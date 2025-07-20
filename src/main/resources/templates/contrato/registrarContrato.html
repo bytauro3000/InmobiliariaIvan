@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layoutSecretaria}">
+
+<head>
+    <title>Registrar Contrato</title>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link rel="stylesheet" th:href="@{/css/estilosContrato.css}">
+</head>
+
+<body>
+<div layout:fragment="content">
+    <div class="container mt-4 mb-5">
+        <div class="card shadow rounded-4 mx-auto" style="max-width: 900px;">
+            <div class="card-body px-4">
+                <div class="titulo-contrato-container mb-4">
+                    <h4 class="text-center mb-0">Registrar Contrato</h4>
+                </div>
+
+                <form th:action="@{/contrato/guardar}" th:object="${contrato}" method="post">
+                    <!-- Bloque 1 -->
+                    <div class="row g-3 mt-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Tipo de Contrato:</label>
+                            <select id="tipoContrato" class="form-select" th:field="*{tipoContrato}" required>
+                                <option value="CONTADO">CONTADO</option>
+                                <option value="FINANCIADO">FINANCIADO</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Fecha Contrato:</label>
+                            <input type="date" class="form-control" th:field="*{fechaContrato}" required>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Buscar Separación (DNI o Apellido):</label>
+                            <select id="selectSeparacion" class="form-select" name="idSeparacion">
+                                <option value="">Seleccione una separación</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 🔖 Punto de inserción dinámico -->
+                    <div id="bloqueDinamicoInicio"></div>
+
+                    <!-- Bloque 2 -->
+                    <div class="row g-3 mt-2" id="bloqueFinanciamiento">
+                        <div class="col-md-4">
+                            <label class="form-label">Monto Total:</label>
+                            <input type="text" class="form-control" id="montoTotal" th:field="*{montoTotal}">
+                        </div>
+                        <div class="col-md-3 financiado-only">
+                            <label class="form-label">Inicial:</label>
+                            <input type="text" class="form-control" id="inicial" th:field="*{inicial}">
+                        </div>
+                        <div class="col-md-3 financiado-only">
+                            <label class="form-label">Saldo:</label>
+                            <input type="text" class="form-control" id="saldo" th:field="*{saldo}" readonly>
+                        </div>
+                        <div class="col-md-2 financiado-only">
+                            <label class="form-label">Cantidad Letras:</label>
+                            <input type="number" class="form-control" th:field="*{cantidadLetras}">
+                        </div>
+                    </div>
+
+                    <!-- Bloque 3 -->
+                    <div class="row g-3 mt-2" id="bloqueObservaciones">
+                        <div class="col-md-12">
+                            <label class="form-label">Observaciones:</label>
+                            <textarea class="form-control" th:field="*{observaciones}" rows="2"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Bloque 4 -->
+                    <div class="row g-3 mt-2" id="bloqueClienteLote">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Buscar Cliente:</label>
+                            <div class="d-flex gap-2">
+                                <select id="selectCliente" class="form-select w-100">
+                                    <option value="">Seleccione un cliente</option>
+                                    <option th:each="cli : ${clientes}" th:value="${cli.idCliente}"
+                                            th:text="${cli.nombre + ' ' + cli.apellidos}"></option>
+                                </select>
+                                <button type="button" class="btn btn-success" onclick="agregarCliente()">+</button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Buscar Lote:</label>
+                            <div class="d-flex gap-2">
+                                <select id="selectLote" class="form-select w-100">
+                                    <option value="">Seleccione un lote</option>
+                                    <option th:each="l : ${lotes}" th:value="${l.idLote}"
+                                            th:text="'Mz ' + ${l.manzana} + ' - Lt ' + ${l.numeroLote}"></option>
+                                </select>
+                                <button type="button" class="btn btn-success" onclick="agregarLote()">+</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Listas -->
+                    <div class="row mt-2">
+                        <div id="bloqueClientes" class="col-md-6">
+                            <ul id="clientesSeleccionados" class="list-group mt-2"></ul>
+                            <div id="clientesHiddenInputs"></div>
+                        </div>
+
+                        <div id="bloqueLotes" class="col-md-6">
+                            <ul id="lotesSeleccionados" class="list-group mt-2"></ul>
+                            <div id="lotesHiddenInputs"></div>
+                        </div>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="mt-4 d-flex justify-content-center gap-3">
+                        <button type="submit" class="btn btn-success">Guardar Contrato</button>
+                        <a th:href="@{/contrato/listar}" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SCRIPTS -->
+<div layout:fragment="scripts">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script th:src="@{/js/registrarContrato.js}"></script>
+</div>
+</body>
+</html>

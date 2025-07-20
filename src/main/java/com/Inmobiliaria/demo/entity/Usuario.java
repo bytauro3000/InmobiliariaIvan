@@ -1,0 +1,51 @@
+package com.Inmobiliaria.demo.entity;
+
+
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import java.util.Date;
+
+@Entity
+@Table(name = "usuario")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class Usuario {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "idUsuario")
+    private Integer id;
+
+    @Column(length = 50, nullable = false)
+    private String nombres;
+
+    @Column(length = 50, nullable = false)
+    private String apellidos;
+
+    @Column(length = 100, nullable = false, unique = true)
+    private String correo;
+
+    @Column(length = 100, nullable = false)
+    private String contrasena;
+
+    @Column(length = 15)
+    private String telefono;
+
+    @Column(length = 150)
+    private String direccion;
+
+    @Column(nullable = false, columnDefinition = "ENUM('activo', 'inactivo')")
+    private String estado;
+
+    @CreationTimestamp
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "fechaRegistro", nullable = false, updatable = false)
+    private Date fechaRegistro;
+
+    @ManyToOne
+    @JoinColumn(name = "idRolUsuario", nullable = false)
+    private RolUsuario rol;
+}

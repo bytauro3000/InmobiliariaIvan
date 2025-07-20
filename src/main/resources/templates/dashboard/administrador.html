@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout/layoutAdministrador}">
+
+<head>
+    <title>Inicio Administrador</title>
+</head>
+
+<body>
+    <div layout:fragment="content">
+		<!-- ✅ Bienvenida personalizada con nombre y apellido -->
+				<h2 class="text-center mt-4" th:text="'Bienvenid@ ' + ${usuario.nombres} + ' ' + ${usuario.apellidos}">
+					Bienvenido</h2>
+
+
+				<p class="text-center">Desde aqui puedes las cuentas y todo tipo de reportes.
+				</p>
+
+
+				<!-- Control opcional por rol -->
+				<div class="text-center mt-3" sec:authorize="hasRole('ROLE_Admnistrador')">
+					<span class="text-success">Estás autenticado como Administrador</span>
+				</div>
+    </div>
+</body>
+</html>
