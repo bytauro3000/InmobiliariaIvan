@@ -8,7 +8,9 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import com.Inmobiliaria.demo.enums.TipoContrato;
 
+
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 @Entity
@@ -45,6 +47,7 @@ public class Contrato {
     @Column(name = "fecha_contrato", nullable = false)
     private Date fechaContrato;
 
+    @NotNull(message = "El monto total es obligatorio")
     @Column(name = "monto_total", precision = 12, scale = 2, nullable = false)
     private BigDecimal montoTotal;
 

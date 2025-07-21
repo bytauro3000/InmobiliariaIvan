@@ -1,8 +1,8 @@
 $(document).ready(function () {
     var tabla = $('#tablaContratos').DataTable({
-        pageLength: 6, // ✅ Mostrar solo 6 registros por página
-        lengthChange: false, // ✅ Oculta el combo "mostrar N registros por página"
-        dom: 'rtp', // ✅ Oculta la búsqueda integrada de DataTables (filtro de la derecha)
+        pageLength: 6, // Mostrar solo 6 registros por página
+        lengthChange: false, // Oculta el combo "mostrar N registros por página"
+        dom: 'rtp', // Oculta la búsqueda integrada de DataTables
 
         language: {
             zeroRecords: "No se encontraron contratos",
@@ -13,24 +13,12 @@ $(document).ready(function () {
                 next: "Siguiente",
                 previous: "Anterior"
             }
-        },
-
-        columnDefs: [
-            {
-                targets: 2, // Columna de clientes
-                render: function (data, type, row, meta) {
-                    if (type === 'display' || type === 'filter') {
-                        const cleanText = $('<div>').html(data).text().replace(/\s+/g, ' ').trim();
-                        return cleanText;
-                    }
-                    return data;
-                }
-            }
-        ]
+        }
     });
 
-    // 🔍 Filtro por nombre + apellido del cliente
+    // 🔍 Filtro personalizado por nombre o apellido del cliente
     $('#filtroNombre').on('keyup', function () {
-        tabla.column(2).search(this.value).draw();
+        tabla.column(2).search(this.value).draw(); // columna de clientes
     });
 });
+

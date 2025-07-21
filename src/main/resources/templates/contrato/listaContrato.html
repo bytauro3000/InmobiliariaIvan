@@ -51,13 +51,22 @@
                                 <td th:text="${iter.index + 1}"></td>
                                 <td th:text="${#dates.format(contrato.fechaContrato, 'dd/MM/yyyy')}"></td>
 
-                                <td class="cliente-nombre">
-                                    <ul class="list-unstyled mb-0" th:if="${!#lists.isEmpty(contrato.clientes)}" th:each="cc : ${contrato.clientes}">
-                                        <li th:text="${cc.cliente.nombre + ' ' + cc.cliente.apellidos}"></li>
-                                    </ul>
-                                    <span th:if="${#lists.isEmpty(contrato.clientes) and contrato.separacion != null}"
-                                          th:text="${contrato.separacion.cliente.nombre + ' ' + contrato.separacion.cliente.apellidos}"></span>
-                                </td>
+								<td class="cliente-nombre">
+								    <!-- Un solo cliente -->
+								    <span th:if="${contrato.clientes.size() == 1}" 
+								          th:text="${contrato.clientes[0].cliente.nombre + ' ' + contrato.clientes[0].cliente.apellidos}"></span>
+
+								    <!-- Varios clientes sin viñetas (igual que en Lote) -->
+								    <div th:if="${contrato.clientes.size() > 1}">
+								        <span th:each="cc : ${contrato.clientes}" 
+								              th:text="${cc.cliente.nombre + ' ' + cc.cliente.apellidos}" 
+								              style="display: block;"></span>
+								    </div>
+
+								    <!-- Cliente por separación -->
+								    <span th:if="${#lists.isEmpty(contrato.clientes) and contrato.separacion != null}"
+								          th:text="${contrato.separacion.cliente.nombre + ' ' + contrato.separacion.cliente.apellidos}"></span>
+								</td>
 
                                 <td>
                                     <ul class="list-unstyled mb-0" th:if="${!#lists.isEmpty(contrato.lotes)}" th:each="cl : ${contrato.lotes}">
