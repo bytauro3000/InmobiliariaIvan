@@ -1,6 +1,6 @@
 $(document).ready(function () {
     var tabla = $('#tablaContratos').DataTable({
-        pageLength: 6, // Mostrar solo 6 registros por página
+        pageLength: 5, // Mostrar solo 6 registros por página
         lengthChange: false, // Oculta el combo "mostrar N registros por página"
         dom: 'rtp', // Oculta la búsqueda integrada de DataTables
 
@@ -20,5 +20,10 @@ $(document).ready(function () {
     $('#filtroNombre').on('keyup', function () {
         tabla.column(2).search(this.value).draw(); // columna de clientes
     });
+	
+	// Efecto visual al cambiar de página o redibujar la tabla
+	tabla.on('draw', function () {
+		        $('#tablaContratos tbody tr').hide().fadeIn(300);
+	});
 });
 

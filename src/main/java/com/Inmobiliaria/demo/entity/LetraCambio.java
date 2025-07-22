@@ -2,6 +2,9 @@ package com.Inmobiliaria.demo.entity;
 
 import java.util.Date;
 
+import com.Inmobiliaria.demo.enums.EstadoLetra;
+import com.Inmobiliaria.demo.enums.TipoComprobante;
+
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -43,15 +46,17 @@ public class LetraCambio {
     @Column(name = "importe_letras")
     private String importeLetras;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "estado")
-    private String estado;
+    private EstadoLetra estado;
 
     @Temporal(TemporalType.DATE)
     @Column(name = "fecha_pago")
     private Date fechaPago;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "tipo_comprobante")
-    private String tipoComprobante;
+    private TipoComprobante tipoComprobante;
 
     @Column(name = "numero_comprobante")
     private String numeroComprobante;
