@@ -37,15 +37,15 @@
         </div>
 
         <!-- Importe -->
-        <div class="mb-3">
-            <label for="importe" class="form-label">Importe por Letra:</label>
-            <input type="number" step="0.01" class="form-control" id="importe" name="importe" required>
-        </div>
+		<div class="mb-3">
+		    <label for="importe" class="form-label">Importe por Letra:</label>
+		    <input type="text" class="form-control" id="importe" name="importe" required>
+		</div>
 
         <!-- Importe en letras -->
         <div class="mb-3">
             <label for="importeLetras" class="form-label">Importe en Letras:</label>
-            <input type="text" class="form-control" id="importeLetras" name="importeLetras" required>
+            <input type="text" class="form-control" id="importeLetras" name="importeLetras" required readonly>
         </div>
 
         <!-- Botones -->
@@ -55,5 +55,8 @@
         </div>
     </form>
 </div>
+
+<!-- ✅ Incluir el script JS externo -->
+<script th:src="@{/js/convertirNumeroALetras.js}"></script>
 </body>
 </html>
