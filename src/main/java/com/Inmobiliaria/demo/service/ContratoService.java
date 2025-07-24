@@ -8,5 +8,6 @@ public interface ContratoService {
     Contrato guardarContrato(Contrato contrato);
     List<Contrato> listarContratos();
     Contrato buscarPorId(Integer idContrato);
+   
     
 }

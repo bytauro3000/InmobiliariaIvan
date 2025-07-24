@@ -105,8 +105,8 @@
 										<!-- 👇 NUEVO BOTÓN PARA LETRAS DE CAMBIO -->
 										<!-- Botón "Generar letras de cambio" solo si el contrato es FINANCIADO -->
 										<span th:if="${contrato.tipoContrato.name() == 'FINANCIADO'}">
-										    <a th:href="@{/letra/crear/{id}(id=${contrato.idContrato})}" class="btn btn-sm btn-info me-1" title="Generar letras">
-										        <i class="bi bi-file-earmark-text"></i>
+										    <a th:href="@{/letras/contrato/{id}/generar(id=${contrato.idContrato})}" class="btn btn-sm btn-success me-1" title="Generar letras de cambio">
+										        <i class="bi bi-file-earmark-plus"></i>
 										    </a>
 										</span>
 										<span th:if="${contrato.tipoContrato.name() != 'FINANCIADO'}">
