@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Generar Letras de Cambio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-4">
+    <h2 class="mb-4">Generar Letras de Cambio</h2>
+
+    <form th:action="@{/letras/generar}" method="post">
+        <!-- ID del contrato (oculto) -->
+        <input type="hidden" name="idContrato" th:value="${idContrato}"/>
+
+        <!-- Distrito de giro -->
+        <div class="mb-3">
+            <label for="idDistrito" class="form-label">Distrito de Giro:</label>
+            <select class="form-select" id="idDistrito" name="idDistrito" required>
+                <option value="">-- Selecciona Distrito --</option>
+                <option th:each="d : ${listaDistritos}"
+                        th:value="${d.idDistrito}"
+                        th:text="${d.nombre}"></option>
+            </select>
+        </div>
+
+        <!-- Fecha de giro -->
+        <div class="mb-3">
+            <label for="fechaGiro" class="form-label">Fecha de Giro:</label>
+            <input type="date" class="form-control" id="fechaGiro" name="fechaGiro" required>
+        </div>
+
+        <!-- Fecha del primer vencimiento -->
+        <div class="mb-3">
+            <label for="fechaVencimientoInicial" class="form-label">Fecha del Primer Vencimiento:</label>
+            <input type="date" class="form-control" id="fechaVencimientoInicial" name="fechaVencimientoInicial" required>
+        </div>
+
+        <!-- Importe -->
+		<div class="mb-3">
+		    <label for="importe" class="form-label">Importe por Letra:</label>
+		    <input type="text" class="form-control" id="importe" name="importe" required>
+		</div>
+
+        <!-- Importe en letras -->
+        <div class="mb-3">
+            <label for="importeLetras" class="form-label">Importe en Letras:</label>
+            <input type="text" class="form-control" id="importeLetras" name="importeLetras" required readonly>
+        </div>
+
+        <!-- Botones -->
+        <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary">Generar Letras</button>
+            <a th:href="@{/letras/contrato/{id}(id=${idContrato})}" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+<!-- ✅ Incluir el script JS externo -->
+<script th:src="@{/js/convertirNumeroALetras.js}"></script>
+</body>
+</html>
