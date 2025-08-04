@@ -1,5 +1,10 @@
 package com.Inmobiliaria.demo.entity;
 
+import java.math.BigDecimal;
+import java.util.Date;
+
+import com.Inmobiliaria.demo.enums.Genero;
+
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -12,9 +17,8 @@ import lombok.*;
 public class Vendedor {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_vendedor")
-    private Integer idVendedor;
+    @Column(name = "id_vendedor", unique = true, length = 7)
+    private String idVendedor;
 
     @Column(name = "nombre", nullable = false, length = 100)
     private String nombre;
@@ -34,12 +38,17 @@ public class Vendedor {
     @Column(name = "direccion", length = 150)
     private String direccion;
 
-    @Column(name = "codigo", unique = true, length = 20)
-    private String codigo;
-
-    @Column(name = "zona", length = 50)
-    private String zona;
-
+    @Column(name = "fecha_nacimiento")
+    @Temporal(TemporalType.DATE)
+    private Date fechaNacimiento;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "genero", nullable = false)
+    private Genero genero;
+    
+    @Column(name = "comision", precision = 5, scale = 2)
+    private BigDecimal comision = BigDecimal.ZERO;
+    
     @ManyToOne
     @JoinColumn(name = "id_distrito")
     private Distrito distrito;
