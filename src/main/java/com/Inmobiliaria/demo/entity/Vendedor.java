@@ -51,5 +51,5 @@ public class Vendedor {
     
     @ManyToOne
     @JoinColumn(name = "id_distrito")
-    private Distrito distrito;
+    private Distrito distrito; 
 }

@@ -23,6 +23,7 @@ public class ContratoController {
     @Autowired private ContratoClienteService contratoClienteService;
     @Autowired private ContratoLoteService contratoLoteService;
     @Autowired private SeparacionService separacionService;
+    @Autowired private VendedorService vendedorService;
 
 
     @GetMapping("/registrar")
@@ -30,6 +31,7 @@ public class ContratoController {
         model.addAttribute("contrato", new Contrato());
         model.addAttribute("clientes", clienteService.listarClientes());
         model.addAttribute("lotes", loteService.listarLotes());
+        model.addAttribute("vendedores", vendedorService.listarVendedores()); 
         return "contrato/registrarContrato";
     }
 
