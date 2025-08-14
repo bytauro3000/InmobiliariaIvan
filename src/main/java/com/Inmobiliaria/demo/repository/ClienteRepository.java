@@ -12,16 +12,14 @@ import com.Inmobiliaria.demo.entity.Cliente;
 @Repository
 public interface ClienteRepository extends JpaRepository<Cliente, Integer> {
 
-    @Query(value = "SELECT * FROM Cliente WHERE dni = :dni", nativeQuery = true)
-    Cliente buscarClientePorDni(@Param("dni") String dni);
+    @Query("SELECT c FROM Cliente c WHERE c.dni = :dni")
+    Cliente buscarPorDni(@Param("dni") String dni);
 
-    @Query(value = "SELECT * FROM Cliente WHERE apellidos = :apellidos", nativeQuery = true)
-    List<Cliente> buscarClientesPorApellido(@Param("apellidos") String apellidos);
+    @Query("SELECT c FROM Cliente c WHERE LOWER(c.apellidos) = LOWER(:apellidos)")
+    List<Cliente> buscarPorApellidos(@Param("apellidos") String apellidos);
 
-    @Query(value = "SELECT * FROM Cliente ORDER BY id_cliente DESC LIMIT 1", nativeQuery = true)
-    Cliente obtenerUltimoCliente();
-
-    @Query(value = "SELECT * FROM Cliente ORDER BY id_cliente ASC", nativeQuery = true)
-    List<Cliente> listarClientesOrdenados();
+    
+    Cliente findByDni(String dni);
+    Cliente findTopByOrderByIdClienteDesc();
+    List<Cliente> findAllByOrderByIdClienteAsc();
 }
-
