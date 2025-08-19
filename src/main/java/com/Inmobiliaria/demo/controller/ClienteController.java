@@ -11,40 +11,59 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/clientes")
+@CrossOrigin(origins = "*") // 🔥 Permite llamadas desde frontend (React, Angular, etc.)
 public class ClienteController {
 
     @Autowired
     private ClienteService clienteService;
 
-    // CREAR (POST)
+    // ✅ CREAR CLIENTE (POST)
     @PostMapping
-    public ResponseEntity<Cliente> crearCliente(@RequestBody Cliente cliente) {
-        Cliente nuevoCliente = clienteService.guardarCliente(cliente);
-        return new ResponseEntity<>(nuevoCliente, HttpStatus.CREATED);
+    public ResponseEntity<?> crearCliente(@RequestBody Cliente cliente) {
+        try {
+            Cliente nuevoCliente = clienteService.guardarCliente(cliente);
+            return new ResponseEntity<>(nuevoCliente, HttpStatus.CREATED);
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>("Error: " + e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
     }
 
-    // LISTAR TODOS (GET)
+    // ✅ LISTAR TODOS LOS CLIENTES (GET)
     @GetMapping
     public ResponseEntity<List<Cliente>> listarClientes() {
         List<Cliente> clientes = clienteService.listarClientes();
         return ResponseEntity.ok(clientes);
     }
 
-    // ACTUALIZAR (PUT)
+    // ✅ BUSCAR CLIENTE POR DNI (GET)
+    @GetMapping("/dni/{dni}")
+    public ResponseEntity<?> buscarPorDni(@PathVariable String dni) {
+        Cliente cliente = clienteService.buscarClientePorDni(dni);
+        if (cliente == null) {
+            return new ResponseEntity<>("Cliente no encontrado", HttpStatus.NOT_FOUND);
+        }
+        return ResponseEntity.ok(cliente);
+    }
+
+    // ✅ BUSCAR CLIENTES POR APELLIDOS (GET)
+    @GetMapping("/apellidos/{apellidos}")
+    public ResponseEntity<List<Cliente>> buscarPorApellidos(@PathVariable String apellidos) {
+        List<Cliente> clientes = clienteService.buscarClientesPorApellidos(apellidos);
+        return ResponseEntity.ok(clientes);
+    }
+
+    // ✅ ACTUALIZAR CLIENTE (PUT)
     @PutMapping("/{id}")
-    public ResponseEntity<Cliente> actualizarCliente(
-            @PathVariable Integer id,
-            @RequestBody Cliente cliente
-    ) {
-        cliente.setIdCliente(id); // Asegurar que el ID coincida
+    public ResponseEntity<?> actualizarCliente(@PathVariable Integer id, @RequestBody Cliente cliente) {
+        cliente.setIdCliente(id);
         Cliente clienteActualizado = clienteService.editarCliente(cliente);
         return ResponseEntity.ok(clienteActualizado);
     }
 
-    // ELIMINAR (DELETE)
+    // ✅ ELIMINAR CLIENTE (DELETE)
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarCliente(@PathVariable Integer id) {
+    public ResponseEntity<String> eliminarCliente(@PathVariable Integer id) {
         clienteService.eliminarClienteById(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok("Cliente eliminado correctamente");
     }
 }
