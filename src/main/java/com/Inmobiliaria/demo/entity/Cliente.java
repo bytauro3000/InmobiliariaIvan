@@ -69,7 +69,7 @@ public class Cliente {
     @Column(name = "estado", nullable = false)
     private EstadoCliente estado = EstadoCliente.ACTIVO;  
     
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "id_distrito")
     private Distrito distrito;
 }

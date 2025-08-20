@@ -38,7 +38,7 @@ public class ClienteServiceImpl implements ClienteService {
 
     @Override
     public List<Cliente> listarClientes() {
-        return clienteRepository.findAll();  // Ahora usa findAll() sin orden
+        return clienteRepository.findAll();
     }
     
     @Override
