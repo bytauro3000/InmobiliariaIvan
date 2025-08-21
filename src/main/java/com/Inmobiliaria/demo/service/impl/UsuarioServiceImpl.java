@@ -9,6 +9,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import com.Inmobiliaria.demo.entity.Usuario;
+import com.Inmobiliaria.demo.enums.EstadoUsuario;
 import com.Inmobiliaria.demo.repository.UsuarioRepository;
 import com.Inmobiliaria.demo.service.UsuarioService;
 
@@ -35,8 +36,8 @@ public class UsuarioServiceImpl implements UserDetailsService, UsuarioService {
         String rol = usuario.getRol().getRolUsuario().toUpperCase(); // Ej: RECEPCIONISTA
         String rolConPrefijo = "ROLE_" + rol; // Ej: ROLE_RECEPCIONISTA
 
-        // Verificar si el usuario está activo
-        boolean estaActivo = "activo".equalsIgnoreCase(usuario.getEstado());
+     // Verificar si el usuario está activo
+        boolean estaActivo = EstadoUsuario.activo.name().equalsIgnoreCase(usuario.getEstado().name());
 
         // Crear y devolver el objeto UserDetails con sus credenciales y rol
         return new User(

@@ -5,6 +5,8 @@ import lombok.*;
 
 import java.math.BigDecimal;
 
+import com.Inmobiliaria.demo.enums.EstadoLote;
+
 @Entity
 @Table(name = "Lote")
 @Getter
@@ -54,8 +56,9 @@ public class Lote {
     @Column(name = "colindante_oeste", length = 100)
     private String colindanteOeste;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "estado", length = 20)
-    private String estado = "Disponible";
+    private EstadoLote estado = EstadoLote.Disponible;
 
     @ManyToOne
     @JoinColumn(name = "id_programa")

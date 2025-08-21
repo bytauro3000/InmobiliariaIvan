@@ -4,6 +4,9 @@ package com.Inmobiliaria.demo.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+
+import com.Inmobiliaria.demo.enums.EstadoUsuario;
+
 import java.util.Date;
 
 @Entity
@@ -37,8 +40,9 @@ public class Usuario {
     @Column(length = 150)
     private String direccion;
 
-    @Column(nullable = false, columnDefinition = "ENUM('activo', 'inactivo')")
-    private String estado;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado", nullable = false)
+    private EstadoUsuario estado = EstadoUsuario.activo;
 
     @CreationTimestamp
     @Temporal(TemporalType.TIMESTAMP)
