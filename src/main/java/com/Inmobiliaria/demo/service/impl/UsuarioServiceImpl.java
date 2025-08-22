@@ -19,30 +19,29 @@ public class UsuarioServiceImpl implements UserDetailsService, UsuarioService {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+    
+    // No necesitas inyectar PasswordEncoder aquí, ya que Spring Security lo gestiona
+    // Puedes inyectarlo en tu servicio de registro de usuarios, pero no en este método de carga.
 
-    /**
-     * Este método es invocado automáticamente por Spring Security
-     * durante el proceso de login. Su objetivo es cargar al usuario
-     * desde la base de datos según su correo, y devolver un objeto
-     * UserDetails con sus credenciales y roles.
-     */
     @Override
     public UserDetails loadUserByUsername(String correo) throws UsernameNotFoundException {
         // Buscar al usuario por su correo electrónico
         Usuario usuario = usuarioRepository.findByCorreo(correo)
             .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + correo));
 
-        // Obtener el rol del usuario (ejemplo: "Recepcionista") y formatearlo
-        String rol = usuario.getRol().getRolUsuario().toUpperCase(); // Ej: RECEPCIONISTA
-        String rolConPrefijo = "ROLE_" + rol; // Ej: ROLE_RECEPCIONISTA
+        // Obtener el rol del usuario
+        String rol = usuario.getRol().getRolUsuario().toUpperCase(); 
+        String rolConPrefijo = "ROLE_" + rol; 
 
-     // Verificar si el usuario está activo
+        // Verificar si el usuario está activo
         boolean estaActivo = EstadoUsuario.activo.name().equalsIgnoreCase(usuario.getEstado().name());
 
-        // Crear y devolver el objeto UserDetails con sus credenciales y rol
+        // Crear y devolver el objeto UserDetails con las credenciales y roles
+        // Spring Security usará el PasswordEncoder para comparar la contraseña del formulario
+        // con la que tú le devuelves aquí.
         return new User(
                 usuario.getCorreo(),                 // nombre de usuario (login)
-                usuario.getContrasena(),             // contraseña
+                usuario.getContrasena(),             // contraseña (cifrada)
                 estaActivo,                          // si está habilitado o no
                 true, true, true,                    // cuenta no expirada, no bloqueada, credenciales válidas
                 Collections.singletonList(
@@ -54,11 +53,4 @@ public class UsuarioServiceImpl implements UserDetailsService, UsuarioService {
 	public Usuario buscarByUsuario(String correo) {
 		return usuarioRepository.findByCorreo(correo).orElse(null);
 	}
-
-    /**
-     * Método personalizado para obtener el objeto Usuario completo
-     * desde el correo electrónico. Se usa para mostrar el nombre
-     * y apellido en las vistas después del login.
-     */
-   
 }

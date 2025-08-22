@@ -1,6 +1,6 @@
-package com.Inmobiliaria.demo.enums;
-
-public enum EstadoUsuario {
-	activo,
-	inactivo
-}
+	package com.Inmobiliaria.demo.enums;
+	
+	public enum EstadoUsuario {
+		activo,
+		inactivo
+	}

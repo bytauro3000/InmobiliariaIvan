@@ -18,7 +18,7 @@ public class Vendedor {
 
     @Id
     @Column(name = "id_vendedor", unique = true, length = 7)
-    private String idVendedor;
+    private Integer idVendedor;
 
     @Column(name = "nombre", nullable = false, length = 100)
     private String nombre;
