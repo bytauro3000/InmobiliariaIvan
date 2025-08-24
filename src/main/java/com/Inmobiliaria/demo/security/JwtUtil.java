@@ -1,10 +1,14 @@
 package com.Inmobiliaria.demo.security;
 
+import com.Inmobiliaria.demo.entity.Usuario;
+import com.Inmobiliaria.demo.service.impl.TokenBlacklistService;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,15 +24,20 @@ public class JwtUtil {
 
     private final String SECRET_KEY;
 
-    // Inyecta la clave secreta del archivo application.properties
+    @Autowired // ✅ Inyecta el servicio de lista negra
+    private TokenBlacklistService tokenBlacklistService;
+
     public JwtUtil(@Value("${jwt.secret-key}") String secretKey) {
         this.SECRET_KEY = secretKey;
     }
 
-    public String generateToken(Authentication authentication) {
+    public String generateToken(Authentication authentication, Usuario usuario) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         Map<String, Object> claims = new HashMap<>();
         claims.put("rol", userDetails.getAuthorities().iterator().next().getAuthority());
+        claims.put("nombre", usuario.getNombres());     // ✅ Agrega el nombre del usuario al token
+        claims.put("apellidos", usuario.getApellidos()); // ✅ Agrega los apellidos del usuario al token
+        
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(userDetails.getUsername())
@@ -55,16 +64,16 @@ public class JwtUtil {
                 .getBody();
     }
 
-    // Método para obtener la clave de firma, ahora usa la clave inyectada
     private Key getSigningKey() {
-        // Usa la clave secreta como una cadena de texto para generar el hash
         byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
+    // ✅ Método isTokenValid modificado para usar el TokenBlacklistService
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+        // ✅ La validación ahora incluye la lista negra
+        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token) && !tokenBlacklistService.isBlacklisted(token));
     }
 
     private boolean isTokenExpired(String token) {
