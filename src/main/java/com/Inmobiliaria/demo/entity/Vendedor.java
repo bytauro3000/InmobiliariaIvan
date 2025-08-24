@@ -16,9 +16,11 @@ import lombok.*;
 @AllArgsConstructor
 public class Vendedor {
 
-    @Id
-    @Column(name = "id_vendedor", unique = true, length = 7)
-    private Integer idVendedor;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Column(name = "id_vendedor", unique = true, length = 7)
+	private Integer idVendedor;
+
 
     @Column(name = "nombre", nullable = false, length = 100)
     private String nombre;

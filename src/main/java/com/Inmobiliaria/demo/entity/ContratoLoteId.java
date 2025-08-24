@@ -9,9 +9,14 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode
 public class ContratoLoteId implements Serializable {
-	private static final long serialVersionUID = 1L;
-	
-	private Integer idContrato;
+
+    private static final long serialVersionUID = 1L;
+
+    @Column(name = "id_contrato")
+    private Integer idContrato;
+
+    @Column(name = "id_lote")
     private Integer idLote;
 }

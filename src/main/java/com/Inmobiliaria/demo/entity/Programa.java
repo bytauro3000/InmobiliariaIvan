@@ -27,7 +27,7 @@ public class Programa {
     @Column(name = "area_total", nullable = false, precision = 10, scale = 2)
     private BigDecimal areaTotal;
 
-    @Column(name = "precio_m2", precision = 10, scale = 2)
+    @Column(name = "precio_m2", precision = 10, scale = 2, nullable =  false)
     private BigDecimal precioM2;
 
     @Column(name = "costo_total", precision = 12, scale = 2)

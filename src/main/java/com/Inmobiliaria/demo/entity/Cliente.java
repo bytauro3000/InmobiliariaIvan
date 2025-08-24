@@ -71,4 +71,15 @@ public class Cliente {
     @ManyToOne
     @JoinColumn(name = "id_distrito")
     private Distrito distrito;
+
+
+    /*Constraint Check(usenlo en el service o DTO):
+     * if (cliente.getTipoCliente() == TipoCliente.NATURAL && cliente.getDni() == null) {
+    throw new IllegalArgumentException("El cliente NATURAL debe tener DNI.");
+}
+if (cliente.getTipoCliente() == TipoCliente.JURIDICO && cliente.getRuc() == null) {
+    throw new IllegalArgumentException("El cliente JURIDICO debe tener RUC.");
+}
+*/
+
 }

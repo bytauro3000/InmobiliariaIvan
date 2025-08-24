@@ -1,16 +1,13 @@
 package com.Inmobiliaria.demo.entity;
 
-
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-
 import com.Inmobiliaria.demo.enums.EstadoUsuario;
-
 import java.util.Date;
 
 @Entity
-@Table(name = "usuario")
+@Table(name = "Usuario")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -22,10 +19,10 @@ public class Usuario {
     @Column(name = "idUsuario")
     private Integer id;
 
-    @Column(length = 50, nullable = false)
+    @Column(length = 100, nullable = false)
     private String nombres;
 
-    @Column(length = 50, nullable = false)
+    @Column(length = 100, nullable = false)
     private String apellidos;
 
     @Column(length = 100, nullable = false, unique = true)
@@ -34,11 +31,14 @@ public class Usuario {
     @Column(length = 100, nullable = false)
     private String contrasena;
 
-    @Column(length = 15)
+    @Column(length = 20)
     private String telefono;
 
     @Column(length = 150)
     private String direccion;
+
+    @Column(length = 8)
+    private String dni; 
 
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", nullable = false)
