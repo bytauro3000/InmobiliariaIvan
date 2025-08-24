@@ -31,7 +31,7 @@ public class Parcelero {
     @Column(name = "direccion", length = 150)
     private String direccion;
 
-    @Column(name = "email", length = 100)
+    @Column(name = "email", length = 100, unique = true)
     private String email;
 
     @ManyToOne
