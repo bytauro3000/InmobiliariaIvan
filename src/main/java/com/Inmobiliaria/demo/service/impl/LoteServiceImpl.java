@@ -12,11 +12,31 @@ import com.Inmobiliaria.demo.service.LoteService;
 @Service
 public class LoteServiceImpl implements LoteService{
 	@Autowired
-	private LoteRepository loterepository;
+	private LoteRepository loteRepository;
 
 	@Override
 	public List<Lote> listarLotes() {
-		return loterepository.findAll();
+		return loteRepository.findAll();
+	}
+
+    @Override
+    public Lote actualizarLote(Lote lote) {
+return loteRepository.save(lote);
+    }
+
+	@Override
+	public Lote obtenerLotePorId(Integer id) {
+		return loteRepository.findById(id).orElse(null);
+	}
+
+	@Override
+	public Lote crearLote(Lote reg) {
+ return loteRepository.save(reg);
+	}
+
+	@Override
+	public void eliminarLote(Integer id) {
+		 loteRepository.deleteById(id);
 	}
 	
 	
