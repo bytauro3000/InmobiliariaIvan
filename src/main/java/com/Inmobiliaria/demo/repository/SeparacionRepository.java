@@ -11,10 +11,8 @@ import com.Inmobiliaria.demo.entity.Separacion;
 
 public interface SeparacionRepository extends JpaRepository<Separacion, Integer> {
 
-	@Query("SELECT new com.Inmobiliaria.demo.dto.SeparacionDTO(" +
-		       "s.idSeparacion, CONCAT(s.cliente.nombre, ' ', s.cliente.apellidos, ' - DNI: ', s.cliente.dni, ' - Mz ', s.lote.manzana, ' Lt ', s.lote.numeroLote)) " +
-		       "FROM Separacion s " +
-		       "WHERE LOWER(s.cliente.apellidos) LIKE LOWER(CONCAT('%', :filtro, '%')) " +
-		       "   OR s.cliente.dni LIKE CONCAT('%', :filtro, '%')")
-	List<SeparacionDTO> buscarPorDniOApellido(@Param("filtro") String filtro);
+	@Query("SELECT new com.Inmobiliaria.demo.dto.SeparacionDTO(s.idSeparacion, CONCAT(s.cliente.nombre, ' ', s.cliente.apellidos, ' - DNI: ', s.cliente.numDoc, ' - Mz ', s.lote.manzana, ' Lt ', s.lote.numeroLote)) " +
+	           "FROM Separacion s WHERE LOWER(s.cliente.apellidos) LIKE LOWER(CONCAT('%', :filtro, '%')) " +
+	           "OR s.cliente.numDoc LIKE CONCAT('%', :filtro, '%')")
+	    List<SeparacionDTO> buscarPorDniOApellido(@Param("filtro") String filtro);
 }

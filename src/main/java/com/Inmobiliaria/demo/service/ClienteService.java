@@ -5,11 +5,12 @@ import com.Inmobiliaria.demo.entity.Cliente;
 
 public interface ClienteService {
 
-    Cliente guardarCliente(Cliente cliente);
-    Cliente editarCliente(Cliente cliente);
-    void eliminarClienteById(Integer idCliente);
+	 Cliente guardarCliente(Cliente cliente);
+	 Cliente editarCliente(Cliente cliente);
+	 void eliminarClienteById(Integer idCliente);
+	 List<Cliente> listarClientes();  
+	    
 
-    Cliente buscarClientePorDni(String dni);  
-    List<Cliente> listarClientes();  
-    List<Cliente> buscarClientesPorApellidos(String apellidos);  
+	 Cliente buscarClientePorNumDoc(String numDoc);
+	 List<Cliente> findByApellidos(String apellidos);
 }

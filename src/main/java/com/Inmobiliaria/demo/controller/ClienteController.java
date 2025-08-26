@@ -2,12 +2,14 @@ package com.Inmobiliaria.demo.controller;
 
 import com.Inmobiliaria.demo.entity.Cliente;
 import com.Inmobiliaria.demo.service.ClienteService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/clientes")
 @CrossOrigin(origins = "*")
 public class ClienteController {
 
@@ -17,40 +19,42 @@ public class ClienteController {
         this.clienteService = clienteService;
     }
 
-    // 🔹 Listar todos los clientes
-    @GetMapping("/listarClientes")
+    @GetMapping("/listar")
     public List<Cliente> listarClientes() {
         return clienteService.listarClientes();
     }
-
-    // 🔹 Buscar cliente por DNI
-    @GetMapping("/obtenerClientePorDni/{dni}")
-    public Cliente obtenerClientePorDni(@PathVariable String dni) {
-        return clienteService.buscarClientePorDni(dni);
+   
+    @GetMapping("/buscar/numDoc/{numDoc}")
+    public Cliente obtenerClientePorNumDoc(@PathVariable String numDoc) {
+        return clienteService.buscarClientePorNumDoc(numDoc);
     }
-
-    // 🔹 Buscar clientes por apellidos
-    @GetMapping("/obtenerClientesPorApellidos/{apellidos}")
+  
+    @GetMapping("/buscar/apellidos/{apellidos}")
     public List<Cliente> obtenerClientesPorApellidos(@PathVariable String apellidos) {
-        return clienteService.buscarClientesPorApellidos(apellidos);
+        return clienteService.findByApellidos(apellidos);
     }
-
-    // 🔹 Agregar nuevo cliente
-    @PostMapping("/agregarCliente")
-    public Cliente agregarCliente(@RequestBody Cliente cliente) {
-        return clienteService.guardarCliente(cliente);
+  
+    @PostMapping("/agregar")
+    public ResponseEntity<Cliente> agregarCliente(@RequestBody Cliente cliente) {
+        Cliente nuevoCliente = clienteService.guardarCliente(cliente);
+        return new ResponseEntity<>(nuevoCliente, HttpStatus.CREATED);
     }
-
-    // 🔹 Actualizar cliente
-    @PostMapping("/actualizarCliente/{id}")
+ 
+    @PutMapping("/actualizar/{id}")
     public Cliente actualizarCliente(@PathVariable Integer id, @RequestBody Cliente cliente) {
         cliente.setIdCliente(id);
         return clienteService.editarCliente(cliente);
     }
-
-    // 🔹 Eliminar cliente
-    @DeleteMapping("/eliminarCliente/{id}")
+ 
+    @DeleteMapping("/eliminar/{id}")
     public void eliminarCliente(@PathVariable Integer id) {
         clienteService.eliminarClienteById(id);
+    }
+
+    // ✅ Nuevo método para manejar la excepción y devolver el mensaje al frontend
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<String> handleIllegalArgumentException(IllegalArgumentException ex) {
+        // Devuelve un código de estado 409 (Conflict) y el mensaje de la excepción
+        return new ResponseEntity<>(ex.getMessage(), HttpStatus.CONFLICT);
     }
 }

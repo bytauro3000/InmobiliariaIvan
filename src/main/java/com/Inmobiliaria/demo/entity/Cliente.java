@@ -2,6 +2,8 @@ package com.Inmobiliaria.demo.entity;
 
 import java.util.Date;
 
+import org.hibernate.annotations.CreationTimestamp;
+
 import com.Inmobiliaria.demo.enums.EstadoCliente;
 import com.Inmobiliaria.demo.enums.TipoCliente;
 
@@ -43,12 +45,9 @@ public class Cliente {
     @Column(name = "tipoCliente", nullable = false)
     private TipoCliente tipoCliente;
     
-    @Column(name = "dni", unique = true, length = 8)  
-    private String dni;
+    @Column(name = "numDocumento", unique = true)  
+    private String numDoc;
 
-    @Column(name = "ruc", unique = true, length = 11) 
-    private String ruc;
-    
     @Column(name = "celular", nullable = false, length = 20) 
     private String celular;
     
@@ -62,6 +61,7 @@ public class Cliente {
     private String email;
     
     @Column(name = "fechaRegistro", nullable = false)
+    @CreationTimestamp
     private Date fechaRegistro;
     
     @Enumerated(EnumType.STRING)
@@ -71,15 +71,5 @@ public class Cliente {
     @ManyToOne
     @JoinColumn(name = "id_distrito")
     private Distrito distrito;
-
-
-    /*Constraint Check(usenlo en el service o DTO):
-     * if (cliente.getTipoCliente() == TipoCliente.NATURAL && cliente.getDni() == null) {
-    throw new IllegalArgumentException("El cliente NATURAL debe tener DNI.");
-}
-if (cliente.getTipoCliente() == TipoCliente.JURIDICO && cliente.getRuc() == null) {
-    throw new IllegalArgumentException("El cliente JURIDICO debe tener RUC.");
-}
-*/
 
 }

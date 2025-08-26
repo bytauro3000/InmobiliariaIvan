@@ -1,4 +1,5 @@
 package com.Inmobiliaria.demo.service.impl;
+
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -14,10 +15,11 @@ public class ClienteServiceImpl implements ClienteService {
 
     @Override
     public Cliente guardarCliente(Cliente cliente) { 
-    	// Validación adicional (opcional): Evitar DNI duplicado
-        if (cliente.getDni() != null && clienteRepository.findByDni(cliente.getDni()) != null) {
-            throw new RuntimeException("El DNI ya está registrado");
+        // ✅ Validar duplicados con el nuevo campo 'numDoc'
+    	 if (cliente.getNumDoc() != null && clienteRepository.findByNumDoc(cliente.getNumDoc()) != null) {
+             throw new IllegalArgumentException("Cliente ya Registrado.");
         }
+        
         return clienteRepository.save(cliente);
     }
 
@@ -32,17 +34,18 @@ public class ClienteServiceImpl implements ClienteService {
     }
 
     @Override
-    public Cliente buscarClientePorDni(String dni) {
-        return clienteRepository.buscarPorDni(dni);
-    }
-
-    @Override
     public List<Cliente> listarClientes() {
         return clienteRepository.findAll();
     }
     
     @Override
-    public List<Cliente> buscarClientesPorApellidos(String apellidos) {
-        return clienteRepository.buscarPorApellidos(apellidos);
+    public List<Cliente> findByApellidos(String apellidos) {
+        return clienteRepository.findByApellidos(apellidos);
+    }
+
+    @Override
+    public Cliente buscarClientePorNumDoc(String numDoc) {
+        // ✅ Implementar el nuevo método de la interfaz
+        return clienteRepository.findByNumDoc(numDoc);
     }
 }

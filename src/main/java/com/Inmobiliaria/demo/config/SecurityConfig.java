@@ -40,6 +40,10 @@ public class SecurityConfig {
             		
             
                 .requestMatchers("/api/auth/login").permitAll()
+             // ✅ Permite que SECRETARIA acceda a todos los endpoints de clientes
+                .requestMatchers("/api/clientes/**").hasRole("SECRETARIA")
+             // ✅ Permite que SECRETARIA acceda a todos los endpoints de distritos
+                .requestMatchers("/api/distritos/**").hasRole("SECRETARIA")
                 
                 .anyRequest().authenticated()
             )

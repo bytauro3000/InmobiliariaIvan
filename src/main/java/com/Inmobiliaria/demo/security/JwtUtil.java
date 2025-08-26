@@ -24,7 +24,7 @@ public class JwtUtil {
 
     private final String SECRET_KEY;
 
-    @Autowired // ✅ Inyecta el servicio de lista negra
+    @Autowired //Inyecta el servicio de lista negra
     private TokenBlacklistService tokenBlacklistService;
 
     public JwtUtil(@Value("${jwt.secret-key}") String secretKey) {
@@ -35,14 +35,14 @@ public class JwtUtil {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         Map<String, Object> claims = new HashMap<>();
         claims.put("rol", userDetails.getAuthorities().iterator().next().getAuthority());
-        claims.put("nombre", usuario.getNombres());     // ✅ Agrega el nombre del usuario al token
-        claims.put("apellidos", usuario.getApellidos()); // ✅ Agrega los apellidos del usuario al token
+        claims.put("nombre", usuario.getNombres());     //  Agrega el nombre del usuario al token
+        claims.put("apellidos", usuario.getApellidos()); // Agrega los apellidos del usuario al token
         
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10))
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10)) // Token vence en 10 horas
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
@@ -69,10 +69,10 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    // ✅ Método isTokenValid modificado para usar el TokenBlacklistService
+    // ✅Método isTokenValid modificado para usar el TokenBlacklistService
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
-        // ✅ La validación ahora incluye la lista negra
+        // La validación ahora incluye la lista negra
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token) && !tokenBlacklistService.isBlacklisted(token));
     }
 
