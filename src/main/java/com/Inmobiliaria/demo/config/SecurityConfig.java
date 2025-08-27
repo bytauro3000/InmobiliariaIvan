@@ -46,9 +46,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/distritos/**").hasRole("SECRETARIA")
              
                 //Lote API
-                .requestMatchers("/api/lotes/**").hasRole("SECRETARIA")
+                .requestMatchers("/api/lotes/**").hasRole("SOPORTE")
              //Programa API
-                .requestMatchers("/api/programas/**").hasRole("SECRETARIA")
+                .requestMatchers("/api/programas/**").hasRole("SOPORTE")
                 
                 
                 .anyRequest().authenticated()
