@@ -10,7 +10,7 @@ public interface ClienteService {
 	 void eliminarClienteById(Integer idCliente);
 	 List<Cliente> listarClientes();  
 	    
-
+	 Cliente buscarClientePorId(Integer idCliente);
 	 Cliente buscarClientePorNumDoc(String numDoc);
 	 List<Cliente> findByApellidos(String apellidos);
 }

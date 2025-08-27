@@ -23,6 +23,11 @@ public class ClienteController {
     public List<Cliente> listarClientes() {
         return clienteService.listarClientes();
     }
+    
+    @GetMapping("/buscar/{id}")
+    public Cliente obtenerClientePorId(@PathVariable Integer id) {
+        return clienteService.buscarClientePorId(id);
+    }
    
     @GetMapping("/buscar/numDoc/{numDoc}")
     public Cliente obtenerClientePorNumDoc(@PathVariable String numDoc) {
