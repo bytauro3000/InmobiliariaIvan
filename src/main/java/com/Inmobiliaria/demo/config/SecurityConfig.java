@@ -47,7 +47,7 @@ public class SecurityConfig {
         
                 .requestMatchers("/api/contratos/**").hasRole("SECRETARIA")
                 
-
+                .requestMatchers("/api/separaciones/**").hasRole("SECRETARIA")
                 
                 // Lote API: permite acceso solo al rol SOPORTE
                 .requestMatchers("/api/lotes/**").hasRole("SOPORTE")
