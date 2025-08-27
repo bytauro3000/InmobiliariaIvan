@@ -28,6 +28,7 @@ public class AuthController {
     @Autowired
     private UsuarioService usuarioService; 
 
+ // Controlador principal para manejar la autenticación (login)
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> authenticateUser(@RequestBody LoginRequest loginRequest) {
         // Autenticar al usuario
@@ -35,12 +36,13 @@ public class AuthController {
                 new UsernamePasswordAuthenticationToken(loginRequest.getCorreo(), loginRequest.getContrasena())
         );
 
-        //Obtener el objeto completo del usuario
+        //Busca el usuario para obtener datos adicionales (nombre, apellidos)
         Usuario usuario = usuarioService.buscarByUsuario(loginRequest.getCorreo());
 
-        //Generar un JWT con los datos adicionales
+        // Genera el JWT si la autenticación es exitosa
         String token = jwtUtil.generateToken(authentication, usuario); // Pasa el objeto usuario a JwtUtil
-
+        
+        //Devuelve el token en la respuesta
         return ResponseEntity.ok(new LoginResponse(token));
     }
 }
