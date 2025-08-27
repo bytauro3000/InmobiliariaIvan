@@ -23,13 +23,10 @@ import java.util.List;
 @EnableWebSecurity
 @EnableMethodSecurity(securedEnabled = true)
 public class SecurityConfig {
-    
-    // ✅ No uses @Autowired aquí, esto crea el ciclo.
-
     @Bean
     public SecurityFilterChain filterChain(
         HttpSecurity http,
-        // ✅ Inyecta el filtro como un parámetro del método.
+        //Inyecta el filtro como un parámetro del método.
         JwtAuthenticationFilter jwtAuthenticationFilter
     ) throws Exception {
         http
@@ -40,9 +37,9 @@ public class SecurityConfig {
             		
             
                 .requestMatchers("/api/auth/login").permitAll()
-             // ✅ Permite que SECRETARIA acceda a todos los endpoints de clientes
+             //Permite que SECRETARIA acceda a todos los endpoints de clientes
                 .requestMatchers("/api/clientes/**").hasRole("SECRETARIA")
-             // ✅ Permite que SECRETARIA acceda a todos los endpoints de distritos
+             //Permite que SECRETARIA acceda a todos los endpoints de distritos
                 .requestMatchers("/api/distritos/**").hasRole("SECRETARIA")
              
                 //Lote API
@@ -53,7 +50,7 @@ public class SecurityConfig {
                 
                 .anyRequest().authenticated()
             )
-            // ✅ Agrega el filtro que se inyectó en el método.
+            //Agrega el filtro que se inyectó en el método.
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         
