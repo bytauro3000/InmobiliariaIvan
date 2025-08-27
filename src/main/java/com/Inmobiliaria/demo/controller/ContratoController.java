@@ -6,8 +6,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import com.Inmobiliaria.demo.dto.SeparacionDTO;
+import com.Inmobiliaria.demo.dto.ContratoRequestDTO;
 import com.Inmobiliaria.demo.entity.*;
+import com.Inmobiliaria.demo.enums.TipoPropietario;
 import com.Inmobiliaria.demo.service.*;
 import java.util.List;
 
@@ -23,20 +24,12 @@ public class ContratoController {
     @Autowired private UsuarioService usuarioService;
     @Autowired private ContratoClienteService contratoClienteService;
     @Autowired private ContratoLoteService contratoLoteService;
-    @Autowired private SeparacionService separacionService;
+   
 
-
-    // Clase interna para mapear los datos de entrada del JSON
-    private static class ContratoRequestDTO {
-        public Contrato contrato;
-        public List<Integer> idClientes;
-        public List<Integer> idLotes;
-        public Integer idSeparacion;
-    }
 
     @PostMapping("/agregar")
     public ResponseEntity<Contrato> guardarContrato(
-        @RequestBody ContratoRequestDTO requestDTO,
+        @RequestBody ContratoRequestDTO requestDTO, //Ahora usa el DTO importado
         Principal principal
     ) {
         Contrato contrato = requestDTO.contrato;
@@ -67,7 +60,7 @@ public class ContratoController {
                         cc.setId(contratoClienteId);
                         cc.setContrato(contratoGuardado);
                         cc.setCliente(cliente);
-                        cc.setTipoPropietario("Titular");
+                        cc.setTipoPropietario(TipoPropietario.TITULAR);
                         contratoClienteService.guardar(cc);
                     }
                 }
@@ -75,7 +68,7 @@ public class ContratoController {
 
             if (requestDTO.idLotes != null) {
                 for (Integer idLote : requestDTO.idLotes) {
-                    Lote lote = loteService.obtenerLotePorId(idLote); // ✅ Línea corregida aquí
+                    Lote lote = loteService.obtenerLotePorId(idLote); 
                     if (lote != null) {
                         ContratoLoteId contratoLoteId = new ContratoLoteId(contratoGuardado.getIdContrato(), idLote);
                         ContratoLote cl = new ContratoLote();
@@ -94,14 +87,5 @@ public class ContratoController {
     @GetMapping("/listar")
     public List<Contrato> listarContratos() {
         return contratoService.listarContratos();
-    }
-    
-    @GetMapping("/separaciones/buscar")
-    public List<SeparacionDTO> buscarSeparaciones(@RequestParam(value = "filtro", required = false) String filtro) {
-        // Devuelve una lista de separaciones basada en el DNI o apellido del cliente
-        if (filtro == null || filtro.trim().isEmpty()) {
-            return List.of();
-        }
-        return separacionService.buscarPorDniOApellido(filtro);
     }
 }

@@ -1,6 +1,6 @@
-package com.Inmobiliaria.demo.enums;
-
-public enum TipoContrato {
-    CONTADO,
-    FINANCIADO
-}
+	package com.Inmobiliaria.demo.enums;
+	
+	public enum TipoContrato {
+	    CONTADO,
+	    FINANCIADO
+	}
