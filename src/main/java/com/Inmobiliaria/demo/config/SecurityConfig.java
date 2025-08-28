@@ -43,7 +43,9 @@ public class SecurityConfig {
              	// Permite que SECRETARIA acceda a todos los endpoints de clientes
                 .requestMatchers("/api/clientes/**").hasRole("SECRETARIA")
              	// Permite que SECRETARIA acceda a todos los endpoints de distritos
-                .requestMatchers("/api/distritos/**").hasRole("SECRETARIA")
+        
+                .requestMatchers("/api/distritos/**").hasAnyRole("SECRETARIA", "SOPORTE")
+
         
                 .requestMatchers("/api/contratos/**").hasRole("SECRETARIA")
                 
@@ -55,6 +57,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/lotes/**").hasRole("SOPORTE")
              	// Programa API: permite acceso solo al rol SOPORTE
                 .requestMatchers("/api/programas/**").hasRole("SOPORTE")
+                .requestMatchers("/api/distritos/**").hasRole("SOPORTE")
                 
                 // Cualquier otra petición debe estar autenticada
                 .anyRequest().authenticated()
