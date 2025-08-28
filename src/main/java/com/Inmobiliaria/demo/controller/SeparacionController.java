@@ -2,12 +2,19 @@ package com.Inmobiliaria.demo.controller;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.Inmobiliaria.demo.dto.SeparacionDTO;
+import com.Inmobiliaria.demo.entity.Lote;
+import com.Inmobiliaria.demo.entity.Separacion;
 import com.Inmobiliaria.demo.service.SeparacionService;
 
 @RestController
@@ -27,4 +34,37 @@ public class SeparacionController {
         // Delega la lógica de búsqueda al servicio
         return separacionService.buscarPorDniOApellido(filtro);
     }
+
+    //listar todas las separaciones:
+    @GetMapping
+    public ResponseEntity<List<Separacion>>listaTodo(){
+    	return ResponseEntity.ok(separacionService.listadoSeparacion());
+    }
+    
+    @GetMapping("/{id}")
+    public ResponseEntity<Separacion> obtenerPorId (@PathVariable Integer id) {
+        Separacion separa = separacionService.obtenerPorId(id);
+        return (separa != null) ? ResponseEntity.ok(separa) : ResponseEntity.notFound().build();
+    }
+    
+    @PostMapping("/{id}")
+    public ResponseEntity<Separacion>  actualizarSeparacion(@PathVariable Integer id, @RequestBody Separacion sepa){
+    	sepa.setIdSeparacion(id);
+    	return (sepa != null) ? ResponseEntity.ok(separacionService.actualizarSeparacion(sepa)) : ResponseEntity.notFound().build();
+    }
+    
+    @PostMapping
+    public ResponseEntity<Separacion> crearSeparacion(@RequestBody Separacion sepa){
+    	Separacion nueva = separacionService.crearSeparacion(sepa);
+    	return ResponseEntity.ok(nueva);
+    }
+
+    
+    @DeleteMapping("/{id}")
+    public void eliminarSeparacion(@PathVariable Integer id) {
+    	separacionService.eliminarSeparacion(id);
+    }
+    
+    
+
 }
