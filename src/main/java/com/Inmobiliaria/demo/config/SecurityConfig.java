@@ -45,7 +45,7 @@ public class SecurityConfig {
              	// Permite que SECRETARIA acceda a todos los endpoints de distritos
                 .requestMatchers("/api/distritos/**").hasRole("SECRETARIA")
         
-                .requestMatchers("/api/contratos/**").hasRole("SECRETARIA")
+                .requestMatchers("/api/contratos/**").permitAll()
                 
                 .requestMatchers("/api/separaciones/**").hasRole("SECRETARIA")
                 

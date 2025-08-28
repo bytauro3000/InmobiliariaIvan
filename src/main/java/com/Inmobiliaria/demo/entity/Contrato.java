@@ -5,12 +5,8 @@ import java.util.Date;
 import java.util.List;
 
 import org.springframework.format.annotation.DateTimeFormat;
-
 import com.Inmobiliaria.demo.enums.TipoContrato;
-
-
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 @Entity
@@ -28,11 +24,11 @@ public class Contrato {
 
     @ManyToOne
     @JoinColumn(name = "id_separacion", nullable = true)
-    private Separacion separacion; // Puede ser null si es venta directa
+    private Separacion separacion;
 
     @ManyToOne
     @JoinColumn(name = "id_vendedor", nullable = true)
-    private Vendedor vendedor; // 🔹 NUEVO: Vendedor que hizo el contrato
+    private Vendedor vendedor;
 
     @ManyToOne
     @JoinColumn(name = "idUsuario", nullable = false)
@@ -40,30 +36,27 @@ public class Contrato {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_contrato", nullable = false)
-    private TipoContrato tipoContrato; // 🔹 NUEVO: CONTADO o FINANCIADO
+    private TipoContrato tipoContrato = TipoContrato.CONTADO;
 
     @Temporal(TemporalType.DATE)
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     @Column(name = "fecha_contrato", nullable = false)
     private Date fechaContrato;
 
-    @NotNull(message = "El monto total es obligatorio")
     @Column(name = "monto_total", precision = 12, scale = 2, nullable = false)
     private BigDecimal montoTotal;
 
-    @Column(name = "inicial", precision = 12, scale = 2)
-    private BigDecimal inicial;
+    @Column(name = "inicial", precision = 12, scale = 2, nullable = true)
+    private BigDecimal inicial = BigDecimal.ZERO;
 
-    @Column(name = "saldo", precision = 12, scale = 2)
-    private BigDecimal saldo;
+    @Column(name = "saldo", precision = 12, scale = 2, nullable = true)
+    private BigDecimal saldo = BigDecimal.ZERO;
 
-    @Column(name = "cantidad_letras")
-    private Integer cantidadLetras;
+    @Column(name = "cantidad_letras", nullable = true)
+    private Integer cantidadLetras = 0;
 
-    @Column(name = "observaciones", columnDefinition = "TEXT")
+    @Column(name = "observaciones", columnDefinition = "TEXT", nullable = true)
     private String observaciones;
-
-    // Relaciones adicionales
 
     @OneToMany(mappedBy = "contrato")
     private List<LetraCambio> letrasCambio;

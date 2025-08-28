@@ -1,9 +1,8 @@
 package com.Inmobiliaria.demo.controller;
 
-import com.Inmobiliaria.demo.entity.Contrato;
+
 import com.Inmobiliaria.demo.entity.Distrito;
 import com.Inmobiliaria.demo.entity.LetraCambio;
-import com.Inmobiliaria.demo.service.ContratoService;
 import com.Inmobiliaria.demo.service.DistritoService;
 import com.Inmobiliaria.demo.service.LetraCambioService;
 
@@ -17,6 +16,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Date;
@@ -30,9 +30,6 @@ public class LetrasCambioController {
 
     @Autowired
     private LetraCambioService letraCambioService;
-
-    @Autowired
-    private ContratoService contratoService;
 
     @Autowired
     private DistritoService distritoService;
@@ -64,15 +61,18 @@ public class LetrasCambioController {
         try {
             // Normalizar importe (quita símbolo de dólar y comas)
             String limpio = importeStr.replaceAll("[$,]", "").trim();
-            Double importe = Double.parseDouble(limpio);
+            BigDecimal importe = new BigDecimal(limpio);
 
-            Contrato contrato = contratoService.buscarPorId(idContrato);
+            // 👉 Elimina esta línea. El servicio LetraCambioService se encargará de buscar el contrato.
+            // Contrato contrato = contratoService.buscarPorId(idContrato);
+            
             Distrito distrito = distritoService.obtenerPorId(idDistrito);
 
             Date giroDate = Date.from(fechaGiro.atStartOfDay(ZoneId.systemDefault()).toInstant());
             Date vencimientoDate = Date.from(fechaVencimientoInicial.atStartOfDay(ZoneId.systemDefault()).toInstant());
 
-            letraCambioService.generarLetrasDesdeContrato(contrato, distrito, giroDate, vencimientoDate, importe, importeLetras);
+            // 👉 Llama al servicio con el idContrato, no con la entidad Contrato
+            letraCambioService.generarLetrasDesdeContrato(idContrato, distrito, giroDate, vencimientoDate, importe, importeLetras);
 
             redirectAttributes.addFlashAttribute("mensaje", "Letra generada correctamente.");
         } catch (Exception e) {
