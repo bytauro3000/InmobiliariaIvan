@@ -18,6 +18,11 @@ public class LoteServiceImpl implements LoteService{
 	public List<Lote> listarLotes() {
 		return loteRepository.findAll();
 	}
+	
+	@Override
+    public List<Lote> listarLotesPorPrograma(Integer idPrograma) {
+        return loteRepository.findByProgramaIdPrograma(idPrograma);
+    }
 
     @Override
     public Lote actualizarLote(Lote lote) {

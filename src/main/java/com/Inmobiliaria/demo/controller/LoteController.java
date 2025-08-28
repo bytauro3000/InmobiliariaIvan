@@ -31,6 +31,16 @@ public class LoteController {
     public ResponseEntity<List<Lote>> listarLotes() {
         return ResponseEntity.ok(loteService.listarLotes());
     }
+    
+    //Se usa para contrato 
+    @GetMapping("/listarPorPrograma/{idPrograma}")
+    public ResponseEntity<List<Lote>> listarLotesPorPrograma(@PathVariable Integer idPrograma) {
+        List<Lote> lotes = loteService.listarLotesPorPrograma(idPrograma);
+        if (lotes.isEmpty()) {
+            return ResponseEntity.noContent().build(); 
+        }
+        return ResponseEntity.ok(lotes);
+    }
 
     //Obtener un lote por su ID
     @GetMapping("/{id}")

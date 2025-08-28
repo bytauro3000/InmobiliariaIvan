@@ -8,6 +8,8 @@ public interface LoteService {
 
 	List<Lote> listarLotes();
 	
+	List<Lote> listarLotesPorPrograma(Integer idPrograma);
+	
 	Lote actualizarLote(Lote reg);
 	
 	Lote obtenerLotePorId(Integer id);
