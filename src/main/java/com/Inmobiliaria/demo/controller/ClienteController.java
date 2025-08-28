@@ -34,11 +34,11 @@ public class ClienteController {
         return clienteService.buscarClientePorNumDoc(numDoc);
     }
   
-    @GetMapping("/buscar/apellidos/{apellidos}")
-    public List<Cliente> obtenerClientesPorApellidos(@PathVariable String apellidos) {
-        return clienteService.findByApellidos(apellidos);
+    @GetMapping("/buscar/filtro/{filtro}")
+    public List<Cliente> buscarClientesPorFiltro(@PathVariable String filtro) {
+        return clienteService.buscarPorApellidosYNombres(filtro);
     }
-  
+
     @PostMapping("/agregar")
     public ResponseEntity<Cliente> agregarCliente(@RequestBody Cliente cliente) {
         Cliente nuevoCliente = clienteService.guardarCliente(cliente);
