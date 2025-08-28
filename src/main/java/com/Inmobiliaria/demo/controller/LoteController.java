@@ -1,7 +1,6 @@
 package com.Inmobiliaria.demo.controller;
 
 import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -12,11 +11,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.Inmobiliaria.demo.dto.LoteProgramaResponseDTO;
 import com.Inmobiliaria.demo.entity.Lote;
 import com.Inmobiliaria.demo.service.LoteService;
-
-
-
 
 @RestController
 @RequestMapping("/api/lotes")
@@ -32,14 +29,14 @@ public class LoteController {
         return ResponseEntity.ok(loteService.listarLotes());
     }
     
-    //Se usa para contrato 
+    //USO esta lista para VISTA CONTRATO
     @GetMapping("/listarPorPrograma/{idPrograma}")
-    public ResponseEntity<List<Lote>> listarLotesPorPrograma(@PathVariable Integer idPrograma) {
-        List<Lote> lotes = loteService.listarLotesPorPrograma(idPrograma);
-        if (lotes.isEmpty()) {
-            return ResponseEntity.noContent().build(); 
+    public ResponseEntity<List<LoteProgramaResponseDTO>> listarLotesPorPrograma(@PathVariable Integer idPrograma) {
+        List<LoteProgramaResponseDTO> lotesDTO = loteService.listarLotesPorPrograma(idPrograma);
+        if (lotesDTO.isEmpty()) {
+            return ResponseEntity.noContent().build();
         }
-        return ResponseEntity.ok(lotes);
+        return ResponseEntity.ok(lotesDTO);
     }
 
     //Obtener un lote por su ID
