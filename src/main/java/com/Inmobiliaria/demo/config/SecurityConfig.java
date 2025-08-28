@@ -53,6 +53,9 @@ public class SecurityConfig {
                 
                 .requestMatchers("/api/separaciones/**").hasRole("SECRETARIA")
                 
+                // 🚨 Exportar Excel de Programas → SOPORTE y SECRETARIA
+                .requestMatchers("/api/programas/reporte-excel").hasAnyRole("SOPORTE", "SECRETARIA")
+                
                 // Lote API: permite acceso solo al rol SOPORTE
                 .requestMatchers("/api/lotes/**").hasRole("SOPORTE")
              	// Programa API: permite acceso solo al rol SOPORTE
