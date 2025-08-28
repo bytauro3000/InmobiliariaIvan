@@ -3,8 +3,6 @@ package com.Inmobiliaria.demo.entity;
 import java.math.BigDecimal;
 import java.util.Date;
 
-import com.Inmobiliaria.demo.enums.Genero;
-
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -44,9 +42,8 @@ public class Vendedor {
     @Temporal(TemporalType.DATE)
     private Date fechaNacimiento;
     
-    @Enumerated(EnumType.STRING)
-    @Column(name = "genero", nullable = false)
-    private Genero genero;
+    @Column(name = "genero", length = 10, nullable = false) // <- ahora es String
+    private String genero; //Elimina el enum genero
     
     @Column(name = "comision", precision = 5, scale = 2)
     private BigDecimal comision = BigDecimal.ZERO;
