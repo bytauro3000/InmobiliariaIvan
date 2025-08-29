@@ -39,7 +39,7 @@ public class SecurityConfig {
                 // 2. Reglas para el rol SOPORTE
                 .requestMatchers("/api/dashboard/**").hasRole("SOPORTE")
                 .requestMatchers("/api/lotes/**").hasRole("SOPORTE")
-                .requestMatchers("/api/programas/**").hasRole("SOPORTE")
+                .requestMatchers("/api/programas/**").hasAnyRole("SOPORTE","SECRETARIA")
                 
                 // 3. Reglas para el rol SECRETARIA
                 .requestMatchers("/api/clientes/**").hasRole("SECRETARIA")
