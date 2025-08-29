@@ -7,10 +7,9 @@ import com.Inmobiliaria.demo.entity.Separacion;
 public interface SeparacionService {
     List<SeparacionDTO> buscarPorDniOApellido(String filtro);
     
-<<<<<<< HEAD
- // Nuevo método para buscar por id
+
     Separacion buscarPorId(Integer idSeparacion);
-=======
+
     List<Separacion> listadoSeparacion();
     
     Separacion obtenerPorId(Integer id);
@@ -21,5 +20,4 @@ public interface SeparacionService {
     
     Separacion actualizarSeparacion(Separacion reg);
     
->>>>>>> branch 'main' of https://github.com/bytauro3000/InmobiliariaIvan
 }

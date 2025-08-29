@@ -20,14 +20,13 @@ public class SeparacionServiceImpl implements SeparacionService {
     public List<SeparacionDTO> buscarPorDniOApellido(String filtro) {
         return separacionRepository.buscarPorDniOApellido(filtro);
     }
-<<<<<<< HEAD
+
     
     // Implementación del método buscarPorId
     @Override
     public Separacion buscarPorId(Integer idSeparacion) {
         return separacionRepository.findById(idSeparacion).orElse(null);
     }
-=======
 
 	@Override
 	public List<Separacion> listadoSeparacion(){
@@ -55,5 +54,5 @@ public class SeparacionServiceImpl implements SeparacionService {
 		// TODO Auto-generated method stub
 		return separacionRepository.save(reg);
 	}
->>>>>>> branch 'main' of https://github.com/bytauro3000/InmobiliariaIvan
+
 }

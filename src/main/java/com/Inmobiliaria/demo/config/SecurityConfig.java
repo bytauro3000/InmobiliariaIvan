@@ -59,12 +59,12 @@ public class SecurityConfig {
                 // Lote API: permite acceso solo al rol SOPORTE
                 //.requestMatchers("/api/lotes/**").hasRole("SOPORTE")
              	// Programa API: permite acceso solo al rol SOPORTE
-<<<<<<< HEAD
+
                 .requestMatchers("/api/programas/**").permitAll()
-=======
+
                 .requestMatchers("/api/programas/**").hasRole("SOPORTE")
                 .requestMatchers("/api/distritos/**").hasRole("SOPORTE")
->>>>>>> branch 'main' of https://github.com/bytauro3000/InmobiliariaIvan
+
                 
                 // Cualquier otra petición debe estar autenticada
                 .anyRequest().authenticated()
