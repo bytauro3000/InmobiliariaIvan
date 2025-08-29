@@ -178,6 +178,13 @@
 			<version>0.11.5</version> <!-- Proporciona la integración con Jackson para JSON -->
 			<scope>runtime</scope> <!-- Necesaria en tiempo de ejecución -->
 		</dependency>
+		
+		<dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.2.5</version>
+        </dependency>
+
 	</dependencies>
 
 	<build>

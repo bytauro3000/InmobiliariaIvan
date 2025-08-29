@@ -1,4 +1,5 @@
 package com.Inmobiliaria.demo.service.impl;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -8,6 +9,9 @@ import org.springframework.stereotype.Service;
 import com.Inmobiliaria.demo.entity.Vendedor;
 import com.Inmobiliaria.demo.repository.VendedorRepository;
 import com.Inmobiliaria.demo.service.VendedorService;
+
+
+
 
 @Service
 public class VendedorServiceImpl implements VendedorService{
@@ -53,4 +57,7 @@ public class VendedorServiceImpl implements VendedorService{
     public void eliminarVendedor(Integer id) {
         vendedorRepository.deleteById(id);
     }
+    
+   
+
 }

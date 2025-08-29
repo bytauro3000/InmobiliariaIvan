@@ -2,6 +2,9 @@ package com.Inmobiliaria.demo.entity;
 
 import java.util.Date;
 
+import com.Inmobiliaria.demo.enums.EstadoLote;
+import com.Inmobiliaria.demo.enums.EstadoSeparacion;
+
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -41,8 +44,9 @@ public class Separacion {
     @Column(name = "fecha_limite", nullable = false)
     private Date fechaLimite;
 
-    @Column(name = "estado")
-    private String estado;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado", length = 20)
+    private EstadoSeparacion estado = EstadoSeparacion.EN_PROCESO;
 
     @Column(name = "observaciones")
     private String observaciones;

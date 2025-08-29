@@ -20,10 +20,40 @@ public class SeparacionServiceImpl implements SeparacionService {
     public List<SeparacionDTO> buscarPorDniOApellido(String filtro) {
         return separacionRepository.buscarPorDniOApellido(filtro);
     }
+<<<<<<< HEAD
     
     // Implementación del método buscarPorId
     @Override
     public Separacion buscarPorId(Integer idSeparacion) {
         return separacionRepository.findById(idSeparacion).orElse(null);
     }
+=======
+
+	@Override
+	public List<Separacion> listadoSeparacion(){
+		return separacionRepository.findAll();
+	}
+
+	@Override
+	public Separacion obtenerPorId(Integer id) {
+		return separacionRepository.findById(id).orElse(null);
+	}
+
+	@Override
+	public Separacion crearSeparacion(Separacion reg) {
+		return separacionRepository.save(reg);
+	}
+
+	@Override
+	public void eliminarSeparacion(Integer id) {
+		separacionRepository.deleteById(id);
+		
+	}
+
+	@Override
+	public Separacion actualizarSeparacion(Separacion reg) {
+		// TODO Auto-generated method stub
+		return separacionRepository.save(reg);
+	}
+>>>>>>> branch 'main' of https://github.com/bytauro3000/InmobiliariaIvan
 }

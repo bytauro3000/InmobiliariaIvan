@@ -43,7 +43,9 @@ public class SecurityConfig {
              	// Permite que SECRETARIA acceda a todos los endpoints de clientes
                 .requestMatchers("/api/clientes/**").hasRole("SECRETARIA")
              	// Permite que SECRETARIA acceda a todos los endpoints de distritos
-                .requestMatchers("/api/distritos/**").hasRole("SECRETARIA")
+        
+                .requestMatchers("/api/distritos/**").hasAnyRole("SECRETARIA", "SOPORTE")
+
         
                 .requestMatchers("/api/contratos/**").hasRole("SECRETARIA")
                 
@@ -51,10 +53,18 @@ public class SecurityConfig {
                 
                 .requestMatchers("/api/separaciones/**").hasRole("SECRETARIA")
                 
+                // 🚨 Exportar Excel de Programas → SOPORTE y SECRETARIA
+                .requestMatchers("/api/programas/reporte-excel").hasAnyRole("SOPORTE", "SECRETARIA")
+                
                 // Lote API: permite acceso solo al rol SOPORTE
                 //.requestMatchers("/api/lotes/**").hasRole("SOPORTE")
              	// Programa API: permite acceso solo al rol SOPORTE
+<<<<<<< HEAD
                 .requestMatchers("/api/programas/**").permitAll()
+=======
+                .requestMatchers("/api/programas/**").hasRole("SOPORTE")
+                .requestMatchers("/api/distritos/**").hasRole("SOPORTE")
+>>>>>>> branch 'main' of https://github.com/bytauro3000/InmobiliariaIvan
                 
                 // Cualquier otra petición debe estar autenticada
                 .anyRequest().authenticated()
