@@ -49,7 +49,7 @@ public class SecurityConfig {
         
                 .requestMatchers("/api/contratos/**").hasRole("SECRETARIA")
                 
-                .requestMatchers("/api/lotes/**").permitAll()
+                .requestMatchers("/api/lotes/**").hasAnyRole("SOPORTE", "SECRETARIA")
                 
                 .requestMatchers("/api/separaciones/**").hasRole("SECRETARIA")
                 
