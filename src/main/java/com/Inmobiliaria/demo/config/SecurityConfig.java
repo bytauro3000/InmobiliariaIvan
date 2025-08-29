@@ -52,9 +52,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/separaciones/**").hasRole("SECRETARIA")
                 
                 // Lote API: permite acceso solo al rol SOPORTE
-                .requestMatchers("/api/lotes/**").hasRole("SOPORTE")
+                //.requestMatchers("/api/lotes/**").hasRole("SOPORTE")
              	// Programa API: permite acceso solo al rol SOPORTE
-                .requestMatchers("/api/programas/**").hasRole("SOPORTE")
+                .requestMatchers("/api/programas/**").permitAll()
                 
                 // Cualquier otra petición debe estar autenticada
                 .anyRequest().authenticated()

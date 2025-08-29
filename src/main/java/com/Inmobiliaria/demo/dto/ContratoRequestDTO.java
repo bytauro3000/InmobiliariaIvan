@@ -1,7 +1,6 @@
 package com.Inmobiliaria.demo.dto;
 
 import java.util.List;
-import com.Inmobiliaria.demo.entity.Contrato;
 import lombok.Data;
 import lombok.NoArgsConstructor; 
 import lombok.AllArgsConstructor;
@@ -10,9 +9,16 @@ import lombok.AllArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ContratoRequestDTO {
-    
-    private Contrato contrato;
+    private String fechaContrato;               // formato 'yyyy-MM-dd'
+    private String tipoContrato;                 // 'CONTADO' o 'FINANCIADO'
+    private Double montoTotal;
+    private Double inicial;
+    private Double saldo;
+    private Integer cantidadLetras;
+    private String observaciones;
+    private Integer idVendedor;
+    private Integer idUsuario;                   // O se obtiene del Principal en controller
+    private Integer idSeparacion;
     private List<Integer> idClientes;
     private List<Integer> idLotes;
-    private Integer idSeparacion;
 }
