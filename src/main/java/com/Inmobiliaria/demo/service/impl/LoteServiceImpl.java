@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import com.Inmobiliaria.demo.dto.LoteProgramaResponseDTO;
 import com.Inmobiliaria.demo.entity.Lote;
+import com.Inmobiliaria.demo.enums.EstadoLote;
 import com.Inmobiliaria.demo.repository.LoteRepository;
 import com.Inmobiliaria.demo.service.LoteService;
 
@@ -20,10 +21,11 @@ public class LoteServiceImpl implements LoteService{
 		return loteRepository.findAll();
 	}
 	
+	
 	@Override
 	public List<LoteProgramaResponseDTO> listarLotesPorPrograma(Integer idPrograma) {
-	    List<Lote> lotes = loteRepository.findByProgramaIdPrograma(idPrograma);
-
+	    // ✅ MODIFICACIÓN: Llamas al nuevo método del repositorio que filtra por estado.
+		List<Lote> lotes = loteRepository.findByProgramaIdProgramaAndEstadoEquals(idPrograma, EstadoLote.Disponible);
 	    return lotes.stream().map(lote -> {
 	        LoteProgramaResponseDTO dto = new LoteProgramaResponseDTO();
 	        dto.setIdLote(lote.getIdLote());
@@ -31,16 +33,15 @@ public class LoteServiceImpl implements LoteService{
 	        dto.setNumeroLote(lote.getNumeroLote());
 	        dto.setArea(lote.getArea());
 
-	        // Aquí accedes al programa relacionado para mapear solo los campos que quieres
 	        if (lote.getPrograma() != null) {
 	            dto.setIdPrograma(lote.getPrograma().getIdPrograma());
 	            dto.setNombrePrograma(lote.getPrograma().getNombrePrograma());
 	            dto.setPrecioM2(lote.getPrograma().getPrecioM2());
 	        }
-
 	        return dto;
 	    }).toList();
 	}
+
 
     @Override
     public Lote actualizarLote(Lote lote) {

@@ -21,6 +21,13 @@ public class SeparacionServiceImpl implements SeparacionService {
         return separacionRepository.buscarPorDniOApellido(filtro);
     }
 
+    
+    // Implementación del método buscarPorId
+    @Override
+    public Separacion buscarPorId(Integer idSeparacion) {
+        return separacionRepository.findById(idSeparacion).orElse(null);
+    }
+
 	@Override
 	public List<Separacion> listadoSeparacion(){
 		return separacionRepository.findAll();
@@ -47,4 +54,5 @@ public class SeparacionServiceImpl implements SeparacionService {
 		// TODO Auto-generated method stub
 		return separacionRepository.save(reg);
 	}
+
 }
