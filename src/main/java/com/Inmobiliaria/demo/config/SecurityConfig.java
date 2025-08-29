@@ -66,6 +66,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/programas/**").hasRole("SOPORTE")
                 .requestMatchers("/api/distritos/**").hasRole("SOPORTE")
 
+                .requestMatchers("/api/vendedores**").hasRole("SECRETARIA")
                 
                 // Cualquier otra petición debe estar autenticada
 

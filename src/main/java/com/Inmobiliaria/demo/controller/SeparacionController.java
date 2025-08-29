@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.Inmobiliaria.demo.dto.SeparacionDTO;
+import com.Inmobiliaria.demo.dto.SeparacionResumenDTO;
 import com.Inmobiliaria.demo.entity.Lote;
 import com.Inmobiliaria.demo.entity.Separacion;
 import com.Inmobiliaria.demo.service.SeparacionService;
@@ -65,6 +66,9 @@ public class SeparacionController {
     	separacionService.eliminarSeparacion(id);
     }
     
-    
+    @GetMapping("/resumen")
+    public List<SeparacionResumenDTO> obtenerResumen() {
+        return separacionService.listarResumen();
+    }
 
 }
