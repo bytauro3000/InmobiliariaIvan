@@ -9,5 +9,5 @@ import com.Inmobiliaria.demo.entity.LetraCambio;
 
 @Repository 
 public interface LetraCambioRepository extends JpaRepository<LetraCambio, Integer> {
-    List<LetraCambio> findByContratoIdContrato(Integer idContrato);
+	 List<LetraCambio> findByContratoIdContrato(Integer idContrato);
 }
