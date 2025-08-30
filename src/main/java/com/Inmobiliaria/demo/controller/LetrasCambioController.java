@@ -20,7 +20,7 @@ public class LetrasCambioController {
     private LetraCambioService letraCambioService;
 
  // Listar letras por contrato
-    @GetMapping("/contrato/{idContrato}")
+    @GetMapping("/listar/{idContrato}")
     public ResponseEntity<List<LetraCambioDTO>> listarPorContrato(@PathVariable Integer idContrato) {
         List<LetraCambioDTO> listaLetras = letraCambioService.listarPorContrato(idContrato);
         return new ResponseEntity<>(listaLetras, HttpStatus.OK);

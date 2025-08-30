@@ -8,6 +8,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.Inmobiliaria.demo.entity.Contrato;
+import com.Inmobiliaria.demo.entity.ContratoCliente;
 import com.Inmobiliaria.demo.entity.Distrito;
 import com.Inmobiliaria.demo.entity.LetraCambio;
 import com.Inmobiliaria.demo.enums.EstadoLetra;
@@ -38,13 +39,28 @@ public class LetraCambioServiceImpl implements LetraCambioService {
     @Override
     public List<LetraCambioDTO> listarPorContrato(Integer idContrato) {
         List<LetraCambio> listaLetras = letraCambioRepository.findByContratoIdContrato(idContrato);
-        
-        // Usamos ModelMapper para hacer la conversión de una manera sencilla
+
         return listaLetras.stream()
-            .map(letra -> modelMapper.map(letra, LetraCambioDTO.class))
+            .map(letra -> {
+                LetraCambioDTO dto = modelMapper.map(letra, LetraCambioDTO.class);
+                // Obtenemos el contrato asociado a la letra
+                Contrato contrato = letra.getContrato();
+                
+                // Verificamos si hay clientes asociados al contrato
+                if (contrato != null && contrato.getClientes() != null && !contrato.getClientes().isEmpty()) {
+                    // Obtenemos el primer cliente de la lista de clientes del contrato
+                    ContratoCliente contratoCliente = contrato.getClientes().get(0);
+                    
+                    // Obtenemos el nombre del cliente del objeto Cliente asociado
+                    if (contratoCliente.getCliente() != null) {
+                        String nombreCompleto = contratoCliente.getCliente().getNombre() + " " + contratoCliente.getCliente().getApellidos();
+                        dto.setNombreCliente(nombreCompleto.trim()); // trim() para eliminar espacios al final
+                    }
+                }
+                return dto;
+            })
             .collect(Collectors.toList());
     }
-    
     
     @Override
     @Transactional

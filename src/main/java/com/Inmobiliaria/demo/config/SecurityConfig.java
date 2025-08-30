@@ -35,7 +35,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
             	// 1. Permite acceso a la ruta de login sin autenticación (la más específica)
                 .requestMatchers("/api/auth/login").permitAll()
-                
+                .requestMatchers("/api/letras/**").permitAll()
                 // 2. Reglas para el rol SOPORTE
                 .requestMatchers("/api/dashboard/**").hasRole("SOPORTE")
                 .requestMatchers("/api/lotes/**").hasAnyRole("SOPORTE", "SECRETARIA")
@@ -45,27 +45,15 @@ public class SecurityConfig {
                 // 3. Reglas para el rol SECRETARIA
                 .requestMatchers("/api/clientes/**").hasRole("SECRETARIA")
                 .requestMatchers("/api/contratos/**").hasRole("SECRETARIA")
+                .requestMatchers("/api/contratos/**").hasRole("SECRETARIA") 
                 
-               
-               
-                .requestMatchers("/api/separaciones/**").hasRole("SECRETARIA")
                 
                 // 4. Reglas compartidas entre SECRETARIA y SOPORTE
                 .requestMatchers("/api/distritos/**").hasAnyRole("SECRETARIA", "SOPORTE")
                 .requestMatchers("/api/programas/reporte-excel").hasAnyRole("SOPORTE", "SECRETARIA")
-                
-
-                // 5. Cualquier otra petición debe estar autenticada (la más general)
-
-                // Lote API: permite acceso solo al rol SOPORTE
-                //.requestMatchers("/api/lotes/**").hasRole("SOPORTE")
-             	// Programa API: permite acceso solo al rol SOPORTE
-
                 .requestMatchers("/api/programas/**").permitAll()
-
                 .requestMatchers("/api/programas/**").hasRole("SOPORTE")
                 .requestMatchers("/api/distritos/**").hasRole("SOPORTE")
-
                 .requestMatchers("/api/vendedores**").hasRole("SECRETARIA")
                 
                 // Cualquier otra petición debe estar autenticada
