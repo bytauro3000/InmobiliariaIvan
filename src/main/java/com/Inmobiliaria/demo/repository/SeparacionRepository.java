@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.Inmobiliaria.demo.dto.SeparacionDTO;
+import com.Inmobiliaria.demo.dto.SeparacionResumenDTO;
 import com.Inmobiliaria.demo.entity.Separacion;
 
 public interface SeparacionRepository extends JpaRepository<Separacion, Integer> {
@@ -15,4 +16,26 @@ public interface SeparacionRepository extends JpaRepository<Separacion, Integer>
 	           "FROM Separacion s WHERE LOWER(s.cliente.apellidos) LIKE LOWER(CONCAT('%', :filtro, '%')) " +
 	           "OR s.cliente.numDoc LIKE CONCAT('%', :filtro, '%')")
 	    List<SeparacionDTO> buscarPorDniOApellido(@Param("filtro") String filtro);
+	@Query("""
+		    SELECT new com.Inmobiliaria.demo.dto.SeparacionResumenDTO(
+		        s.idSeparacion,
+		        c.numDoc,
+		        CONCAT(
+		            COALESCE(c.nombre, ''), ' ',
+		            COALESCE(c.apellidos, '')
+		        ),
+		        CONCAT(
+		            COALESCE(l.manzana, ''), '-', COALESCE(l.numeroLote, '')
+		        ),
+		        s.monto,
+		        s.fechaSeparacion,
+		        s.fechaLimite,
+		        s.estado
+		    )
+		    FROM Separacion s
+		    JOIN s.cliente c
+		    JOIN s.lote l
+		""")
+		List<SeparacionResumenDTO> obtenerResumenSeparaciones();
+
 }

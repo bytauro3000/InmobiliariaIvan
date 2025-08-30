@@ -2,6 +2,7 @@ package com.Inmobiliaria.demo.service;
 
 import java.util.List;
 import com.Inmobiliaria.demo.dto.SeparacionDTO;
+import com.Inmobiliaria.demo.dto.SeparacionResumenDTO;
 import com.Inmobiliaria.demo.entity.Separacion;
 
 public interface SeparacionService {
@@ -19,5 +20,6 @@ public interface SeparacionService {
     void eliminarSeparacion(Integer id);
     
     Separacion actualizarSeparacion(Separacion reg);
-    
+    List<SeparacionResumenDTO> listarResumen();
+
 }
