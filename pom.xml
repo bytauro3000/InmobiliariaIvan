@@ -178,6 +178,11 @@
 			<version>0.11.5</version> <!-- Proporciona la integración con Jackson para JSON -->
 			<scope>runtime</scope> <!-- Necesaria en tiempo de ejecución -->
 		</dependency>
+		<dependency>
+    <groupId>org.modelmapper</groupId>
+    <artifactId>modelmapper</artifactId>
+    <version>3.1.0</version>
+</dependency>
 		
 		<dependency>
             <groupId>org.apache.poi</groupId>
