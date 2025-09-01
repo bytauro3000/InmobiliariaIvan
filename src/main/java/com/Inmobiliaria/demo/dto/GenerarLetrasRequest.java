@@ -1,6 +1,10 @@
 package com.Inmobiliaria.demo.dto;
 
-import java.util.Date;
+
+
+
+import java.time.LocalDate;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,8 +14,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class GenerarLetrasRequest {
     private Integer idDistrito;
-    private Date fechaGiro;
-    private Date fechaVencimientoInicial;
+    private LocalDate fechaGiro;
+    private LocalDate fechaVencimientoInicial;
     private String importe;
     private String importeLetras;
 }

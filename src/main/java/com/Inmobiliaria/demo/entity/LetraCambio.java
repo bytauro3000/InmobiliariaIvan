@@ -1,11 +1,10 @@
 package com.Inmobiliaria.demo.entity;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Date;
-
 import com.Inmobiliaria.demo.enums.EstadoLetra;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
-
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -36,11 +35,11 @@ public class LetraCambio {
 
     @Temporal(TemporalType.DATE)
     @Column(name = "fecha_giro", nullable = false)
-    private Date fechaGiro;
+    private LocalDate fechaGiro;
 
     @Temporal(TemporalType.DATE)
     @Column(name = "fecha_vencimiento", nullable = false)
-    private Date fechaVencimiento;
+    private LocalDate  fechaVencimiento;
 
     @Column(name = "importe", nullable = false, precision = 12, scale = 2)
     private BigDecimal importe;

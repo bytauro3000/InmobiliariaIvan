@@ -1,11 +1,7 @@
 package com.Inmobiliaria.demo.dto;
 
 import java.math.BigDecimal;
-import java.util.Date;
-import java.util.List;
-
-import com.Inmobiliaria.demo.enums.TipoContrato;
-
+import java.time.LocalDate;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -16,15 +12,21 @@ import lombok.NoArgsConstructor;
 public class LetraCambioDTO {
 
     private Integer idLetra;
-    private Date fechaGiro;
-    private Date fechaVencimiento;
+    private LocalDate fechaGiro;
+    private LocalDate fechaVencimiento;
     private BigDecimal importe;
     private String importeLetras;
     private String estadoLetra;
     private String numeroLetra;
     
-    
     private Integer idContrato;
     private String nombreCliente;
 
+    private Integer idDistrito;
+    private String nombreDistrito;
+
+    private LocalDate fechaPago;
+    private String tipoComprobante;
+    private String numeroComprobante;
+    private String observaciones;
 }
