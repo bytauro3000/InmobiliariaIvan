@@ -40,6 +40,7 @@ public class LetraCambioServiceImpl implements LetraCambioService {
     private ModelMapper modelMapper;
 
     @Override
+    @Transactional
     public List<LetraCambioDTO> listarPorContrato(Integer idContrato) {
         List<LetraCambio> listaLetras = letraCambioRepository.findByContratoIdContrato(idContrato);
 
