@@ -18,6 +18,7 @@ import com.Inmobiliaria.demo.repository.ContratoRepository;
 import com.Inmobiliaria.demo.repository.DistritoRepository;
 import com.Inmobiliaria.demo.repository.LetraCambioRepository;
 import com.Inmobiliaria.demo.service.LetraCambioService;
+import com.Inmobiliaria.demo.util.NumeroALetrasUtil;
 import com.Inmobiliaria.demo.dto.GenerarLetrasRequest;
 import com.Inmobiliaria.demo.dto.LetraCambioDTO;
 
@@ -68,16 +69,36 @@ public class LetraCambioServiceImpl implements LetraCambioService {
         Distrito distrito = distritoRepository.findById(generarLetrasRequest.getIdDistrito())
             .orElseThrow(() -> new IllegalArgumentException("Distrito no encontrado con el ID: " + generarLetrasRequest.getIdDistrito()));
 
-        BigDecimal importe;
-        try {
-            importe = new BigDecimal(generarLetrasRequest.getImporte().replaceAll("[^\\d.]", ""));
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Importe inválido: " + generarLetrasRequest.getImporte());
+        int cantidad = contrato.getCantidadLetras();
+        if (cantidad <= 0) {
+            throw new IllegalArgumentException("La cantidad de letras debe ser mayor a cero");
         }
 
-        int cantidad = contrato.getCantidadLetras();
+        BigDecimal importePorLetra;
+        BigDecimal importeUltimaLetra = null;
 
-        // Usamos LocalDate en lugar de Calendar
+        if (generarLetrasRequest.isModoAutomatico()) {
+            BigDecimal saldo = contrato.getSaldo();
+            if (saldo == null || saldo.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException("El saldo del contrato es inválido o cero");
+            }
+
+            // Trabajar con saldo entero (redondeado)
+            BigDecimal saldoEntero = saldo.setScale(0, BigDecimal.ROUND_HALF_UP);
+
+            importePorLetra = saldoEntero.divide(new BigDecimal(cantidad), 0, BigDecimal.ROUND_DOWN);
+            BigDecimal sumaParcial = importePorLetra.multiply(new BigDecimal(cantidad - 1));
+            // La última letra es el resto del saldo menos la suma parcial, redondeada al entero más cercano
+            importeUltimaLetra = saldoEntero.subtract(sumaParcial).setScale(0, BigDecimal.ROUND_HALF_UP);
+        } else {
+            try {
+                String importeStr = generarLetrasRequest.getImporte().replaceAll("[^\\d]", "");
+                importePorLetra = new BigDecimal(importeStr).setScale(0, BigDecimal.ROUND_HALF_UP);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Importe inválido: " + generarLetrasRequest.getImporte());
+            }
+        }
+
         LocalDate fechaVencimientoInicial = generarLetrasRequest.getFechaVencimientoInicial();
         int diaVencimientoOriginal = fechaVencimientoInicial.getDayOfMonth();
 
@@ -90,13 +111,22 @@ public class LetraCambioServiceImpl implements LetraCambioService {
             LetraCambio letra = new LetraCambio();
             letra.setContrato(contrato);
             letra.setDistrito(distrito);
-            letra.setFechaGiro(generarLetrasRequest.getFechaGiro()); // LocalDate
+            letra.setFechaGiro(generarLetrasRequest.getFechaGiro());
             letra.setFechaVencimiento(fechaFinal);
-            letra.setImporte(importe);
-            letra.setImporteLetras(generarLetrasRequest.getImporteLetras());
+
+            if (generarLetrasRequest.isModoAutomatico()) {
+                if (i < cantidad) {
+                    letra.setImporte(importePorLetra);
+                } else {
+                    letra.setImporte(importeUltimaLetra);
+                }
+            } else {
+                letra.setImporte(importePorLetra);
+            }
+
+            letra.setImporteLetras(NumeroALetrasUtil.convertir(letra.getImporte()));
             letra.setEstadoLetra(EstadoLetra.PENDIENTE);
             letra.setNumeroLetra(i + "/" + cantidad);
-
             letra.setFechaPago(null);
             letra.setTipoComprobante(null);
             letra.setNumeroComprobante("");
@@ -104,5 +134,40 @@ public class LetraCambioServiceImpl implements LetraCambioService {
 
             letraCambioRepository.save(letra);
         }
+    }
+    
+    @Override
+    @Transactional
+    public LetraCambioDTO actualizarLetra(Integer id, LetraCambioDTO letraCambioDTO) {
+        LetraCambio letraExistente = letraCambioRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Letra de cambio no encontrada con el ID: " + id));
+
+        // Actualizar campos
+        letraExistente.setFechaGiro(letraCambioDTO.getFechaGiro());
+        letraExistente.setFechaVencimiento(letraCambioDTO.getFechaVencimiento());
+        letraExistente.setImporte(letraCambioDTO.getImporte());
+
+        // Agregar esta línea para actualizar importeLetras:
+        letraExistente.setImporteLetras(letraCambioDTO.getImporteLetras());
+
+        letraExistente.setEstadoLetra(EstadoLetra.valueOf(letraCambioDTO.getEstadoLetra()));
+        letraExistente.setNumeroComprobante(letraCambioDTO.getNumeroComprobante());
+        letraExistente.setObservaciones(letraCambioDTO.getObservaciones());
+
+        // Guardar y retornar
+        LetraCambio letraActualizada = letraCambioRepository.save(letraExistente);
+        return modelMapper.map(letraActualizada, LetraCambioDTO.class);
+    }
+    
+    
+    @Override
+    @Transactional
+    public void eliminarPorContrato(Integer idContrato) {
+        // Verifica si el contrato existe antes de intentar eliminar
+        contratoRepository.findById(idContrato)
+            .orElseThrow(() -> new IllegalArgumentException("Contrato no encontrado con el ID: " + idContrato));
+        
+        // Llama al nuevo método del repositorio para la eliminación masiva
+        letraCambioRepository.deleteByContratoIdContrato(idContrato);
     }
 }

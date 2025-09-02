@@ -2,11 +2,7 @@ package com.Inmobiliaria.demo.dto;
 
 import java.math.BigDecimal;
 import java.util.Date;
-
-import java.math.BigDecimal;
-import java.util.Date;
 import java.util.List;
-
 import com.Inmobiliaria.demo.enums.TipoContrato;
 import lombok.AllArgsConstructor;
 import lombok.Data;

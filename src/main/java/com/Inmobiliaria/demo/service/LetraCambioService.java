@@ -10,4 +10,8 @@ public interface LetraCambioService {
 
     // Método corregido para aceptar un DTO
     void generarLetrasDesdeContrato(Integer idContrato, GenerarLetrasRequest generarLetrasRequest);
+    
+    LetraCambioDTO actualizarLetra(Integer id, LetraCambioDTO letraCambioDTO);
+    
+    void eliminarPorContrato(Integer idContrato);
 }

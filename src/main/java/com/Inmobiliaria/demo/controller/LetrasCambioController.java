@@ -25,6 +25,7 @@ public class LetrasCambioController {
         List<LetraCambioDTO> listaLetras = letraCambioService.listarPorContrato(idContrato);
         return new ResponseEntity<>(listaLetras, HttpStatus.OK);
     }
+    
     // Generar letras para un contrato dado
     @PostMapping("/contrato/{idContrato}")
     public ResponseEntity<Void> generarLetras(
@@ -34,4 +35,22 @@ public class LetrasCambioController {
         letraCambioService.generarLetrasDesdeContrato(idContrato, request); // Corregido
         return new ResponseEntity<>(HttpStatus.CREATED);
     }
+    
+    //Actualizar una letra de cambio por su ID (no por contrato)
+    @PutMapping("/actualizar/{idLetra}")
+    public ResponseEntity<LetraCambioDTO> actualizarLetra(
+        @PathVariable Integer idLetra,
+        @RequestBody LetraCambioDTO letraCambioDTO
+    ) {
+        LetraCambioDTO letraActualizada = letraCambioService.actualizarLetra(idLetra, letraCambioDTO);
+        return new ResponseEntity<>(letraActualizada, HttpStatus.OK);
+    }
+    
+    //Eliminar todas las letras de un contrato
+    @DeleteMapping("/eliminar/{idContrato}")
+    public ResponseEntity<Void> eliminarPorContrato(@PathVariable Integer idContrato) {
+        letraCambioService.eliminarPorContrato(idContrato);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+    
 }
