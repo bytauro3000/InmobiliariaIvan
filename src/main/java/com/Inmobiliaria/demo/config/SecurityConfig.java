@@ -37,7 +37,7 @@ public class SecurityConfig {
                 .requestMatchers("/", "/index.html", "/favicon.ico", "/static/**", "/img/**", "/media/**", "/**/*.js", "/**/*.css", "/**/*.woff2", "/**/*.woff", "/**/*.ttf", "/**/*.svg", "/**/*.png", "/**/*.jpg", "/**/*.jpeg", "/**/*.map").permitAll()
             	// 1. Permite acceso a la ruta de login sin autenticación (la más específica)
                 .requestMatchers("/api/auth/login").permitAll()
-                .requestMatchers("/api/letras/**").hasRole("SECRETARIA")
+                .requestMatchers("/api/letras/**").permitAll()
              
                 // 2. Reglas para el rol SOPORTE
                 .requestMatchers("/api/dashboard/**").hasRole("SOPORTE")
@@ -47,7 +47,6 @@ public class SecurityConfig {
                 
                 // 3. Reglas para el rol SECRETARIA
                 .requestMatchers("/api/clientes/**").hasRole("SECRETARIA")
-                .requestMatchers("/api/contratos/**").hasRole("SECRETARIA")
                 .requestMatchers("/api/contratos/**").hasRole("SECRETARIA") 
                 
                 

@@ -1,10 +1,7 @@
 package com.Inmobiliaria.demo.entity;
 
 import java.util.Date;
-
-import com.Inmobiliaria.demo.enums.EstadoLote;
 import com.Inmobiliaria.demo.enums.EstadoSeparacion;
-
 import jakarta.persistence.*;
 import lombok.*;
 

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.Inmobiliaria.demo.dto.GenerarLetrasRequest;
 import com.Inmobiliaria.demo.dto.LetraCambioDTO;
+import com.Inmobiliaria.demo.dto.ReporteLetraCambioDTO;
 import com.Inmobiliaria.demo.service.LetraCambioService;
 
 @RestController
@@ -51,6 +52,13 @@ public class LetrasCambioController {
     public ResponseEntity<Void> eliminarPorContrato(@PathVariable Integer idContrato) {
         letraCambioService.eliminarPorContrato(idContrato);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+    
+ // Obtener el reporte de letras por contrato
+    @GetMapping("/reporte/{idContrato}")
+    public ResponseEntity<List<ReporteLetraCambioDTO>> obtenerReportePorContrato(@PathVariable Integer idContrato) {
+        List<ReporteLetraCambioDTO> reporte = letraCambioService.obtenerReportePorContrato(idContrato);
+        return new ResponseEntity<>(reporte, HttpStatus.OK);
     }
     
 }

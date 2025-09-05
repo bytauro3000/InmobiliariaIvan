@@ -3,6 +3,7 @@ package com.Inmobiliaria.demo.service.impl;
 import java.util.stream.Collectors;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.modelmapper.ModelMapper;
@@ -21,6 +22,7 @@ import com.Inmobiliaria.demo.service.LetraCambioService;
 import com.Inmobiliaria.demo.util.NumeroALetrasUtil;
 import com.Inmobiliaria.demo.dto.GenerarLetrasRequest;
 import com.Inmobiliaria.demo.dto.LetraCambioDTO;
+import com.Inmobiliaria.demo.dto.ReporteLetraCambioDTO;
 
 import jakarta.transaction.Transactional;
 
@@ -61,6 +63,41 @@ public class LetraCambioServiceImpl implements LetraCambioService {
             .collect(Collectors.toList());
     }
     
+    @Override
+    @Transactional
+    public List<ReporteLetraCambioDTO> obtenerReportePorContrato(Integer idContrato) {
+        List<Object[]> results = letraCambioRepository.obtenerReportePorContrato(idContrato);
+        
+        List<ReporteLetraCambioDTO> reportes = new ArrayList<>();
+        for (Object[] row : results) {
+            ReporteLetraCambioDTO dto = new ReporteLetraCambioDTO();
+            dto.setNumeroLetra((String) row[0]);
+
+            // Si la fecha es de tipo java.sql.Date, convertirla a LocalDate
+            java.sql.Date sqlFechaGiro = (java.sql.Date) row[1];
+            LocalDate fechaGiro = sqlFechaGiro != null ? sqlFechaGiro.toLocalDate() : null;
+            dto.setFechaGiro(fechaGiro);
+
+            java.sql.Date sqlFechaVencimiento = (java.sql.Date) row[2];
+            LocalDate fechaVencimiento = sqlFechaVencimiento != null ? sqlFechaVencimiento.toLocalDate() : null;
+            dto.setFechaVencimiento(fechaVencimiento);
+
+            dto.setImporte((BigDecimal) row[3]);
+            dto.setImporteLetras((String) row[4]);
+            dto.setDistritoNombre((String) row[5]);
+            dto.setCliente1Nombre((String) row[6]);
+            dto.setCliente1Apellidos((String) row[7]);
+            dto.setCliente1NumDocumento((String) row[8]);
+            dto.setCliente2Nombre((String) row[9]);
+            dto.setCliente2Apellidos((String) row[10]);
+            dto.setCliente2NumDocumento((String) row[11]);
+            dto.setCliente1Direccion((String) row[12]);
+            dto.setCliente1Distrito((String) row[13]);
+            reportes.add(dto);
+        }
+        return reportes;
+    }
+   
     @Override
     @Transactional
     public void generarLetrasDesdeContrato(Integer idContrato, GenerarLetrasRequest generarLetrasRequest) {

@@ -2,7 +2,6 @@ package com.Inmobiliaria.demo.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Date;
 import com.Inmobiliaria.demo.enums.EstadoLetra;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
 
@@ -53,7 +52,7 @@ public class LetraCambio {
 
     @Temporal(TemporalType.DATE)
     @Column(name = "fecha_pago", nullable = true)
-    private Date fechaPago;
+    private LocalDate fechaPago;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_comprobante", nullable = true)
