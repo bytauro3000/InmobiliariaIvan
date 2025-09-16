@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.Inmobiliaria.demo.dto.GenerarLetrasRequest;
 import com.Inmobiliaria.demo.dto.LetraCambioDTO;
+import com.Inmobiliaria.demo.dto.ReporteCronogramaPagosClientesDTO;
 import com.Inmobiliaria.demo.dto.ReporteLetraCambioDTO;
 import com.Inmobiliaria.demo.service.LetraCambioService;
 
@@ -58,6 +59,13 @@ public class LetrasCambioController {
     @GetMapping("/reporte/{idContrato}")
     public ResponseEntity<List<ReporteLetraCambioDTO>> obtenerReportePorContrato(@PathVariable Integer idContrato) {
         List<ReporteLetraCambioDTO> reporte = letraCambioService.obtenerReportePorContrato(idContrato);
+        return new ResponseEntity<>(reporte, HttpStatus.OK);
+    }
+    
+ //reporte de cronograma de pagos clientes
+    @GetMapping("/repcronograma/{idContrato}")
+    public ResponseEntity<List<ReporteCronogramaPagosClientesDTO>> obtenerReporteCronogramaPagosPorContrato(@PathVariable Integer idContrato) {
+        List<ReporteCronogramaPagosClientesDTO> reporte = letraCambioService.obtenerReporteCronogramaPagosPorContrato(idContrato);
         return new ResponseEntity<>(reporte, HttpStatus.OK);
     }
     

@@ -22,6 +22,7 @@ import com.Inmobiliaria.demo.service.LetraCambioService;
 import com.Inmobiliaria.demo.util.NumeroALetrasUtil;
 import com.Inmobiliaria.demo.dto.GenerarLetrasRequest;
 import com.Inmobiliaria.demo.dto.LetraCambioDTO;
+import com.Inmobiliaria.demo.dto.ReporteCronogramaPagosClientesDTO;
 import com.Inmobiliaria.demo.dto.ReporteLetraCambioDTO;
 
 import jakarta.transaction.Transactional;
@@ -93,6 +94,54 @@ public class LetraCambioServiceImpl implements LetraCambioService {
             dto.setCliente2NumDocumento((String) row[11]);
             dto.setCliente1Direccion((String) row[12]);
             dto.setCliente1Distrito((String) row[13]);
+            reportes.add(dto);
+        }
+        return reportes;
+    }
+    
+ // Nuevo método para obtener el reporte del cronograma de pagos con múltiples clientes y lotes
+    @Override
+    @Transactional
+    public List<ReporteCronogramaPagosClientesDTO> obtenerReporteCronogramaPagosPorContrato(Integer idContrato) {
+        List<Object[]> results = letraCambioRepository.obtenerCronogramaPagosPorContrato(idContrato);
+        List<ReporteCronogramaPagosClientesDTO> reportes = new ArrayList<>();
+
+        for (Object[] row : results) {
+            ReporteCronogramaPagosClientesDTO dto = new ReporteCronogramaPagosClientesDTO();
+            int i = 0; // Usar un índice para mayor claridad y seguridad
+
+            dto.setIdLetra((Integer) row[i++]);
+            dto.setCantidadLetras((Integer) row[i++]);
+            dto.setMontoTotal((BigDecimal) row[i++]);
+            dto.setInicial((BigDecimal) row[i++]);
+            dto.setSaldo((BigDecimal) row[i++]);
+            dto.setVendedorNombre((String) row[i++]);
+            dto.setVendedorApellidos((String) row[i++]);
+            dto.setNumeroLetra((String) row[i++]);
+
+            // Conversión de fecha
+            java.sql.Date sqlFechaVencimiento = (java.sql.Date) row[i++];
+            dto.setFechaVencimiento(sqlFechaVencimiento != null ? sqlFechaVencimiento.toLocalDate() : null);
+
+            dto.setImporte((BigDecimal) row[i++]);
+            dto.setCliente1Nombre((String) row[i++]);
+            dto.setCliente1Apellidos((String) row[i++]);
+            dto.setCliente1NumDocumento((String) row[i++]);
+            dto.setCliente1Celular((String) row[i++]);
+            dto.setCliente1Telefono((String) row[i++]);
+            dto.setCliente1Direccion((String) row[i++]);
+            dto.setCliente1Distrito((String) row[i++]);
+            dto.setCliente2Nombre((String) row[i++]);
+            dto.setCliente2Apellidos((String) row[i++]);
+            dto.setCliente2NumDocumento((String) row[i++]);
+            dto.setLote1Manzana((String) row[i++]);
+            dto.setLote1NumeroLote((String) row[i++]);
+            dto.setLote1Area((BigDecimal) row[i++]);
+            dto.setLote2Manzana((String) row[i++]);
+            dto.setLote2NumeroLote((String) row[i++]);
+            dto.setLote2Area((BigDecimal) row[i++]);
+            dto.setProgramaNombre((String) row[i++]);
+
             reportes.add(dto);
         }
         return reportes;
