@@ -45,7 +45,13 @@ public class LoteServiceImpl implements LoteService{
 
     @Override
     public Lote actualizarLote(Lote lote) {
-return loteRepository.save(lote);
+    	
+    	Lote loteAct = obtenerLotePorId(lote.getIdLote());
+    	if (loteAct.getEstado() == EstadoLote.Separado) {
+    		return null;
+    	}else {
+    		return loteRepository.save(lote);
+    	}
     }
 
 	@Override
