@@ -80,10 +80,30 @@ public class SeparacionServiceImpl implements SeparacionService {
 	}
 
 	@Override
-	public Separacion actualizarSeparacion(Separacion reg) {
-		// TODO Auto-generated method stub
-		return separacionRepository.save(reg);
+	public Separacion actualizarSeparacion(Separacion separacionEntrante) {
+	    // 1. Buscamos si existe en la BD
+	    Separacion separacionExistente = separacionRepository.findById(separacionEntrante.getIdSeparacion()).orElse(null);
+
+	    if (separacionExistente == null) {
+	        return null; // O lanzar una excepción
+	    }
+
+	    // 2. Actualizamos SOLO los campos que queremos modificar
+	    // (O usamos el objeto completo si esa es la lógica de tu negocio)
+	    separacionExistente.setMonto(separacionEntrante.getMonto());
+	    separacionExistente.setFechaLimite(separacionEntrante.getFechaLimite());
+	    separacionExistente.setEstado(separacionEntrante.getEstado());
+	    separacionExistente.setObservaciones(separacionEntrante.getObservaciones());
+	    
+	    // Si permites cambiar de lote o cliente, actualízalos también:
+	    separacionExistente.setCliente(separacionEntrante.getCliente());
+	    separacionExistente.setVendedor(separacionEntrante.getVendedor());
+	    separacionExistente.setLote(separacionEntrante.getLote());
+
+	    // 3. Guardamos los cambios
+	    return separacionRepository.save(separacionExistente);
 	}
+	
 	@Override
 	public List<SeparacionResumenDTO> listarResumen() {
         return separacionRepository.obtenerResumenSeparaciones();}
