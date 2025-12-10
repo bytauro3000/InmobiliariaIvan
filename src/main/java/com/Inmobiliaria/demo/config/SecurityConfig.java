@@ -37,17 +37,18 @@ public class SecurityConfig {
                 .requestMatchers("/", "/index.html", "/favicon.ico", "/static/**", "/img/**", "/media/**", "/**/*.js", "/**/*.css", "/**/*.woff2", "/**/*.woff", "/**/*.ttf", "/**/*.svg", "/**/*.png", "/**/*.jpg", "/**/*.jpeg", "/**/*.map").permitAll()
             	// 1. Permite acceso a la ruta de login sin autenticación (la más específica)
                 .requestMatchers("/api/auth/login").permitAll()
-                .requestMatchers("/api/letras/**").permitAll()
-             
+        
                 // 2. Reglas para el rol SOPORTE
                 .requestMatchers("/api/dashboard/**").hasRole("SOPORTE")
-                .requestMatchers("/api/lotes/**").hasAnyRole("SOPORTE", "SECRETARIA")
-             
-                .requestMatchers("/api/programas/**").hasAnyRole("SOPORTE","SECRETARIA")
-                
+               
                 // 3. Reglas para el rol SECRETARIA
                 .requestMatchers("/api/clientes/**").hasRole("SECRETARIA")
-                .requestMatchers("/api/contratos/**").hasRole("SECRETARIA") 
+                .requestMatchers("/api/contratos/**").hasRole("SECRETARIA")
+                .requestMatchers("/api/vendedores/**").hasRole("SECRETARIA")
+                .requestMatchers("/api/lotes/**").hasRole("SECRETARIA")
+                .requestMatchers("/api/programas/**").hasAnyRole("SECRETARIA")
+                .requestMatchers("/api/letras/**").hasAnyRole("SECRETARIA")
+                
                 
                 
                 // 4. Reglas compartidas entre SECRETARIA y SOPORTE
@@ -56,7 +57,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/programas/**").permitAll()
                 .requestMatchers("/api/programas/**").hasRole("SOPORTE")
                 .requestMatchers("/api/distritos/**").hasRole("SOPORTE")
-                .requestMatchers("/api/vendedores**").hasRole("SECRETARIA")
+                .requestMatchers("/api/vendedores**").hasRole("SOPORTE")
                 
                 // Cualquier otra petición debe estar autenticada
 
