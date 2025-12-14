@@ -38,7 +38,9 @@ public class SecurityConfig {
                 .requestMatchers("/", "/index.html", "/favicon.ico", "/static/**", "/img/**", "/media/**", "/**/*.js", "/**/*.css", "/**/*.woff2", "/**/*.woff", "/**/*.ttf", "/**/*.svg", "/**/*.png", "/**/*.jpg", "/**/*.jpeg", "/**/*.map").permitAll()
             	// 1. Permite acceso a la ruta de login sin autenticación (la más específica)
                 .requestMatchers("/api/auth/login").permitAll()
-        
+                .requestMatchers("/api/clientes/**").permitAll()
+                .requestMatchers("/api/vendedores/**").permitAll()
+                .requestMatchers("/api/distritos/**").permitAll()
                 // 2. Reglas para el rol SOPORTE
                 .requestMatchers("/api/dashboard/**").hasRole("SOPORTE")
                

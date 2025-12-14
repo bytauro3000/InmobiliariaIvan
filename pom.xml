@@ -1,227 +1,157 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-	<modelVersion>4.0.0</modelVersion>
-	<parent>
-		<groupId>org.springframework.boot</groupId>
-		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.5.5</version> <!-- Versión del parent de Spring Boot -->
-		<relativePath /> <!-- lookup parent from repository -->
-	</parent>
-	<groupId>com.Inmobiliaria</groupId>
-	<artifactId>InmobiliariaIVAN</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
-	<packaging>jar</packaging>
-	<name>InmobiliariaIVAN</name>
-	<description>Demo project for Spring Boot</description>
-	<url />
-	<licenses>
-		<license />
-	</licenses>
-	<developers>
-		<developer />
-	</developers>
-	<scm>
-		<connection />
-		<developerConnection />
-		<tag />
-		<url />
-	</scm>
-	<properties>
-		<java.version>17</java.version> <!-- Versión de Java utilizada en el proyecto -->
-		<!--
-		Esta propiedad es CRUCIAL. Define la versión de la librería JWT que Spring Boot utilizará.
-		Al especificarla aquí, sobrescribes cualquier versión que pueda venir de forma transitiva
-		de otras dependencias (como spring-boot-starter-security), asegurando la compatibilidad.
-		-->
-		<io.jsonwebtoken.jjwt.version>0.11.5</io.jsonwebtoken.jjwt.version>
-	</properties>
-	<dependencies>
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
-		<!-- Spring Data JPA: para interactuar con la base de datos usando
-		entidades y repositorios. Permite la persistencia de datos y operaciones CRUD. -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa</artifactId>
-		</dependency>
+    <modelVersion>4.0.0</modelVersion>
 
-		<!-- Thymeleaf: motor de plantillas para generar vistas HTML desde
-		Spring Boot. Ideal para construir la interfaz de usuario web. -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-thymeleaf</artifactId>
-		</dependency>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.5</version>
+        <relativePath/>
+    </parent>
 
-		<!-- Spring Web: permite construir aplicaciones web y REST (usa Spring
-		MVC). Es la base para tu backend HTTP. -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-web</artifactId>
-		</dependency>
+    <groupId>com.Inmobiliaria</groupId>
+    <artifactId>InmobiliariaIVAN</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
 
-		<!-- MySQL Driver: permite la conexión con bases de datos MySQL.
-		Necesario para que JPA pueda comunicarse con tu base de datos. -->
-		<dependency>
-			<groupId>com.mysql</groupId>
-			<artifactId>mysql-connector-j</artifactId>
-			<scope>runtime</scope>
-		</dependency>
+    <name>InmobiliariaIVAN</name>
+    <description>Sistema de Gestión Inmobiliaria - Producción</description>
 
-		<!-- Lombok: reduce código repetitivo en las entidades (getters,
-		setters, constructores, etc.) mediante anotaciones. Utilizado en tus clases de modelo. -->
-		<dependency>
-			<groupId>org.projectlombok</groupId>
-			<artifactId>lombok</artifactId>
-			<scope>provided</scope>
-		</dependency>
+    <properties>
+        <java.version>17</java.version>
+        <io.jsonwebtoken.jjwt.version>0.11.5</io.jsonwebtoken.jjwt.version>
+    </properties>
 
-		<!-- Thymeleaf Layout Dialect: permite usar layouts y fragmentos de
-		vista (estructura reutilizable) en Thymeleaf. Mejora la modularidad de tus plantillas HTML. -->
-		<dependency>
-			<groupId>nz.net.ultraq.thymeleaf</groupId>
-			<artifactId>thymeleaf-layout-dialect</artifactId>
-		</dependency>
+    <dependencies>
 
-		<!-- Spring Boot Test: para pruebas unitarias y de integración con
-		JUnit, Mockito, etc. Es fundamental para asegurar la calidad de tu código. -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-test</artifactId>
-			<scope>test</scope>
-		</dependency>
+        <!-- Spring Core -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
 
-		<!-- Spring DevTools: recarga automática del servidor cuando detecta
-		cambios (modo desarrollo). Acelera el ciclo de desarrollo. -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-devtools</artifactId>
-			<scope>runtime</scope>
-			<optional>true</optional>
-		</dependency>
+        <!-- JPA -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
 
-		<!-- Spring Security: protección de rutas, autenticación y autorización.
-		Es la base para la seguridad de tu aplicación.
-		Las exclusiones son VITALES aquí para evitar conflictos de versiones con JJWT.
-		-->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-security</artifactId>
-			<exclusions>
-				<!-- Excluye todas las dependencias de JWT que Spring Security podría traer.
-				Esto asegura que se utilice la versión definida en <properties> y declarada
-				explícitamente más abajo. -->
-				<exclusion>
-					<groupId>io.jsonwebtoken</groupId>
-					<artifactId>jjwt-api</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>io.jsonwebtoken</groupId>
-					<artifactId>jjwt-impl</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>io.jsonwebtoken</groupId>
-					<artifactId>jjwt-jackson</artifactId>
-				</exclusion>
-			</exclusions>
-		</dependency>
+        <!-- Thymeleaf -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
 
-		<!-- Extras de seguridad para Thymeleaf: habilita etiquetas como
-		sec:authorize en vistas para mostrar u ocultar contenido basado en roles. -->
-		<dependency>
-			<groupId>org.thymeleaf.extras</groupId>
-			<artifactId>thymeleaf-extras-springsecurity6</artifactId>
-		</dependency>
+        <!-- Seguridad -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
 
-		<!-- JasperReports: generación de reportes PDF, Excel, etc. desde el
-		backend. Utilizado si tu aplicación necesita generar informes. -->
-		<dependency>
-			<groupId>net.sf.jasperreports</groupId>
-			<artifactId>jasperreports</artifactId>
-			<version>6.20.0</version>
-		</dependency>
+        <!-- JWT -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>${io.jsonwebtoken.jjwt.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>${io.jsonwebtoken.jjwt.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>${io.jsonwebtoken.jjwt.version}</version>
+            <scope>runtime</scope>
+        </dependency>
 
-		<!-- Validación de formularios con anotaciones como @NotNull, @Size,
-		etc. Ayuda a validar los datos de entrada en tus controladores y DTOs. -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-validation</artifactId>
-		</dependency>
+        <!-- Validaciones -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
 
-		<!-- SpringDoc OpenAPI: genera documentación de la API REST usando
-		Swagger UI. Proporciona una interfaz interactiva para probar tus endpoints. -->
-		<dependency>
-			<groupId>org.springdoc</groupId>
-			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-			<version>2.5.0</version>
-		</dependency>
+        <!-- MySQL -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
 
-		<!-- Dependencias de JJWT (JSON Web Token): Estas son las librerías
-		principales para crear, firmar y verificar JWTs.
-		Son ESENCIALES para tu clase JwtUtil.java. La versión 0.11.5 es compatible. -->
-		<dependency>
-			<groupId>io.jsonwebtoken</groupId>
-			<artifactId>jjwt-api</artifactId>
-			<version>0.11.5</version> <!-- Contiene las interfaces y API base de JWT -->
-		</dependency>
+        <!-- Lombok (solo compilación) -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
 
-		<dependency>
-			<groupId>io.jsonwebtoken</groupId>
-			<artifactId>jjwt-impl</artifactId>
-			<version>0.11.5</version> <!-- Contiene la implementación concreta del API -->
-			<scope>runtime</scope> <!-- Necesaria en tiempo de ejecución -->
-		</dependency>
+        <!-- Thymeleaf Layout -->
+        <dependency>
+            <groupId>nz.net.ultraq.thymeleaf</groupId>
+            <artifactId>thymeleaf-layout-dialect</artifactId>
+        </dependency>
 
-		<dependency>
-			<groupId>io.jsonwebtoken</groupId>
-			<artifactId>jjwt-jackson</artifactId>
-			<version>0.11.5</version> <!-- Proporciona la integración con Jackson para JSON -->
-			<scope>runtime</scope> <!-- Necesaria en tiempo de ejecución -->
-		</dependency>
-		<dependency>
-    <groupId>org.modelmapper</groupId>
-    <artifactId>modelmapper</artifactId>
-    <version>3.1.0</version>
-</dependency>
-		
-		<dependency>
+        <!-- Spring Security Extras -->
+        <dependency>
+            <groupId>org.thymeleaf.extras</groupId>
+            <artifactId>thymeleaf-extras-springsecurity6</artifactId>
+        </dependency>
+
+        <!-- ModelMapper -->
+        <dependency>
+            <groupId>org.modelmapper</groupId>
+            <artifactId>modelmapper</artifactId>
+            <version>3.1.0</version>
+        </dependency>
+
+        <!-- JasperReports -->
+        <dependency>
+            <groupId>net.sf.jasperreports</groupId>
+            <artifactId>jasperreports</artifactId>
+            <version>6.20.0</version>
+        </dependency>
+
+        <!-- Excel -->
+        <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
             <version>5.2.5</version>
         </dependency>
 
-	</dependencies>
+        <!-- Test (NO se incluye en el jar final) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
 
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<configuration>
-					<source>${java.version}</source> <!-- Configura la versión de Java para la compilación -->
-					<target>${java.version}</target>
-					<annotationProcessorPaths>
-						<path>
-							<groupId>org.projectlombok</groupId>
-							<artifactId>lombok</artifactId>
-							<version>1.18.38</version>
-						</path>
-					</annotationProcessorPaths>
-				</configuration>
-			</plugin>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-				<configuration>
-					<excludes>
-						<exclude>
-							<groupId>org.projectlombok</groupId>
-							<artifactId>lombok</artifactId>
-						</exclude>
-					</excludes>
-				</configuration>
-			</plugin>
-		</plugins>
-	</build>
+    </dependencies>
+
+    <build>
+        <plugins>
+
+            <!-- Compilador -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                </configuration>
+            </plugin>
+
+            <!-- Spring Boot Plugin -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+        </plugins>
+    </build>
 
 </project>

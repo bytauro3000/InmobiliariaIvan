@@ -7,7 +7,7 @@ import com.Inmobiliaria.demo.enums.EstadoUsuario;
 import java.util.Date;
 
 @Entity
-@Table(name = "Usuario")
+@Table(name = "usuario")
 @Getter
 @Setter
 @NoArgsConstructor

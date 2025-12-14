@@ -1,0 +1,5 @@
+target/*.original
+.git
+.gitignore
+.mvn
+node_modules
