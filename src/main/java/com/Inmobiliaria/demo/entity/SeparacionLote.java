@@ -4,20 +4,20 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "contrato_lote")
+@Table(name = "separacion_lote")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class ContratoLote {
+public class SeparacionLote {
 
     @EmbeddedId
-    private ContratoLoteId id;
+    private SeparacionLoteId id;
 
     @ManyToOne
-    @MapsId("idContrato")
-    @JoinColumn(name = "id_contrato")
-    private Contrato contrato;
+    @MapsId("idSeparacion")
+    @JoinColumn(name = "id_separacion")
+    private Separacion separacion;
 
     @ManyToOne
     @MapsId("idLote")

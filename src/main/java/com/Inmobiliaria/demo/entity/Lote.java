@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 import com.Inmobiliaria.demo.enums.EstadoLote;
 
 @Entity
-@Table(name = "Lote")
+@Table(name = "lote")
 @Getter
 @Setter
 @NoArgsConstructor

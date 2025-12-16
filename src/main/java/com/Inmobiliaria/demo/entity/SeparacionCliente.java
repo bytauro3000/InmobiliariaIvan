@@ -1,23 +1,24 @@
 package com.Inmobiliaria.demo.entity;
+
 import com.Inmobiliaria.demo.enums.TipoPropietario;
 import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "contrato_cliente")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class ContratoCliente {
+@Table(name = "separacion_cliente")
+public class SeparacionCliente {
 
     @EmbeddedId
-    private ContratoClienteId id;
+    private SeparacionClienteId id;
 
     @ManyToOne
-    @MapsId("idContrato")
-    @JoinColumn(name = "id_contrato")
-    private Contrato contrato;
+    @MapsId("idSeparacion")
+    @JoinColumn(name = "id_separacion")
+    private Separacion separacion;
 
     @ManyToOne
     @MapsId("idCliente")

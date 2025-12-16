@@ -1,12 +1,13 @@
 package com.Inmobiliaria.demo.entity;
 
 import java.util.Date;
+import java.util.List;
 import com.Inmobiliaria.demo.enums.EstadoSeparacion;
 import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "Separacion")
+@Table(name = "separacion")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -19,16 +20,8 @@ public class Separacion {
     private Integer idSeparacion;
 
     @ManyToOne
-    @JoinColumn(name = "id_cliente")
-    private Cliente cliente;
-
-    @ManyToOne
     @JoinColumn(name = "id_vendedor")
     private Vendedor vendedor;
-
-    @ManyToOne
-    @JoinColumn(name = "id_lote")
-    private Lote lote;
 
     @Column(name = "monto", nullable = false)
     private Double monto;
@@ -48,10 +41,10 @@ public class Separacion {
     @Column(name = "observaciones")
     private String observaciones;
     
-    //CONSTRUTOR PARA MOSTRAR LOS DATOS DEL CLIENTE Y LOTE EN LA BUSQUEDA DE SEPARACON CONTRATO
-    public Separacion(Integer idSeparacion, Cliente cliente, Lote lote) {
-        this.idSeparacion = idSeparacion;
-        this.cliente = cliente;
-        this.lote = lote;
-    }
+    // Estas son las relaciones que ahora mandan
+    @OneToMany(mappedBy = "separacion", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<SeparacionCliente> clientes;
+
+    @OneToMany(mappedBy = "separacion", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<SeparacionLote> lotes;
 }

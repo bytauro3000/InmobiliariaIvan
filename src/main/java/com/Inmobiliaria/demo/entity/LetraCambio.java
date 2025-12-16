@@ -9,7 +9,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "LetraCambio")
+@Table(name = "letra_cambio")
 @Getter
 @Setter
 @NoArgsConstructor

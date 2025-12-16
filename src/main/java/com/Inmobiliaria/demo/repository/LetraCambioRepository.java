@@ -18,7 +18,7 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
     @Transactional
     void deleteByContratoIdContrato(Integer idContrato);
 
-   
+    
     @Query(value = "SELECT " +
             "lc.numero_letra, " +
             "lc.fecha_giro, " +
@@ -32,11 +32,12 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
             "MAX(CASE WHEN clientes.client_rank = 2 THEN clientes.nombre END) AS cliente2_nombre, " +
             "MAX(CASE WHEN clientes.client_rank = 2 THEN clientes.apellidos END) AS cliente2_apellidos, " +
             "MAX(CASE WHEN clientes.client_rank = 2 THEN clientes.numDocumento END) AS cliente2_numDocumento, " +
-            "MAX(CASE WHEN clientes.client_rank = 1 THEN clientes.direccion END) AS cliente1_direccion, " +   
+            "MAX(CASE WHEN clientes.client_rank = 1 THEN clientes.direccion END) AS cliente1_direccion, " +    
             "MAX(CASE WHEN clientes.client_rank = 1 THEN clienteDistrito.nombre END) AS cliente1_distrito " +
-            "FROM LetraCambio lc " +
-            "JOIN Distrito d ON lc.id_distrito = d.id_distrito " +
-            "JOIN Contrato c ON lc.id_contrato = c.id_contrato " +
+            // LetraCambio -> letra_cambio
+            "FROM letra_cambio lc " + 
+            "JOIN distrito d ON lc.id_distrito = d.id_distrito " +
+            "JOIN contrato c ON lc.id_contrato = c.id_contrato " +
             "JOIN (" +
             "    SELECT " +
             "        cc.id_contrato, " +
@@ -46,18 +47,20 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
             "        cl.direccion, " +
             "        cl.id_distrito AS cliente_distrito_id, " +
             "        ROW_NUMBER() OVER (PARTITION BY cc.id_contrato ORDER BY cl.id_cliente) AS client_rank " +
-            "    FROM ContratoCliente cc " +
-            "    JOIN Cliente cl ON cc.id_cliente = cl.id_cliente " +
+            // ContratoCliente -> contrato_cliente
+            "    FROM contrato_cliente cc " + 
+            "    JOIN cliente cl ON cc.id_cliente = cl.id_cliente " +
             ") AS clientes ON lc.id_contrato = clientes.id_contrato " +
-            "JOIN Distrito clienteDistrito ON clienteDistrito.id_distrito = clientes.cliente_distrito_id " +
+            "JOIN distrito clienteDistrito ON clienteDistrito.id_distrito = clientes.cliente_distrito_id " +
             "WHERE c.id_contrato = :idContrato " +
             "GROUP BY " +
+            // Corregido: Se debe agrupar por los campos seleccionados que no son agregados.
             "lc.numero_letra, " +
             "lc.fecha_giro, " +
             "lc.fecha_vencimiento, " +
             "lc.importe, " +
             "lc.importe_letras, " +
-            "d.nombre", nativeQuery = true)
+            "distritoNombre", nativeQuery = true) // <-- Usar el alias de columna
     List<Object[]> obtenerReportePorContrato(@Param("idContrato") Integer idContrato);
 
     
@@ -90,9 +93,10 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
         "MAX(CASE WHEN lotes.lote_rank = 2 THEN lotes.numero_lote END) AS lote2_numero_lote, " +
         "MAX(CASE WHEN lotes.lote_rank = 2 THEN lotes.area END) AS lote2_area, " +
         "p.nombre_programa AS programa_nombre " +
-        "FROM LetraCambio lc " +
-        "JOIN Contrato c ON lc.id_contrato = c.id_contrato " +
-        "JOIN Vendedor v ON c.id_vendedor = v.id_vendedor " +
+        // LetraCambio -> letra_cambio
+        "FROM letra_cambio lc " + 
+        "JOIN contrato c ON lc.id_contrato = c.id_contrato " +
+        "JOIN vendedor v ON c.id_vendedor = v.id_vendedor " +
         "JOIN (" +
         "    SELECT " +
         "        cc.id_contrato, " +
@@ -105,23 +109,25 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
         "        cl.direccion, " +
         "        cl.id_distrito, " +
         "        ROW_NUMBER() OVER (PARTITION BY cc.id_contrato ORDER BY cl.id_cliente) AS client_rank " +
-        "    FROM ContratoCliente cc " +
-        "    JOIN Cliente cl ON cc.id_cliente = cl.id_cliente " +
+        // ContratoCliente -> contrato_cliente
+        "    FROM contrato_cliente cc " + 
+        "    JOIN cliente cl ON cc.id_cliente = cl.id_cliente " +
         ") AS clientes ON c.id_contrato = clientes.id_contrato " +
-        "JOIN Distrito d_cliente ON clientes.id_distrito = d_cliente.id_distrito " +
+        "JOIN distrito d_cliente ON clientes.id_distrito = d_cliente.id_distrito " +
         "JOIN (" +
         "    SELECT " +
-        "        cl.id_contrato, " +
+        // ContratoLote -> contrato_lote
+        "        cl.id_contrato, " + 
         "        l.id_lote, " +
         "        l.manzana, " +
         "        l.numero_lote, " +
         "        l.area, " +
         "        l.id_programa, " +
         "        ROW_NUMBER() OVER (PARTITION BY cl.id_contrato ORDER BY l.id_lote) AS lote_rank " +
-        "    FROM ContratoLote cl " +
-        "    JOIN Lote l ON cl.id_lote = l.id_lote " +
+        "    FROM contrato_lote cl " +
+        "    JOIN lote l ON cl.id_lote = l.id_lote " +
         ") AS lotes ON c.id_contrato = lotes.id_contrato " +
-        "JOIN Programa p ON lotes.id_programa = p.id_programa " +
+        "JOIN programa p ON lotes.id_programa = p.id_programa " +
         "WHERE c.id_contrato = :idContrato " +
         "GROUP BY " +
         "lc.id_letra, " +
