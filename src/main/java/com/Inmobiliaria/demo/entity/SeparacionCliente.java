@@ -1,6 +1,8 @@
 package com.Inmobiliaria.demo.entity;
 
 import com.Inmobiliaria.demo.enums.TipoPropietario;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -18,6 +20,7 @@ public class SeparacionCliente {
     @ManyToOne
     @MapsId("idSeparacion")
     @JoinColumn(name = "id_separacion")
+    @JsonIgnore
     private Separacion separacion;
 
     @ManyToOne

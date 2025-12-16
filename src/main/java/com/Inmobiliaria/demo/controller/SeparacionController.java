@@ -2,83 +2,75 @@ package com.Inmobiliaria.demo.controller;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import com.Inmobiliaria.demo.dto.SeparacionDTO;
 import com.Inmobiliaria.demo.dto.SeparacionResumenDTO;
-import com.Inmobiliaria.demo.entity.Lote;
 import com.Inmobiliaria.demo.entity.Separacion;
 import com.Inmobiliaria.demo.service.SeparacionService;
 
 @RestController
-@RequestMapping("/api/separaciones") 
+@RequestMapping("/api/separaciones")
 @CrossOrigin(origins = "*")
 public class SeparacionController {
 
     @Autowired
     private SeparacionService separacionService;
 
-    @GetMapping("/buscar") 
-    public List<SeparacionDTO> buscarSeparaciones(@RequestParam(value = "filtro", required = false) String filtro) {
-        // Si el filtro es nulo o vacío, devuelve una lista vacía para evitar búsquedas innecesarias
+    // Se agrega produces = MediaType.APPLICATION_JSON_VALUE para forzar JSON
+    @GetMapping(value = "/buscar", produces = MediaType.APPLICATION_JSON_VALUE) 
+    public ResponseEntity<List<SeparacionDTO>> buscarSeparaciones(@RequestParam(value = "filtro", required = false) String filtro) {
         if (filtro == null || filtro.trim().isEmpty()) {
-            return List.of();
+            return ResponseEntity.ok(List.of());
         }
-        // Delega la lógica de búsqueda al servicio
-        return separacionService.buscarPorDniOApellido(filtro);
+        return ResponseEntity.ok(separacionService.buscarPorDniOApellido(filtro));
     }
 
-    //listar todas las separaciones:
-    @GetMapping
-    public ResponseEntity<List<Separacion>>listaTodo(){
-    	return ResponseEntity.ok(separacionService.listadoSeparacion());
+    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<Separacion>> listaTodo() {
+        List<Separacion> lista = separacionService.listadoSeparacion();
+        return ResponseEntity.ok(lista);
     }
     
-    @GetMapping("/{id}")
-    public ResponseEntity<Separacion> obtenerPorId (@PathVariable Integer id) {
+    // Método crítico corregido para devolver JSON
+    @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Separacion> obtenerPorId(@PathVariable Integer id) {
         Separacion separa = separacionService.obtenerPorId(id);
         return (separa != null) ? ResponseEntity.ok(separa) : ResponseEntity.notFound().build();
     }
     
-    @PutMapping("/{id}")
+    @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> crearSeparacion(@RequestBody Separacion sepa) {
+        try {
+            Separacion nueva = separacionService.crearSeparacion(sepa);
+            return ResponseEntity.status(HttpStatus.CREATED).body(nueva);
+        } catch (Exception e) {
+            // Retorna el error en formato texto plano o podrías envolverlo en un mapa para JSON
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+
+    @PutMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Separacion> actualizarSeparacion(@PathVariable Integer id, @RequestBody Separacion sepa) {
-        // Aseguramos que el ID de la URL coincida con el objeto
         sepa.setIdSeparacion(id);
-        
         Separacion actualizada = separacionService.actualizarSeparacion(sepa);
-        
-        if (actualizada != null) {
-            return ResponseEntity.ok(actualizada);
-        } else {
-            return ResponseEntity.notFound().build(); // Devuelve 404 si el ID no existe
+        return (actualizada != null) ? ResponseEntity.ok(actualizada) : ResponseEntity.notFound().build();
+    }
+    
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminarSeparacion(@PathVariable Integer id) {
+        try {
+            separacionService.eliminarSeparacion(id);
+            return ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
         }
     }
     
-    @PostMapping
-    public ResponseEntity<Separacion> crearSeparacion(@RequestBody Separacion sepa){
-    	Separacion nueva = separacionService.crearSeparacion(sepa);
-    	return ResponseEntity.ok(nueva);
+    @GetMapping(value = "/resumen", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<SeparacionResumenDTO>> obtenerResumen() {
+        return ResponseEntity.ok(separacionService.listarResumen());
     }
-
-    
-    @DeleteMapping("/{id}")
-    public void eliminarSeparacion(@PathVariable Integer id) {
-    	separacionService.eliminarSeparacion(id);
-    }
-    
-    @GetMapping("/resumen")
-    public List<SeparacionResumenDTO> obtenerResumen() {
-        return separacionService.listarResumen();
-    }
-
-    
 }

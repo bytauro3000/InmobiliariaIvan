@@ -58,6 +58,7 @@ public class ContratoServiceImpl implements ContratoService {
             contrato.setSaldo(BigDecimal.ZERO);
         }
     }
+    
 
     @Override
     @Transactional
@@ -107,18 +108,25 @@ public class ContratoServiceImpl implements ContratoService {
         // Guardar contrato para obtener ID
         Contrato contratoGuardado = contratoRepository.save(contrato);
 
-        // Lógica para asociar clientes y lotes
+        // --- INICIO DE LA MODIFICACIÓN APLICADA ---
         List<Integer> idsClientesAAsociar = null;
+        
         if (requestDTO.getIdSeparacion() != null) {
             Separacion separacion = separacionService.buscarPorId(requestDTO.getIdSeparacion());
             if (separacion != null) {
-                // ✅ Paso 1: Actualizar el estado de la separación
+                // ✅ Actualizar el estado de la separación
                 separacion.setEstado(EstadoSeparacion.CONCRETADO);
                 separacionService.actualizarSeparacion(separacion);
 
-                // ... (resto de la lógica que ya tenías)
-                idsClientesAAsociar = List.of(separacion.getCliente().getIdCliente());
-                List<Integer> idsLotesAAsociar = List.of(separacion.getLote().getIdLote());
+                // ✅ NUEVA LÓGICA: Obtener IDs desde las listas de Separación
+                idsClientesAAsociar = separacion.getClientes().stream()
+                        .map(sc -> sc.getCliente().getIdCliente())
+                        .collect(Collectors.toList());
+
+                List<Integer> idsLotesAAsociar = separacion.getLotes().stream()
+                        .map(sl -> sl.getLote().getIdLote())
+                        .collect(Collectors.toList());
+
                 for (Integer idLote : idsLotesAAsociar) {
                     Lote lote = loteService.obtenerLotePorId(idLote);
                     if (lote != null) {
@@ -134,6 +142,7 @@ public class ContratoServiceImpl implements ContratoService {
                 }
             }
         } else {
+            // Lógica para contrato directo (sin separación)
             idsClientesAAsociar = requestDTO.getIdClientes();
             if (requestDTO.getIdLotes() != null) {
                 for (Integer idLote : requestDTO.getIdLotes()) {
@@ -151,6 +160,7 @@ public class ContratoServiceImpl implements ContratoService {
                 }
             }
         }
+        // --- FIN DE LA MODIFICACIÓN APLICADA ---
 
         if (idsClientesAAsociar != null && !idsClientesAAsociar.isEmpty()) {
             for (Integer idCliente : idsClientesAAsociar) {
@@ -169,6 +179,8 @@ public class ContratoServiceImpl implements ContratoService {
 
         return mapToContratoResponseDTO(contratoGuardado);
     }
+    
+    
     
     @Override
     @Transactional(readOnly = true)

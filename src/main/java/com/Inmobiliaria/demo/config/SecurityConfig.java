@@ -38,33 +38,20 @@ public class SecurityConfig {
                 .requestMatchers("/", "/index.html", "/favicon.ico", "/static/**", "/img/**", "/media/**", "/**/*.js", "/**/*.css", "/**/*.woff2", "/**/*.woff", "/**/*.ttf", "/**/*.svg", "/**/*.png", "/**/*.jpg", "/**/*.jpeg", "/**/*.map").permitAll()
             	// 1. Permite acceso a la ruta de login sin autenticación (la más específica)
                 .requestMatchers("/api/auth/login").permitAll()
-                .requestMatchers("/api/clientes/**").permitAll()
-                .requestMatchers("/api/vendedores/**").permitAll()
-                .requestMatchers("/api/distritos/**").permitAll()
+                
+                      
                 // 2. Reglas para el rol SOPORTE
                 .requestMatchers("/api/dashboard/**").hasRole("SOPORTE")
-               
-                // 3. Reglas para el rol SECRETARIA
+                .requestMatchers("/api/separaciones/**").hasRole("SECRETARIA")
                 .requestMatchers("/api/clientes/**").hasRole("SECRETARIA")
+                .requestMatchers("/api/distritos/**").hasAnyRole("SOPORTE")
                 .requestMatchers("/api/contratos/**").hasRole("SECRETARIA")
                 .requestMatchers("/api/vendedores/**").hasRole("SECRETARIA")
                 .requestMatchers("/api/lotes/**").hasRole("SECRETARIA")
                 .requestMatchers("/api/programas/**").hasAnyRole("SECRETARIA")
                 .requestMatchers("/api/letras/**").hasAnyRole("SECRETARIA")
-                
-                
-                
-                // 4. Reglas compartidas entre SECRETARIA y SOPORTE
-                .requestMatchers("/api/distritos/**").hasAnyRole("SECRETARIA", "SOPORTE")
-                .requestMatchers("/api/programas/reporte-excel").hasAnyRole("SOPORTE", "SECRETARIA")
-                .requestMatchers("/api/programas/**").permitAll()
-                .requestMatchers("/api/programas/**").hasRole("SOPORTE")
-                .requestMatchers("/api/distritos/**").hasRole("SOPORTE")
-                .requestMatchers("/api/vendedores**").hasRole("SOPORTE")
-                
-                // Cualquier otra petición debe estar autenticada
-
-
+                .requestMatchers("/api/programas/reporte-excel").hasAnyRole("SECRETARIA")
+        
                     // ==== 1️⃣ Recursos públicos (Angular, login, letras) ====
                     .requestMatchers(
                             "/", "/index.html", "/favicon.ico",
@@ -82,18 +69,7 @@ public class SecurityConfig {
                     // ==== 2️⃣ SOPORTE ====
                     .requestMatchers("/api/dashboard/**").hasRole("SOPORTE")
 
-                    // ==== 3️⃣ SOPORTE o SECRETARIA ====
-                    .requestMatchers("/api/lotes/**").hasAnyRole("SOPORTE", "SECRETARIA")
-                    .requestMatchers("/api/programas/**").hasAnyRole("SOPORTE", "SECRETARIA")
-                    .requestMatchers("/api/programas/reporte-excel").hasAnyRole("SOPORTE", "SECRETARIA")
-                    .requestMatchers("/api/distritos/**").hasAnyRole("SOPORTE", "SECRETARIA")
-                    .requestMatchers("/api/separaciones/**").hasAnyRole("SOPORTE", "SECRETARIA")
-
-                    // ==== 4️⃣ SOLO SECRETARIA ====
-                    .requestMatchers("/api/clientes/**").hasRole("SECRETARIA")
-                    .requestMatchers("/api/contratos/**").hasRole("SECRETARIA")
-                    .requestMatchers("/api/vendedores/**").hasRole("SECRETARIA")
-
+                  
                     // ==== 5️⃣ Todas las demás rutas requieren autenticación ====
                     .anyRequest().authenticated()
             )

@@ -41,10 +41,9 @@ public class Separacion {
     @Column(name = "observaciones")
     private String observaciones;
     
-    // Estas son las relaciones que ahora mandan
-    @OneToMany(mappedBy = "separacion", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "separacion", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     private List<SeparacionCliente> clientes;
 
-    @OneToMany(mappedBy = "separacion", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "separacion", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     private List<SeparacionLote> lotes;
 }

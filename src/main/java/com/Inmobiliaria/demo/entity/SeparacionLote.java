@@ -1,5 +1,7 @@
 package com.Inmobiliaria.demo.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -17,6 +19,7 @@ public class SeparacionLote {
     @ManyToOne
     @MapsId("idSeparacion")
     @JoinColumn(name = "id_separacion")
+    @JsonIgnore
     private Separacion separacion;
 
     @ManyToOne
