@@ -41,17 +41,17 @@ public class SecurityConfig {
                 
                       
                 // 2. Reglas para el rol SOPORTE
-                .requestMatchers("/api/dashboard/**").hasRole("SOPORTE")
+                .requestMatchers("/api/distritos/**").hasAnyRole("SECRETARIA")
+               
                 .requestMatchers("/api/separaciones/**").hasRole("SECRETARIA")
                 .requestMatchers("/api/clientes/**").hasRole("SECRETARIA")
-                .requestMatchers("/api/distritos/**").hasAnyRole("SOPORTE")
                 .requestMatchers("/api/contratos/**").hasRole("SECRETARIA")
                 .requestMatchers("/api/vendedores/**").hasRole("SECRETARIA")
                 .requestMatchers("/api/lotes/**").hasRole("SECRETARIA")
                 .requestMatchers("/api/programas/**").hasAnyRole("SECRETARIA")
                 .requestMatchers("/api/letras/**").hasAnyRole("SECRETARIA")
                 .requestMatchers("/api/programas/reporte-excel").hasAnyRole("SECRETARIA")
-        
+                .requestMatchers("/api/dashboard/**").hasRole("SOPORTE")
                     // ==== 1️⃣ Recursos públicos (Angular, login, letras) ====
                     .requestMatchers(
                             "/", "/index.html", "/favicon.ico",
