@@ -1,7 +1,10 @@
 package com.Inmobiliaria.demo.entity;
 
 import java.util.Date;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+
 import com.Inmobiliaria.demo.enums.EstadoSeparacion;
 import jakarta.persistence.*;
 import lombok.*;
@@ -42,8 +45,8 @@ public class Separacion {
     private String observaciones;
     
     @OneToMany(mappedBy = "separacion", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
-    private List<SeparacionCliente> clientes;
+    private Set<SeparacionCliente> clientes = new LinkedHashSet<>();
 
     @OneToMany(mappedBy = "separacion", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
-    private List<SeparacionLote> lotes;
+    private Set<SeparacionLote> lotes = new LinkedHashSet<>();
 }

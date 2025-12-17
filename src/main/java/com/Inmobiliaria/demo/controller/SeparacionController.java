@@ -47,8 +47,9 @@ public class SeparacionController {
             Separacion nueva = separacionService.crearSeparacion(sepa);
             return ResponseEntity.status(HttpStatus.CREATED).body(nueva);
         } catch (Exception e) {
-            // Retorna el error en formato texto plano o podrías envolverlo en un mapa para JSON
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            // Envolver el error en un Mapa para que sea JSON válido
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                 .body(java.util.Map.of("error", e.getMessage()));
         }
     }
 
