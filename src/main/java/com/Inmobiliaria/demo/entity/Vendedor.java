@@ -3,6 +3,8 @@ package com.Inmobiliaria.demo.entity;
 import java.math.BigDecimal;
 import java.util.Date;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -48,7 +50,8 @@ public class Vendedor {
     @Column(name = "comision", precision = 5, scale = 2)
     private BigDecimal comision = BigDecimal.ZERO;
     
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "id_distrito")
-    private Distrito distrito; 
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Distrito distrito;
 }

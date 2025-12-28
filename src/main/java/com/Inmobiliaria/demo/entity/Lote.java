@@ -6,6 +6,7 @@ import lombok.*;
 import java.math.BigDecimal;
 
 import com.Inmobiliaria.demo.enums.EstadoLote;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
 @Table(name = "lote")
@@ -60,7 +61,8 @@ public class Lote {
     @Column(name = "estado", length = 20)
     private EstadoLote estado = EstadoLote.Disponible;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "id_programa")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Programa programa;
 }

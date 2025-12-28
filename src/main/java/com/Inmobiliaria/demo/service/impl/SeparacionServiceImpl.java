@@ -32,22 +32,29 @@ public class SeparacionServiceImpl implements SeparacionService {
     private SeparacionLoteRepository separacionLoteRepository;
 
     @Override
+    @Transactional(readOnly = true)
     public List<SeparacionDTO> buscarPorDniOApellido(String filtro) {
         return separacionRepository.buscarPorDniOApellido(filtro);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Separacion buscarPorId(Integer idSeparacion) {
+        // Utilizamos findById que en el Repositorio tiene el @EntityGraph completo
         return separacionRepository.findById(idSeparacion).orElse(null);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Separacion> listadoSeparacion() {
+        // Utilizamos findAll que en el Repositorio tiene el @EntityGraph para listados
         return separacionRepository.findAll();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Separacion obtenerPorId(Integer id) {
+        // Crucial: llama al método con EntityGraph para cargar distritos y evitar error JSON
         return separacionRepository.findById(id).orElse(null);
     }
 
@@ -62,7 +69,7 @@ public class SeparacionServiceImpl implements SeparacionService {
                 separacion.setFechaSeparacion(new Date());
             }
 
-            // 2. Extraer SETS para salvar la cabecera sola primero (CORREGIDO A SET)
+            // 2. Extraer SETS para salvar la cabecera sola primero
             Set<SeparacionLote> lotesReq = separacion.getLotes();
             Set<SeparacionCliente> clientesReq = separacion.getClientes();
             
@@ -101,7 +108,9 @@ public class SeparacionServiceImpl implements SeparacionService {
                 separacionClienteRepository.saveAll(clientesReq);
             }
 
-            return separacionGuardada;
+            // Devolvemos el objeto recargado desde el repositorio para asegurar que traiga las relaciones EAGER
+            return this.obtenerPorId(separacionGuardada.getIdSeparacion());
+            
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage());
         }
@@ -152,7 +161,6 @@ public class SeparacionServiceImpl implements SeparacionService {
             dto.setNomVendedor(s.getVendedor() != null ? 
                 s.getVendedor().getNombre() + " " + s.getVendedor().getApellidos() : "Sin Vendedor");
 
-            // Mapear SET de clientes a LIST del DTO
             if (s.getClientes() != null) {
                 dto.setClientes(s.getClientes().stream()
                     .map(sc -> new SeparacionResumenDTO.ClienteDetalleDTO(
@@ -161,7 +169,6 @@ public class SeparacionServiceImpl implements SeparacionService {
                     .collect(Collectors.toList()));
             }
 
-            // Mapear SET de lotes a LIST del DTO
             if (s.getLotes() != null) {
                 dto.setLotes(s.getLotes().stream()
                     .map(sl -> new SeparacionResumenDTO.LoteDetalleDTO(

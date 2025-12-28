@@ -13,9 +13,11 @@ import com.Inmobiliaria.demo.entity.Separacion;
 @Repository
 public interface SeparacionRepository extends JpaRepository<Separacion, Integer> {
 
+    // 🟢 CORRECCIÓN: Se añaden "clientes.cliente.distrito" y se unifica findById
     @EntityGraph(attributePaths = {
         "clientes", 
         "clientes.cliente", 
+        "clientes.cliente.distrito", // 👈 Crucial para evitar el error "no session" en Distrito
         "lotes", 
         "lotes.lote", 
         "lotes.lote.programa",
@@ -25,7 +27,7 @@ public interface SeparacionRepository extends JpaRepository<Separacion, Integer>
     @Override
     Optional<Separacion> findById(Integer id);
 
-    // Usamos este EntityGraph para traer toda la lista sin errores de carga diferida
+    // EntityGraph optimizado para traer la información base en listados
     @EntityGraph(attributePaths = {
         "clientes.cliente", 
         "lotes.lote", 
@@ -34,14 +36,16 @@ public interface SeparacionRepository extends JpaRepository<Separacion, Integer>
     @Override
     List<Separacion> findAll();
 
-    @Query("SELECT new com.Inmobiliaria.demo.dto.SeparacionDTO(s.idSeparacion, " +
+    // 🟢 MEJORA: Se añade DISTINCT para que no se repitan IDs en el buscador de Angular
+    @Query("SELECT DISTINCT new com.Inmobiliaria.demo.dto.SeparacionDTO(s.idSeparacion, " +
            "CONCAT(c.nombre, ' ', c.apellidos, ' - DNI: ', c.numDoc, ' - Mz ', l.manzana, ' Lt ', l.numeroLote)) " +
            "FROM Separacion s " +
            "JOIN s.clientes sc " + 
            "JOIN sc.cliente c " +
            "JOIN s.lotes sl " + 
            "JOIN sl.lote l " +
-           "WHERE LOWER(c.apellidos) LIKE LOWER(CONCAT('%', :filtro, '%')) " +
-           "OR c.numDoc LIKE CONCAT('%', :filtro, '%')")
+           "WHERE (LOWER(c.apellidos) LIKE LOWER(CONCAT('%', :filtro, '%')) " +
+           "OR c.numDoc LIKE CONCAT('%', :filtro, '%') " +
+           "OR CAST(s.idSeparacion AS string) LIKE CONCAT('%', :filtro, '%'))")
     List<SeparacionDTO> buscarPorDniOApellido(@Param("filtro") String filtro);
 }

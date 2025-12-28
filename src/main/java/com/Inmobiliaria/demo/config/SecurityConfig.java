@@ -38,11 +38,9 @@ public class SecurityConfig {
                 .requestMatchers("/", "/index.html", "/favicon.ico", "/static/**", "/img/**", "/media/**", "/**/*.js", "/**/*.css", "/**/*.woff2", "/**/*.woff", "/**/*.ttf", "/**/*.svg", "/**/*.png", "/**/*.jpg", "/**/*.jpeg", "/**/*.map").permitAll()
             	// 1. Permite acceso a la ruta de login sin autenticación (la más específica)
                 .requestMatchers("/api/auth/login").permitAll()
-                
-                      
-                // 2. Reglas para el rol SOPORTE
-                .requestMatchers("/api/distritos/**").hasAnyRole("SECRETARIA")
-               
+                               
+               // 2. Reglas para el rol SOPORTE
+                .requestMatchers("/api/distritos/**").hasAnyRole("SECRETARIA")              
                 .requestMatchers("/api/separaciones/**").hasRole("SECRETARIA")
                 .requestMatchers("/api/clientes/**").hasRole("SECRETARIA")
                 .requestMatchers("/api/contratos/**").hasRole("SECRETARIA")
@@ -53,16 +51,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/programas/reporte-excel").hasAnyRole("SECRETARIA")
                 .requestMatchers("/api/dashboard/**").hasRole("SOPORTE")
                     // ==== 1️⃣ Recursos públicos (Angular, login, letras) ====
-                    .requestMatchers(
-                            "/", "/index.html", "/favicon.ico",
-                            "/static/**", "/img/**", "/media/**",
-                            "/**/*.js", "/**/*.css",
-                            "/**/*.woff2", "/**/*.woff",
-                            "/**/*.ttf", "/**/*.svg",
-                            "/**/*.png", "/**/*.jpg", "/**/*.jpeg",
-                            "/**/*.map"
-                    ).permitAll()
-
+                    
                     .requestMatchers("/api/auth/login").permitAll()
                     .requestMatchers("/api/letras/**").permitAll()
 
@@ -91,7 +80,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:4200"));
+        // 🟢 Agregamos la URL de producción de Vercel y mantenemos localhost
+        configuration.setAllowedOrigins(List.of(
+            "http://localhost:4200", 
+            "https://inmobiliaria-ivan.vercel.app"
+        ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

@@ -6,11 +6,13 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import com.Inmobiliaria.demo.enums.EstadoCliente;
 import com.Inmobiliaria.demo.enums.TipoCliente;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -68,8 +70,9 @@ public class Cliente {
     @Column(name = "estado", nullable = false)
     private EstadoCliente estado = EstadoCliente.ACTIVO;  
     
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "id_distrito")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Distrito distrito;
 
 }

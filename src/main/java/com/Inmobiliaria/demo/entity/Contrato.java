@@ -58,12 +58,15 @@ public class Contrato {
     @Column(name = "observaciones", columnDefinition = "TEXT", nullable = true)
     private String observaciones;
 
-    @OneToMany(mappedBy = "contrato")
+    // 🟢 CORRECCIÓN: Cascada para Letras de Cambio
+    @OneToMany(mappedBy = "contrato", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<LetraCambio> letrasCambio;
 
-    @OneToMany(mappedBy = "contrato")
+    // 🟢 CORRECCIÓN: Cascada para la tabla intermedia contrato_cliente
+    @OneToMany(mappedBy = "contrato", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ContratoCliente> clientes;
 
-    @OneToMany(mappedBy = "contrato")
+    // 🟢 CORRECCIÓN: Cascada para la tabla intermedia contrato_lote
+    @OneToMany(mappedBy = "contrato", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ContratoLote> lotes;
 }

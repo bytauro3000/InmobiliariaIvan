@@ -4,7 +4,6 @@ import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-
 import com.Inmobiliaria.demo.enums.EstadoSeparacion;
 import jakarta.persistence.*;
 import lombok.*;
@@ -22,7 +21,7 @@ public class Separacion {
     @Column(name = "id_separacion")
     private Integer idSeparacion;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "id_vendedor")
     private Vendedor vendedor;
 
@@ -43,10 +42,13 @@ public class Separacion {
 
     @Column(name = "observaciones")
     private String observaciones;
-    
-    @OneToMany(mappedBy = "separacion", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+ 
+    @OneToMany(mappedBy = "separacion", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ReciboSeparacion> recibos;
+   
+    @OneToMany(mappedBy = "separacion", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<SeparacionCliente> clientes = new LinkedHashSet<>();
-
-    @OneToMany(mappedBy = "separacion", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+   
+    @OneToMany(mappedBy = "separacion", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<SeparacionLote> lotes = new LinkedHashSet<>();
 }
