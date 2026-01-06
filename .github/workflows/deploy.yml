@@ -3,7 +3,7 @@ name: Deploy Backend to Render
 on:
   push:
     branches:
-      - main  # Se activa cada vez que subes cambios a la rama main
+      - main
 
 jobs:
   build-and-push:
@@ -34,9 +34,9 @@ jobs:
         with:
           context: .
           push: true
-          # Reemplaza 'tu-usuario' por tu nombre real de Docker Hub o usa un secreto
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/inmobiliaria-backend:latest 
+          # ✅ Se usan las variables de tus secretos para formar la ruta completa
+          tags: "${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO }}:latest"
 
       - name: Notificar a Render para actualizar
         run: |
-          curl -f ${{ secrets.RENDER_DEPLOY_HOOK }}
+          curl -f "${{ secrets.RENDER_DEPLOY_HOOK }}"
