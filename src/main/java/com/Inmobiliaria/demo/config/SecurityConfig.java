@@ -49,7 +49,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/programas/**").hasAnyRole("SECRETARIA")
                 .requestMatchers("/api/letras/**").hasAnyRole("SECRETARIA")
                 .requestMatchers("/api/programas/reporte-excel").hasAnyRole("SECRETARIA")
-                .requestMatchers("/api/dashboard/**").permitAll()
+                .requestMatchers("/api/dashboard/**").hasRole("SECRETARIA")
                     // ==== 1️⃣ Recursos públicos (Angular, login, letras) ====
                     
                     .requestMatchers("/api/auth/login").permitAll()
