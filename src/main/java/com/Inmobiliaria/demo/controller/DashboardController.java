@@ -14,7 +14,8 @@ import com.Inmobiliaria.demo.service.LoteService;
 import com.Inmobiliaria.demo.service.ParceleroService;
 import com.Inmobiliaria.demo.service.ProgramaService;
 import com.Inmobiliaria.demo.service.VendedorService;
-import com.Inmobiliaria.demo.service.ClienteService; // Asegúrate de tener este import
+import com.Inmobiliaria.demo.service.ClienteService;
+import com.Inmobiliaria.demo.repository.ContratoRepository; 
 
 @RestController
 @RequestMapping("/api/dashboard")
@@ -34,40 +35,51 @@ public class DashboardController {
     private LoteService loteService;
     
     @Autowired
-    private ClienteService clienteService; // Inyectamos clientes para la nueva tarjeta
+    private ClienteService clienteService;
+
+    @Autowired
+    private ContratoRepository contratoRepository; // Inyección para el nuevo gráfico
 
     @GetMapping("/totales")
     public Map<String, Object> obtenerTotales() {
         Map<String, Object> respuesta = new HashMap<>();
 
-        // 1. Conteos simples para las tarjetas
+        // 1. Conteos para las tarjetas superiores
         respuesta.put("vendedores", (long) vendedorService.listarVendedores().size());
         respuesta.put("parceleros", (long) parceleroService.listarParceleros().size());
         respuesta.put("programas", (long) programaService.listProgramas().size());
         respuesta.put("lotes", (long) loteService.listarLotes().size());
         respuesta.put("clientes", (long) clienteService.listarClientes().size());
 
-        // 2. Lógica para el gráfico de barras apiladas
-        // Obtenemos la lista de Object[] desde el service (que ya llama al repo)
-        List<Object[]> resultadosGrafico = loteService.obtenerConteoPorEstadoYPrograma();
-        
-        // Estructura para el gráfico: { "NombrePrograma": { "Disponible": 10, "Vendido": 5 }, ... }
-        Map<String, Map<String, Long>> graficoLotes = new HashMap<>();
+        // 2. Lógica para el gráfico de Lotes (Disponible, Vendido, Separado)
+        List<Object[]> resultadosLotes = loteService.obtenerConteoPorEstadoYPrograma();
+        respuesta.put("graficoLotes", procesarResultadosParaGrafico(resultadosLotes));
 
-        for (Object[] fila : resultadosGrafico) {
-            String nombrePrograma = (String) fila[0];
-            String estado = fila[1].toString(); // El enum EstadoLote pasado a String
-            Long cantidad = (Long) fila[2];
-
-            // Si el programa no existe en el mapa, lo creamos con un mapa interno vacío
-            graficoLotes.putIfAbsent(nombrePrograma, new HashMap<>());
-            
-            // Agregamos el conteo al estado correspondiente dentro de ese programa
-            graficoLotes.get(nombrePrograma).put(estado, cantidad);
-        }
-
-        respuesta.put("graficoLotes", graficoLotes);
+        // 3. Lógica para el gráfico de Contratos (CONTADO vs FINANCIADO)
+        // Usamos la query que definimos en el ContratoRepository
+        List<Object[]> resultadosContratos = contratoRepository.contarContratosPorProgramaYTipo();
+        respuesta.put("graficoContratos", procesarResultadosParaGrafico(resultadosContratos));
 
         return respuesta;
+    }
+
+    /**
+     * Método auxiliar genérico para convertir una lista de Object[] en el formato 
+     * Map<Nombre, Map<Categoria, Cantidad>> que requiere el Frontend.
+     */
+    private Map<String, Map<String, Long>> procesarResultadosParaGrafico(List<Object[]> resultados) {
+        Map<String, Map<String, Long>> mapaFinal = new HashMap<>();
+
+        if (resultados != null) {
+            for (Object[] fila : resultados) {
+                String nombrePrograma = (String) fila[0];
+                String categoria = fila[1].toString(); // Puede ser EstadoLote o TipoContrato
+                Long cantidad = (Long) fila[2];
+
+                mapaFinal.putIfAbsent(nombrePrograma, new HashMap<>());
+                mapaFinal.get(nombrePrograma).put(categoria, cantidad);
+            }
+        }
+        return mapaFinal;
     }
 }
