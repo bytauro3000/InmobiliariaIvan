@@ -19,6 +19,11 @@ public class LoteServiceImpl implements LoteService {
     public List<Lote> listarLotes() {
         return loteRepository.findAll();
     }
+    
+    @Override
+    public List<Object[]> obtenerConteoPorEstadoYPrograma() {
+        return loteRepository.contarLotesPorProgramaYEstado();
+    }
 
     @Override
     public List<LoteProgramaResponseDTO> listarLotesPorPrograma(Integer idPrograma) {

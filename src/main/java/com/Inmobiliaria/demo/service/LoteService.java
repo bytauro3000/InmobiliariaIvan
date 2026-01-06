@@ -9,6 +9,8 @@ public interface LoteService {
 
 	List<Lote> listarLotes();
 	
+	List<Object[]> obtenerConteoPorEstadoYPrograma();
+	
 	List<LoteProgramaResponseDTO> listarLotesPorPrograma(Integer idPrograma);
 	
 	Lote actualizarLote(Lote reg);
