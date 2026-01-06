@@ -49,14 +49,13 @@ public class SecurityConfig {
                 .requestMatchers("/api/programas/**").hasAnyRole("SECRETARIA")
                 .requestMatchers("/api/letras/**").hasAnyRole("SECRETARIA")
                 .requestMatchers("/api/programas/reporte-excel").hasAnyRole("SECRETARIA")
-                .requestMatchers("/api/dashboard/**").hasRole("SOPORTE")
+                .requestMatchers("/api/dashboard/**").hasRole("SECRETARIA")
                     // ==== 1️⃣ Recursos públicos (Angular, login, letras) ====
                     
                     .requestMatchers("/api/auth/login").permitAll()
                     .requestMatchers("/api/letras/**").permitAll()
 
-                    // ==== 2️⃣ SOPORTE ====
-                    .requestMatchers("/api/dashboard/**").hasRole("SOPORTE")
+                   
 
                   
                     // ==== 5️⃣ Todas las demás rutas requieren autenticación ====
