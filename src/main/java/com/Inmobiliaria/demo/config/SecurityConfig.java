@@ -38,6 +38,8 @@ public class SecurityConfig {
                 .requestMatchers("/", "/index.html", "/favicon.ico", "/static/**", "/img/**", "/media/**", "/**/*.js", "/**/*.css", "/**/*.woff2", "/**/*.woff", "/**/*.ttf", "/**/*.svg", "/**/*.png", "/**/*.jpg", "/**/*.jpeg", "/**/*.map").permitAll()
             	// 1. Permite acceso a la ruta de login sin autenticación (la más específica)
                 .requestMatchers("/api/auth/login").permitAll()
+             // 🟢 NUEVO: Permitir la ruta del Health Check (PING) sin autenticación
+                .requestMatchers("/api/public/**").permitAll()
                                
                // 2. Reglas para el rol SOPORTE
                 .requestMatchers("/api/distritos/**").hasAnyRole("SECRETARIA")              
