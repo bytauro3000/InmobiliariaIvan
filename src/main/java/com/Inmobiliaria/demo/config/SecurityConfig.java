@@ -54,12 +54,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/dashboard/**").hasRole("SECRETARIA")
                     // ==== 1️⃣ Recursos públicos (Angular, login, letras) ====
                     
-                    .requestMatchers("/api/auth/login").permitAll()
-                    .requestMatchers("/api/letras/**").permitAll()
-
-                   
-
-                  
+       
                     // ==== 5️⃣ Todas las demás rutas requieren autenticación ====
                     .anyRequest().authenticated()
             )
