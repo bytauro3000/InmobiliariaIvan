@@ -28,30 +28,30 @@ public class PdfGenerator {
         // --- PROCESAMIENTO DINÁMICO DE CLIENTES ---
         List<ClienteResponseDTO> clientes = contrato.getClientes();
         int numClientes = clientes.size();
-        
-        // Datos del primer cliente para dirección
         ClienteResponseDTO titular = clientes.get(0);
        
-     // 🟢 CORRECCIÓN AQUÍ: Accedemos al nombre del distrito específicamente
+        // 1. Obtención del nombre del Distrito y ubicación fija de Lima
         String nombreDistrito = (titular.getDistrito() != null) ? titular.getDistrito().getNombre() : "";
-        String direccionCompleta = titular.getDireccion() + ", Distrito de " + nombreDistrito;
+        String ubicacionLima = ", DISTRITO DE " + nombreDistrito.toUpperCase() + ", PROVINCIA Y DEPARTAMENTO DE LIMA";
+        String direccionCompleta = titular.getDireccion().toUpperCase() + ubicacionLima;
 
-        // Construcción del bloque de compradores
+        // 2. Construcción del bloque de compradores con lógica de género y nacionalidad
         StringBuilder sbCompradores = new StringBuilder();
         for (int i = 0; i < numClientes; i++) {
             ClienteResponseDTO c = clientes.get(i);
             
-            // 🟢 Comparación exacta con tu Enum Genero
-            String prefijo = "el Sr. "; // Valor por defecto
-            if (c.getGenero() != null && c.getGenero().equals(Genero.Femenino)) {
-                prefijo = "la Sra. ";
-            }
-            
+            boolean esFemenino = (c.getGenero() != null && c.getGenero().equals(Genero.Femenino));
+            String prefijo = esFemenino ? "LA SRA. " : "EL SR. ";
+            String nacionalidad = extraerNacionalidad(c.getCelular(), esFemenino);
+            String estadoCivilContrato = esFemenino ? "CASADA" : "CASADO";
+
             sbCompradores.append(prefijo).append(c.getNombre()).append(" ").append(c.getApellidos())
-                         .append(", identificado con DNI N°").append(c.getNumDoc());
+                         .append(", ").append(nacionalidad.toUpperCase())
+                         .append(", IDENTIFICADO CON DNI N°").append(c.getNumDoc());
             
             if (numClientes > 1 && i == 0) {
-                sbCompradores.append(", casado con ");
+                // Concordancia de género: Casado con / Casada con
+                sbCompradores.append(", ").append(estadoCivilContrato).append(" CON ");
             }
         }
 
@@ -70,15 +70,19 @@ public class PdfGenerator {
         document.add(new Paragraph("CONTRATO PRIVADO DE COMPRA-VENTA DE TERRENO RUSTICO").setTextAlignment(TextAlignment.CENTER).setBold().setUnderline());
         document.add(new Paragraph("\n"));
 
-        // --- PÁRRAFO INTRODUCTORIO (CORREGIDO) ---
+        // --- PÁRRAFO INTRODUCTORIO ---
         Paragraph intro = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setFontSize(10);
         intro.add("Conste por el presente documento de Contrato privado de Compra-Venta de terreno rústico con Reserva de Propiedad que celebran de una parte ");
         intro.add(new Text("“INMOBILIARIA CONSTRUCTORA IVAN E.I.R.L.”").setBold());
-        intro.add(" con RUC Nº 20537853108 con domicilio Av. Alfredo Mendiola N°3623- Tercer Piso - Of. 301-A Urb. Panamericana Norte, Distrito de Los Olivos, representado por su Gerente General ");
+        intro.add(" con RUC Nº 20537853108 con domicilio Av. Alfredo Mendiola N°3623- Tercer Piso - Of. 301-A Urb. Panamericana Norte, Distrito de Los Olivos, Provincia y Departamento de Lima, representado por su Gerente General ");
         intro.add(new Text("OLMEDO SILVA LOPEZ").setBold());
-        intro.add(" con DNI No.19404451 según consta del poder inscrito en la partida electrónica Nº 12561792, a quien en adelante se le denominará LA VENDEDORA; y de la otra parte ");
+        intro.add(" con DNI No.19404451, a quien en adelante se le denominará LA VENDEDORA; y de la otra parte ");
+        
+        // Nombres y DNI en Negrita y Mayúsculas
         intro.add(new Text(sbCompradores.toString().toUpperCase()).setBold());
-        intro.add(", " + etiquetaDomicilio + direccionCompleta.toUpperCase() + ", a quien en adelante se le denominará ");
+        
+        intro.add(", " + etiquetaDomicilio + direccionCompleta);
+        intro.add(", a quien en adelante se le denominará ");
         intro.add(new Text(etiquetaComprador).setBold().setUnderline());
         intro.add(" en los términos y condiciones de las cláusulas siguientes: ----------------------------------------------------");
         document.add(intro);
@@ -113,9 +117,22 @@ public class PdfGenerator {
         return out.toByteArray();
     }
 
+    /**
+     * Extrae nacionalidad basándose en el prefijo telefónico (+51, +1, +52, +57)
+     */
+    private static String extraerNacionalidad(String celular, boolean esFemenino) {
+        if (celular == null) return esFemenino ? "peruana" : "peruano";
+        
+        if (celular.startsWith("+51")) return esFemenino ? "peruana" : "peruano";
+        if (celular.startsWith("+52")) return esFemenino ? "mexicana" : "mexicano";
+        if (celular.startsWith("+57")) return esFemenino ? "colombiana" : "colombiano";
+        if (celular.startsWith("+1")) return esFemenino ? "estadounidense" : "estadounidense";
+        
+        return esFemenino ? "peruana" : "peruano";
+    }
+
     private static void agregarBloqueFirmas(Document document, List<ClienteResponseDTO> clientes) {
         document.add(new Paragraph("\n\n\n"));
-        // Línea para Primer Comprador y Vendedora
         document.add(new Paragraph("….….……………………………………………….                 ...…………………………").setTextAlignment(TextAlignment.CENTER));
         
         String primerComprador = clientes.get(0).getNombre() + " " + clientes.get(0).getApellidos();

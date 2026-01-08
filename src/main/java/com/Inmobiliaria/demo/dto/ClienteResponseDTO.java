@@ -16,6 +16,7 @@ public class ClienteResponseDTO {
     private String apellidos;
     private String numDoc; // Esto es el DNI
     private String direccion;
+    private String celular;
     private Distrito distrito;
     private Genero genero;
 }
