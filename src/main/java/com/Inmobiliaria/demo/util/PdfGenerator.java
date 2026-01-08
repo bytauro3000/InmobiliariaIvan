@@ -14,6 +14,9 @@ import com.itextpdf.layout.properties.AreaBreakType;
 import com.itextpdf.layout.properties.TextAlignment;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
+import com.itextpdf.io.font.PdfEncodings;
+import com.itextpdf.kernel.font.PdfFont;
+import com.itextpdf.kernel.font.PdfFontFactory;
 
 public class PdfGenerator {
 
@@ -23,6 +26,24 @@ public class PdfGenerator {
         PdfDocument pdf = new PdfDocument(writer);
         Document document = new Document(pdf);
         document.setMargins(25, 30, 25, 30);
+        
+     // 🔹 FUENTE ARIAL REAL (SOLO PARA EL TÍTULO)
+     // 🔹 CARGA DE FUENTE ROBUSTA (MÉTODO ESTÁTICO)
+        PdfFont arialBoldItalic;
+        try {
+            // 1. Usamos PdfGenerator.class en lugar de getClass()
+            byte[] fontBytes = com.itextpdf.io.util.StreamUtil.inputStreamToArray(
+                PdfGenerator.class.getClassLoader().getResourceAsStream("fonts/ARIALBI.TTF")
+            );
+            // 2. Creamos la fuente
+            arialBoldItalic = PdfFontFactory.createFont(fontBytes, PdfEncodings.WINANSI);
+
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("Error al leer el archivo de fuente ARIALBI.TTF", e);
+        } catch (Exception e) {
+            throw new RuntimeException("No se pudo cargar la fuente desde resources/fonts/. Verifique que el archivo existe.", e);
+        }
+
         
         // --- PROCESAMIENTO DINÁMICO DE CLIENTES ---
         List<ClienteResponseDTO> clientes = contrato.getClientes();
@@ -67,14 +88,15 @@ public class PdfGenerator {
         // --- PÁGINA 1: ENCABEZADO ---
         document.add(new Paragraph("PROGRAMA DE VIVIENDA").setTextAlignment(TextAlignment.CENTER).setBold().setMarginBottom(0));
         document.add(new Paragraph("“LA FLORIDA DE TORRE BLANCA”").setTextAlignment(TextAlignment.CENTER).setBold().setFontSize(13).setMarginBottom(0));
+     // ✅ AQUÍ ES EL ÚNICO CAMBIO → ARIAL REAL
+     // ✅ Aplicando la fuente Arial Bold Italic cargada
         document.add(new Paragraph("CONTRATO PRIVADO DE COMPRA-VENTA DE TERRENO RUSTICO")
-        	        .setTextAlignment(TextAlignment.CENTER)
-        	        .setFontSize(11)
-        	        .setBold()
-        	        .setItalic()
-        	        .setUnderline()
-        	        .setMarginBottom(20)
-        	);
+                .setFont(arialBoldItalic)
+                .setFontSize(11) // Tamaño ideal para títulos secundarios
+                .setUnderline()
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginBottom(15) // Ajustado de 20 a 15 para mayor fidelidad al Word
+        );
         // --- PÁRRAFO INTRODUCTORIO CORREGIDO ---
         Paragraph intro = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setFontSize(10);
         intro.add("Conste por el presente documento de Contrato privado de Compra-Venta de terreno rústico con Reserva de Propiedad que celebran de una parte ");
