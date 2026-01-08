@@ -15,7 +15,9 @@ public interface ContratoService {
     List<ContratoResponseDTO> listarContratos();
 
     void eliminarContrato(Integer idContrato);
-    
  
     ContratoResponseDTO buscarPorId(Integer idContrato);
+    
+ // 🟢 NUEVO: Método para generar el PDF desde el Service
+    byte[] generarPdf(Integer idContrato);
 }

@@ -20,7 +20,8 @@ public class ContratoResponseDTO {
     private BigDecimal saldo;
     private Integer cantidadLetras;
     private String observaciones;
-    private List<ClienteResponseDTO> clientes;
+    private List<ClienteResponseDTO> clientes; // <-- Lista de DTOs de clientes
+ // Dentro de tu ContratoResponseDTO.java actual agregas:
     private List<LoteResponseDTO> lotes;
     private List<LetraResponseDTO> letras;
 }

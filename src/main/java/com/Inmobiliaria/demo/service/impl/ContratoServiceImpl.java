@@ -20,6 +20,7 @@ import com.Inmobiliaria.demo.enums.TipoContrato;
 import com.Inmobiliaria.demo.enums.TipoPropietario;
 import com.Inmobiliaria.demo.repository.ContratoRepository;
 import com.Inmobiliaria.demo.service.*;
+import com.Inmobiliaria.demo.util.PdfGenerator; // 👈 Importamos tu utilidad
 
 @Service
 public class ContratoServiceImpl implements ContratoService {
@@ -45,8 +46,6 @@ public class ContratoServiceImpl implements ContratoService {
     @Transactional
     public ContratoResponseDTO guardarContrato(ContratoRequestDTO requestDTO, Principal principal) {
         Contrato contrato = new Contrato();
-        
-        // 1. Parsear Fecha
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         try {
             Date fecha = dateFormat.parse(requestDTO.getFechaContrato());
@@ -55,7 +54,6 @@ public class ContratoServiceImpl implements ContratoService {
             throw new RuntimeException("Error al parsear la fecha del contrato.", e);
         }
 
-        // 2. Asignar Valores Básicos
         contrato.setTipoContrato(TipoContrato.valueOf(requestDTO.getTipoContrato()));
         contrato.setMontoTotal(BigDecimal.valueOf(requestDTO.getMontoTotal()));
         contrato.setInicial(BigDecimal.valueOf(requestDTO.getInicial()));
@@ -63,7 +61,6 @@ public class ContratoServiceImpl implements ContratoService {
         contrato.setCantidadLetras(requestDTO.getCantidadLetras());
         contrato.setObservaciones(requestDTO.getObservaciones());
 
-        // 3. Asignar Vendedor y Separación
         Vendedor vendedor = null;
         if (requestDTO.getIdSeparacion() != null) {
             Separacion separacion = separacionService.buscarPorId(requestDTO.getIdSeparacion());
@@ -79,17 +76,14 @@ public class ContratoServiceImpl implements ContratoService {
         }
         contrato.setVendedor(vendedor);
 
-        // 4. Asignar Usuario
         String correo = principal.getName();
         Usuario usuario = usuarioService.buscarByUsuario(correo);
         contrato.setUsuario(usuario);
 
         setearValoresPorDefecto(contrato);
 
-        // 5. Guardar Cabecera
         Contrato contratoGuardado = contratoRepository.save(contrato);
 
-        // 6. Procesar Clientes y Lotes
         List<Integer> idsClientesAAsociar;
         if (requestDTO.getIdSeparacion() != null) {
             Separacion separacion = contratoGuardado.getSeparacion();
@@ -114,7 +108,6 @@ public class ContratoServiceImpl implements ContratoService {
             }
         }
 
-        // Asociar Clientes
         if (idsClientesAAsociar != null) {
             for (Integer idCliente : idsClientesAAsociar) {
                 Cliente cliente = clienteService.buscarClientePorId(idCliente);
@@ -165,7 +158,17 @@ public class ContratoServiceImpl implements ContratoService {
         contratoRepository.deleteById(idContrato);
     }
 
-    // 🟢 MAPEO COMPLETO PARA EL PDF
+    // 🟢 NUEVO: Implementación para generar el PDF
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] generarPdf(Integer idContrato) {
+        ContratoResponseDTO dto = buscarPorId(idContrato);
+        if (dto == null) {
+            throw new RuntimeException("No se encontró el contrato con ID: " + idContrato);
+        }
+        return PdfGenerator.generarContratoFlorida(dto);
+    }
+
     private ContratoResponseDTO mapToContratoResponseDTO(Contrato contrato) {
         if (contrato == null) return null;
         
@@ -179,7 +182,6 @@ public class ContratoServiceImpl implements ContratoService {
         dto.setCantidadLetras(contrato.getCantidadLetras());
         dto.setObservaciones(contrato.getObservaciones());
 
-        // 1. Mapear Clientes
         if (contrato.getClientes() != null) {
             dto.setClientes(contrato.getClientes().stream()
                 .map(cc -> new ClienteResponseDTO(
@@ -190,7 +192,6 @@ public class ContratoServiceImpl implements ContratoService {
                 )).collect(Collectors.toList()));
         }
 
-        // 2. Mapear Lotes (Datos para Cláusula Segunda)
         if (contrato.getLotes() != null) {
             dto.setLotes(contrato.getLotes().stream()
                 .map(cl -> {
@@ -205,7 +206,6 @@ public class ContratoServiceImpl implements ContratoService {
                 }).collect(Collectors.toList()));
         }
 
-        // 3. Mapear Letras (Datos para Cláusula Tercera)
         if (contrato.getLetrasCambio() != null) {
             dto.setLetras(contrato.getLetrasCambio().stream()
                 .map(letra -> new LetraResponseDTO(

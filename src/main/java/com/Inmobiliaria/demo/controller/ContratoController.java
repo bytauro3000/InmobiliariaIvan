@@ -10,7 +10,6 @@ import com.Inmobiliaria.demo.dto.ContratoRequestDTO;
 import com.Inmobiliaria.demo.dto.ContratoResponseDTO;
 import com.Inmobiliaria.demo.service.ContratoService;
 
-
 @RestController
 @RequestMapping("/api/contratos")
 @CrossOrigin(origins = "*")
@@ -33,6 +32,7 @@ public class ContratoController {
         return contratoService.listarContratos();
     }
     
+    // Mantenlo: Sirve para visualización rápida y edición en Angular
     @GetMapping("/{id}")
     public ResponseEntity<ContratoResponseDTO> buscarContratoPorId(@PathVariable Integer id) {
         ContratoResponseDTO contrato = contratoService.buscarPorId(id);
@@ -46,5 +46,16 @@ public class ContratoController {
     @DeleteMapping("/eliminar/{id}")
     public void eliminarContrato(@PathVariable Integer id) {
         contratoService.eliminarContrato(id);
+    }
+    
+    // Endpoint de Seguridad Legal: Genera el archivo real
+    @GetMapping("/{id}/imprimir")
+    public ResponseEntity<byte[]> descargarContratoPdf(@PathVariable Integer id) {
+        byte[] pdfBytes = contratoService.generarPdf(id);
+
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Contrato_LaFlorida_" + id + ".pdf")
+                .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                .body(pdfBytes);
     }
 }
