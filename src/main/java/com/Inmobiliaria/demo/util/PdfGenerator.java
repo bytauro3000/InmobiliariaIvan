@@ -15,7 +15,6 @@ import com.itextpdf.layout.element.Text;
 import com.itextpdf.layout.properties.AreaBreakType;
 import com.itextpdf.layout.properties.TextAlignment;
 import java.io.ByteArrayOutputStream;
-import java.text.SimpleDateFormat;
 import java.util.List;
 import com.itextpdf.io.font.PdfEncodings;
 import com.itextpdf.kernel.font.PdfFont;
