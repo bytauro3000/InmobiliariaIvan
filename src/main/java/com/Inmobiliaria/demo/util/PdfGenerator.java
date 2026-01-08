@@ -31,7 +31,10 @@ public class PdfGenerator {
         
         // Datos del primer cliente para dirección
         ClienteResponseDTO titular = clientes.get(0);
-        String direccionCompleta = titular.getDireccion() + ", Distrito de " + titular.getDistrito();
+       
+     // 🟢 CORRECCIÓN AQUÍ: Accedemos al nombre del distrito específicamente
+        String nombreDistrito = (titular.getDistrito() != null) ? titular.getDistrito().getNombre() : "";
+        String direccionCompleta = titular.getDireccion() + ", Distrito de " + nombreDistrito;
 
         // Construcción del bloque de compradores
         StringBuilder sbCompradores = new StringBuilder();
