@@ -6,14 +6,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.security.Principal;
 import java.text.SimpleDateFormat;
+import java.text.ParseException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.text.ParseException;
-import com.Inmobiliaria.demo.dto.ClienteResponseDTO;
-import com.Inmobiliaria.demo.dto.ContratoRequestDTO;
-import com.Inmobiliaria.demo.dto.ContratoResponseDTO;
+
+import com.Inmobiliaria.demo.dto.*;
 import com.Inmobiliaria.demo.entity.*;
 import com.Inmobiliaria.demo.enums.EstadoLote;
 import com.Inmobiliaria.demo.enums.EstadoSeparacion;
@@ -45,7 +44,6 @@ public class ContratoServiceImpl implements ContratoService {
     @Override
     @Transactional
     public ContratoResponseDTO guardarContrato(ContratoRequestDTO requestDTO, Principal principal) {
-        
         Contrato contrato = new Contrato();
         
         // 1. Parsear Fecha
@@ -65,20 +63,19 @@ public class ContratoServiceImpl implements ContratoService {
         contrato.setCantidadLetras(requestDTO.getCantidadLetras());
         contrato.setObservaciones(requestDTO.getObservaciones());
 
-        // 3. Lógica para asignar Vendedor y SEPARACIÓN (Crucial)
+        // 3. Asignar Vendedor y Separación
         Vendedor vendedor = null;
         if (requestDTO.getIdSeparacion() != null) {
-            // 🟢 SOLUCIÓN: Buscamos la entidad separación y la asignamos al contrato
             Separacion separacion = separacionService.buscarPorId(requestDTO.getIdSeparacion());
             if (separacion != null) {
-                contrato.setSeparacion(separacion); // 👈 ESTA LÍNEA ES LA QUE FALTABA
+                contrato.setSeparacion(separacion);
                 vendedor = separacion.getVendedor();
             } else {
                 throw new RuntimeException("La separación con ID " + requestDTO.getIdSeparacion() + " no existe.");
             }
         } else if (requestDTO.getIdVendedor() != null) {
             vendedor = vendedorService.obtenerVendedorPorId(requestDTO.getIdVendedor())
-                                      .orElseThrow(() -> new RuntimeException("Vendedor no encontrado"));
+                    .orElseThrow(() -> new RuntimeException("Vendedor no encontrado"));
         }
         contrato.setVendedor(vendedor);
 
@@ -89,16 +86,13 @@ public class ContratoServiceImpl implements ContratoService {
 
         setearValoresPorDefecto(contrato);
 
-        // 5. GUARDAR CABECERA (Aquí se insertará el id_separacion en la DB)
+        // 5. Guardar Cabecera
         Contrato contratoGuardado = contratoRepository.save(contrato);
 
         // 6. Procesar Clientes y Lotes
         List<Integer> idsClientesAAsociar;
-        
         if (requestDTO.getIdSeparacion() != null) {
             Separacion separacion = contratoGuardado.getSeparacion();
-            
-            // Actualizar estado de la separación
             separacion.setEstado(EstadoSeparacion.CONCRETADO);
             separacionService.actualizarSeparacion(separacion);
 
@@ -171,20 +165,57 @@ public class ContratoServiceImpl implements ContratoService {
         contratoRepository.deleteById(idContrato);
     }
 
+    // 🟢 MAPEO COMPLETO PARA EL PDF
     private ContratoResponseDTO mapToContratoResponseDTO(Contrato contrato) {
         if (contrato == null) return null;
-        ContratoResponseDTO dto = new ContratoResponseDTO(
-            contrato.getIdContrato(), contrato.getFechaContrato(), contrato.getTipoContrato(),
-            contrato.getMontoTotal(), contrato.getInicial(), contrato.getSaldo(),
-            contrato.getCantidadLetras(), contrato.getObservaciones(), null
-        );
+        
+        ContratoResponseDTO dto = new ContratoResponseDTO();
+        dto.setIdContrato(contrato.getIdContrato());
+        dto.setFechaContrato(contrato.getFechaContrato());
+        dto.setTipoContrato(contrato.getTipoContrato());
+        dto.setMontoTotal(contrato.getMontoTotal());
+        dto.setInicial(contrato.getInicial());
+        dto.setSaldo(contrato.getSaldo());
+        dto.setCantidadLetras(contrato.getCantidadLetras());
+        dto.setObservaciones(contrato.getObservaciones());
+
+        // 1. Mapear Clientes
         if (contrato.getClientes() != null) {
             dto.setClientes(contrato.getClientes().stream()
                 .map(cc -> new ClienteResponseDTO(
-                    cc.getCliente().getIdCliente(), cc.getCliente().getNombre(),
-                    cc.getCliente().getApellidos(), cc.getCliente().getNumDoc()
+                    cc.getCliente().getIdCliente(), 
+                    cc.getCliente().getNombre(),
+                    cc.getCliente().getApellidos(), 
+                    cc.getCliente().getNumDoc()
                 )).collect(Collectors.toList()));
         }
+
+        // 2. Mapear Lotes (Datos para Cláusula Segunda)
+        if (contrato.getLotes() != null) {
+            dto.setLotes(contrato.getLotes().stream()
+                .map(cl -> {
+                    Lote l = cl.getLote();
+                    return new LoteResponseDTO(
+                        l.getManzana(), l.getNumeroLote(), l.getArea(),
+                        l.getLargo1(), l.getLargo2(), l.getAncho1(), l.getAncho2(),
+                        l.getColindanteNorte(), l.getColindanteSur(),
+                        l.getColindanteEste(), l.getColindanteOeste(),
+                        l.getPrograma().getNombrePrograma()
+                    );
+                }).collect(Collectors.toList()));
+        }
+
+        // 3. Mapear Letras (Datos para Cláusula Tercera)
+        if (contrato.getLetrasCambio() != null) {
+            dto.setLetras(contrato.getLetrasCambio().stream()
+                .map(letra -> new LetraResponseDTO(
+                    letra.getNumeroLetra(),
+                    letra.getFechaVencimiento(),
+                    letra.getImporte(),
+                    letra.getImporteLetras()
+                )).collect(Collectors.toList()));
+        }
+
         return dto;
     }
 }

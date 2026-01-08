@@ -20,5 +20,7 @@ public class ContratoResponseDTO {
     private BigDecimal saldo;
     private Integer cantidadLetras;
     private String observaciones;
-    private List<ClienteResponseDTO> clientes; // <-- Lista de DTOs de clientes
+    private List<ClienteResponseDTO> clientes;
+    private List<LoteResponseDTO> lotes;
+    private List<LetraResponseDTO> letras;
 }
