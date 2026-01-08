@@ -380,6 +380,95 @@ public class PdfGenerator {
      terceraFinal.add(".");
 
      document.add(terceraFinal);
+     
+     /* =========================================================
+      * PAGINA 2: CLAUSULA CUARTA - EQUIVALENCIA
+      * ========================================================= */
+
+     // 1. Título de la Cláusula (Negrita, Cursiva y Subrayado)
+     document.add(new Paragraph()
+         .add(new Text("CUARTA: EQUIVALENCIA:").setFont(arialBoldItalic).setUnderline())
+         .setFontSize(11)
+         .setMarginTop(15));
+
+     // 2. Cuerpo de la cláusula (Todo en Cursiva)
+     Paragraph cuartaCuerpo = new Paragraph()
+         .setTextAlignment(TextAlignment.JUSTIFIED)
+         .setFont(arialItalic) // Arial 11 Cursiva
+         .setFontSize(11)
+         .setMultipliedLeading(1.0f); // Interlineado 1.0 
+
+     cuartaCuerpo.add("Las partes contratantes declaran que entre el lote vendido y el precio pactado existe una justa y perfecta equivalencia y que si hubiera alguna diferencia de más o menos en el área de terreno al momento de entrega del referido bien se pagará el reintegro o devolución al precio actualizado. ");
+     cuartaCuerpo.add("Así mismo, queda establecido entre las partes contratantes que el precio pactado en este contrato es solamente por la venta del terreno rustico en el que no están incluidos las obras de habilitación urbana, ni impuestos de ley, etc.");
+
+     document.add(cuartaCuerpo);
+     
+     
+     /* =================================================================
+      * PAGINA 3: CLAUSULA QUINTA: INTERESES COMPENSATORIOS Y MORATORIOS:
+      * ================================================================= */
+
+  // 1. Título de la Cláusula
+     document.add(new Paragraph()
+         .add(new Text("QUINTA: INTERESES COMPENSATORIOS Y MORATORIOS:").setFont(arialBoldItalic).setUnderline())
+         .setFontSize(11)
+         .setMarginTop(15));
+
+     // 2. Cuerpo de la cláusula (Interlineado 1.0f)
+     Paragraph quintaCuerpo = new Paragraph()
+         .setTextAlignment(TextAlignment.JUSTIFIED)
+         .setFont(arialItalic)
+         .setFontSize(11)
+         .setMultipliedLeading(1.0f); // 👈 Interlineado 1.0 aplicado
+
+     quintaCuerpo.add("Las partes contratantes, de común acuerdo establecen de que en caso de incumplimiento del pago establecido en la cláusula tercera del presente contrato, en las fechas programadas estas generaran un ");
+
+     // Texto subrayado 1
+     Text sub1 = new Text("interés compensatorio y moratorio mensual que es del 5% del valor de la letra vencida o impagada más 1 dólar diario hasta la cancelación de la misma")
+         .setUnderline();
+     quintaCuerpo.add(sub1);
+
+     quintaCuerpo.add(", el mismo que se deberá de ser pagada de manera mensual, ");
+
+     // Texto subrayado 2
+     Text sub2 = new Text("sin perjuicio de ello el incumplimiento del pago de tres letras consecutivas o alternadas")
+         .setUnderline();
+     quintaCuerpo.add(sub2);
+
+     quintaCuerpo.add(", facultara a ”");
+     quintaCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+     quintaCuerpo.add("”, a dar por vencidas todas las letras pactadas y exigir el cumplimiento de todas las letras pendientes de pago o por resolver el presente contrato.");
+
+     document.add(quintaCuerpo);
+     
+     /* =================================================================
+      * PAGINA 3: CLAUSULA SEXTA: PACTO DE RESERVA DE PROPIEDAD 
+      * ================================================================= */
+  // 1. Título de la Cláusula (Negrita, Cursiva y Subrayado)
+     document.add(new Paragraph()
+         .add(new Text("SEXTA: PACTO DE RESERVA DE PROPIEDAD").setFont(arialBoldItalic).setUnderline())
+         .setFontSize(11)
+         .setMarginTop(15));
+
+     // 2. Cuerpo de la cláusula (Interlineado 1.0f)
+     Paragraph sextaCuerpo = new Paragraph()
+         .setTextAlignment(TextAlignment.JUSTIFIED)
+         .setFont(arialItalic)
+         .setFontSize(11)
+         .setMultipliedLeading(1.0f); // Interlineado 1.0 aplicado
+
+     sextaCuerpo.add("Las partes contratantes acuerdan al amparo de lo dispuesto por del artículo 1583° del Código Civil incorporar en el presente contrato el pacto de reserva de propiedad a favor de ");
+     sextaCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+     sextaCuerpo.add(". En consecuencia, este conservara la propiedad del bien materia del presente contrato aun cuando la posesión del mismo haya sido entregada a ");
+     sextaCuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic)); // LOS COMPRADORES o EL COMPRADOR
+     sextaCuerpo.add(". Así mismo se deja establecido que el pacto de reserva de propiedad a quien se refiere la cláusula anterior, tendrá vigencia hasta que la compradora cumpla con pagar la totalidad del precio pactado en la cláusula tercera de este contrato, más los intereses devengados. --------------------------------------------------------------------------------");
+
+     document.add(sextaCuerpo);
+     
+     /* =================================================================
+      * PAGINA 3: CLAUSULA SEXTA: PACTO DE RESERVA DE PROPIEDAD 
+      * ================================================================= */
+     
 
      // 4. Segundo bloque descriptivo (Final de la cláusula)
      Paragraph segundaFinal = new Paragraph()
@@ -396,6 +485,7 @@ public class PdfGenerator {
      segundaFinal.add(" así mismo, correspondiéndole sus aires, usos, costumbres, entradas, salidas y todo cuanto de hecho y por derecho le corresponde sin reserva ni limitación alguna, toda vez que la finalidad del presente contrato es que surta todos sus efectos legales.");
 
      document.add(segundaFinal);
+     
      
      
 
