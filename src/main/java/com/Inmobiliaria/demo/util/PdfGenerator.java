@@ -27,26 +27,34 @@ public class PdfGenerator {
         Document document = new Document(pdf);
         document.setMargins(100, 70, 100, 71); //multiplicar los cm * 28.35 = numero dentro del parentesis 
         
-     // 🔹 CARGA DE FUENTES
+     // 🔹 CARGA DE FUENTES (NORMAL, NEGRITA Y NEGRITA-CURSIVA)
+        PdfFont arialNormal;
+        PdfFont arialBold;
         PdfFont arialBoldItalic;
-        PdfFont arialBold; // Nueva fuente para el nombre del programa
-        try {
-            // Carga de Arial Bold Italic (Negrita y Cursiva)
-            byte[] biBytes = com.itextpdf.io.util.StreamUtil.inputStreamToArray(
-                PdfGenerator.class.getClassLoader().getResourceAsStream("fonts/ARIALBI.TTF")
-            );
-            arialBoldItalic = PdfFontFactory.createFont(biBytes, PdfEncodings.WINANSI);
 
-            // 🆕 Carga de Arial Bold (SOLO Negrita)
+        try {
+            // 1. Arial Normal (Para el cuerpo del texto)
+            byte[] nBytes = com.itextpdf.io.util.StreamUtil.inputStreamToArray(
+                PdfGenerator.class.getClassLoader().getResourceAsStream("fonts/ARIAL.TTF")
+            );
+            arialNormal = PdfFontFactory.createFont(nBytes, PdfEncodings.WINANSI);
+
+            // 2. Arial Bold (Para nombres y datos en negrita)
             byte[] bBytes = com.itextpdf.io.util.StreamUtil.inputStreamToArray(
                 PdfGenerator.class.getClassLoader().getResourceAsStream("fonts/ARIALBD.TTF")
             );
             arialBold = PdfFontFactory.createFont(bBytes, PdfEncodings.WINANSI);
 
-        } catch (Exception e) {
-            throw new RuntimeException("Error cargando fuentes Arial", e);
-        }
+            // 3. Arial Bold Italic (Para el título del contrato)
+            byte[] biBytes = com.itextpdf.io.util.StreamUtil.inputStreamToArray(
+                PdfGenerator.class.getClassLoader().getResourceAsStream("fonts/ARIALBI.TTF")
+            );
+            arialBoldItalic = PdfFontFactory.createFont(biBytes, PdfEncodings.WINANSI);
 
+        } catch (Exception e) {
+            throw new RuntimeException("Error cargando las fuentes Arial desde resources/fonts/", e);
+        }
+        
         
         // --- PROCESAMIENTO DINÁMICO DE CLIENTES ---
         List<ClienteResponseDTO> clientes = contrato.getClientes();
@@ -114,32 +122,40 @@ public class PdfGenerator {
                 .setMarginBottom(15) 
         );
         
-        // --- PÁRRAFO INTRODUCTORIO CORREGIDO ---
-        Paragraph intro = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setFontSize(10);
+     // --- PÁRRAFO INTRODUCTORIO ---
+        Paragraph intro = new Paragraph()
+            .setTextAlignment(TextAlignment.JUSTIFIED)
+            .setFont(arialNormal)      // Fuente base Arial Normal
+            .setFontSize(12)           // Tamaño 12
+            .setMultipliedLeading(1.5f); // Interlineado 1.5
+
         intro.add("Conste por el presente documento de Contrato privado de Compra-Venta de terreno rústico con Reserva de Propiedad que celebran de una parte ");
-        intro.add(new Text("“INMOBILIARIA CONSTRUCTORA IVAN E.I.R.L.” ").setBold());
+
+        // Solo usamos arialBold para los fragmentos que requieren negrita
+        intro.add(new Text("“INMOBILIARIA CONSTRUCTORA IVAN E.I.R.L.” ").setFont(arialBold));
         intro.add("con ");
-        intro.add(new Text("RUC Nº 20537853108 ").setBold());
+        intro.add(new Text("RUC Nº 20537853108 ").setFont(arialBold));
         intro.add("con domicilio Av. Alfredo Mendiola N°3623- Tercer Piso - Of. 301-A Urb. Panamericana Norte, Distrito de Los Olivos, Provincia y Departamento de Lima, debidamente representado por su ");
-        intro.add(new Text("Gerente General OLMEDO SILVA LOPEZ ").setBold());
+        intro.add(new Text("Gerente General OLMEDO SILVA LOPEZ ").setFont(arialBold));
         intro.add("con ");
-        intro.add(new Text("DNI No.19404451 ").setBold());
-        intro.add("consta del poder inscrito en la partida electrónica Nº ");
-        intro.add(new Text("12561792 ").setBold());
+        intro.add(new Text("DNI No.19404451 ").setFont(arialBold));
+        intro.add("según consta del poder inscrito en la partida electrónica Nº ");
+        intro.add(new Text("12561792 ").setFont(arialBold));
         intro.add("del Registro de Personas Jurídicas, a quien en adelante se le denominará ");
-        intro.add(new Text("LA VENDEDORA").setBold());
+        intro.add(new Text("LA VENDEDORA").setFont(arialBold));
         intro.add("; y de la otra parte ");
-        
-        // Insertar bloque de compradores dinámico
+
+        // Bloque dinámico de compradores
         for (com.itextpdf.layout.element.IElement el : bloqueCompradores.getChildren()) {
             intro.add((com.itextpdf.layout.element.ILeafElement)el);
         }
-        
+
         String etiquetaDomicilio = (numClientes > 1) ? "ambos con domicilio común en " : "con domicilio en ";
         intro.add(", " + etiquetaDomicilio + direccionRealParaContrato);
         intro.add(", a quien en adelante se " + pronombreDenom + " denominará ");
-        intro.add(new Text(etiquetaComprador).setBold().setUnderline());
-        intro.add(" en los términos y condiciones de las cláusulas siguientes: ");
+        intro.add(new Text(etiquetaComprador).setFont(arialBold).setUnderline());
+        intro.add(" en los términos y condiciones de las cláusulas siguientes: ----------------------------------------------------");
+
         document.add(intro);
 
      // --- PRIMERA: PROPIEDAD ---
@@ -154,7 +170,7 @@ public class PdfGenerator {
 
      primeraCuerpo.add(new Text("“LA VENDEDORA”").setBold());
      primeraCuerpo.add(" es propietaria de un lote de terreno rústico con un área superficial de 201,224.03 m2 Equivalente a 20 Has. 1,224.03 m2, que corresponde al 100% de las acciones y derechos del Predio denominado Sector Pampa San Antonio, Margen derecha del Kilómetro 23 de La Avenida Túpac Amaru, Distrito de Carabayllo, Provincia y Departamento De Lima, el cual forma parte de un predio de mayor extensión ubicado en las Provincia de Huarochirí, Lima y Canta, inscrito a fojas 515 del tomo 10-H, actualmente ");
-     primeraCuerpo.add(new Text("Partida Electrónica 11049870 del Registro de Predios de Lima. --------------").setItalic());
+     primeraCuerpo.add(new Text("Partida Electrónica 11049870 del Registro de Predios de Lima. ").setItalic());
      primeraCuerpo.add("\nFue adquirido mediante la minuta de Compra- Venta de Acciones y Derechos de Predio Rustico de la fecha ");
      primeraCuerpo.add(new Text("06/11/2019").setBold());
      primeraCuerpo.add(" (15 Has.) y con fecha ");
