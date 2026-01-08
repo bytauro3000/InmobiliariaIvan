@@ -27,21 +27,24 @@ public class PdfGenerator {
         Document document = new Document(pdf);
         document.setMargins(25, 30, 25, 30);
         
-     // 🔹 FUENTE ARIAL REAL (SOLO PARA EL TÍTULO)
-     // 🔹 CARGA DE FUENTE ROBUSTA (MÉTODO ESTÁTICO)
+     // 🔹 CARGA DE FUENTES
         PdfFont arialBoldItalic;
+        PdfFont arialBold; // Nueva fuente para el nombre del programa
         try {
-            // 1. Usamos PdfGenerator.class en lugar de getClass()
-            byte[] fontBytes = com.itextpdf.io.util.StreamUtil.inputStreamToArray(
+            // Carga de Arial Bold Italic (Negrita y Cursiva)
+            byte[] biBytes = com.itextpdf.io.util.StreamUtil.inputStreamToArray(
                 PdfGenerator.class.getClassLoader().getResourceAsStream("fonts/ARIALBI.TTF")
             );
-            // 2. Creamos la fuente
-            arialBoldItalic = PdfFontFactory.createFont(fontBytes, PdfEncodings.WINANSI);
+            arialBoldItalic = PdfFontFactory.createFont(biBytes, PdfEncodings.WINANSI);
 
-        } catch (java.io.IOException e) {
-            throw new RuntimeException("Error al leer el archivo de fuente ARIALBI.TTF", e);
+            // 🆕 Carga de Arial Bold (SOLO Negrita)
+            byte[] bBytes = com.itextpdf.io.util.StreamUtil.inputStreamToArray(
+                PdfGenerator.class.getClassLoader().getResourceAsStream("fonts/ARIALBD.TTF")
+            );
+            arialBold = PdfFontFactory.createFont(bBytes, PdfEncodings.WINANSI);
+
         } catch (Exception e) {
-            throw new RuntimeException("No se pudo cargar la fuente desde resources/fonts/. Verifique que el archivo existe.", e);
+            throw new RuntimeException("Error cargando fuentes Arial", e);
         }
 
         
@@ -86,17 +89,29 @@ public class PdfGenerator {
         String montoTexto = pL.getImporteLetras().split(" POR ")[0];
 
         // --- PÁGINA 1: ENCABEZADO ---
-        document.add(new Paragraph("PROGRAMA DE VIVIENDA").setTextAlignment(TextAlignment.CENTER).setBold().setMarginBottom(0));
-        document.add(new Paragraph("“LA FLORIDA DE TORRE BLANCA”").setTextAlignment(TextAlignment.CENTER).setBold().setFontSize(13).setMarginBottom(0));
-     // ✅ AQUÍ ES EL ÚNICO CAMBIO → ARIAL REAL
+        document.add(new Paragraph("PROGRAMA DE VIVIENDA")
+        		.setFont(arialBold) // 🅰️ ASIGNA LA FUENTE, LA NEGRITA Y LA CURSIVA
+        	    .setFontSize(18) // 📏 ASIGNA EL TAMAÑO DE LA LETRA
+        	    .setTextAlignment(TextAlignment.CENTER) // 🎯 CENTRA EL TEXTO EN LA PÁGINA
+        	    .setMarginBottom(0)  // 📑 ASIGNA EL ESPACIO INFERIOR
+        		);
+        		
+        document.add(new Paragraph("“LA FLORIDA DE TORRE BLANCA”")
+        		.setFont(arialBold) // 🅰️ ASIGNA LA FUENTE, LA NEGRITA Y LA CURSIVA
+        	    .setFontSize(18) // 📏 ASIGNA EL TAMAÑO DE LA LETRA
+        	    .setTextAlignment(TextAlignment.CENTER) // 🎯 CENTRA EL TEXTO EN LA PÁGINA
+        	    .setMarginBottom(0)  // 📑 ASIGNA EL ESPACIO INFERIOR
+        		);
+
      // ✅ Aplicando la fuente Arial Bold Italic cargada
         document.add(new Paragraph("CONTRATO PRIVADO DE COMPRA-VENTA DE TERRENO RUSTICO")
-                .setFont(arialBoldItalic)
-                .setFontSize(11) // Tamaño ideal para títulos secundarios
-                .setUnderline()
-                .setTextAlignment(TextAlignment.CENTER)
-                .setMarginBottom(15) // Ajustado de 20 a 15 para mayor fidelidad al Word
-        );
+        	    .setFont(arialBoldItalic) // 🅰️ ASIGNA LA FUENTE, LA NEGRITA Y LA CURSIVA
+        	    .setFontSize(11) // 📏 ASIGNA EL TAMAÑO DE LA LETRA
+        	    .setUnderline() // 🖋️ APLICA EL SUBRAYADO AL TEXTO
+        	    .setTextAlignment(TextAlignment.CENTER) // 🎯 CENTRA EL TEXTO EN LA PÁGINA
+        	    .setMarginBottom(15)  // 📑 ASIGNA EL ESPACIO INFERIOR (Distancia con el párrafo de abajo)
+        	    // El espacio superior sería .setMarginTop(valor)
+        	);
         // --- PÁRRAFO INTRODUCTORIO CORREGIDO ---
         Paragraph intro = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setFontSize(10);
         intro.add("Conste por el presente documento de Contrato privado de Compra-Venta de terreno rústico con Reserva de Propiedad que celebran de una parte ");
