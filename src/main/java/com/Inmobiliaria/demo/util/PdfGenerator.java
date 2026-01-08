@@ -1,5 +1,4 @@
 package com.Inmobiliaria.demo.util;
-
 import com.Inmobiliaria.demo.dto.ContratoResponseDTO;
 import com.Inmobiliaria.demo.dto.LetraResponseDTO;
 import com.Inmobiliaria.demo.dto.LoteResponseDTO;
@@ -68,8 +67,14 @@ public class PdfGenerator {
         // --- PÁGINA 1: ENCABEZADO ---
         document.add(new Paragraph("PROGRAMA DE VIVIENDA").setTextAlignment(TextAlignment.CENTER).setBold().setMarginBottom(0));
         document.add(new Paragraph("“LA FLORIDA DE TORRE BLANCA”").setTextAlignment(TextAlignment.CENTER).setBold().setFontSize(13).setMarginBottom(0));
-        document.add(new Paragraph("CONTRATO PRIVADO DE COMPRA-VENTA DE TERRENO RUSTICO").setTextAlignment(TextAlignment.CENTER).setBold().setMarginBottom(20));
-
+        document.add(new Paragraph("CONTRATO PRIVADO DE COMPRA-VENTA DE TERRENO RUSTICO")
+        	        .setTextAlignment(TextAlignment.CENTER)
+        	        .setFontSize(11)
+        	        .setBold()
+        	        .setItalic()
+        	        .setUnderline()
+        	        .setMarginBottom(20)
+        	);
         // --- PÁRRAFO INTRODUCTORIO CORREGIDO ---
         Paragraph intro = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setFontSize(10);
         intro.add("Conste por el presente documento de Contrato privado de Compra-Venta de terreno rústico con Reserva de Propiedad que celebran de una parte ");
