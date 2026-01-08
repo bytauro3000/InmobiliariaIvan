@@ -15,6 +15,7 @@ import com.itextpdf.layout.element.Text;
 import com.itextpdf.layout.properties.AreaBreakType;
 import com.itextpdf.layout.properties.TextAlignment;
 import java.io.ByteArrayOutputStream;
+import java.text.SimpleDateFormat;
 import java.util.List;
 import com.itextpdf.io.font.PdfEncodings;
 import com.itextpdf.kernel.font.PdfFont;
@@ -289,6 +290,113 @@ public class PdfGenerator {
      segundaFinal.add(" así mismo, correspondiéndole sus aires, usos, costumbres, entradas, salidas y todo cuanto de hecho y por derecho le corresponde sin reserva ni limitación alguna, toda vez que la finalidad del presente contrato es que surta todos sus efectos legales.");
 
      document.add(segundaFinal);
+     
+     /* =========================================================
+      * PAGINA 2: CLAUSULA TERCERA - PRECIO
+      * ========================================================= */
+
+     // 1. Título de la Cláusula
+     document.add(new Paragraph()
+         .add(new Text("TERCERA:      PRECIO").setFont(arialBoldItalic).setUnderline())
+         .setFontSize(11)
+         .setMarginTop(15));
+
+     // 2. Cuerpo inicial de la cláusula
+     Paragraph terceraCuerpo = new Paragraph()
+         .setTextAlignment(TextAlignment.JUSTIFIED)
+         .setFont(arialItalic)
+         .setFontSize(11)
+         .setMultipliedLeading(1.0f);
+
+     terceraCuerpo.add("El precio del bien objeto de la prestación a cargo de ");
+     terceraCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+     terceraCuerpo.add(" asciende a la suma de ");
+
+     // Datos dinámicos del contrato (Monto total y texto)
+     LetraResponseDTO primeraLetra = contrato.getLetras().get(0);
+     terceraCuerpo.add(new Text("US$." + contrato.getMontoTotal()).setFont(arialBoldItalic));
+     terceraCuerpo.add(new Text(" (" + primeraLetra.getImporteLetras().split(" POR ")[0] + " AMERICANOS)").setFont(arialBoldItalic));
+
+     terceraCuerpo.add(", que ");
+     terceraCuerpo.add(new Text("“" + etiquetaComprador + "”").setFont(arialBoldItalic));
+     terceraCuerpo.add(" se obliga a cancelar en dinero, íntegramente y por armadas, según el cronograma de la siguiente forma:");
+
+     document.add(terceraCuerpo);
+
+     // 3. Sub-cláusulas 3.1, 3.2 y 3.3 con sangría (Margen izquierdo)
+     // 3.1 Cuota Inicial
+     String textoInicial = (contrato.getInicial().doubleValue() > 0) ? "US$." + contrato.getInicial() : "Sin Cuota inicial.";
+     document.add(new Paragraph("3.1 " + textoInicial)
+         .setFont(arialItalic).setFontSize(11).setMarginLeft(40).setMarginTop(10));
+
+     // 3.2 Detalle del Saldo y Letras
+     Paragraph subclausula32 = new Paragraph()
+         .setTextAlignment(TextAlignment.JUSTIFIED)
+         .setFont(arialItalic).setFontSize(11)
+         .setMultipliedLeading(1.5f)
+         .setMarginLeft(40).setMarginTop(10);
+
+     subclausula32.add("3.2 El saldo del precio de ");
+     subclausula32.add(new Text("US$." + contrato.getSaldo()).setFont(arialBoldItalic));
+     subclausula32.add(new Text(" (" + primeraLetra.getImporteLetras().split(" POR ")[0] + " AMERICANOS)").setFont(arialBoldItalic));
+     subclausula32.add(", que será cancelado en ");
+
+     // Cálculo de letras (139 normales y 1 última diferente según tu ejemplo)
+     int totalLetras = contrato.getCantidadLetras();
+     LetraResponseDTO ultimaLetra = contrato.getLetras().get(totalLetras - 1);
+
+     subclausula32.add(new Text(totalLetras + " letras de cambio ").setFont(arialBoldItalic));
+     subclausula32.add("(" + (totalLetras - 1) + " letras de cambio de ");
+     subclausula32.add(new Text("US$" + primeraLetra.getImporte()).setFont(arialBoldItalic));
+     subclausula32.add(" y la última letra la ");
+     subclausula32.add(new Text("Nº" + totalLetras).setFont(arialBoldItalic));
+     subclausula32.add(" de ");
+     subclausula32.add(new Text("US$" + ultimaLetra.getImporte()).setFont(arialBoldItalic));
+     subclausula32.add(") debidamente aceptadas por ");
+     subclausula32.add(new Text("“" + etiquetaComprador).setFont(arialBoldItalic));
+     subclausula32.add(", según el detalle siguiente:");
+
+     document.add(subclausula32);
+
+     // 3.3 Fechas de Vencimiento
+     SimpleDateFormat fmt = new SimpleDateFormat("dd/MM/yyyy");
+     Paragraph subclausula33 = new Paragraph()
+         .setFont(arialItalic).setFontSize(11)
+         .setMarginLeft(40).setMarginTop(10);
+
+     subclausula33.add("3.3 Letra ");
+     subclausula33.add(new Text("No.01").setFont(arialBoldItalic));
+     subclausula33.add(" por ");
+     subclausula33.add(new Text("US$" + primeraLetra.getImporte()).setFont(arialBoldItalic));
+     subclausula33.add(" con vencimiento el día ");
+     subclausula33.add(new Text(fmt.format(primeraLetra.getFechaVencimiento())).setFont(arialBoldItalic));
+     subclausula33.add(" y la última ");
+     subclausula33.add(new Text("Letra No." + totalLetras).setFont(arialBoldItalic));
+     subclausula33.add(" por ");
+     subclausula33.add(new Text("US$" + ultimaLetra.getImporte()).setFont(arialBoldItalic));
+     subclausula33.add(" con vencimiento el día ");
+     subclausula33.add(new Text(fmt.format(ultimaLetra.getFechaVencimiento())).setFont(arialBoldItalic));
+     subclausula33.add(".");
+
+     document.add(subclausula33);
+
+     // 4. Párrafo final de garantía y domicilio de pago
+     Paragraph terceraFinal = new Paragraph()
+         .setTextAlignment(TextAlignment.JUSTIFIED)
+         .setFont(arialItalic).setFontSize(11)
+         .setMultipliedLeading(1.5f)
+         .setMarginTop(15);
+
+     terceraFinal.add("Así mismo a efectos de garantizar el cumplimiento de su obligación ");
+     terceraFinal.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+     terceraFinal.add(" giran a favor de ");
+     terceraFinal.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+     terceraFinal.add(" letras de cambio que se detallan en la cláusula tercera que serán cancelados en la fecha de vencimiento de los respectivos cambiales, más los correspondientes intereses en caso de mora. El lugar de pago de todas las armadas será el domicilio de ");
+     terceraFinal.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+     terceraFinal.add(".");
+
+     document.add(terceraFinal);
+
      
      
      //========================================================================================
