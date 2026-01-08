@@ -74,7 +74,9 @@ public class PdfGenerator {
         Paragraph intro = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setFontSize(10);
         intro.add("Conste por el presente documento de Contrato privado de Compra-Venta de terreno rústico con Reserva de Propiedad que celebran de una parte ");
         intro.add(new Text("“INMOBILIARIA CONSTRUCTORA IVAN E.I.R.L.”").setBold());
-        intro.add(" con RUC Nº 20537853108 con domicilio Av. Alfredo Mendiola N°3623- Tercer Piso - Of. 301-A Urb. Panamericana Norte, Distrito de Los Olivos, Provincia y Departamento de Lima, debidamente representado por su ");
+        intro.add("con");
+        intro.add(new Text("RUC Nº 20537853108").setBold());
+        intro.add("con domicilio Av. Alfredo Mendiola N°3623- Tercer Piso - Of. 301-A Urb. Panamericana Norte, Distrito de Los Olivos, Provincia y Departamento de Lima, debidamente representado por su ");
         intro.add(new Text("Gerente General OLMEDO SILVA LOPEZ").setBold());
         intro.add(" con DNI No.19404451 según consta del poder inscrito en la partida electrónica Nº 12561792 del Registro de Personas Jurídicas, a quien en adelante se le denominará LA VENDEDORA; y de la otra parte ");
         
@@ -87,7 +89,7 @@ public class PdfGenerator {
         intro.add(", " + etiquetaDomicilio + direccionRealParaContrato);
         intro.add(", a quien en adelante se " + pronombreDenom + " denominará ");
         intro.add(new Text(etiquetaComprador).setBold().setUnderline());
-        intro.add(" en los términos y condiciones de las cláusulas siguientes: ----------------------------------------------------");
+        intro.add(" en los términos y condiciones de las cláusulas siguientes: ");
         document.add(intro);
 
         // --- PRIMERA: PROPIEDAD ---
