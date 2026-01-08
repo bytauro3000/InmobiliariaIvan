@@ -461,9 +461,10 @@ public class PdfGenerator {
      sextaCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
      sextaCuerpo.add(". En consecuencia, este conservara la propiedad del bien materia del presente contrato aun cuando la posesión del mismo haya sido entregada a ");
      sextaCuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic)); // LOS COMPRADORES o EL COMPRADOR
-     sextaCuerpo.add(". Así mismo se deja establecido que el pacto de reserva de propiedad a quien se refiere la cláusula anterior, tendrá vigencia hasta que la compradora cumpla con pagar la totalidad del precio pactado en la cláusula tercera de este contrato, más los intereses devengados.");
+     sextaCuerpo.add(". Así mismo se deja establecido que el pacto de reserva de propiedad a quien se refiere la cláusula anterior, tendrá vigencia hasta que la compradora cumpla con pagar la totalidad del precio pactado en la cláusula tercera de este contrato, más los intereses devengados. --------------------------------------------------------------------------------");
 
      document.add(sextaCuerpo);
+     
      
      /* =================================================================
       * PAGINA 3: CLAUSULA SEXTA: PACTO DE RESERVA DE PROPIEDAD 
