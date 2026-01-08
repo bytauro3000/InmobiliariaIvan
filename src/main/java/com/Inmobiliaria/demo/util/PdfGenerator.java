@@ -25,7 +25,7 @@ public class PdfGenerator {
         PdfWriter writer = new PdfWriter(out);
         PdfDocument pdf = new PdfDocument(writer);
         Document document = new Document(pdf);
-        document.setMargins(25, 30, 25, 30);
+        document.setMargins(85, 57, 85, 57);
         
      // 🔹 CARGA DE FUENTES
         PdfFont arialBoldItalic;
