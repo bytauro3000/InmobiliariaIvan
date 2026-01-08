@@ -182,14 +182,21 @@ public class ContratoServiceImpl implements ContratoService {
         dto.setCantidadLetras(contrato.getCantidadLetras());
         dto.setObservaciones(contrato.getObservaciones());
 
+     // 🟢 MAPEADO CORREGIDO: Ahora incluye los 7 parámetros requeridos por el DTO
         if (contrato.getClientes() != null) {
             dto.setClientes(contrato.getClientes().stream()
-                .map(cc -> new ClienteResponseDTO(
-                    cc.getCliente().getIdCliente(), 
-                    cc.getCliente().getNombre(),
-                    cc.getCliente().getApellidos(), 
-                    cc.getCliente().getNumDoc()
-                )).collect(Collectors.toList()));
+                .map(cc -> {
+                    Cliente c = cc.getCliente();
+                    return new ClienteResponseDTO(
+                        c.getIdCliente(), 
+                        c.getNombre(),
+                        c.getApellidos(), 
+                        c.getNumDoc(),
+                        c.getDireccion(),
+                        c.getDistrito(),
+                        c.getGenero()
+                    );
+                }).collect(Collectors.toList()));
         }
 
         if (contrato.getLotes() != null) {
