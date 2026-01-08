@@ -185,7 +185,7 @@ public class PdfGenerator {
          .setTextAlignment(TextAlignment.JUSTIFIED)
          .setFont(arialItalic) 
          .setFontSize(11)
-         .setMultipliedLeading(1.5f);
+         .setMultipliedLeading(1.0f);
 
      primeraCuerpo.add(new Text("“LA VENDEDORA”").setFont(arialBoldItalic));
      primeraCuerpo.add(" es propietaria de un lote de terreno rústico con un área superficial de 201,224.03 m2 Equivalente a 20 Has. 1,224.03 m2, que corresponde al 100% de las acciones y derechos del Predio denominado Sector Pampa San Antonio, Margen derecha del Kilómetro 23 de La Avenida Túpac Amaru, Distrito de Carabayllo, Provincia y Departamento De Lima, el cual forma parte de un predio de mayor extensión ubicado en las Provincia de Huarochirí, Lima y Canta, inscrito a fojas 515 del tomo 10-H, actualmente ");
