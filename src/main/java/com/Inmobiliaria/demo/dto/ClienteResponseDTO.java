@@ -1,5 +1,8 @@
 package com.Inmobiliaria.demo.dto;
 
+import com.Inmobiliaria.demo.entity.Distrito;
+import com.Inmobiliaria.demo.enums.Genero;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,4 +15,7 @@ public class ClienteResponseDTO {
     private String nombre;
     private String apellidos;
     private String numDoc; // Esto es el DNI
+    private String direccion;
+    private Distrito distrito;
+    private Genero genero;
 }

@@ -5,6 +5,7 @@ import java.util.Date;
 import org.hibernate.annotations.CreationTimestamp;
 
 import com.Inmobiliaria.demo.enums.EstadoCliente;
+import com.Inmobiliaria.demo.enums.Genero;
 import com.Inmobiliaria.demo.enums.TipoCliente;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
@@ -65,6 +66,11 @@ public class Cliente {
     @Column(name = "fechaRegistro", nullable = false)
     @CreationTimestamp
     private Date fechaRegistro;
+    
+ // 🟢 Cambiado de String a Enum para consistencia con Vendedores
+    @Enumerated(EnumType.STRING)
+    @Column(name = "genero", length = 20, nullable = false)
+    private Genero genero;
     
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", nullable = false)
