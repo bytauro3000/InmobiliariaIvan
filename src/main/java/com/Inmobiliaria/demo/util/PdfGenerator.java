@@ -8,7 +8,9 @@ import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.element.AreaBreak;
+import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Paragraph;
+import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.element.Text;
 import com.itextpdf.layout.properties.AreaBreakType;
 import com.itextpdf.layout.properties.TextAlignment;
@@ -137,7 +139,7 @@ public class PdfGenerator {
          * ========================================================= */
         Paragraph intro = new Paragraph()
             .setTextAlignment(TextAlignment.JUSTIFIED)
-            .setFont(arialNormal)      // Fuente base Arial Normal
+            .setFont(arialItalic)      // Fuente base Arial Normal
             .setFontSize(12)           // Tamaño 12
             .setMultipliedLeading(1.5f); // Interlineado 1.5
 
@@ -214,15 +216,83 @@ public class PdfGenerator {
      /* =========================================================
       *  PAGINA 1: CLAUSULA SEGUNDO: OBJETO
       * ========================================================= */
-        document.add(new Paragraph("\nSEGUNDA: OBJETO DEL CONTRATO").setBold().setFontSize(10));
-        document.add(new Paragraph("Por el presente contrato LA VENDEDORA transfiere los derechos y acciones de un lote de terreno rústico ubicado la Manzana “"+lote.getManzana()+"” y asignado, con el lote Nº "+lote.getNumeroLote()+" del Programa de Vivienda “LA FLORIDA DE TORRE BLANCA” con un área de "+lote.getArea()+"M2. Encerrado dentro de los siguientes linderos y medidas perimétricas:").setFontSize(10).setTextAlignment(TextAlignment.JUSTIFIED));
-        
-        Paragraph linderos = new Paragraph().setFontSize(10).setMarginLeft(40).setFixedLeading(12);
-        linderos.add("Por el frente: con la " + lote.getColindanteNorte() + " Con " + lote.getAncho1() + " m.l.\n");
-        linderos.add("Por la derecha: con el " + lote.getColindanteEste() + " Con " + lote.getLargo1() + " m.l.\n");
-        linderos.add("Por la izquierda: con el " + lote.getColindanteOeste() + " Con " + lote.getLargo2() + " m.l.\n");
-        linderos.add("Por el fondo: con el " + lote.getColindanteSur() + " Con " + lote.getAncho2() + " m.l.");
-        document.add(linderos);
+     /* =========================================================
+      * PAGINA 1: CLAUSULA SEGUNDA - OBJETO (REPLICADO)
+      * ========================================================= */
+
+     // 1. Título de la Cláusula
+     document.add(new Paragraph()
+         .add(new Text("SEGUNDA:      OBJETO DEL CONTRATO").setFont(arialBoldItalic).setUnderline())
+         .setFontSize(11)
+         .setMarginTop(15));
+
+     // 2. Primer bloque descriptivo
+     Paragraph segundaCuerpo = new Paragraph()
+         .setTextAlignment(TextAlignment.JUSTIFIED)
+         .setFont(arialItalic) 
+         .setFontSize(11)
+         .setMultipliedLeading(1.5f);
+
+     segundaCuerpo.add("Por el presente contrato ");
+     segundaCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+     segundaCuerpo.add(" transfiere los derechos y acciones de un lote de terreno rústico ubicado la Manzana ");
+     segundaCuerpo.add(new Text("“" + lote.getManzana() + "”").setFont(arialBoldItalic));
+     segundaCuerpo.add(" y asignado, con el lote ");
+     segundaCuerpo.add(new Text("Nº " + lote.getNumeroLote()).setFont(arialBoldItalic));
+     segundaCuerpo.add(" del Programa de Vivienda ");
+     segundaCuerpo.add(new Text("“LA FLORIDA DE TORRE BLANCA”").setFont(arialBoldItalic));
+     segundaCuerpo.add(" con un área total de ");
+     segundaCuerpo.add(new Text(lote.getArea() + " M2.").setFont(arialBoldItalic));
+     segundaCuerpo.add(" Encerrado dentro de los siguientes linderos y medidas perimétricas:");
+
+     document.add(segundaCuerpo);
+
+     // 3. Tabla de Linderos (Para alineamiento perfecto como en la imagen)
+     // Usamos una tabla sin bordes de 3 columnas
+     float[] columnWidths = {120f, 200f, 100f}; 
+     Table tablaLinderos = new Table(columnWidths)
+         .setMarginLeft(20)
+         .setMarginTop(5)
+         .setMarginBottom(5)
+         .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
+
+     // Fila: Por el Frente
+     tablaLinderos.addCell(new Cell().add(new Paragraph("Por el frente").setFont(arialItalic).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
+     tablaLinderos.addCell(new Cell().add(new Paragraph(lote.getColindanteNorte()).setFont(arialItalic).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
+     tablaLinderos.addCell(new Cell().add(new Paragraph("Con    " + lote.getAncho1() + "  m.l.").setFont(arialItalic).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
+
+     // Fila: Por la Derecha
+     tablaLinderos.addCell(new Cell().add(new Paragraph("Por la derecha").setFont(arialItalic).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
+     tablaLinderos.addCell(new Cell().add(new Paragraph(lote.getColindanteEste()).setFont(arialItalic).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
+     tablaLinderos.addCell(new Cell().add(new Paragraph("Con  " + lote.getLargo1() + "  m.l.").setFont(arialItalic).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
+
+     // Fila: Por la Izquierda
+     tablaLinderos.addCell(new Cell().add(new Paragraph("Por la Izquierda").setFont(arialItalic).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
+     tablaLinderos.addCell(new Cell().add(new Paragraph(lote.getColindanteOeste()).setFont(arialItalic).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
+     tablaLinderos.addCell(new Cell().add(new Paragraph("Con    " + lote.getLargo2() + "  m.l.").setFont(arialItalic).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
+
+     // Fila: Por el Fondo
+     tablaLinderos.addCell(new Cell().add(new Paragraph("Por el fondo").setFont(arialItalic).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
+     tablaLinderos.addCell(new Cell().add(new Paragraph(lote.getColindanteSur()).setFont(arialItalic).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
+     tablaLinderos.addCell(new Cell().add(new Paragraph("Con    " + lote.getAncho2() + "  m.l.").setFont(arialItalic).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
+
+     document.add(tablaLinderos);
+
+     // 4. Segundo bloque descriptivo (Final de la cláusula)
+     Paragraph segundaFinal = new Paragraph()
+         .setTextAlignment(TextAlignment.JUSTIFIED)
+         .setFont(arialItalic)
+         .setFontSize(11)
+         .setMultipliedLeading(1.5f)
+         .setMarginTop(10);
+
+     segundaFinal.add("Por el presente contrato ");
+     segundaFinal.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+     segundaFinal.add(" otorga en venta real un lote de terreno rustico con veredas, agua y luz provisional previo pago por cada servicio brindado a ");
+     segundaFinal.add(new Text(etiquetaComprador).setFont(arialBoldItalic)); // EL COMPRADOR o LOS COMPRADORES
+     segundaFinal.add(" así mismo, correspondiéndole sus aires, usos, costumbres, entradas, salidas y todo cuanto de hecho y por derecho le corresponde sin reserva ni limitación alguna, toda vez que la finalidad del presente contrato es que surta todos sus efectos legales. ---------------------------------------------------------------------------------------------------------");
+
+     document.add(segundaFinal);
 
         // --- FIRMAS PÁGINA 1 ---
         agregarBloqueFirmas(document, clientes);
