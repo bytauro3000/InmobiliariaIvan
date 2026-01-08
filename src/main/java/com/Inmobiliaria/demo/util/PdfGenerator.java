@@ -88,30 +88,32 @@ public class PdfGenerator {
         LetraResponseDTO uL = contrato.getLetras().get(contrato.getLetras().size() - 1);
         String montoTexto = pL.getImporteLetras().split(" POR ")[0];
 
-        // --- PÁGINA 1: ENCABEZADO ---
+     // --- PÁGINA 1: ENCABEZADO ---
         document.add(new Paragraph("PROGRAMA DE VIVIENDA")
-        		.setFont(arialBold) // 🅰️ ASIGNA LA FUENTE, LA NEGRITA Y LA CURSIVA
-        	    .setFontSize(18) // 📏 ASIGNA EL TAMAÑO DE LA LETRA
-        	    .setTextAlignment(TextAlignment.CENTER) // 🎯 CENTRA EL TEXTO EN LA PÁGINA
-        	    .setMarginBottom(0)  // 📑 ASIGNA EL ESPACIO INFERIOR
-        		);
-        		
-        document.add(new Paragraph("“LA FLORIDA DE TORRE BLANCA”")
-        		.setFont(arialBold) // 🅰️ ASIGNA LA FUENTE, LA NEGRITA Y LA CURSIVA
-        	    .setFontSize(18) // 📏 ASIGNA EL TAMAÑO DE LA LETRA
-        	    .setTextAlignment(TextAlignment.CENTER) // 🎯 CENTRA EL TEXTO EN LA PÁGINA
-        	    .setMarginBottom(0)  // 📑 ASIGNA EL ESPACIO INFERIOR
-        		);
+                .setFont(arialBold)
+                .setFontSize(18)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setFixedLeading(18) // 📏 Controla el espacio con la siguiente línea
+                .setMarginBottom(0)
+        );
 
-     // ✅ Aplicando la fuente Arial Bold Italic cargada
+        document.add(new Paragraph("“LA FLORIDA DE TORRE BLANCA”")
+                .setFont(arialBold)
+                .setFontSize(18)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setFixedLeading(18) // 📏 Mantener el mismo valor para consistencia
+                .setMarginBottom(5)  // Un pequeño margen para separar del siguiente título
+        );
+
         document.add(new Paragraph("CONTRATO PRIVADO DE COMPRA-VENTA DE TERRENO RUSTICO")
-        	    .setFont(arialBoldItalic) // 🅰️ ASIGNA LA FUENTE, LA NEGRITA Y LA CURSIVA
-        	    .setFontSize(11) // 📏 ASIGNA EL TAMAÑO DE LA LETRA
-        	    .setUnderline() // 🖋️ APLICA EL SUBRAYADO AL TEXTO
-        	    .setTextAlignment(TextAlignment.CENTER) // 🎯 CENTRA EL TEXTO EN LA PÁGINA
-        	    .setMarginBottom(15)  // 📑 ASIGNA EL ESPACIO INFERIOR (Distancia con el párrafo de abajo)
-        	    // El espacio superior sería .setMarginTop(valor)
-        	);
+                .setFont(arialBoldItalic)
+                .setFontSize(11)
+                .setUnderline()
+                .setTextAlignment(TextAlignment.CENTER)
+                .setFixedLeading(12) // Interlineado más pequeño porque la letra es más chica (11)
+                .setMarginBottom(15) 
+        );
+        
         // --- PÁRRAFO INTRODUCTORIO CORREGIDO ---
         Paragraph intro = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setFontSize(10);
         intro.add("Conste por el presente documento de Contrato privado de Compra-Venta de terreno rústico con Reserva de Propiedad que celebran de una parte ");
