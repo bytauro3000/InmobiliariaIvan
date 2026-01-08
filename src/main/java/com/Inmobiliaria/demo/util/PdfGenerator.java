@@ -32,8 +32,11 @@ public class PdfGenerator {
        
         // 1. Obtención del nombre del Distrito y ubicación fija de Lima
         String nombreDistrito = (titular.getDistrito() != null) ? titular.getDistrito().getNombre() : "";
+        
+        // 🟢 CORRECCIÓN: Usamos titular.getDireccion() explícitamente para el domicilio
+        String domicilioCalle = (titular.getDireccion() != null) ? titular.getDireccion().toUpperCase() : "";
         String ubicacionLima = ", DISTRITO DE " + nombreDistrito.toUpperCase() + ", PROVINCIA Y DEPARTAMENTO DE LIMA";
-        String direccionCompleta = titular.getDireccion().toUpperCase() + ubicacionLima;
+        String direccionRealParaContrato = domicilioCalle + ubicacionLima;
 
         // 2. Construcción del bloque de compradores con lógica de género y nacionalidad
         StringBuilder sbCompradores = new StringBuilder();
@@ -81,7 +84,9 @@ public class PdfGenerator {
         // Nombres y DNI en Negrita y Mayúsculas
         intro.add(new Text(sbCompradores.toString().toUpperCase()).setBold());
         
-        intro.add(", " + etiquetaDomicilio + direccionCompleta);
+        // 🟢 SE USA LA DIRECCIÓN REAL CORREGIDA
+        intro.add(", " + etiquetaDomicilio + direccionRealParaContrato);
+        
         intro.add(", a quien en adelante se le denominará ");
         intro.add(new Text(etiquetaComprador).setBold().setUnderline());
         intro.add(" en los términos y condiciones de las cláusulas siguientes: ----------------------------------------------------");
