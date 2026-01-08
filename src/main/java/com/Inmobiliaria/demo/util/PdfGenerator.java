@@ -25,7 +25,7 @@ public class PdfGenerator {
         PdfWriter writer = new PdfWriter(out);
         PdfDocument pdf = new PdfDocument(writer);
         Document document = new Document(pdf);
-        document.setMargins(85, 57, 85, 57);
+        document.setMargins(100, 70, 100, 71); //multiplicar los cm * 28.35 = numero dentro del parentesis 
         
      // 🔹 CARGA DE FUENTES
         PdfFont arialBoldItalic;
@@ -90,18 +90,18 @@ public class PdfGenerator {
 
      // --- PÁGINA 1: ENCABEZADO ---
         document.add(new Paragraph("PROGRAMA DE VIVIENDA")
-                .setFont(arialBold)
+                .setFont(arialBoldItalic)
                 .setFontSize(18)
                 .setTextAlignment(TextAlignment.CENTER)
-                .setFixedLeading(18) // 📏 Controla el espacio con la siguiente línea
+                .setFixedLeading(16) // 📏 Controla el espacio con la siguiente línea
                 .setMarginBottom(0)
         );
 
         document.add(new Paragraph("“LA FLORIDA DE TORRE BLANCA”")
-                .setFont(arialBold)
+                .setFont(arialBoldItalic)
                 .setFontSize(18)
                 .setTextAlignment(TextAlignment.CENTER)
-                .setFixedLeading(18) // 📏 Mantener el mismo valor para consistencia
+                .setFixedLeading(16) // 📏 Mantener el mismo valor para consistencia
                 .setMarginBottom(5)  // Un pequeño margen para separar del siguiente título
         );
 
