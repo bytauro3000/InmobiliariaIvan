@@ -25,7 +25,7 @@ public class PdfGenerator {
         PdfWriter writer = new PdfWriter(out);
         PdfDocument pdf = new PdfDocument(writer);
         Document document = new Document(pdf);
-        document.setMargins(114, 85, 85, 85); //multiplicar los cm * 28.35 = numero dentro del parentesis 
+        document.setMargins(114, 85, 85, 85); //multiplicar los cm * 28.35 = margenes
         
      // 🔹 CARGA DE FUENTES (NORMAL, NEGRITA Y NEGRITA-CURSIVA)
         PdfFont arialNormal;
