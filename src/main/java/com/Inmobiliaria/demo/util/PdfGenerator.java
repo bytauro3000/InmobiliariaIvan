@@ -25,7 +25,7 @@ public class PdfGenerator {
         PdfWriter writer = new PdfWriter(out);
         PdfDocument pdf = new PdfDocument(writer);
         Document document = new Document(pdf);
-        document.setMargins(114, 85, 100, 85); //multiplicar los cm * 28.35 = numero dentro del parentesis 
+        document.setMargins(100, 85, 100, 85); //multiplicar los cm * 28.35 = numero dentro del parentesis 
         
      // 🔹 CARGA DE FUENTES (NORMAL, NEGRITA Y NEGRITA-CURSIVA)
         PdfFont arialNormal;
@@ -206,7 +206,7 @@ public class PdfGenerator {
      primeraCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
      primeraCuerpo.add(" ha proyectado el Programa de Vivienda denominado ");
      primeraCuerpo.add(new Text("“LA FLORIDA DE TORRE BLANCA 1ERA.ETAPA”").setFont(arialBoldItalic));
-     primeraCuerpo.add(", el mismo que se distribuye en los lotes y manzanas con sus respectivas áreas conforme al plano de Lotización. ----");
+     primeraCuerpo.add(", el mismo que se distribuye en los lotes y manzanas con sus respectivas áreas conforme al plano de Lotización.");
 
      document.add(primeraCuerpo);
      
