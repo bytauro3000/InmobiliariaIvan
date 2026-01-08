@@ -25,12 +25,13 @@ public class PdfGenerator {
         PdfWriter writer = new PdfWriter(out);
         PdfDocument pdf = new PdfDocument(writer);
         Document document = new Document(pdf);
-        document.setMargins(100, 70, 100, 71); //multiplicar los cm * 28.35 = numero dentro del parentesis 
+        document.setMargins(114, 85, 100, 85); //multiplicar los cm * 28.35 = numero dentro del parentesis 
         
      // 🔹 CARGA DE FUENTES (NORMAL, NEGRITA Y NEGRITA-CURSIVA)
         PdfFont arialNormal;
         PdfFont arialBold;
         PdfFont arialBoldItalic;
+        PdfFont arialItalic;
 
         try {
             // 1. Arial Normal (Para el cuerpo del texto)
@@ -50,6 +51,12 @@ public class PdfGenerator {
                 PdfGenerator.class.getClassLoader().getResourceAsStream("fonts/ARIALBI.TTF")
             );
             arialBoldItalic = PdfFontFactory.createFont(biBytes, PdfEncodings.WINANSI);
+            
+         // 4. Carga de Arial Italic (Solo Cursiva)
+            byte[] iBytes = com.itextpdf.io.util.StreamUtil.inputStreamToArray(
+                PdfGenerator.class.getClassLoader().getResourceAsStream("fonts/ARIALI.TTF")
+            );
+            arialItalic = PdfFontFactory.createFont(iBytes, PdfEncodings.WINANSI);
 
         } catch (Exception e) {
             throw new RuntimeException("Error cargando las fuentes Arial desde resources/fonts/", e);
@@ -154,42 +161,49 @@ public class PdfGenerator {
         intro.add(", " + etiquetaDomicilio + direccionRealParaContrato);
         intro.add(", a quien en adelante se " + pronombreDenom + " denominará ");
         intro.add(new Text(etiquetaComprador).setFont(arialBold).setUnderline());
-        intro.add(" en los términos y condiciones de las cláusulas siguientes: ----------------------------------------------------");
+        intro.add(" en los términos y condiciones de las cláusulas siguientes:");
 
         document.add(intro);
 
      // --- PRIMERA: PROPIEDAD ---
-     // Título de la cláusula
+     // Título de la cláusula (Arial 11, Negrita y Cursiva)
      document.add(new Paragraph()
-         .add(new Text("PRIMERA:      PROPIEDAD").setBold().setUnderline())
-         .setFontSize(10)
+         .add(new Text("PRIMERA:      PROPIEDAD").setFont(arialBoldItalic).setUnderline())
+         .setFontSize(11)
          .setMarginTop(10));
 
      // Cuerpo de la cláusula
-     Paragraph primeraCuerpo = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setFontSize(10).setFixedLeading(11);
+     // Seteamos arialItalic como fuente base del párrafo
+     Paragraph primeraCuerpo = new Paragraph()
+         .setTextAlignment(TextAlignment.JUSTIFIED)
+         .setFont(arialItalic) 
+         .setFontSize(11)
+         .setMultipliedLeading(1.5f);
 
-     primeraCuerpo.add(new Text("“LA VENDEDORA”").setBold());
+     primeraCuerpo.add(new Text("“LA VENDEDORA”").setFont(arialBoldItalic));
      primeraCuerpo.add(" es propietaria de un lote de terreno rústico con un área superficial de 201,224.03 m2 Equivalente a 20 Has. 1,224.03 m2, que corresponde al 100% de las acciones y derechos del Predio denominado Sector Pampa San Antonio, Margen derecha del Kilómetro 23 de La Avenida Túpac Amaru, Distrito de Carabayllo, Provincia y Departamento De Lima, el cual forma parte de un predio de mayor extensión ubicado en las Provincia de Huarochirí, Lima y Canta, inscrito a fojas 515 del tomo 10-H, actualmente ");
-     primeraCuerpo.add(new Text("Partida Electrónica 11049870 del Registro de Predios de Lima. ").setItalic());
+     primeraCuerpo.add(new Text("Partida Electrónica 11049870 del Registro de Predios de Lima. --------------").setFont(arialBoldItalic));
      primeraCuerpo.add("\nFue adquirido mediante la minuta de Compra- Venta de Acciones y Derechos de Predio Rustico de la fecha ");
-     primeraCuerpo.add(new Text("06/11/2019").setBold());
+     primeraCuerpo.add(new Text("06/11/2019").setFont(arialBoldItalic));
      primeraCuerpo.add(" (15 Has.) y con fecha ");
-     primeraCuerpo.add(new Text("29/03/2021").setBold());
+     primeraCuerpo.add(new Text("29/03/2021").setFont(arialBoldItalic));
      primeraCuerpo.add(" (51,224.03 m2). Que le otorgo su anterior Propietaria ");
-     primeraCuerpo.add(new Text("INVERSIONES INMOBILIARIAS LAS PRADERAS S.A.C").setBold());
+     primeraCuerpo.add(new Text("INVERSIONES INMOBILIARIAS LAS PRADERAS S.A.C").setFont(arialBoldItalic));
      primeraCuerpo.add(", identificada con ");
-     primeraCuerpo.add(new Text("RUC. N°20601878616").setBold());
+     primeraCuerpo.add(new Text("RUC. N°20601878616").setFont(arialBoldItalic));
      primeraCuerpo.add(", debidamente representada por su Gerente General ");
-     primeraCuerpo.add(new Text("DON JOSE ANTONIO ESPINOZA TENA").setBold());
+     primeraCuerpo.add(new Text("DON JOSE ANTONIO ESPINOZA TENA").setFont(arialBoldItalic));
      primeraCuerpo.add(", identificado con ");
-     primeraCuerpo.add(new Text("DNI N°09403557").setBold());
+     primeraCuerpo.add(new Text("DNI N°09403557").setFont(arialBoldItalic));
      primeraCuerpo.add(". Sobre dicho terreno, ");
-     primeraCuerpo.add(new Text("LA VENDEDORA").setBold());
+     primeraCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
      primeraCuerpo.add(" ha proyectado el Programa de Vivienda denominado ");
-     primeraCuerpo.add(new Text("“LA FLORIDA DE TORRE BLANCA 1ERA.ETAPA”").setBold());
+     primeraCuerpo.add(new Text("“LA FLORIDA DE TORRE BLANCA 1ERA.ETAPA”").setFont(arialBoldItalic));
      primeraCuerpo.add(", el mismo que se distribuye en los lotes y manzanas con sus respectivas áreas conforme al plano de Lotización. ----");
 
      document.add(primeraCuerpo);
+     
+     
         // --- SEGUNDA: OBJETO ---
         document.add(new Paragraph("\nSEGUNDA: OBJETO DEL CONTRATO").setBold().setFontSize(10));
         document.add(new Paragraph("Por el presente contrato LA VENDEDORA transfiere los derechos y acciones de un lote de terreno rústico ubicado la Manzana “"+lote.getManzana()+"” y asignado, con el lote Nº "+lote.getNumeroLote()+" del Programa de Vivienda “LA FLORIDA DE TORRE BLANCA” con un área de "+lote.getArea()+"M2. Encerrado dentro de los siguientes linderos y medidas perimétricas:").setFontSize(10).setTextAlignment(TextAlignment.JUSTIFIED));
