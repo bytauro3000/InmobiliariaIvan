@@ -290,7 +290,7 @@ public class PdfGenerator {
          .setTextAlignment(TextAlignment.JUSTIFIED)
          .setFont(arialItalic)
          .setFontSize(11)
-         .setMultipliedLeading(1.5f);
+         .setMultipliedLeading(1.0f);
 
      terceraCuerpo.add("El precio del bien objeto de la prestación a cargo de ");
      terceraCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
