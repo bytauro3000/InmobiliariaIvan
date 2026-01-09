@@ -325,7 +325,7 @@ public class PdfGenerator {
          LetraResponseDTO primeraLetra = contrato.getLetras().get(0);
       
          terceraCuerpo.add(new Text("US$." + df.format(contrato.getMontoTotal())).setFont(arialBoldItalic));
-         terceraCuerpo.add(new Text(" " + montoTotalLetras).setFont(arialBoldItalic));
+         terceraCuerpo.add(new Text(" (" + montoTotalLetras + ")").setFont(arialBoldItalic));
          terceraCuerpo.add(", que ");
          terceraCuerpo.add(new Text("“" + etiquetaComprador + "”").setFont(arialBoldItalic));
          terceraCuerpo.add(" se obliga a cancelar en dinero, íntegramente y por armadas, según el cronograma de la siguiente forma:");
@@ -344,7 +344,7 @@ public class PdfGenerator {
 
          subclausula32.add("3.2 El saldo del precio de ");
          subclausula32.add(new Text("US$." + df.format(contrato.getSaldo())).setFont(arialBoldItalic));
-         subclausula32.add(new Text(" " + montoSaldoLetras).setFont(arialBoldItalic));
+         subclausula32.add(new Text(" (" + montoSaldoLetras + ")").setFont(arialBoldItalic));
          subclausula32.add(", que será cancelado en ");
 
          // Cálculo de letras (139 normales y 1 última diferente según tu ejemplo)
@@ -353,11 +353,11 @@ public class PdfGenerator {
 
          subclausula32.add(new Text(totalLetras + " letras de cambio ").setFont(arialBoldItalic));
          subclausula32.add("(" + (totalLetras - 1) + " letras de cambio de ");
-         subclausula32.add(new Text("US$" + primeraLetra.getImporte()).setFont(arialBoldItalic));
+         subclausula32.add(new Text("US$" + df.format(primeraLetra.getImporte())).setFont(arialBoldItalic));
          subclausula32.add(" y la última letra la ");
          subclausula32.add(new Text("Nº" + totalLetras).setFont(arialBoldItalic));
          subclausula32.add(" de ");
-         subclausula32.add(new Text("US$" + ultimaLetra.getImporte()).setFont(arialBoldItalic));
+         subclausula32.add(new Text("US$" + df.format(ultimaLetra.getImporte())).setFont(arialBoldItalic));
          subclausula32.add(") debidamente aceptadas por ");
          subclausula32.add(new Text("“" + etiquetaComprador).setFont(arialBoldItalic));
          subclausula32.add(", según el detalle siguiente:");
