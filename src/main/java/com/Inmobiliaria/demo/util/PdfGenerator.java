@@ -15,7 +15,6 @@ import com.itextpdf.layout.element.Text;
 import com.itextpdf.layout.properties.AreaBreakType;
 import com.itextpdf.layout.properties.TextAlignment;
 import java.io.ByteArrayOutputStream;
-import java.text.SimpleDateFormat;
 import java.util.List;
 import com.itextpdf.io.font.PdfEncodings;
 import com.itextpdf.kernel.font.PdfFont;
@@ -365,23 +364,32 @@ public class PdfGenerator {
 
          document.add(subclausula32);
          
-       //3.3 Fechas de Vencimiento
+      // 3.3 Fechas de Vencimiento
          Paragraph subclausula33 = new Paragraph()
              .setFont(arialItalic).setFontSize(11)
              .setMarginLeft(40).setMarginTop(10);
+
+         // Definimos el formato: DIA/MES/AÑO
+         java.time.format.DateTimeFormatter formatoLindo = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
          subclausula33.add("3.3 Letra ");
          subclausula33.add(new Text("No.01").setFont(arialBoldItalic));
          subclausula33.add(" por ");
          subclausula33.add(new Text("US$" + primeraLetra.getImporte()).setFont(arialBoldItalic));
          subclausula33.add(" con vencimiento el día ");
-         subclausula33.add(new Text(String.valueOf(primeraLetra.getFechaVencimiento())).setFont(arialBoldItalic));
+
+         // Formateo directo asumiendo que el dato siempre existe
+         subclausula33.add(new Text(primeraLetra.getFechaVencimiento().format(formatoLindo)).setFont(arialBoldItalic));
+
          subclausula33.add(" y la última ");
          subclausula33.add(new Text("Letra No." + totalLetras).setFont(arialBoldItalic));
          subclausula33.add(" por ");
          subclausula33.add(new Text("US$" + ultimaLetra.getImporte()).setFont(arialBoldItalic));
          subclausula33.add(" con vencimiento el día ");
-         subclausula33.add(new Text(String.valueOf(ultimaLetra.getFechaVencimiento())).setFont(arialBoldItalic));
+
+         // Formateo directo asumiendo que el dato siempre existe
+         subclausula33.add(new Text(ultimaLetra.getFechaVencimiento().format(formatoLindo)).setFont(arialBoldItalic));
+
          subclausula33.add(".");
 
          document.add(subclausula33);
