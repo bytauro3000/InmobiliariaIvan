@@ -365,43 +365,27 @@ public class PdfGenerator {
 
          document.add(subclausula32);
          
-      // 3.3 Fechas de Vencimiento
-         SimpleDateFormat fmt = new SimpleDateFormat("dd/MM/yyyy");
+       //3.3 Fechas de Vencimiento
          Paragraph subclausula33 = new Paragraph()
-             .setFont(arialItalic)
-             .setFontSize(11)
-             .setMarginLeft(40)
-             .setMarginTop(10)
-             .setMultipliedLeading(1.0f); // Interlineado 1.0 solicitado
-
-         // --- VALIDACIÓN PREVIA PARA EVITAR CAÍDA DEL SERVIDOR ---
-         // Si la fecha es nula, se asigna un texto vacío o guiones en lugar de romper el código
-         String fecha01Str = (primeraLetra.getFechaVencimiento() != null) 
-                             ? fmt.format(primeraLetra.getFechaVencimiento()) : "---";
-         String fechaUltimaStr = (ultimaLetra.getFechaVencimiento() != null) 
-                                 ? fmt.format(ultimaLetra.getFechaVencimiento()) : "---";
+             .setFont(arialItalic).setFontSize(11)
+             .setMarginLeft(40).setMarginTop(10);
 
          subclausula33.add("3.3 Letra ");
          subclausula33.add(new Text("No.01").setFont(arialBoldItalic));
          subclausula33.add(" por ");
          subclausula33.add(new Text("US$" + primeraLetra.getImporte()).setFont(arialBoldItalic));
          subclausula33.add(" con vencimiento el día ");
-
-         // Usamos la variable ya formateada y validada
-         subclausula33.add(new Text(fecha01Str).setFont(arialBoldItalic));
-
+         subclausula33.add(new Text(String.valueOf(primeraLetra.getFechaVencimiento())).setFont(arialBoldItalic));
          subclausula33.add(" y la última ");
          subclausula33.add(new Text("Letra No." + totalLetras).setFont(arialBoldItalic));
          subclausula33.add(" por ");
          subclausula33.add(new Text("US$" + ultimaLetra.getImporte()).setFont(arialBoldItalic));
          subclausula33.add(" con vencimiento el día ");
-
-         // Usamos la variable ya formateada y validada
-         subclausula33.add(new Text(fechaUltimaStr).setFont(arialBoldItalic));
-
+         subclausula33.add(new Text(String.valueOf(ultimaLetra.getFechaVencimiento())).setFont(arialBoldItalic));
          subclausula33.add(".");
 
          document.add(subclausula33);
+         
          
          
       // 4. Párrafo final de garantía y domicilio de pago
