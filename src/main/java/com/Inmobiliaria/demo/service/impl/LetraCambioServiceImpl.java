@@ -19,7 +19,7 @@ import com.Inmobiliaria.demo.repository.ContratoRepository;
 import com.Inmobiliaria.demo.repository.DistritoRepository;
 import com.Inmobiliaria.demo.repository.LetraCambioRepository;
 import com.Inmobiliaria.demo.service.LetraCambioService;
-import com.Inmobiliaria.demo.util.NumeroALetrasUtil;
+import com.Inmobiliaria.demo.util.NumeroALetras;
 import com.Inmobiliaria.demo.dto.GenerarLetrasRequest;
 import com.Inmobiliaria.demo.dto.LetraCambioDTO;
 import com.Inmobiliaria.demo.dto.ReporteCronogramaPagosClientesDTO;
@@ -211,7 +211,7 @@ public class LetraCambioServiceImpl implements LetraCambioService {
                 letra.setImporte(importePorLetra);
             }
 
-            letra.setImporteLetras(NumeroALetrasUtil.convertir(letra.getImporte()));
+            letra.setImporteLetras(NumeroALetras.convertir(letra.getImporte()));
             letra.setEstadoLetra(EstadoLetra.PENDIENTE);
             letra.setNumeroLetra(i + "/" + cantidad);
             letra.setFechaPago(null);
