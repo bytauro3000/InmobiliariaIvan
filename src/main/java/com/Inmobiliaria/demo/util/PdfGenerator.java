@@ -17,6 +17,7 @@ import com.itextpdf.layout.properties.TextAlignment;
 import java.io.ByteArrayOutputStream;
 import java.text.DecimalFormat;
 import java.util.List;
+import com.itextpdf.layout.element.ListItem;
 import com.itextpdf.io.font.PdfEncodings;
 import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.font.PdfFontFactory;
@@ -498,8 +499,78 @@ public class PdfGenerator {
      sextaCuerpo.add(". Así mismo se deja establecido que el pacto de reserva de propiedad a quien se refiere la cláusula anterior, tendrá vigencia hasta que la compradora cumpla con pagar la totalidad del precio pactado en la cláusula tercera de este contrato, más los intereses devengados.");
 
      document.add(sextaCuerpo);
+     
+     /* =================================================================
+      * PAGINA 3: CLAUSULA SEPTIMA: OBLIGACIONES DE LOS COMPRADORES
+      * ================================================================= */
 
+     document.add(new Paragraph()
+         .add(new Text("SEPTIMA: OBLIGACIONES DE LOS COMPRADORES").setFont(arialBoldItalic).setUnderline())
+         .setFontSize(11)
+         .setMarginTop(15));
 
+     Paragraph septimaIntro = new Paragraph()
+         .setTextAlignment(TextAlignment.JUSTIFIED)
+         .setFont(arialItalic)
+         .setFontSize(11)
+         .setMultipliedLeading(1.0f);
+
+     septimaIntro.add("Queda establecido que así ");
+     septimaIntro.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+     septimaIntro.add(" tenga cancelado el ");
+     septimaIntro.add(new Text("50%").setFont(arialBoldItalic));
+     septimaIntro.add(" del valor del predio objeto del presente contrato y/o ");
+     septimaIntro.add(new Text("dejen de pagar dos (02) letras consecutivas o alternadas").setUnderline());
+     septimaIntro.add(", ");
+     septimaIntro.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+     septimaIntro.add(" quedara facultada para ejercer las acciones legales correspondientes haciendo valer su derecho, siendo estas las siguientes:");
+
+     document.add(septimaIntro);
+
+     // USAMOS EL NOMBRE COMPLETO PARA EVITAR CONFLICTO CON java.util.List
+     com.itextpdf.layout.element.List listaObligaciones = new com.itextpdf.layout.element.List()
+         .setListSymbol("• ") 
+         .setFont(arialItalic)
+         .setFontSize(11)
+         .setMarginLeft(20)
+         .setMarginTop(5);
+
+     // --- PRIMER PUNTO ---
+     ListItem item1 = new ListItem();
+     Paragraph p1 = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setMultipliedLeading(1.0f);
+     p1.add("Según lo dispuesto por el artículo 1561° del código civil pedir la resolución del contrato para cuyo efecto se remitirá a ");
+     p1.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+     p1.add(" una carta notarial en tal sentido. Se procederá a descontar el ");
+     p1.add(new Text("30% del precio total").setFont(arialBoldItalic));
+     p1.add(" a favor de ");
+     p1.add(new Text("LA VENDEDORA,").setFont(arialBoldItalic));
+     p1.add(" por concepto de indemnización de daños y perjuicios, lucro cesante y otros según el artículo 1563° del código civil.");
+     item1.add(p1); 
+     listaObligaciones.add(item1); 
+
+     // --- SEGUNDO PUNTO ---
+     ListItem item2 = new ListItem();
+     Paragraph p2 = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setMultipliedLeading(1.0f);
+     p2.add("Así mismo la devolución del saldo restante de lo recibido se hará cuando el lote sea vendido y conforme a lo aportado. En caso de resolución del contrato quedara en beneficio de ");
+     p2.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+     p2.add(" sin desembolso alguno para ella las mejoras introducidas en el inmueble o lote, sin obligación de reembolso de ninguna clase por parte de esta ni el pago de mejoras por acuerdo libre de ambas partes. Estipulándose así mismo que durante todo el tiempo que demore la devolución de dicho inmueble ");
+     p2.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+     p2.add(" deberá pagar mensualmente al a vendedora el ");
+     p2.add(new Text("3% del precio total").setFont(arialBoldItalic));
+     p2.add(" estipulado en calidad de merced conductiva; incrementándose esta en un 50% cada año que venza, hasta su desocupación total.");
+     item2.add(p2);
+     listaObligaciones.add(item2); 
+
+     // --- TERCER PUNTO ---
+     ListItem item3 = new ListItem();
+     Paragraph p3 = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setMultipliedLeading(1.0f);
+     p3.add("En caso de resolución de contrato por motivos precedentes ");
+     p3.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+     p3.add(", desea continuar conservando el predio objeto del presente contrato, se restaurará al precio y/o valor por metro cuadra del momento en que se actualice el contrato.");
+     item3.add(p3);
+     listaObligaciones.add(item3); 
+
+     document.add(listaObligaciones);
      
      
      //========================================================================================
