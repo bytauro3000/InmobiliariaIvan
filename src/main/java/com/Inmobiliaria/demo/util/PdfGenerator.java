@@ -300,8 +300,8 @@ public class PdfGenerator {
      DecimalFormat df = new DecimalFormat("#,##0.00");
 
      // 2. Convertir montos a letras usando tu clase NumeroALetras
-     String montoTotalLetras = NumeroALetras.convertir(contrato.getMontoTotal().doubleValue());
-     String montoSaldoLetras = NumeroALetras.convertir(contrato.getSaldo().doubleValue());
+     String montoTotalLetras = NumeroALetras.convertir(contrato.getMontoTotal());
+     String montoSaldoLetras = NumeroALetras.convertir(contrato.getSaldo());
 
      // 1. Título de la Cláusula
      document.add(new Paragraph()
