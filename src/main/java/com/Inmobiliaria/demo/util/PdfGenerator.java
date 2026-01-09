@@ -365,7 +365,7 @@ public class PdfGenerator {
 
          document.add(subclausula32);
          
-      /* 3.3 Fechas de Vencimiento
+         //3.3 Fechas de Vencimiento
          SimpleDateFormat fmt = new SimpleDateFormat("dd/MM/yyyy");
          Paragraph subclausula33 = new Paragraph()
              .setFont(arialItalic).setFontSize(11)
@@ -387,7 +387,7 @@ public class PdfGenerator {
 
          document.add(subclausula33);
          
-         */
+         
          
       // 4. Párrafo final de garantía y domicilio de pago
          Paragraph terceraFinal = new Paragraph()
