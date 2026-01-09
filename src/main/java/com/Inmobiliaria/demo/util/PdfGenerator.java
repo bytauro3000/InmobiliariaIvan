@@ -292,7 +292,7 @@ public class PdfGenerator {
      document.add(segundaFinal);
      
      /* =========================================================
-      * PAGINA 2: CLAUSULA TERCERA
+      * PAGINA 2: CLAUSULA TERCERA: PRECIO
       * ========================================================= */
 
      // 1. Título de la Cláusula
@@ -363,6 +363,30 @@ public class PdfGenerator {
          subclausula32.add(", según el detalle siguiente:");
 
          document.add(subclausula32);
+         
+      // 3.3 Fechas de Vencimiento
+         SimpleDateFormat fmt = new SimpleDateFormat("dd/MM/yyyy");
+         Paragraph subclausula33 = new Paragraph()
+             .setFont(arialItalic).setFontSize(11)
+             .setMarginLeft(40).setMarginTop(10);
+
+         subclausula33.add("3.3 Letra ");
+         subclausula33.add(new Text("No.01").setFont(arialBoldItalic));
+         subclausula33.add(" por ");
+         subclausula33.add(new Text("US$" + primeraLetra.getImporte()).setFont(arialBoldItalic));
+         subclausula33.add(" con vencimiento el día ");
+         subclausula33.add(new Text(fmt.format(primeraLetra.getFechaVencimiento())).setFont(arialBoldItalic));
+         subclausula33.add(" y la última ");
+         subclausula33.add(new Text("Letra No." + totalLetras).setFont(arialBoldItalic));
+         subclausula33.add(" por ");
+         subclausula33.add(new Text("US$" + ultimaLetra.getImporte()).setFont(arialBoldItalic));
+         subclausula33.add(" con vencimiento el día ");
+         subclausula33.add(new Text(fmt.format(ultimaLetra.getFechaVencimiento())).setFont(arialBoldItalic));
+         subclausula33.add(".");
+
+         document.add(subclausula33);
+
+
 
      }
      
