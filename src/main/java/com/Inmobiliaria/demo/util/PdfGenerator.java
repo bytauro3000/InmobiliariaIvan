@@ -372,26 +372,33 @@ public class PdfGenerator {
              .setFontSize(11)
              .setMarginLeft(40)
              .setMarginTop(10)
-             .setMultipliedLeading(1.0f); // Manteniendo tu interlineado 1.0
+             .setMultipliedLeading(1.0f); // Interlineado 1.0 solicitado
 
-         // --- VALIDACIÓN DE FECHAS (Para evitar el error 403) ---
-         String fecha1 = (primeraLetra.getFechaVencimiento() != null) 
-                         ? fmt.format(primeraLetra.getFechaVencimiento()) : "---";
-         String fechaUltima = (ultimaLetra.getFechaVencimiento() != null) 
-                              ? fmt.format(ultimaLetra.getFechaVencimiento()) : "---";
+         // --- VALIDACIÓN PREVIA PARA EVITAR CAÍDA DEL SERVIDOR ---
+         // Si la fecha es nula, se asigna un texto vacío o guiones en lugar de romper el código
+         String fecha01Str = (primeraLetra.getFechaVencimiento() != null) 
+                             ? fmt.format(primeraLetra.getFechaVencimiento()) : "---";
+         String fechaUltimaStr = (ultimaLetra.getFechaVencimiento() != null) 
+                                 ? fmt.format(ultimaLetra.getFechaVencimiento()) : "---";
 
          subclausula33.add("3.3 Letra ");
          subclausula33.add(new Text("No.01").setFont(arialBoldItalic));
          subclausula33.add(" por ");
-         subclausula33.add(new Text("US$" + (primeraLetra.getImporte() != null ? primeraLetra.getImporte() : "0.00")).setFont(arialBoldItalic));
+         subclausula33.add(new Text("US$" + primeraLetra.getImporte()).setFont(arialBoldItalic));
          subclausula33.add(" con vencimiento el día ");
-         subclausula33.add(new Text(fecha1).setFont(arialBoldItalic)); // Usa la variable validada
+
+         // Usamos la variable ya formateada y validada
+         subclausula33.add(new Text(fecha01Str).setFont(arialBoldItalic));
+
          subclausula33.add(" y la última ");
          subclausula33.add(new Text("Letra No." + totalLetras).setFont(arialBoldItalic));
          subclausula33.add(" por ");
-         subclausula33.add(new Text("US$" + (ultimaLetra.getImporte() != null ? ultimaLetra.getImporte() : "0.00")).setFont(arialBoldItalic));
+         subclausula33.add(new Text("US$" + ultimaLetra.getImporte()).setFont(arialBoldItalic));
          subclausula33.add(" con vencimiento el día ");
-         subclausula33.add(new Text(fechaUltima).setFont(arialBoldItalic)); // Usa la variable validada
+
+         // Usamos la variable ya formateada y validada
+         subclausula33.add(new Text(fechaUltimaStr).setFont(arialBoldItalic));
+
          subclausula33.add(".");
 
          document.add(subclausula33);
