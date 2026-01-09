@@ -15,6 +15,7 @@ import com.itextpdf.layout.element.Text;
 import com.itextpdf.layout.properties.AreaBreakType;
 import com.itextpdf.layout.properties.TextAlignment;
 import java.io.ByteArrayOutputStream;
+import java.text.DecimalFormat;
 import java.util.List;
 import com.itextpdf.io.font.PdfEncodings;
 import com.itextpdf.kernel.font.PdfFont;
@@ -294,6 +295,13 @@ public class PdfGenerator {
      /* =========================================================
       * PAGINA 2: CLAUSULA TERCERA: PRECIO
       * ========================================================= */
+     
+  // 1. Definir el formato de moneda con comas
+     DecimalFormat df = new DecimalFormat("#,##0.00");
+
+     // 2. Convertir montos a letras usando tu clase NumeroALetras
+     String montoTotalLetras = NumeroALetras.convertir(contrato.getMontoTotal().doubleValue());
+     String montoSaldoLetras = NumeroALetras.convertir(contrato.getSaldo().doubleValue());
 
      // 1. Título de la Cláusula
      document.add(new Paragraph()
@@ -315,15 +323,9 @@ public class PdfGenerator {
      // --- Validación de Letras para evitar errores NullPointer ---
      if (contrato.getLetras() != null && !contrato.getLetras().isEmpty()) {
          LetraResponseDTO primeraLetra = contrato.getLetras().get(0);
-         
-         // Extracción segura del texto del monto
-         String montoEnLetras = "DOLARES AMERICANOS";
-         if (primeraLetra.getImporteLetras() != null && primeraLetra.getImporteLetras().contains(" POR ")) {
-             montoEnLetras = primeraLetra.getImporteLetras().split(" POR ")[0] + " AMERICANOS";
-         }
-
-         terceraCuerpo.add(new Text("US$." + contrato.getMontoTotal()).setFont(arialBoldItalic));
-         terceraCuerpo.add(new Text(" (" + montoEnLetras + ")").setFont(arialBoldItalic));
+      
+         terceraCuerpo.add(new Text("US$." + df.format(contrato.getMontoTotal())).setFont(arialBoldItalic));
+         terceraCuerpo.add(new Text(" " + montoTotalLetras).setFont(arialBoldItalic));
          terceraCuerpo.add(", que ");
          terceraCuerpo.add(new Text("“" + etiquetaComprador + "”").setFont(arialBoldItalic));
          terceraCuerpo.add(" se obliga a cancelar en dinero, íntegramente y por armadas, según el cronograma de la siguiente forma:");
@@ -331,20 +333,18 @@ public class PdfGenerator {
          
       // 3. Sub-cláusulas 3.1, 3.2 y 3.3 con sangría (Margen izquierdo)
          // 3.1 Cuota Inicial
-         String textoInicial = (contrato.getInicial().doubleValue() > 0) ? "US$." + contrato.getInicial() : "Sin Cuota inicial.";
-         document.add(new Paragraph("3.1 " + textoInicial)
-             .setFont(arialItalic).setFontSize(11).setMarginLeft(40).setMarginTop(10));
-
-         // 3.2 Detalle del Saldo y Letras
+      // Subcláusula 3.1 (Cuota inicial)
+         String textoInicial = (contrato.getInicial().doubleValue() > 0) ? "US$." + df.format(contrato.getInicial()) : "Sin Cuota inicial.";
+         document.add(new Paragraph("3.1 " + textoInicial).setFont(arialItalic).setFontSize(11).setMarginLeft(40).setMarginTop(10));
+         
+      // Subcláusula 3.2 (Saldo)
          Paragraph subclausula32 = new Paragraph()
              .setTextAlignment(TextAlignment.JUSTIFIED)
-             .setFont(arialItalic).setFontSize(11)
-             .setMultipliedLeading(1.0f)
-             .setMarginLeft(40).setMarginTop(10);
+             .setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f).setMarginLeft(40).setMarginTop(10);
 
          subclausula32.add("3.2 El saldo del precio de ");
-         subclausula32.add(new Text("US$." + contrato.getSaldo()).setFont(arialBoldItalic));
-         subclausula32.add(new Text(" (" + primeraLetra.getImporteLetras().split(" POR ")[0] + " AMERICANOS)").setFont(arialBoldItalic));
+         subclausula32.add(new Text("US$." + df.format(contrato.getSaldo())).setFont(arialBoldItalic));
+         subclausula32.add(new Text(" " + montoSaldoLetras).setFont(arialBoldItalic));
          subclausula32.add(", que será cancelado en ");
 
          // Cálculo de letras (139 normales y 1 última diferente según tu ejemplo)
@@ -375,12 +375,11 @@ public class PdfGenerator {
          subclausula33.add("3.3 Letra ");
          subclausula33.add(new Text("No.01").setFont(arialBoldItalic));
          subclausula33.add(" por ");
-         subclausula33.add(new Text("US$" + primeraLetra.getImporte()).setFont(arialBoldItalic));
+         subclausula33.add(new Text("US$" + df.format(primeraLetra.getImporte())).setFont(arialBoldItalic)); // Con comas
          subclausula33.add(" con vencimiento el día ");
-
-         // Formateo directo asumiendo que el dato siempre existe
          subclausula33.add(new Text(primeraLetra.getFechaVencimiento().format(formatoLindo)).setFont(arialBoldItalic));
-
+         
+         
          subclausula33.add(" y la última ");
          subclausula33.add(new Text("Letra No." + totalLetras).setFont(arialBoldItalic));
          subclausula33.add(" por ");
