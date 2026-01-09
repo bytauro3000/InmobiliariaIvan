@@ -248,7 +248,7 @@ public class PdfGenerator {
      // Usamos una tabla sin bordes de 3 columnas
      float[] columnWidths = {120f, 200f, 100f}; 
      Table tablaLinderos = new Table(columnWidths)
-         .setMarginLeft(20)
+         .setMarginLeft(10)
          .setMarginTop(5)
          .setMarginBottom(5)
          .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
@@ -280,7 +280,7 @@ public class PdfGenerator {
          .setTextAlignment(TextAlignment.JUSTIFIED)
          .setFont(arialItalic)
          .setFontSize(11)
-         .setMultipliedLeading(1.5f)
+         .setMultipliedLeading(1.0f)
          .setMarginTop(10);
 
      segundaFinal.add("Por el presente contrato ");
@@ -328,6 +328,41 @@ public class PdfGenerator {
          terceraCuerpo.add(new Text("“" + etiquetaComprador + "”").setFont(arialBoldItalic));
          terceraCuerpo.add(" se obliga a cancelar en dinero, íntegramente y por armadas, según el cronograma de la siguiente forma:");
          document.add(terceraCuerpo);
+         
+      // 3. Sub-cláusulas 3.1, 3.2 y 3.3 con sangría (Margen izquierdo)
+         // 3.1 Cuota Inicial
+         String textoInicial = (contrato.getInicial().doubleValue() > 0) ? "US$." + contrato.getInicial() : "Sin Cuota inicial.";
+         document.add(new Paragraph("3.1 " + textoInicial)
+             .setFont(arialItalic).setFontSize(11).setMarginLeft(40).setMarginTop(10));
+
+         // 3.2 Detalle del Saldo y Letras
+         Paragraph subclausula32 = new Paragraph()
+             .setTextAlignment(TextAlignment.JUSTIFIED)
+             .setFont(arialItalic).setFontSize(11)
+             .setMultipliedLeading(1.0f)
+             .setMarginLeft(40).setMarginTop(10);
+
+         subclausula32.add("3.2 El saldo del precio de ");
+         subclausula32.add(new Text("US$." + contrato.getSaldo()).setFont(arialBoldItalic));
+         subclausula32.add(new Text(" (" + primeraLetra.getImporteLetras().split(" POR ")[0] + " AMERICANOS)").setFont(arialBoldItalic));
+         subclausula32.add(", que será cancelado en ");
+
+         // Cálculo de letras (139 normales y 1 última diferente según tu ejemplo)
+         int totalLetras = contrato.getCantidadLetras();
+         LetraResponseDTO ultimaLetra = contrato.getLetras().get(totalLetras - 1);
+
+         subclausula32.add(new Text(totalLetras + " letras de cambio ").setFont(arialBoldItalic));
+         subclausula32.add("(" + (totalLetras - 1) + " letras de cambio de ");
+         subclausula32.add(new Text("US$" + primeraLetra.getImporte()).setFont(arialBoldItalic));
+         subclausula32.add(" y la última letra la ");
+         subclausula32.add(new Text("Nº" + totalLetras).setFont(arialBoldItalic));
+         subclausula32.add(" de ");
+         subclausula32.add(new Text("US$" + ultimaLetra.getImporte()).setFont(arialBoldItalic));
+         subclausula32.add(") debidamente aceptadas por ");
+         subclausula32.add(new Text("“" + etiquetaComprador).setFont(arialBoldItalic));
+         subclausula32.add(", según el detalle siguiente:");
+
+         document.add(subclausula32);
 
      }
 
