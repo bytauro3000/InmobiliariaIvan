@@ -249,8 +249,9 @@ public class PdfGenerator {
      float[] columnWidths = {120f, 200f, 100f}; 
      Table tablaLinderos = new Table(columnWidths)
          .setMarginLeft(10)
+         
          .setMarginTop(5)
-         .setMarginBottom(5)
+    
          .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
 
      // Fila: Por el Frente
@@ -364,7 +365,7 @@ public class PdfGenerator {
 
          document.add(subclausula32);
          
-      // 3.3 Fechas de Vencimiento
+      /* 3.3 Fechas de Vencimiento
          SimpleDateFormat fmt = new SimpleDateFormat("dd/MM/yyyy");
          Paragraph subclausula33 = new Paragraph()
              .setFont(arialItalic).setFontSize(11)
@@ -385,9 +386,26 @@ public class PdfGenerator {
          subclausula33.add(".");
 
          document.add(subclausula33);
+         
+         */
+         
+      // 4. Párrafo final de garantía y domicilio de pago
+         Paragraph terceraFinal = new Paragraph()
+             .setTextAlignment(TextAlignment.JUSTIFIED)
+             .setFont(arialItalic).setFontSize(11)
+             .setMultipliedLeading(1.0f)
+             .setMarginTop(15);
 
+         terceraFinal.add("Así mismo a efectos de garantizar el cumplimiento de su obligación ");
+         terceraFinal.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+         terceraFinal.add(" giran a favor de ");
+         terceraFinal.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+         terceraFinal.add(" letras de cambio que se detallan en la cláusula tercera que serán cancelados en la fecha de vencimiento de los respectivos cambiales, más los correspondientes intereses en caso de mora. El lugar de pago de todas las armadas será el domicilio de ");
+         terceraFinal.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+         terceraFinal.add(".");
 
-
+         document.add(terceraFinal);
+         
      }
      
 
