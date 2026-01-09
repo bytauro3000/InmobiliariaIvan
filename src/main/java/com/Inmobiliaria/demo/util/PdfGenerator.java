@@ -365,28 +365,36 @@ public class PdfGenerator {
 
          document.add(subclausula32);
          
-         //3.3 Fechas de Vencimiento
+      // 3.3 Fechas de Vencimiento
          SimpleDateFormat fmt = new SimpleDateFormat("dd/MM/yyyy");
          Paragraph subclausula33 = new Paragraph()
-             .setFont(arialItalic).setFontSize(11)
-             .setMarginLeft(40).setMarginTop(10);
+             .setFont(arialItalic)
+             .setFontSize(11)
+             .setMarginLeft(40)
+             .setMarginTop(10)
+             .setMultipliedLeading(1.0f); // Manteniendo tu interlineado 1.0
+
+         // --- VALIDACIÓN DE FECHAS (Para evitar el error 403) ---
+         String fecha1 = (primeraLetra.getFechaVencimiento() != null) 
+                         ? fmt.format(primeraLetra.getFechaVencimiento()) : "---";
+         String fechaUltima = (ultimaLetra.getFechaVencimiento() != null) 
+                              ? fmt.format(ultimaLetra.getFechaVencimiento()) : "---";
 
          subclausula33.add("3.3 Letra ");
          subclausula33.add(new Text("No.01").setFont(arialBoldItalic));
          subclausula33.add(" por ");
-         subclausula33.add(new Text("US$" + primeraLetra.getImporte()).setFont(arialBoldItalic));
+         subclausula33.add(new Text("US$" + (primeraLetra.getImporte() != null ? primeraLetra.getImporte() : "0.00")).setFont(arialBoldItalic));
          subclausula33.add(" con vencimiento el día ");
-         subclausula33.add(new Text(fmt.format(primeraLetra.getFechaVencimiento())).setFont(arialBoldItalic));
+         subclausula33.add(new Text(fecha1).setFont(arialBoldItalic)); // Usa la variable validada
          subclausula33.add(" y la última ");
          subclausula33.add(new Text("Letra No." + totalLetras).setFont(arialBoldItalic));
          subclausula33.add(" por ");
-         subclausula33.add(new Text("US$" + ultimaLetra.getImporte()).setFont(arialBoldItalic));
+         subclausula33.add(new Text("US$" + (ultimaLetra.getImporte() != null ? ultimaLetra.getImporte() : "0.00")).setFont(arialBoldItalic));
          subclausula33.add(" con vencimiento el día ");
-         subclausula33.add(new Text(fmt.format(ultimaLetra.getFechaVencimiento())).setFont(arialBoldItalic));
+         subclausula33.add(new Text(fechaUltima).setFont(arialBoldItalic)); // Usa la variable validada
          subclausula33.add(".");
 
          document.add(subclausula33);
-         
          
          
       // 4. Párrafo final de garantía y domicilio de pago
