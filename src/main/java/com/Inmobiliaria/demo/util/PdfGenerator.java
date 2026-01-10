@@ -949,7 +949,9 @@ public class PdfGenerator {
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialItalic) // Fuente base cursiva
 				.setFontSize(11)      // Tamaño de letra 11 solicitado
-				.setMarginTop(15);    // Espacio respecto a la tabla anterior
+				.setMarginTop(15)	    // Espacio respecto a la tabla anterior
+				.setMultipliedLeading(1.0f);
+
 
 		// Título: SEGUNDO en Negrita, Cursiva y Subrayado
 		segundoCuerpo.add(new Text("SEGUNDO.").setFont(arialBoldItalic).setUnderline());
@@ -973,7 +975,9 @@ public class PdfGenerator {
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialItalic)
 				.setFontSize(11)
-				.setMarginTop(15);
+				.setMarginTop(15)
+				.setMultipliedLeading(1.0f);
+
 
 		// Título: TERCERO en Negrita, Cursiva y Subrayado
 		terceroCuerpo.add(new Text("TERCERO.").setFont(arialBoldItalic).setUnderline());
@@ -1015,12 +1019,14 @@ public class PdfGenerator {
 
 		/* ===========================================================================================  
 			CLAUSULA CUARTA: DEL DOCUMENTO DE SEÑALIZACION 
-===========================================================================================*/
+		============================================================================================*/
 		Paragraph cuartoCuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialItalic)
 				.setFontSize(11)
-				.setMarginTop(15);
+				.setMarginTop(15)
+				.setMultipliedLeading(1.0f);
+
 
 		cuartoCuerpo.add(new Text("CUARTO.").setFont(arialBoldItalic).setUnderline());
 		cuartoCuerpo.add(" - Queda expresamente convenido que ");
@@ -1036,12 +1042,14 @@ public class PdfGenerator {
 
 		/* ===========================================================================================  
 			CLAUSULA QUINTA: DEL DOCUMENTO DE SEÑALIZACION 
-===========================================================================================*/
+		============================================================================================*/
 		Paragraph quintoCuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialItalic)
 				.setFontSize(11)
-				.setMarginTop(15);
+				.setMarginTop(15)
+				.setMultipliedLeading(1.0f);
+
 
 		quintoCuerpo.add(new Text("QUINTO.").setFont(arialBoldItalic).setUnderline());
 		quintoCuerpo.add(" - Queda entendido que al entrar ");
@@ -1057,7 +1065,9 @@ public class PdfGenerator {
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialItalic)
 				.setFontSize(11)
-				.setMarginTop(20);
+				.setMarginTop(20)
+				.setMultipliedLeading(1.0f);
+
 
 		cierrePosesion.add("Conformes ambas partes con el contenido del presente documento, lo firman por duplicado del día ");
 
