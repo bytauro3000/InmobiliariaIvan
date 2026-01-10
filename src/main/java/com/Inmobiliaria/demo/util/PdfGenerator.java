@@ -882,8 +882,9 @@ public class PdfGenerator {
 
 	     document.add(introPosesion);
 	     
-	     
-	  // --- CLAUSULA PRIMERA: DETALLE DEL LOTE ---
+	     /* ===========================================================================================  
+	                  CLAUSULA PRIMERA: DETALLE DEL LOTE 
+	     ==============================================================================================*/
 	     Paragraph primeroCuerpo = new Paragraph()
 	         .setTextAlignment(TextAlignment.JUSTIFIED)
 	         .setFont(arialItalic) // Fuente base cursiva
@@ -940,6 +941,33 @@ public class PdfGenerator {
 	     parrafoFinalPosesion.add(new Text("Partida Electrónica 11049870 del Registro de Predios de Lima.").setFont(arialItalic)); // En tu imagen esto no está en negrita
 
 	     document.add(parrafoFinalPosesion);
+	     
+	     /* ===========================================================================================  
+         				 CLAUSULA SEGUNDA: DEL DOCUMENTO DE SEÑALIZACION
+         ==============================================================================================*/   
+	     Paragraph segundoCuerpo = new Paragraph()
+	         .setTextAlignment(TextAlignment.JUSTIFIED)
+	         .setFont(arialItalic) // Fuente base cursiva
+	         .setFontSize(11)      // Tamaño de letra 11 solicitado
+	         .setMarginTop(15);    // Espacio respecto a la tabla anterior
+
+	     // Título: SEGUNDO en Negrita, Cursiva y Subrayado
+	     segundoCuerpo.add(new Text("SEGUNDO.").setFont(arialBoldItalic).setUnderline());
+	     segundoCuerpo.add(" - ");
+
+	     // Denominación de la Vendedora en Negrita
+	     segundoCuerpo.add(new Text("\"LA VENDEDORA\"").setFont(arialBold));
+	     segundoCuerpo.add(" mediante el presente documento, da en posesión efectiva a ");
+
+	     // Denominación de los Compradores en Negrita
+	     segundoCuerpo.add(new Text("“" + etiquetaComprador + "”").setFont(arialBold));
+	     segundoCuerpo.add(" el lote de terreno señalado en la cláusula anterior, quien declara haberlo recepcionado a su entera y completa satisfacción.");
+
+	     document.add(segundoCuerpo);
+	     
+	     /* ===========================================================================================  
+         						CLAUSULA TERCERA: DEL DOCUMENTO DE SEÑALIZACION 
+         ==============================================================================================*/  
 	     
 	     
 	  // 4. Agregar las firmas en la hoja de posesión
@@ -1038,7 +1066,7 @@ public class PdfGenerator {
 	    // --- COMPRADORES ADICIONALES (Exactamente debajo del primer bloque) ---
 	    if (clientes.size() > 1) {
 	        for (int i = 1; i < clientes.size(); i++) {
-	            document.add(new Paragraph("\n\n\n\\n")); 
+	            document.add(new Paragraph("\n\n\n")); 
 	            ClienteResponseDTO ci = clientes.get(i);
 
 	            // Tabla de una sola columna alineada a la izquierda (ocupa 45% igual que arriba)
