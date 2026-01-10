@@ -215,75 +215,98 @@ public class PdfGenerator {
 		document.add(primeraCuerpo);
 
 		/* =========================================================
-		 * PAGINA 2: CLAUSULA SEGUNDA - OBJETO 
+		 * PAGINA 2: CLAUSULA SEGUNDA - OBJETO DEL CONTRATO
 		 * ========================================================= */
 
 		// 1. Título de la Cláusula
 		document.add(new Paragraph()
-				.add(new Text("SEGUNDA:      OBJETO DEL CONTRATO").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11)
-				.setMarginTop(15));
+		        .add(new Text("SEGUNDA:      OBJETO DEL CONTRATO").setFont(arialBoldItalic).setUnderline())
+		        .setFontSize(11)
+		        .setMarginTop(15));
 
-		// --- INICIO DE BUCLE DINÁMICO PARA LOTES ---
+		// --- LÓGICA DINÁMICA PARA AGRUPAR MANZANAS Y LOTES ---
 		List<LoteResponseDTO> listaLotes = contrato.getLotes();
-		
-		for (int i = 0; i < listaLotes.size(); i++) {
-			LoteResponseDTO loteItem = listaLotes.get(i);
-			
-			// Si hay más de un lote, ponemos un pequeño subtítulo para separarlos visualmente
-			if (listaLotes.size() > 1) {
-				document.add(new Paragraph("DESCRIPCIÓN DEL INMUEBLE N° " + (i + 1))
-						.setFont(arialBoldItalic).setFontSize(10).setMarginTop(10));
-			}
+		StringBuilder ubicacionTexto = new StringBuilder();
+		java.math.BigDecimal areaTotal = java.math.BigDecimal.ZERO;
 
-			// 2. Bloque descriptivo dinámico
-			Paragraph segundaCuerpo = new Paragraph()
-					.setTextAlignment(TextAlignment.JUSTIFIED)
-					.setFont(arialItalic) 
-					.setFontSize(11)
-					.setMultipliedLeading(1.0f);
-
-			segundaCuerpo.add("Por el presente contrato ");
-			segundaCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
-			segundaCuerpo.add(" transfiere los derechos y acciones de un lote de terreno rústico ubicado la Manzana ");
-			segundaCuerpo.add(new Text("“" + loteItem.getManzana() + "”").setFont(arialBoldItalic));
-			segundaCuerpo.add(" y asignado, con el lote ");
-			segundaCuerpo.add(new Text("Nº " + loteItem.getNumeroLote()).setFont(arialBoldItalic));
-			segundaCuerpo.add(" del Programa de Vivienda ");
-			segundaCuerpo.add(new Text("“LA FLORIDA DE TORRE BLANCA”").setFont(arialBoldItalic));
-			segundaCuerpo.add(" con un área total de ");
-			segundaCuerpo.add(new Text(loteItem.getArea() + " M².").setFont(arialBoldItalic)); // Movido antes del texto de linderos
-			segundaCuerpo.add(" Encerrado dentro de los siguientes linderos y medidas perimétricas:");
-
-			document.add(segundaCuerpo);
-
-			// 3. Tabla de Linderos Dinámica
-			float[] columnWidths = {120f, 200f, 100f}; 
-			Table tablaLinderos = new Table(columnWidths)
-					.setMarginLeft(10).setMarginTop(5)
-					.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
-
-			// Usamos el método auxiliar con los datos del lote actual (loteItem)
-			agregarFilaLinderos(tablaLinderos, "Por el frente", loteItem.getColindanteNorte(), "Con    " + loteItem.getAncho1() + "  m.l.", arialItalic);
-			agregarFilaLinderos(tablaLinderos, "Por la derecha", loteItem.getColindanteEste(), "Con  " + loteItem.getLargo1() + "  m.l.", arialItalic);
-			agregarFilaLinderos(tablaLinderos, "Por la Izquierda", loteItem.getColindanteOeste(), "Con    " + loteItem.getLargo2() + "  m.l.", arialItalic);
-			agregarFilaLinderos(tablaLinderos, "Por el fondo", loteItem.getColindanteSur(), "Con    " + loteItem.getAncho2() + "  m.l.", arialItalic);
-
-			document.add(tablaLinderos);
+		if (listaLotes.size() == 1) {
+		    LoteResponseDTO single = listaLotes.get(0);
+		    ubicacionTexto.append("ubicado la Manzana “").append(single.getManzana()).append("” y asignado, con el lote Nº ").append(single.getNumeroLote());
+		    areaTotal = single.getArea();
+		} else {
+		    // Si hay más de uno, verificamos si son de la misma manzana
+		    boolean mismaManzana = listaLotes.stream().map(LoteResponseDTO::getManzana).distinct().count() == 1;
+		    
+		    if (mismaManzana) {
+		        ubicacionTexto.append("ubicado la Manzana “").append(listaLotes.get(0).getManzana()).append("” y asignado, con los lotes ");
+		        for (int i = 0; i < listaLotes.size(); i++) {
+		            ubicacionTexto.append("Nº ").append(listaLotes.get(i).getNumeroLote());
+		            if (i < listaLotes.size() - 1) ubicacionTexto.append(" y ");
+		        }
+		    } else {
+		        // Si son manzanas distintas
+		        for (int i = 0; i < listaLotes.size(); i++) {
+		            ubicacionTexto.append("la Manzana “").append(listaLotes.get(i).getManzana()).append("” asignado, con el lote ").append(listaLotes.get(i).getNumeroLote());
+		            if (i < listaLotes.size() - 1) ubicacionTexto.append(" y ");
+		        }
+		    }
+		    // Sumamos áreas
+		    for (LoteResponseDTO l : listaLotes) { areaTotal = areaTotal.add(l.getArea()); }
 		}
-		// --- FIN DE BUCLE DINÁMICO ---
 
-		// 4. Bloque descriptivo Final (Fuera del bucle, se muestra una sola vez al terminar de listar los lotes)
+		// 2. Bloque descriptivo inicial
+		Paragraph segundaIntro = new Paragraph()
+		        .setTextAlignment(TextAlignment.JUSTIFIED)
+		        .setFont(arialItalic) 
+		        .setFontSize(11)
+		        .setMultipliedLeading(1.0f);
+
+		segundaIntro.add("Por el presente contrato ");
+		segundaIntro.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		segundaIntro.add(" transfiere los derechos y acciones de un lote de terreno rústico " + ubicacionTexto.toString());
+		segundaIntro.add(" del Programa de Vivienda ");
+		segundaIntro.add(new Text("“LA FLORIDA DE TORRE BLANCA”").setFont(arialBoldItalic));
+		segundaIntro.add(" con un área total de ");
+		segundaIntro.add(new Text(areaTotal + "M2.").setFont(arialBoldItalic));
+		segundaIntro.add(" Encerrado dentro de los siguientes linderos y medidas perimétricas:");
+
+		document.add(segundaIntro);
+
+		// --- 3. BUCLE PARA MOSTRAR LINDEROS DE CADA LOTE (Como la Imagen) ---
+		for (LoteResponseDTO loteItem : listaLotes) {
+		    // Encabezado del Lote: MZ. XX LT.XX ÀREA:XXXM2
+		    document.add(new Paragraph()
+		            .add(new Text("MZ. " + loteItem.getManzana() + " LT." + loteItem.getNumeroLote() + " ÀREA:" + loteItem.getArea() + "M2")
+		            .setFont(arialBoldItalic))
+		            .setFontSize(11)
+		            .setMarginTop(10)
+		            .setMarginBottom(2));
+
+		    float[] colWidths = {120f, 200f, 100f}; 
+		    Table tablaLinderos = new Table(colWidths)
+		            .setMarginLeft(10)
+		            .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
+
+		    // Reutilizamos tu método de 5 parámetros
+		    agregarFilaLinderos(tablaLinderos, "Por el frente", loteItem.getColindanteNorte(), "Con    " + loteItem.getAncho1() + "  m.l.", arialItalic);
+		    agregarFilaLinderos(tablaLinderos, "Por la derecha", loteItem.getColindanteEste(), "Con  " + loteItem.getLargo1() + "  m.l.", arialItalic);
+		    agregarFilaLinderos(tablaLinderos, "Por la Izquierda", loteItem.getColindanteOeste(), "Con    " + loteItem.getLargo2() + "  m.l.", arialItalic);
+		    agregarFilaLinderos(tablaLinderos, "Por el fondo", loteItem.getColindanteSur(), "Con    " + loteItem.getAncho2() + "  m.l.", arialItalic);
+
+		    document.add(tablaLinderos);
+		}
+
+		// 4. Bloque descriptivo Final
 		Paragraph segundaFinal = new Paragraph()
-				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic)
-				.setFontSize(11)
-				.setMultipliedLeading(1.0f)
-				.setMarginTop(10);
+		        .setTextAlignment(TextAlignment.JUSTIFIED)
+		        .setFont(arialItalic)
+		        .setFontSize(11)
+		        .setMultipliedLeading(1.0f)
+		        .setMarginTop(10);
 
 		segundaFinal.add("Por el presente contrato ");
 		segundaFinal.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
-		segundaFinal.add(" otorga en venta real los lotes de terreno rústico antes descritos, con veredas, agua y luz provisional previo pago por cada servicio brindado a ");
+		segundaFinal.add(" otorga en venta real un lote de terreno rustico con veredas, agua y luz provisional previo pago por cada servicio brindado a ");
 		segundaFinal.add(new Text(etiquetaComprador).setFont(arialBoldItalic)); 
 		segundaFinal.add(" así mismo, correspondiéndole sus aires, usos, costumbres, entradas, salidas y todo cuanto de hecho y por derecho le corresponde sin reserva ni limitación alguna, toda vez que la finalidad del presente contrato es que surta todos sus efectos legales.");
 
