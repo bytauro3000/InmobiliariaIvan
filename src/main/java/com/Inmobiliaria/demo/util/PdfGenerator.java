@@ -869,60 +869,77 @@ public class PdfGenerator {
 
 	// 🔹 MÉTODO REUTILIZABLE DE FIRMAS (Arial 12 Bold Italic)
 	private static void agregarBloqueFirmas(Document document, List<ClienteResponseDTO> clientes, PdfFont arialBoldItalic) {
-		document.add(new Paragraph("\n\n\n\n")); // Espacio para firmar
+	    document.add(new Paragraph("\n\n\n\n")); // Espacio para firmar
 
-		float[] columnWidths = {1f, 1f}; 
-		Table tablaFirmas = new Table(com.itextpdf.layout.properties.UnitValue.createPercentArray(columnWidths))
-				.useAllAvailableWidth()
-				.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
+	    // Usamos una tabla de 2 columnas que ocupa el 100% del ancho de la página
+	    float[] columnWidths = {1f, 1f}; 
+	    Table tablaFirmas = new Table(com.itextpdf.layout.properties.UnitValue.createPercentArray(columnWidths))
+	            .useAllAvailableWidth()
+	            .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
 
-		// --- COLUMNA IZQUIERDA: PRIMER COMPRADOR ---
-		ClienteResponseDTO c1 = clientes.get(0);
-		Cell celdaC1 = new Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
-		celdaC1.add(new Paragraph("....................................................................")
-				.setTextAlignment(TextAlignment.CENTER).setMarginBottom(0));
-		celdaC1.add(new Paragraph(c1.getNombre().toUpperCase() + " " + c1.getApellidos().toUpperCase())
-				.setFont(arialBoldItalic).setFontSize(12).setTextAlignment(TextAlignment.CENTER).setMarginBottom(0));
-		celdaC1.add(new Paragraph("DNI N°" + c1.getNumDoc())
-				.setFont(arialBoldItalic).setFontSize(12).setTextAlignment(TextAlignment.CENTER).setMarginBottom(0));
+	    // --- COLUMNA IZQUIERDA: PRIMER COMPRADOR (Alineado al margen izquierdo) ---
+	    ClienteResponseDTO c1 = clientes.get(0);
+	    Cell celdaC1 = new Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
+	            .setTextAlignment(TextAlignment.CENTER); // Centra el contenido dentro de su mitad
+	    
+	    // El largo de los puntos se ajusta dinámicamente o se fija a un estándar visual
+	    celdaC1.add(new Paragraph("....................................................................")
+	            .setMarginBottom(0));
+	    celdaC1.add(new Paragraph(c1.getNombre().toUpperCase() + " " + c1.getApellidos().toUpperCase())
+	            .setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0));
+	    celdaC1.add(new Paragraph("DNI N°" + c1.getNumDoc())
+	            .setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0));
+	    
+	    if (clientes.size() == 1) {
+	        celdaC1.add(new Paragraph("“EL COMPRADOR”")
+	                .setFont(arialBoldItalic).setFontSize(12));
+	    }
 
-		if (clientes.size() == 1) {
-			celdaC1.add(new Paragraph("“EL COMPRADOR”")
-					.setFont(arialBoldItalic).setFontSize(12).setTextAlignment(TextAlignment.CENTER));
-		}
+	    // --- COLUMNA DERECHA: LA VENDEDORA (Alineada al margen derecho) ---
+	    Cell celdaV = new Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
+	            .setTextAlignment(TextAlignment.CENTER); // Centra el contenido dentro de su mitad
+	    
+	    celdaV.add(new Paragraph("................................................")
+	            .setMarginBottom(0));
+	    celdaV.add(new Paragraph("“LA VENDEDORA”")
+	            .setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0));
+	    celdaV.add(new Paragraph("DNI N°19404451")
+	            .setFont(arialBoldItalic).setFontSize(12));
 
-		// --- COLUMNA DERECHA: LA VENDEDORA ---
-		Cell celdaV = new Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
-		celdaV.add(new Paragraph("................................................")
-				.setTextAlignment(TextAlignment.CENTER).setMarginBottom(0));
-		celdaV.add(new Paragraph("“LA VENDEDORA”")
-				.setFont(arialBoldItalic).setFontSize(12).setTextAlignment(TextAlignment.CENTER).setMarginBottom(0));
-		celdaV.add(new Paragraph("DNI N°19404451")
-				.setFont(arialBoldItalic).setFontSize(12).setTextAlignment(TextAlignment.CENTER).setMarginBottom(0));
+	    tablaFirmas.addCell(celdaC1);
+	    tablaFirmas.addCell(celdaV);
+	    document.add(tablaFirmas);
 
-		tablaFirmas.addCell(celdaC1);
-		tablaFirmas.addCell(celdaV);
-		document.add(tablaFirmas);
+	    // --- FILAS SIGUIENTES: COMPRADORES ADICIONALES (Debajo del primero) ---
+	    if (clientes.size() > 1) {
+	        for (int i = 1; i < clientes.size(); i++) {
+	            document.add(new Paragraph("\n\n")); 
+	            ClienteResponseDTO ci = clientes.get(i);
+	            
+	            // Creamos otra tabla de una sola columna alineada a la izquierda
+	            // para que los compradores extra no se centren en toda la hoja, sino en la columna 1
+	            Table tablaExtra = new Table(new float[]{1f})
+	                    .setWidth(com.itextpdf.layout.properties.UnitValue.createPercentValue(50)) // Solo ocupa la mitad izquierda
+	                    .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
 
-		// --- FIRMAS ADICIONALES ---
-		if (clientes.size() > 1) {
-			for (int i = 1; i < clientes.size(); i++) {
-				document.add(new Paragraph("\n\n")); 
-				ClienteResponseDTO ci = clientes.get(i);
+	            Cell celdaExtra = new Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
+	                    .setTextAlignment(TextAlignment.CENTER);
 
-				Paragraph pFirmaExtra = new Paragraph()
-						.setTextAlignment(TextAlignment.LEFT)
-						.setMarginLeft(45);
-
-				pFirmaExtra.add("....................................................................\n");
-				pFirmaExtra.add(new Text(ci.getNombre().toUpperCase() + " " + ci.getApellidos().toUpperCase() + "\n").setFont(arialBoldItalic).setFontSize(12));
-				pFirmaExtra.add(new Text("DNI N°" + ci.getNumDoc() + "\n").setFont(arialBoldItalic).setFontSize(12));
-
-				if (i == clientes.size() - 1) {
-					pFirmaExtra.add(new Text("“LOS COMPRADORES”").setFont(arialBoldItalic).setFontSize(12));
-				}
-				document.add(pFirmaExtra);
-			}
-		}
+	            celdaExtra.add(new Paragraph("....................................................................")
+	                    .setMarginBottom(0));
+	            celdaExtra.add(new Paragraph(ci.getNombre().toUpperCase() + " " + ci.getApellidos().toUpperCase())
+	                    .setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0));
+	            celdaExtra.add(new Paragraph("DNI N°" + ci.getNumDoc())
+	                    .setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0));
+	            
+	            if (i == clientes.size() - 1) {
+	                celdaExtra.add(new Paragraph("“LOS COMPRADORES”")
+	                        .setFont(arialBoldItalic).setFontSize(12));
+	            }
+	            
+	            tablaExtra.addCell(celdaExtra);
+	            document.add(tablaExtra);
+	        }
+	    }
 	}
 }
