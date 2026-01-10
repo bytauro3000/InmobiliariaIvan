@@ -573,6 +573,255 @@ public class PdfGenerator {
      document.add(listaObligaciones);
      
      
+     /* =================================================================
+      * PAGINA 3: CLAUSULA OCTAVA: RENUNCIA
+      * ================================================================= */
+
+     // 1. Título de la Cláusula (Arial 11, Negrita, Cursiva y Subrayado)
+     document.add(new Paragraph()
+         .add(new Text("OCTAVA: RENUNCIA").setFont(arialBoldItalic).setUnderline())
+         .setFontSize(11)
+         .setMarginTop(15));
+
+     // 2. Párrafo Introductorio
+     Paragraph octavaIntro = new Paragraph()
+         .setTextAlignment(TextAlignment.JUSTIFIED)
+         .setFont(arialItalic)
+         .setFontSize(11)
+         .setMultipliedLeading(1.0f);
+
+     octavaIntro.add("Por tratarse de un contrato de compra venta con pago por armadas las partes conviene que ");
+     octavaIntro.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+     octavaIntro.add(" puede solicitar a ");
+     octavaIntro.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+     octavaIntro.add(" la renuncia, justificando la razón o circunstancias; debiendo cumplir las siguientes condiciones:");
+
+     document.add(octavaIntro);
+
+     // 3. Definición de la Lista con Letras (a, b, c, d)
+     com.itextpdf.layout.element.List listaRenuncia = new com.itextpdf.layout.element.List(com.itextpdf.layout.properties.ListNumberingType.ENGLISH_LOWER)
+         .setFont(arialItalic)
+         .setFontSize(11)
+         .setMarginLeft(40)
+         .setMarginTop(5);
+
+     // --- APARTADO a. ---
+     com.itextpdf.layout.element.ListItem itemA = new com.itextpdf.layout.element.ListItem();
+     Paragraph pa = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setMultipliedLeading(1.0f);
+     pa.add("la renuncia debe ser presentada por escrito, siendo necesario para que produzca sus efectos de aprobación por parte de ");
+     pa.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+     pa.add(" de la solicitud presentada por ");
+     pa.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+     pa.add(" cuando los motivos invocados justifiquen dicha renuncia para sus efectos legales.");
+     itemA.add(pa);
+     listaRenuncia.add(itemA);
+
+     // --- APARTADO b. ---
+     com.itextpdf.layout.element.ListItem itemB = new com.itextpdf.layout.element.ListItem();
+     Paragraph pb = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setMultipliedLeading(1.0f);
+     pb.add("De ser aprobada la renuncia presentada, ");
+     pb.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+     pb.add(" deberá retener el ");
+     pb.add(new Text("30% de valor total del terreno").setFont(arialBoldItalic));
+     pb.add(" pactado en el presente contrato, más los gastos de cobranza, intereses, devengados, comisiones, impuestos y cualquier otro concepto derivado de la compra venta y su resolución.");
+     itemB.add(pb);
+     listaRenuncia.add(itemB);
+
+     // --- APARTADO c. ---
+     com.itextpdf.layout.element.ListItem itemC = new com.itextpdf.layout.element.ListItem();
+     Paragraph pc = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setMultipliedLeading(1.0f);
+     pc.add("La devolución del dinero abonado por ");
+     pc.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+     pc.add(" se realizará cuando el lote materia de renuncia y/o resolución sea vendido y conforme a lo aportado.");
+     
+     // Línea de separación punteada (estética como en la imagen)
+     pc.add("\n------------------------------------------------------------------------------------------");
+     
+     itemC.add(pc);
+     listaRenuncia.add(itemC);
+
+     // --- APARTADO d. ---
+     com.itextpdf.layout.element.ListItem itemD = new com.itextpdf.layout.element.ListItem();
+     Paragraph pd = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setMultipliedLeading(1.0f);
+     pd.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+     pd.add(" se compromete a respetar exactamente las medidas perimétricas de su lote, materia de este contrato. En caso contrario es el único responsable de los daños y perjuicios que se puede ocasionar a sus vecinos colindantes. Asimismo, queda convenido que ");
+     pd.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+     pd.add(" para construir su vivienda deberá realizarla conforme a los planos elaborados por profesionales competentes, en consecuencia, queda ");
+     pd.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+     pd.add(" liberada de errores, fallas y demás anomalías que puedan presentarse en la construcción de sus viviendas y su correspondiente aprobación por el municipio.");
+     itemD.add(pd);
+     listaRenuncia.add(itemD);
+
+     document.add(listaRenuncia);
+     
+     /* =================================================================
+      * PAGINA 4: CLAUSULA NOVENA: OBLIGACIONES DE LA VENDEDORA
+      * ================================================================= */
+
+     // 1. Título de la Cláusula (Arial 11, Negrita, Cursiva y Subrayado)
+     document.add(new Paragraph()
+         .add(new Text("NOVENA: OBLIGACIONES DE LA VENDEDORA").setFont(arialBoldItalic).setUnderline())
+         .setFontSize(11)
+         .setMarginTop(15));
+
+     // 2. Cuerpo de la cláusula
+     Paragraph novenaCuerpo = new Paragraph()
+         .setTextAlignment(TextAlignment.JUSTIFIED)
+         .setFont(arialItalic)
+         .setFontSize(11)
+         .setMultipliedLeading(1.0f); // Mantenemos interlineado simple según la imagen
+
+     novenaCuerpo.add(new Text("LA VENDEDORA ").setFont(arialBoldItalic));
+     novenaCuerpo.add("se obliga a entregar el bien objeto del presente contrato, cuando a su vez ");
+     novenaCuerpo.add(new Text(etiquetaComprador + " ").setFont(arialBoldItalic));
+     novenaCuerpo.add("haya cancelado el íntegro del saldo deudor especificado en la cláusula tercera.");
+
+     document.add(novenaCuerpo);
+     
+     /* =================================================================
+      * PAGINA 4: CLAUSULA DECIMA: ENTREGA DEL BIEN OBJETO DEL PRESENTE CONTRATO
+      * ================================================================= */
+
+     // 1. Título de la Cláusula
+     document.add(new Paragraph()
+         .add(new Text("DECIMA: ENTREGA DEL BIEN OBJETO DEL PRESENTE CONTRATO").setFont(arialBoldItalic).setUnderline())
+         .setFontSize(11)
+         .setMarginTop(15));
+
+     // 2. Cuerpo de la cláusula como un solo párrafo continuo
+     Paragraph decimaCuerpo = new Paragraph()
+         .setTextAlignment(TextAlignment.JUSTIFIED)
+         .setFont(arialItalic)
+         .setFontSize(11)
+         .setMultipliedLeading(1.0f);
+
+     decimaCuerpo.add(new Text(etiquetaComprador + " ").setFont(arialBoldItalic));
+     decimaCuerpo.add("declara que la entrega física y real del predio objeto del presente contrato se realizara a la suscripción y legalización del presente contrato, por lo que a partir de ello el cuidado, administración y conservación del bien lo asume ");
+     decimaCuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+     decimaCuerpo.add(". Así mismo ");
+     decimaCuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+     decimaCuerpo.add(", declara conocer la situación física, real y legal del predio objeto de transferencia, el mismo que lo encuentra a su entera satisfacción, por tanto, renuncia a toda acción rescisoria por dolo, error, lesión y cualquiera que tienda a invalidar el presente contrato.");
+
+     document.add(decimaCuerpo);
+     
+     /* =================================================================
+      * PAGINA 4: CLAUSULA DECIMA PRIMERA: GASTOS Y TRIBUTOS
+      * ================================================================= */
+     document.add(new Paragraph()
+         .add(new Text("DECIMA PRIMERA: GASTOS Y TRIBUTOS").setFont(arialBoldItalic).setUnderline())
+         .setFontSize(11)
+         .setMarginTop(15));
+
+     Paragraph undecimaCuerpo = new Paragraph()
+         .setTextAlignment(TextAlignment.JUSTIFIED)
+         .setFont(arialItalic)
+         .setFontSize(11)
+         .setMultipliedLeading(1.0f);
+
+     undecimaCuerpo.add("Así mismo las partes contratantes establecen de mutuo acuerdo que todos los gastos que origine la formalización del presente contrato serán asumidos por ");
+     undecimaCuerpo.add(new Text("LA COMPRADORA").setFont(arialBoldItalic)); // En tu imagen aparece en femenino específico
+     undecimaCuerpo.add(", incluyendo el impuesto de alcabala si estuviera afecto.");
+     document.add(undecimaCuerpo);
+
+     /* =================================================================
+      * PAGINA 4: CLAUSULA DECIMA SEGUNDA: GRAVAMEN
+      * ================================================================= */
+     document.add(new Paragraph()
+         .add(new Text("DECIMA SEGUNDA: GRAVAMEN").setFont(arialBoldItalic).setUnderline())
+         .setFontSize(11)
+         .setMarginTop(15));
+
+     Paragraph duodecimaCuerpo = new Paragraph()
+         .setTextAlignment(TextAlignment.JUSTIFIED)
+         .setFont(arialItalic)
+         .setFontSize(11)
+         .setMultipliedLeading(1.0f);
+
+     duodecimaCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+     duodecimaCuerpo.add(", declaran que sobre el inmueble materia del presente contrato, no pesa ninguna carga, ni hipoteca, gravamen, embargo, ni ninguna medida judicial o extrajudicial, que pudiera limitar o restringir su derecho de libre disposición, obligándose en todo caso al saneamiento por evicción.");
+     document.add(duodecimaCuerpo);
+
+     /* =================================================================
+      * PAGINA 4: CLAUSULA DECIMA TERCERA: ESCRITURA
+      * ================================================================= */
+     document.add(new Paragraph()
+         .add(new Text("DECIMA TERCERA: ESCRITURA").setFont(arialBoldItalic).setUnderline())
+         .setFontSize(11)
+         .setMarginTop(15));
+
+     Paragraph decimaTerceraCuerpo = new Paragraph()
+         .setTextAlignment(TextAlignment.JUSTIFIED)
+         .setFont(arialItalic)
+         .setFontSize(11)
+         .setMultipliedLeading(1.0f);
+
+     decimaTerceraCuerpo.add("Queda establecido que el presente contrato será elevado a Escritura Pública una vez que ");
+     decimaTerceraCuerpo.add(new Text("LA VENDEDORA ").setFont(arialBoldItalic));
+     decimaTerceraCuerpo.add("haya concluido con todos los trámites pertinentes a la formalización de su derecho de propiedad, siempre y cuando que ");
+     decimaTerceraCuerpo.add(new Text(etiquetaComprador + " ").setFont(arialBoldItalic));
+     decimaTerceraCuerpo.add("no adeude suma alguna, ello toda vez que las partes declaran conocer el hecho que el presente contrato es privado y quedara sujeto al cumplimiento de los acuerdos establecidos en cada una de las cláusulas de este instrumento legal, para que opere la traslación de dominio; obligándose la compradora a no condicionar el cumplimiento de su obligación ante la eventual demora que pudiera resultar de la tramitación del mismo por parte de las autoridades competentes, gestión que se encuentra en proceso; Las partes contratantes de mutuo acuerdo se compromete a firmar una Minuta y la correspondiente Escritura Pública de compraventa cuando estas condiciones se materialicen, respetándose el integro de los pactos contenidos en el presente contrato.");
+     document.add(decimaTerceraCuerpo);
+
+     /* =================================================================
+      * PAGINA 4: CLAUSULA DECIMA CUARTA: COMPETENCIA TERRITORIAL Y DOMICILIO
+      * ================================================================= */
+     document.add(new Paragraph()
+         .add(new Text("DECIMA CUARTA: COMPETENCIA TERRITORIAL Y DOMICILIO:").setFont(arialBoldItalic).setUnderline())
+         .setFontSize(11)
+         .setMarginTop(15));
+
+     Paragraph decimaCuartaCuerpo = new Paragraph()
+         .setTextAlignment(TextAlignment.JUSTIFIED)
+         .setFont(arialItalic)
+         .setFontSize(11)
+         .setMultipliedLeading(1.0f);
+
+     decimaCuartaCuerpo.add("Las partes contratantes dejan expresa constancia que para efectos de cualquier controversia y/o para todas las acciones legales que se deriven de la celebración y ejecución del presente contrato se someten exclusivamente a la jurisdicción de los Jueces y Tribunales de la Corte Superior de Justicia de Lima Norte, y señalan como sus domicilios los indicados en la introducción del presente contrato, donde se les hará llegar las notificaciones a que hubiera lugar, renunciando expresamente a la ley de domicilio y al fuero del mismo nombre.");
+     document.add(decimaCuartaCuerpo);
+     
+     
+     /* =================================================================
+      * PÁGINA FINAL: CLÁUSULA DÉCIMA QUINTA Y CIERRE DEL CONTRATO
+      * ================================================================= */
+
+     // 1. Título de la Cláusula Décima Quinta
+     document.add(new Paragraph()
+         .add(new Text("DECIMA QUINTA: APLICACIÓN SUPLETORIA DE LA LEY:").setFont(arialBoldItalic).setUnderline())
+         .setFontSize(11)
+         .setMarginTop(15));
+
+     // 2. Bloque único de texto (Cláusula 15 + Aceptación + Fecha)
+     Paragraph cierreFinal = new Paragraph()
+         .setTextAlignment(TextAlignment.JUSTIFIED)
+         .setFont(arialItalic)
+         .setFontSize(11)
+         .setMultipliedLeading(1.0f);
+
+     // Cuerpo de la Décima Quinta
+     cierreFinal.add("En todo lo no previsto por las partes en este contrato, se aplicará supletoriamente las normas del Código Civil y demás dispositivos legales del sistema jurídico que resulten aplicables al presente contrato. ");
+     
+     // Párrafo de Aceptación
+     cierreFinal.add("Las partes contratantes declaran aceptar todas y cada una de las cláusulas contenidas en el presente contrato, expresando que suscriben la misma bajo libre expresión de su voluntad, no habiendo mediado presión, dolo, violencia u otro medio ilícito análogo, renunciando a cualquier acción legal ulterior destinado a enervar los efectos legales del presente contrato. ");
+
+  // --- LÓGICA DE FECHA DINÁMICA CORREGIDA ---
+     java.time.LocalDate hoy = java.time.LocalDate.now();
+     String[] nombresMeses = {"Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", 
+                              "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"};
+     
+     String diaNum = String.format("%02d", hoy.getDayOfMonth());
+     String mesNombre = nombresMeses[hoy.getMonthValue() - 1];
+     String mesNum = String.format("%02d", hoy.getMonthValue());
+     int anioNum = hoy.getYear();
+
+     // CORRECCIÓN: Convertimos el int a BigDecimal para que NumeroALetras lo acepte
+     java.math.BigDecimal anioBigDecimal = java.math.BigDecimal.valueOf(anioNum);
+     String anioLetras = NumeroALetras.convertir(anioBigDecimal).split(" CON ")[0].trim(); 
+
+     cierreFinal.add("Leído el presente contrato y estando las partes contratantes conformes con las cláusulas establecidas en el presente contrato, proceden a suscribirlo al ");
+     cierreFinal.add(new Text("primer (" + diaNum + ") día del mes de " + mesNombre + " (" + mesNum + ") del Año " + anioLetras + " (" + anioNum + ").").setFont(arialBoldItalic));
+
+     document.add(cierreFinal);
+     
      //========================================================================================
 
         // --- FIRMAS PÁGINA 1 ---
