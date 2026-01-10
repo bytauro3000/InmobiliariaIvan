@@ -220,9 +220,9 @@ public class PdfGenerator {
 
 		// 1. Título de la Cláusula
 		document.add(new Paragraph()
-		        .add(new Text("SEGUNDA:      OBJETO DEL CONTRATO").setFont(arialBoldItalic).setUnderline())
-		        .setFontSize(11)
-		        .setMarginTop(15));
+				.add(new Text("SEGUNDA:      OBJETO DEL CONTRATO").setFont(arialBoldItalic).setUnderline())
+				.setFontSize(11)
+				.setMarginTop(15));
 
 		// --- LÓGICA DINÁMICA PARA AGRUPAR MANZANAS Y LOTES ---
 		List<LoteResponseDTO> listaLotes = contrato.getLotes();
@@ -230,36 +230,36 @@ public class PdfGenerator {
 		java.math.BigDecimal areaTotal = java.math.BigDecimal.ZERO;
 
 		if (listaLotes.size() == 1) {
-		    LoteResponseDTO single = listaLotes.get(0);
-		    ubicacionTexto.append("ubicado la Manzana “").append(single.getManzana()).append("” y asignado, con el lote Nº ").append(single.getNumeroLote());
-		    areaTotal = single.getArea();
+			LoteResponseDTO single = listaLotes.get(0);
+			ubicacionTexto.append("ubicado la Manzana “").append(single.getManzana()).append("” y asignado, con el lote Nº ").append(single.getNumeroLote());
+			areaTotal = single.getArea();
 		} else {
-		    // Si hay más de uno, verificamos si son de la misma manzana
-		    boolean mismaManzana = listaLotes.stream().map(LoteResponseDTO::getManzana).distinct().count() == 1;
-		    
-		    if (mismaManzana) {
-		        ubicacionTexto.append("ubicado la Manzana “").append(listaLotes.get(0).getManzana()).append("” y asignado, con los lotes ");
-		        for (int i = 0; i < listaLotes.size(); i++) {
-		            ubicacionTexto.append("Nº ").append(listaLotes.get(i).getNumeroLote());
-		            if (i < listaLotes.size() - 1) ubicacionTexto.append(" y ");
-		        }
-		    } else {
-		        // Si son manzanas distintas
-		        for (int i = 0; i < listaLotes.size(); i++) {
-		            ubicacionTexto.append("la Manzana “").append(listaLotes.get(i).getManzana()).append("” asignado, con el lote ").append(listaLotes.get(i).getNumeroLote());
-		            if (i < listaLotes.size() - 1) ubicacionTexto.append(" y ");
-		        }
-		    }
-		    // Sumamos áreas
-		    for (LoteResponseDTO l : listaLotes) { areaTotal = areaTotal.add(l.getArea()); }
+			// Si hay más de uno, verificamos si son de la misma manzana
+			boolean mismaManzana = listaLotes.stream().map(LoteResponseDTO::getManzana).distinct().count() == 1;
+
+			if (mismaManzana) {
+				ubicacionTexto.append("ubicado la Manzana “").append(listaLotes.get(0).getManzana()).append("” y asignado, con los lotes ");
+				for (int i = 0; i < listaLotes.size(); i++) {
+					ubicacionTexto.append("Nº ").append(listaLotes.get(i).getNumeroLote());
+					if (i < listaLotes.size() - 1) ubicacionTexto.append(" y ");
+				}
+			} else {
+				// Si son manzanas distintas
+				for (int i = 0; i < listaLotes.size(); i++) {
+					ubicacionTexto.append("la Manzana “").append(listaLotes.get(i).getManzana()).append("” asignado, con el lote ").append(listaLotes.get(i).getNumeroLote());
+					if (i < listaLotes.size() - 1) ubicacionTexto.append(" y ");
+				}
+			}
+			// Sumamos áreas
+			for (LoteResponseDTO l : listaLotes) { areaTotal = areaTotal.add(l.getArea()); }
 		}
 
 		// 2. Bloque descriptivo inicial
 		Paragraph segundaIntro = new Paragraph()
-		        .setTextAlignment(TextAlignment.JUSTIFIED)
-		        .setFont(arialItalic) 
-		        .setFontSize(11)
-		        .setMultipliedLeading(1.0f);
+				.setTextAlignment(TextAlignment.JUSTIFIED)
+				.setFont(arialItalic) 
+				.setFontSize(11)
+				.setMultipliedLeading(1.0f);
 
 		segundaIntro.add("Por el presente contrato ");
 		segundaIntro.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
@@ -274,37 +274,37 @@ public class PdfGenerator {
 
 		// --- 3. BUCLE PARA MOSTRAR LINDEROS DE CADA LOTE ---
 		for (LoteResponseDTO loteItem : listaLotes) {
-		    
-		    // 🔹 AJUSTE: Solo muestra el encabezado MZ/LT/ÀREA si hay más de un lote
-		    if (listaLotes.size() > 1) {
-		        document.add(new Paragraph()
-		                .add(new Text("MZ. " + loteItem.getManzana() + " LT." + loteItem.getNumeroLote() + " ÀREA:" + loteItem.getArea() + "M2")
-		                .setFont(arialBoldItalic))
-		                .setFontSize(11)
-		                .setMarginTop(10)
-		                .setMarginBottom(2));
-		    }
 
-		    float[] colWidths = {120f, 200f, 100f}; 
-		    Table tablaLinderos = new Table(colWidths)
-		            .setMarginLeft(10)
-		            .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
+			// 🔹 AJUSTE: Solo muestra el encabezado MZ/LT/ÀREA si hay más de un lote
+			if (listaLotes.size() > 1) {
+				document.add(new Paragraph()
+						.add(new Text("MZ. " + loteItem.getManzana() + " LT." + loteItem.getNumeroLote() + " ÀREA:" + loteItem.getArea() + "M2")
+								.setFont(arialBoldItalic))
+						.setFontSize(11)
+						.setMarginTop(10)
+						.setMarginBottom(2));
+			}
 
-		    // Reutilizamos tu método de 5 parámetros
-		    agregarFilaLinderos(tablaLinderos, "Por el frente", loteItem.getColindanteNorte(), "Con    " + loteItem.getAncho1() + "  m.l.", arialItalic);
-		    agregarFilaLinderos(tablaLinderos, "Por la derecha", loteItem.getColindanteEste(), "Con  " + loteItem.getLargo1() + "  m.l.", arialItalic);
-		    agregarFilaLinderos(tablaLinderos, "Por la Izquierda", loteItem.getColindanteOeste(), "Con    " + loteItem.getLargo2() + "  m.l.", arialItalic);
-		    agregarFilaLinderos(tablaLinderos, "Por el fondo", loteItem.getColindanteSur(), "Con    " + loteItem.getAncho2() + "  m.l.", arialItalic);
+			float[] colWidths = {120f, 200f, 100f}; 
+			Table tablaLinderos = new Table(colWidths)
+					.setMarginLeft(10)
+					.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
 
-		    document.add(tablaLinderos);
+			// Reutilizamos tu método de 5 parámetros
+			agregarFilaLinderos(tablaLinderos, "Por el frente", loteItem.getColindanteNorte(), "Con    " + loteItem.getAncho1() + "  m.l.", arialItalic);
+			agregarFilaLinderos(tablaLinderos, "Por la derecha", loteItem.getColindanteEste(), "Con  " + loteItem.getLargo1() + "  m.l.", arialItalic);
+			agregarFilaLinderos(tablaLinderos, "Por la Izquierda", loteItem.getColindanteOeste(), "Con    " + loteItem.getLargo2() + "  m.l.", arialItalic);
+			agregarFilaLinderos(tablaLinderos, "Por el fondo", loteItem.getColindanteSur(), "Con    " + loteItem.getAncho2() + "  m.l.", arialItalic);
+
+			document.add(tablaLinderos);
 		}
 		// 4. Bloque descriptivo Final
 		Paragraph segundaFinal = new Paragraph()
-		        .setTextAlignment(TextAlignment.JUSTIFIED)
-		        .setFont(arialItalic)
-		        .setFontSize(11)
-		        .setMultipliedLeading(1.0f)
-		        .setMarginTop(10);
+				.setTextAlignment(TextAlignment.JUSTIFIED)
+				.setFont(arialItalic)
+				.setFontSize(11)
+				.setMultipliedLeading(1.0f)
+				.setMarginTop(10);
 
 		segundaFinal.add("Por el presente contrato ");
 		segundaFinal.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
@@ -918,62 +918,89 @@ public class PdfGenerator {
 		document.add(introPosesion);
 
 		/* ===========================================================================================  
-	                  CLAUSULA PRIMERA: DETALLE DEL LOTE 
-	     ==============================================================================================*/
+        CLAUSULA PRIMERA: DETALLE DEL LOTE (DINÁMICO)
+==============================================================================================*/
+
+		// 1. Lógica de agrupación (Reutilizada del contrato)
+		StringBuilder ubicacionPosesion = new StringBuilder();
+		java.math.BigDecimal areaTotalPosesion = java.math.BigDecimal.ZERO;
+		List<LoteResponseDTO> listaLotesPosesion = contrato.getLotes();
+
+		if (listaLotesPosesion.size() == 1) {
+			LoteResponseDTO single = listaLotesPosesion.get(0);
+			ubicacionPosesion.append("un lote de terreno rústico de ").append(single.getArea()).append("M2. El mismo que se ubica en la Manzana “").append(single.getManzana()).append("” y se encuentra signado con el lote Nº ").append(single.getNumeroLote());
+			areaTotalPosesion = single.getArea();
+		} else {
+			boolean mismaMz = listaLotesPosesion.stream().map(LoteResponseDTO::getManzana).distinct().count() == 1;
+			ubicacionPosesion.append("lotes de terreno rústico ubicados ");
+			if (mismaMz) {
+				ubicacionPosesion.append("en la Manzana “").append(listaLotesPosesion.get(0).getManzana()).append("” y asignados con los lotes ");
+				for (int i = 0; i < listaLotesPosesion.size(); i++) {
+					ubicacionPosesion.append("Nº ").append(listaLotesPosesion.get(i).getNumeroLote());
+					if (i < listaLotesPosesion.size() - 1) ubicacionPosesion.append(" y ");
+				}
+			} else {
+				for (int i = 0; i < listaLotesPosesion.size(); i++) {
+					ubicacionPosesion.append("en la Manzana “").append(listaLotesPosesion.get(i).getManzana()).append("” lote ").append(listaLotesPosesion.get(i).getNumeroLote());
+					if (i < listaLotesPosesion.size() - 1) ubicacionPosesion.append(" y ");
+				}
+			}
+			for (LoteResponseDTO l : listaLotesPosesion) { areaTotalPosesion = areaTotalPosesion.add(l.getArea()); }
+		}
+
 		Paragraph primeroCuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic) // Fuente base cursiva
+				.setFont(arialItalic)
 				.setFontSize(11)
 				.setMarginTop(10);
 
-		primeroCuerpo.add(new Text("PRIMERO.").setFont(arialBold).setUnderline()); // Título subrayado y negrita
+		primeroCuerpo.add(new Text("PRIMERO.").setFont(arialBold).setUnderline());
 		primeroCuerpo.add(" - ");
 		primeroCuerpo.add(new Text("\"LA VENDEDORA\"").setFont(arialBold));
 		primeroCuerpo.add(" en virtud del presente contrato de Compra - Venta celebrado con ");
 		primeroCuerpo.add(new Text("\"" + etiquetaComprador + "\"").setFont(arialBold));
 
-		// Fecha dinámica (usando la fecha actual o una específica del contrato si la tienes)
 		java.time.format.DateTimeFormatter fmtFecha = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
 		primeroCuerpo.add(" con fecha ");
 		primeroCuerpo.add(new Text(hoy.format(fmtFecha)).setFont(arialBold)); 
 
-		primeroCuerpo.add(" dio en venta real un lote de terreno rústico de ");
-		primeroCuerpo.add(new Text(lote.getArea() + "M2.").setFont(arialBold));
-		primeroCuerpo.add(" El mismo que se ubica en la Manzana ");
-		primeroCuerpo.add(new Text("“" + lote.getManzana() + "”").setFont(arialBold));
-		primeroCuerpo.add(" y se encuentra signado con el lote ");
-		primeroCuerpo.add(new Text("Nº " + lote.getNumeroLote()).setFont(arialBold));
+		primeroCuerpo.add(" dio en venta real " + ubicacionPosesion.toString());
 		primeroCuerpo.add(" correspondiente al Programa de Vivienda ");
 		primeroCuerpo.add(new Text("“LA FLORIDA DE TORRE BLANCA”").setFont(arialBold));
 		primeroCuerpo.add(" del Distrito de Carabayllo, Provincia y Departamento de Lima; cuyos linderos y medidas perimétricas son las siguientes:");
 
 		document.add(primeroCuerpo);
 
-		// --- TABLA DE LINDEROS POSESIÓN (Unificada a 3 columnas / 5 parámetros) ---
+		// --- 2. BUCLE DINÁMICO DE LINDEROS ---
+		for (LoteResponseDTO loteItem : listaLotesPosesion) {
 
-		float[] colWidthsLinderos = {120f, 200f, 100f}; 
-		Table tablaPosesionLinderos = new Table(colWidthsLinderos)
-				.setMarginLeft(20)
-				.setMarginTop(2)    // Reducido de 5 a 2
-				.setMarginBottom(5) // Reducido de 10 a 5
-				.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
+			// Solo muestra el encabezado MZ/LT si hay más de un lote
+			if (listaLotesPosesion.size() > 1) {
+				document.add(new Paragraph()
+						.add(new Text("MZ. " + loteItem.getManzana() + " LT." + loteItem.getNumeroLote() + " ÀREA:" + loteItem.getArea() + "M2").setFont(arialBoldItalic))
+						.setFontSize(11).setMarginTop(10).setMarginBottom(2));
+			}
 
-		// Ahora enviamos 5 argumentos: (Tabla, Etiqueta, Colindante, Medida Completa, Fuente)
-		agregarFilaLinderos(tablaPosesionLinderos, "Por el frente", lote.getColindanteNorte(), "Con    " + lote.getAncho1() + "  m.l.", arialItalic);
-		agregarFilaLinderos(tablaPosesionLinderos, "Por la derecha", "con el lote Nº" + (Integer.parseInt(lote.getNumeroLote()) - 1), "Con    12.57  m.l.", arialItalic);
-		agregarFilaLinderos(tablaPosesionLinderos, "Por la Izquierda", "con el lote Nº" + (Integer.parseInt(lote.getNumeroLote()) + 1), "Con    16.47  m.l.", arialItalic);
-		agregarFilaLinderos(tablaPosesionLinderos, "Por el fondo", lote.getColindanteSur(), "Con    " + lote.getAncho2() + "  m.l.", arialItalic);
+			float[] colWidthsLinderos = {120f, 200f, 100f}; 
+			Table tablaPosesionLinderos = new Table(colWidthsLinderos)
+					.setMarginLeft(20).setMarginTop(2).setMarginBottom(5)
+					.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
 
-		document.add(tablaPosesionLinderos);
-		// --- PÁRRAFO FINAL: UBICACIÓN MAYOR ---
+			agregarFilaLinderos(tablaPosesionLinderos, "Por el frente", loteItem.getColindanteNorte(), "Con    " + loteItem.getAncho1() + "  m.l.", arialItalic);
+			agregarFilaLinderos(tablaPosesionLinderos, "Por la derecha", loteItem.getColindanteEste(), "Con  " + loteItem.getLargo1() + "  m.l.", arialItalic);
+			agregarFilaLinderos(tablaPosesionLinderos, "Por la Izquierda", loteItem.getColindanteOeste(), "Con    " + loteItem.getLargo2() + "  m.l.", arialItalic);
+			agregarFilaLinderos(tablaPosesionLinderos, "Por el fondo", loteItem.getColindanteSur(), "Con    " + loteItem.getAncho2() + "  m.l.", arialItalic);
+
+			document.add(tablaPosesionLinderos);
+		}
+
+		// --- 3. PÁRRAFO FINAL: UBICACIÓN MAYOR ---
 		Paragraph parrafoFinalPosesion = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic)
-				.setFontSize(11)
-				.setMultipliedLeading(1.1f);
+				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.1f);
 
 		parrafoFinalPosesion.add("Dicho lote se encuentra ubicado en el predio denominado lote de terreno rústico con un área superficial de 201,224.03 m2 Equivalente a 20 Has. 1,224.03 m2, que corresponde al 100% de las acciones y derechos del Predio denominado Sector Pampa San Antonio, Margen derecha del Kilómetro 23 de La Avenida Túpac Amaru, Distrito de Carabayllo, Provincia y Departamento De Lima, el cual forma parte de un predio de mayor extensión ubicado en las Provincia de Huarochirí, Lima y Canta, inscrito a fojas 515 del tomo 10-H, actualmente ");
-		parrafoFinalPosesion.add(new Text("Partida Electrónica 11049870 del Registro de Predios de Lima.").setFont(arialItalic)); // En tu imagen esto no está en negrita
+		parrafoFinalPosesion.add(new Text("Partida Electrónica 11049870 del Registro de Predios de Lima.").setFont(arialItalic));
 
 		document.add(parrafoFinalPosesion);
 
