@@ -864,6 +864,11 @@ public class PdfGenerator {
 
 		// 1. Salto de página para iniciar el nuevo documento
 		document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
+		
+		// 🔹 REUTILIZAMOS la fechaRegistro ya convertida arriba para evitar errores de "variable not found"
+				// Si no la habías movido al inicio, asegúrate de tener esta línea aquí:
+				java.util.Date fechaD = contrato.getFechaContrato(); 
+				java.time.LocalDate fechaRegPosesion = fechaD.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
 
 		// 2. Título: Arial 12, Negrita, Cursiva y Subrayado
 		document.add(new Paragraph()
@@ -971,10 +976,10 @@ primeroCuerpo.add(new Text("\"LA VENDEDORA\"").setFont(arialBold));
 primeroCuerpo.add(" en virtud del presente contrato de Compra - Venta celebrado con ");
 primeroCuerpo.add(new Text("\"" + etiquetaComprador + "\"").setFont(arialBold));
 
-// 🔹 CORRECCIÓN DE FECHA: Usamos fechaRegistro (proviene del contrato)
-java.time.format.DateTimeFormatter fmtFecha = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
-primeroCuerpo.add(" con fecha ");
-primeroCuerpo.add(new Text(fechaRegistro.format(fmtFecha)).setFont(arialBold)); 
+//🔹 USAMOS LA FECHA CONVERTIDA
+		java.time.format.DateTimeFormatter fmtFecha = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+		primeroCuerpo.add(" con fecha ");
+		primeroCuerpo.add(new Text(fechaRegPosesion.format(fmtFecha)).setFont(arialBold));
 
 primeroCuerpo.add(" dio en venta real " + ubicacionPosesion.toString());
 primeroCuerpo.add(" correspondiente al Programa de Vivienda ");
