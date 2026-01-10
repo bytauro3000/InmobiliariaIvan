@@ -820,25 +820,36 @@ public class PdfGenerator {
 		// Párrafo de Aceptación
 		cierreFinal.add("Las partes contratantes declaran aceptar todas y cada una de las cláusulas contenidas en el presente contrato, expresando que suscriben la misma bajo libre expresión de su voluntad, no habiendo mediado presión, dolo, violencia u otro medio ilícito análogo, renunciando a cualquier acción legal ulterior destinado a enervar los efectos legales del presente contrato. ");
 
-		// --- LÓGICA DE FECHA DINÁMICA CORREGIDA ---
-		java.time.LocalDate hoy = java.time.LocalDate.now();
-		String[] nombresMeses = {"Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", 
-				"Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"};
+		// --- LÓGICA DE FECHA DINÁMICA CORREGIDA PARA TIPO java.util.Date ---
+		
+				// 1. Convertimos el Date antiguo a LocalDate moderno
+				java.util.Date fechaDate = contrato.getFechaContrato(); 
+				java.time.LocalDate fechaRegistro = fechaDate.toInstant()
+				    .atZone(java.time.ZoneId.systemDefault())
+				    .toLocalDate();
+				
+				String[] nombresMeses = {"Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", 
+						"Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"};
 
-		String diaNum = String.format("%02d", hoy.getDayOfMonth());
-		String mesNombre = nombresMeses[hoy.getMonthValue() - 1];
-		String mesNum = String.format("%02d", hoy.getMonthValue());
-		int anioNum = hoy.getYear();
+				String diaNum = String.format("%02d", fechaRegistro.getDayOfMonth());
+				String mesNombre = nombresMeses[fechaRegistro.getMonthValue() - 1];
+				String mesNum = String.format("%02d", fechaRegistro.getMonthValue());
+				int anioNum = fechaRegistro.getYear();
 
-		// CORRECCIÓN: Convertimos el int a BigDecimal para que NumeroALetras lo acepte
-		java.math.BigDecimal anioBigDecimal = java.math.BigDecimal.valueOf(anioNum);
-		String anioLetras = NumeroALetras.convertir(anioBigDecimal).split(" CON ")[0].trim(); 
+				// Convertimos DIA y AÑO a letras usando tu clase NumeroALetras
+				java.math.BigDecimal diaBigDecimal = java.math.BigDecimal.valueOf(fechaRegistro.getDayOfMonth());
+				String diaLetras = NumeroALetras.convertir(diaBigDecimal).split(" CON ")[0].trim().toLowerCase(); 
+				
+				java.math.BigDecimal anioBigDecimal = java.math.BigDecimal.valueOf(anioNum);
+				String anioLetras = NumeroALetras.convertir(anioBigDecimal).split(" CON ")[0].trim(); 
 
-		cierreFinal.add("Leído el presente contrato y estando las partes contratantes conformes con las cláusulas establecidas en el presente contrato, proceden a suscribirlo al ");
-		cierreFinal.add(new Text("primer (" + diaNum + ") día del mes de " + mesNombre + " (" + mesNum + ") del Año " + anioLetras + " (" + anioNum + ").").setFont(arialBoldItalic));
+				cierreFinal.add("Leído el presente contrato y estando las partes contratantes conformes con las cláusulas establecidas en el presente contrato, proceden a suscribirlo ");
+				
+				// Texto en Arial Italic (normal, sin negrita)
+				cierreFinal.add(new Text("a los " + diaLetras + " (" + diaNum + ") días del mes de " + mesNombre + " (" + mesNum + ") del Año " + anioLetras + " (" + anioNum + ").")
+						.setFont(arialItalic)); 
 
-		document.add(cierreFinal);
-
+				document.add(cierreFinal);
 
 		/* ==================================================================================
 		 * FIRMAS DEL CONTRATO
@@ -921,55 +932,56 @@ public class PdfGenerator {
         CLAUSULA PRIMERA: DETALLE DEL LOTE (DINÁMICO)
 ==============================================================================================*/
 
-		// 1. Lógica de agrupación (Reutilizada del contrato)
-		StringBuilder ubicacionPosesion = new StringBuilder();
-		java.math.BigDecimal areaTotalPosesion = java.math.BigDecimal.ZERO;
-		List<LoteResponseDTO> listaLotesPosesion = contrato.getLotes();
 
-		if (listaLotesPosesion.size() == 1) {
-			LoteResponseDTO single = listaLotesPosesion.get(0);
-			ubicacionPosesion.append("un lote de terreno rústico de ").append(single.getArea()).append("M2. El mismo que se ubica en la Manzana “").append(single.getManzana()).append("” y se encuentra signado con el lote Nº ").append(single.getNumeroLote());
-			areaTotalPosesion = single.getArea();
-		} else {
-			boolean mismaMz = listaLotesPosesion.stream().map(LoteResponseDTO::getManzana).distinct().count() == 1;
-			ubicacionPosesion.append("lotes de terreno rústico ubicados ");
-			if (mismaMz) {
-				ubicacionPosesion.append("en la Manzana “").append(listaLotesPosesion.get(0).getManzana()).append("” y asignados con los lotes ");
-				for (int i = 0; i < listaLotesPosesion.size(); i++) {
-					ubicacionPosesion.append("Nº ").append(listaLotesPosesion.get(i).getNumeroLote());
-					if (i < listaLotesPosesion.size() - 1) ubicacionPosesion.append(" y ");
-				}
-			} else {
-				for (int i = 0; i < listaLotesPosesion.size(); i++) {
-					ubicacionPosesion.append("en la Manzana “").append(listaLotesPosesion.get(i).getManzana()).append("” lote ").append(listaLotesPosesion.get(i).getNumeroLote());
-					if (i < listaLotesPosesion.size() - 1) ubicacionPosesion.append(" y ");
-				}
-			}
-			for (LoteResponseDTO l : listaLotesPosesion) { areaTotalPosesion = areaTotalPosesion.add(l.getArea()); }
-		}
+// 2. Lógica de agrupación (Mantenemos tu lógica dinámica)
+StringBuilder ubicacionPosesion = new StringBuilder();
+java.math.BigDecimal areaTotalPosesion = java.math.BigDecimal.ZERO;
+List<LoteResponseDTO> listaLotesPosesion = contrato.getLotes();
 
-		Paragraph primeroCuerpo = new Paragraph()
-				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic)
-				.setFontSize(11)
-				.setMarginTop(10);
+if (listaLotesPosesion.size() == 1) {
+LoteResponseDTO single = listaLotesPosesion.get(0);
+ubicacionPosesion.append("un lote de terreno rústico de ").append(single.getArea()).append("M2. El mismo que se ubica en la Manzana “").append(single.getManzana()).append("” y se encuentra signado con el lote Nº ").append(single.getNumeroLote());
+areaTotalPosesion = single.getArea();
+} else {
+// ... (resto de tu lógica de agrupación de manzanas se mantiene igual)
+boolean mismaMz = listaLotesPosesion.stream().map(LoteResponseDTO::getManzana).distinct().count() == 1;
+ubicacionPosesion.append("lotes de terreno rústico ubicados ");
+if (mismaMz) {
+	ubicacionPosesion.append("en la Manzana “").append(listaLotesPosesion.get(0).getManzana()).append("” y asignados con los lotes ");
+	for (int i = 0; i < listaLotesPosesion.size(); i++) {
+		ubicacionPosesion.append("Nº ").append(listaLotesPosesion.get(i).getNumeroLote());
+		if (i < listaLotesPosesion.size() - 1) ubicacionPosesion.append(" y ");
+	}
+} else {
+	for (int i = 0; i < listaLotesPosesion.size(); i++) {
+		ubicacionPosesion.append("en la Manzana “").append(listaLotesPosesion.get(i).getManzana()).append("” lote ").append(listaLotesPosesion.get(i).getNumeroLote());
+		if (i < listaLotesPosesion.size() - 1) ubicacionPosesion.append(" y ");
+	}
+}
+for (LoteResponseDTO l : listaLotesPosesion) { areaTotalPosesion = areaTotalPosesion.add(l.getArea()); }
+}
 
-		primeroCuerpo.add(new Text("PRIMERO.").setFont(arialBold).setUnderline());
-		primeroCuerpo.add(" - ");
-		primeroCuerpo.add(new Text("\"LA VENDEDORA\"").setFont(arialBold));
-		primeroCuerpo.add(" en virtud del presente contrato de Compra - Venta celebrado con ");
-		primeroCuerpo.add(new Text("\"" + etiquetaComprador + "\"").setFont(arialBold));
+Paragraph primeroCuerpo = new Paragraph()
+	.setTextAlignment(TextAlignment.JUSTIFIED)
+	.setFont(arialItalic).setFontSize(11).setMarginTop(10);
 
-		java.time.format.DateTimeFormatter fmtFecha = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
-		primeroCuerpo.add(" con fecha ");
-		primeroCuerpo.add(new Text(hoy.format(fmtFecha)).setFont(arialBold)); 
+primeroCuerpo.add(new Text("PRIMERO.").setFont(arialBold).setUnderline());
+primeroCuerpo.add(" - ");
+primeroCuerpo.add(new Text("\"LA VENDEDORA\"").setFont(arialBold));
+primeroCuerpo.add(" en virtud del presente contrato de Compra - Venta celebrado con ");
+primeroCuerpo.add(new Text("\"" + etiquetaComprador + "\"").setFont(arialBold));
 
-		primeroCuerpo.add(" dio en venta real " + ubicacionPosesion.toString());
-		primeroCuerpo.add(" correspondiente al Programa de Vivienda ");
-		primeroCuerpo.add(new Text("“LA FLORIDA DE TORRE BLANCA”").setFont(arialBold));
-		primeroCuerpo.add(" del Distrito de Carabayllo, Provincia y Departamento de Lima; cuyos linderos y medidas perimétricas son las siguientes:");
+// 🔹 CORRECCIÓN DE FECHA: Usamos fechaRegistro (proviene del contrato)
+java.time.format.DateTimeFormatter fmtFecha = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+primeroCuerpo.add(" con fecha ");
+primeroCuerpo.add(new Text(fechaRegistro.format(fmtFecha)).setFont(arialBold)); 
 
-		document.add(primeroCuerpo);
+primeroCuerpo.add(" dio en venta real " + ubicacionPosesion.toString());
+primeroCuerpo.add(" correspondiente al Programa de Vivienda ");
+primeroCuerpo.add(new Text("“LA FLORIDA DE TORRE BLANCA”").setFont(arialBold));
+primeroCuerpo.add(" del Distrito de Carabayllo, Provincia y Departamento de Lima; cuyos linderos y medidas perimétricas son las siguientes:");
+
+document.add(primeroCuerpo);
 
 		// --- 2. BUCLE DINÁMICO DE LINDEROS ---
 		for (LoteResponseDTO loteItem : listaLotesPosesion) {
@@ -1121,23 +1133,32 @@ public class PdfGenerator {
 		document.add(quintoCuerpo);
 
 		/* ===========================================================================================  
-			PARRAFO DE CIERRE: DEL DOCUMENTO DE SEÑALIZACION 
-        ===============================================================================================*/
-		Paragraph cierrePosesion = new Paragraph()
-				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic)
-				.setFontSize(11)
-				.setMarginTop(20)
-				.setMultipliedLeading(1.0f);
+		PARRAFO DE CIERRE: DEL DOCUMENTO DE SEÑALIZACION 
+===============================================================================================*/
+Paragraph cierrePosesion = new Paragraph()
+	.setTextAlignment(TextAlignment.JUSTIFIED)
+	.setFont(arialItalic)
+	.setFontSize(11)
+	.setMarginTop(20)
+	.setMultipliedLeading(1.0f);
 
+// 1. Convertimos la fecha del contrato para el cierre
+java.util.Date fechaDateCierre = contrato.getFechaContrato(); 
+java.time.LocalDate fechaC = fechaDateCierre.toInstant()
+.atZone(java.time.ZoneId.systemDefault())
+.toLocalDate();
 
-		cierrePosesion.add("Conformes ambas partes con el contenido del presente documento, lo firman por duplicado del día ");
+String diaC = String.format("%02d", fechaC.getDayOfMonth());
+String mesC = nombresMeses[fechaC.getMonthValue() - 1].toLowerCase();
+int anioC = fechaC.getYear();
 
-		// Fecha dinámica en negrita para el cierre
-		String fechaCierre = hoy.getDayOfMonth() + " de " + mesNombre.toLowerCase() + " del año " + hoy.getYear() + ".";
-		cierrePosesion.add(new Text(fechaCierre).setFont(arialBold));
+cierrePosesion.add("Conformes ambas partes con el contenido del presente documento, lo firman por duplicado a los ");
 
-		document.add(cierrePosesion);
+// 2. Fecha en texto normal (arialItalic) basándose en la fecha del contrato
+String fechaTextoCierre = diaC + " días del mes de " + mesC + " del año " + anioC + ".";
+cierrePosesion.add(new Text(fechaTextoCierre).setFont(arialItalic));
+
+document.add(cierrePosesion);
 
 		// 4. Agregar las firmas en la hoja de posesión
 		agregarBloqueFirmas(document, clientes, arialBoldItalic);
