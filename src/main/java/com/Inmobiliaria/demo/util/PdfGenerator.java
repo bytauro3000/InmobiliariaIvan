@@ -821,42 +821,155 @@ public class PdfGenerator {
 		cierreFinal.add(new Text("primer (" + diaNum + ") día del mes de " + mesNombre + " (" + mesNum + ") del Año " + anioLetras + " (" + anioNum + ").").setFont(arialBoldItalic));
 
 		document.add(cierreFinal);
+		
 
-		//========================================================================================
+		/* ==================================================================================
+		 * FIRMAS DEL CONTRATO
+		 * ==================================================================================*/
 
 		// 1. Firmas al final del contrato (Página 1 o la que corresponda)
 		agregarBloqueFirmas(document, clientes, arialBoldItalic);
 
 		// ========================================================================================
-		// DOCUMENTO DE SEÑALIZACIÓN (PÁGINA APARTE)
-		// ========================================================================================
+	     // DOCUMENTO DE SEÑALIZACIÓN (PÁGINA APARTE) - SOLO INTRODUCCIÓN
+	     // ========================================================================================
 
-		// 2. Salto de página para el nuevo documento
-		document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
+	     // 1. Salto de página para iniciar el nuevo documento
+	     document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
+	     
+	     // 2. Título: Arial 12, Negrita, Cursiva y Subrayado
+	     document.add(new Paragraph()
+	         .add(new Text("DOCUMENTO DE SEÑALIZACION Y TOMA DE POSESION DE TERRENO")
+	             .setFont(arialBoldItalic)
+	             .setUnderline())
+	         .setFontSize(12)
+	         .setTextAlignment(TextAlignment.CENTER)
+	         .setMarginBottom(20));
+	     
+	     // 3. Introducción del Documento
+	     Paragraph introPosesion = new Paragraph()
+	         .setTextAlignment(TextAlignment.JUSTIFIED)
+	         .setFont(arialItalic) // Fuente base cursiva según tu imagen
+	         .setFontSize(12)
+	         .setMultipliedLeading(1.2f);
 
-		document.add(new Paragraph("DOCUMENTO DE SEÑALIZACION Y TOMA DE POSESION DE TERRENO")
-				.setTextAlignment(TextAlignment.CENTER)
-				.setBold()
-				.setFontSize(12));
+	     introPosesion.add("Conste por el presente documento de Contrato privado de Compra-Venta de terreno rústico con Reserva de Propiedad que celebran de una parte ");
 
-		document.add(new Paragraph("\n"));
+	     // Bloque de LA VENDEDORA en Negrita
+	     introPosesion.add(new Text("“INMOBILIARIA CONSTRUCTORA IVAN E.I.R.L.” ").setFont(arialBold));
+	     introPosesion.add("con RUC No. ");
+	     introPosesion.add(new Text("20537853108 ").setFont(arialBold));
+	     introPosesion.add("con domicilio Av. Alfredo Mendiola N°3623-tercer piso – Ofc. 301 Urb. Panamericana Norte, Distrito de Los Olivos, Provincia y Departamento de Lima, debidamente representado por su ");
+	     introPosesion.add(new Text("Gerente General OLMEDO SILVA LOPEZ ").setFont(arialBold));
+	     introPosesion.add("con ");
+	     introPosesion.add(new Text("DNI No.19404451 ").setFont(arialBold));
+	     introPosesion.add("según consta del poder inscrito en la partida electrónica No. ");
+	     introPosesion.add(new Text("12561792 ").setFont(arialBold));
+	     introPosesion.add("del Registro de Personas Jurídicas, a quien en adelante se le denominara ");
+	     introPosesion.add(new Text("LA VENDEDORA; ").setFont(arialBold));
+	     
+	     introPosesion.add("y de la otra parte ");
 
-		// Usamos df.format y las variables de texto que ya procesamos anteriormente
-		document.add(new Paragraph()
-				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFontSize(10)
-				.add("PRIMERO.- LA VENDEDORA en virtud del presente contrato da en venta real un lote de terreno rústico de " + lote.getArea() + "M2 en la Manzana “" + lote.getManzana() + "” lote Nº " + lote.getNumeroLote() + ". ")
-				.add("TERCERO.- " + etiquetaComprador + " reconoce adeudar US$." + df.format(contrato.getSaldo()) + " (" + montoSaldoLetras + ") y constituyen PRIMERA HIPOTECA a favor de LA VENDEDORA conforme a los Artículos 1118 y 1119 del Código Civil."));
+	     // 4. Bloque dinámico de COMPRADORES en Negrita
+	     for (int i = 0; i < numClientes; i++) {
+	         ClienteResponseDTO c = clientes.get(i);
+	         boolean esFem = (c.getGenero() != null && c.getGenero().equals(Genero.Femenino));
+	         
+	         String pref = esFem ? "la Sra. " : "el Sr. ";
+	         String ident = esFem ? "identificada" : "identificado";
+	         String nacion = extraerNacionalidad(c.getCelular(), esFem);
+	         String estCiv = esFem ? "casada" : "casado";
 
-		// 3. Reutilizamos el bloque de firmas para el documento de posesión
-		agregarBloqueFirmas(document, clientes, arialBoldItalic);
+	         introPosesion.add(pref);
+	         // Nombre en Negrita
+	         introPosesion.add(new Text(c.getNombre().toUpperCase() + " " + c.getApellidos().toUpperCase()).setFont(arialBold));
+	         introPosesion.add(", " + nacion + ", " + ident + " con ");
+	         // DNI en Negrita
+	         introPosesion.add(new Text("DNI N°" + c.getNumDoc()).setFont(arialBold));
+	         
+	         if (numClientes > 1 && i == 0) {
+	             introPosesion.add(", " + estCiv + ", con ");
+	         }
+	     }
 
-		// 4. Cierre final del flujo del PDF
-		document.close();
-		return out.toByteArray();
-	} // 👈 Cierre del método generarContratoFlorida
+	     introPosesion.add(", " + etiquetaDomicilio + direccionRealParaContrato);
+	     introPosesion.add(", a quien en adelante se les denominará ");
+	     // Denominación final en Negrita
+	     introPosesion.add(new Text(etiquetaComprador).setFont(arialBold));
+	     introPosesion.add(" en los términos y condiciones de las cláusulas siguientes:");
 
-	// --- MÉTODOS AUXILIARES ---
+	     document.add(introPosesion);
+	     
+	     
+	  // --- CLAUSULA PRIMERA: DETALLE DEL LOTE ---
+	     Paragraph primeroCuerpo = new Paragraph()
+	         .setTextAlignment(TextAlignment.JUSTIFIED)
+	         .setFont(arialItalic) // Fuente base cursiva
+	         .setFontSize(12)
+	         .setMarginTop(10);
+
+	     primeroCuerpo.add(new Text("PRIMERO.").setFont(arialBold).setUnderline()); // Título subrayado y negrita
+	     primeroCuerpo.add(" - ");
+	     primeroCuerpo.add(new Text("\"LA VENDEDORA\"").setFont(arialBold));
+	     primeroCuerpo.add(" en virtud del presente contrato de Compra - Venta celebrado con ");
+	     primeroCuerpo.add(new Text("\"" + etiquetaComprador + "\"").setFont(arialBold));
+	     
+	     // Fecha dinámica (usando la fecha actual o una específica del contrato si la tienes)
+	     java.time.format.DateTimeFormatter fmtFecha = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+	     primeroCuerpo.add(" con fecha ");
+	     primeroCuerpo.add(new Text(hoy.format(fmtFecha)).setFont(arialBold)); 
+	     
+	     primeroCuerpo.add(" dio en venta real un lote de terreno rústico de ");
+	     primeroCuerpo.add(new Text(lote.getArea() + "M2.").setFont(arialBold));
+	     primeroCuerpo.add(" El mismo que se ubica en la Manzana ");
+	     primeroCuerpo.add(new Text("“" + lote.getManzana() + "”").setFont(arialBold));
+	     primeroCuerpo.add(" y se encuentra signado con el lote ");
+	     primeroCuerpo.add(new Text("Nº " + lote.getNumeroLote()).setFont(arialBold));
+	     primeroCuerpo.add(" correspondiente al Programa de Vivienda ");
+	     primeroCuerpo.add(new Text("“LA FLORIDA DE TORRE BLANCA”").setFont(arialBold));
+	     primeroCuerpo.add(" del Distrito de Carabayllo, Provincia y Departamento de Lima; cuyos linderos y medidas perimétricas son las siguientes:");
+
+	     document.add(primeroCuerpo);
+
+	     // --- TABLA DE LINDEROS (Formato Arial 12 Cursiva) ---
+	     float[] colWidthsLinderos = {120f, 180f, 40f, 60f, 30f};
+	     Table tablaPosesionLinderos = new Table(colWidthsLinderos)
+	         .setMarginLeft(20).setMarginTop(5).setMarginBottom(10)
+	         .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
+
+	     // Función auxiliar para celdas de linderos
+	     agregarFilaLinderosPosesion(tablaPosesionLinderos, "Por el frente", lote.getColindanteNorte(), "Con", lote.getAncho1().toString(), "m.l.", arialItalic);
+	     agregarFilaLinderosPosesion(tablaPosesionLinderos, "Por la derecha", lote.getColindanteEste(), "con el lote Nº" + (Integer.parseInt(lote.getNumeroLote())-1), "12.57", "m.l.", arialItalic); // Ejemplo estático según imagen
+	     agregarFilaLinderosPosesion(tablaPosesionLinderos, "Por la Izquierda", lote.getColindanteOeste(), "con el lote Nº" + (Integer.parseInt(lote.getNumeroLote())+1), "16.47", "m.l.", arialItalic);
+	     agregarFilaLinderosPosesion(tablaPosesionLinderos, "Por el fondo", lote.getColindanteSur(), "Con", lote.getAncho2().toString(), "m.l.", arialItalic);
+
+	     document.add(tablaPosesionLinderos);
+
+	     // --- PÁRRAFO FINAL: UBICACIÓN MAYOR ---
+	     Paragraph parrafoFinalPosesion = new Paragraph()
+	         .setTextAlignment(TextAlignment.JUSTIFIED)
+	         .setFont(arialItalic)
+	         .setFontSize(12)
+	         .setMultipliedLeading(1.1f);
+
+	     parrafoFinalPosesion.add("Dicho lote se encuentra ubicado en el predio denominado lote de terreno rústico con un área superficial de 201,224.03 m2 Equivalente a 20 Has. 1,224.03 m2, que corresponde al 100% de las acciones y derechos del Predio denominado Sector Pampa San Antonio, Margen derecha del Kilómetro 23 de La Avenida Túpac Amaru, Distrito de Carabayllo, Provincia y Departamento De Lima, el cual forma parte de un predio de mayor extensión ubicado en las Provincia de Huarochirí, Lima y Canta, inscrito a fojas 515 del tomo 10-H, actualmente ");
+	     parrafoFinalPosesion.add(new Text("Partida Electrónica 11049870 del Registro de Predios de Lima.").setFont(arialItalic)); // En tu imagen esto no está en negrita
+
+	     document.add(parrafoFinalPosesion);
+	     
+	     
+	  // 4. Agregar las firmas en la hoja de posesión
+	     agregarBloqueFirmas(document, clientes, arialBoldItalic);
+
+	     // 5. FINALIZAR DOCUMENTO Y RETORNAR BYTES
+	     document.close();
+	     return out.toByteArray(); // 👈 ESTO ES LO QUE EL COMPILADOR TE PIDE
+		
+	} 
+
+	/* ==================================================================================
+	 * METODOS AUXILIARES
+	 * ==================================================================================*/
 
 	private static String extraerNacionalidad(String celular, boolean esFemenino) {
 		if (celular == null) return esFemenino ? "peruana" : "peruano";
@@ -865,6 +978,14 @@ public class PdfGenerator {
 		if (celular.startsWith("+57")) return esFemenino ? "colombiana" : "colombiano";
 		if (celular.startsWith("+1")) return esFemenino ? "estadounidense" : "estadounidense";
 		return esFemenino ? "peruana" : "peruano";
+	}
+	
+	private static void agregarFilaLinderosPosesion(Table tabla, String etiqueta, String colindante, String prefijoMedida, String medida, String unidad, PdfFont font) {
+	    tabla.addCell(new Cell().add(new Paragraph(etiqueta).setFont(font).setFontSize(12)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
+	    tabla.addCell(new Cell().add(new Paragraph(colindante).setFont(font).setFontSize(12)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
+	    tabla.addCell(new Cell().add(new Paragraph(prefijoMedida).setFont(font).setFontSize(12)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
+	    tabla.addCell(new Cell().add(new Paragraph(medida).setFont(font).setFontSize(12)).setTextAlignment(TextAlignment.RIGHT).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
+	    tabla.addCell(new Cell().add(new Paragraph(unidad).setFont(font).setFontSize(12)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
 	}
 
 	// 🔹 MÉTODO REUTILIZABLE DE FIRMAS (Arial 12 Bold Italic)
@@ -919,14 +1040,15 @@ public class PdfGenerator {
 	    // --- COMPRADORES ADICIONALES (Exactamente debajo del primer bloque) ---
 	    if (clientes.size() > 1) {
 	        for (int i = 1; i < clientes.size(); i++) {
-	            document.add(new Paragraph("\n\n")); 
+	            document.add(new Paragraph("\n\n\\n\\n")); 
 	            ClienteResponseDTO ci = clientes.get(i);
 
 	            // Tabla de una sola columna alineada a la izquierda (ocupa 45% igual que arriba)
 	            Table tablaExtra = new Table(new float[]{45f})
 	                    .setWidth(com.itextpdf.layout.properties.UnitValue.createPercentValue(45))
 	                    .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
-	                    .setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.LEFT);
+	                    .setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.LEFT)
+	                    .setMarginTop(35f);
 
 	            Cell celdaExtra = new Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
 	                    .setTextAlignment(TextAlignment.CENTER).setPadding(0);
