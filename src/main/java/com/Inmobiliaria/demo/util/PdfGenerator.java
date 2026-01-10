@@ -914,9 +914,12 @@ public class PdfGenerator {
 	     document.add(primeroCuerpo);
 
 	  // --- TABLA DE LINDEROS POSESIÓN (Unificada a 3 columnas / 5 parámetros) ---
-	     float[] colWidthsLinderos = {120f, 200f, 100f}; // 3 columnas igual que contrato
+	 
+	     float[] colWidthsLinderos = {120f, 200f, 100f}; 
 	     Table tablaPosesionLinderos = new Table(colWidthsLinderos)
-	         .setMarginLeft(20).setMarginTop(5).setMarginBottom(10)
+	         .setMarginLeft(20)
+	         .setMarginTop(2)    // Reducido de 5 a 2
+	         .setMarginBottom(5) // Reducido de 10 a 5
 	         .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
 
 	     // Ahora enviamos 5 argumentos: (Tabla, Etiqueta, Colindante, Medida Completa, Fuente)
@@ -954,9 +957,23 @@ public class PdfGenerator {
 
 	// 🔹 Versión para el CONTRATO (5 parámetros)
 	private static void agregarFilaLinderos(Table tabla, String etiqueta, String colindante, String medidaCompleta, PdfFont font) {
-	    tabla.addCell(new Cell().add(new Paragraph(etiqueta).setFont(font).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
-	    tabla.addCell(new Cell().add(new Paragraph(colindante).setFont(font).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
-	    tabla.addCell(new Cell().add(new Paragraph(medidaCompleta).setFont(font).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
+	    // Celda 1
+	    tabla.addCell(new Cell()
+	        .add(new Paragraph(etiqueta).setFont(font).setFontSize(11).setFixedLeading(11f)) // Leading igual al tamaño de fuente
+	        .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
+	        .setPaddingTop(0f).setPaddingBottom(0f)); // Elimina espacios arriba y abajo
+
+	    // Celda 2
+	    tabla.addCell(new Cell()
+	        .add(new Paragraph(colindante).setFont(font).setFontSize(11).setFixedLeading(11f))
+	        .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
+	        .setPaddingTop(0f).setPaddingBottom(0f));
+
+	    // Celda 3
+	    tabla.addCell(new Cell()
+	        .add(new Paragraph(medidaCompleta).setFont(font).setFontSize(11).setFixedLeading(11f))
+	        .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
+	        .setPaddingTop(0f).setPaddingBottom(0f));
 	}
 	
 	private static String extraerNacionalidad(String celular, boolean esFemenino) {
