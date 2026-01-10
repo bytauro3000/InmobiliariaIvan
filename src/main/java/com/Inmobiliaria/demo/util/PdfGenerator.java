@@ -869,77 +869,77 @@ public class PdfGenerator {
 
 	// 🔹 MÉTODO REUTILIZABLE DE FIRMAS (Arial 12 Bold Italic)
 	private static void agregarBloqueFirmas(Document document, List<ClienteResponseDTO> clientes, PdfFont arialBoldItalic) {
-	    document.add(new Paragraph("\n\n\n\n")); // Espacio para firmar
+		document.add(new Paragraph("\n\n\n\n")); // Espacio para firmar
 
-	    // Usamos una tabla de 2 columnas que ocupa el 100% del ancho de la página
-	    float[] columnWidths = {1f, 1f}; 
-	    Table tablaFirmas = new Table(com.itextpdf.layout.properties.UnitValue.createPercentArray(columnWidths))
-	            .useAllAvailableWidth()
-	            .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
+		// Tabla principal para separar Comprador (Izquierda) de Vendedor (Derecha)
+		Table tablaPrincipal = new Table(com.itextpdf.layout.properties.UnitValue.createPercentArray(new float[]{1f, 1f}))
+				.useAllAvailableWidth()
+				.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
 
-	    // --- COLUMNA IZQUIERDA: PRIMER COMPRADOR (Alineado al margen izquierdo) ---
-	    ClienteResponseDTO c1 = clientes.get(0);
-	    Cell celdaC1 = new Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
-	            .setTextAlignment(TextAlignment.CENTER); // Centra el contenido dentro de su mitad
-	    
-	    // El largo de los puntos se ajusta dinámicamente o se fija a un estándar visual
-	    celdaC1.add(new Paragraph("....................................................................")
-	            .setMarginBottom(0));
-	    celdaC1.add(new Paragraph(c1.getNombre().toUpperCase() + " " + c1.getApellidos().toUpperCase())
-	            .setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0));
-	    celdaC1.add(new Paragraph("DNI N°" + c1.getNumDoc())
-	            .setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0));
-	    
-	    if (clientes.size() == 1) {
-	        celdaC1.add(new Paragraph("“EL COMPRADOR”")
-	                .setFont(arialBoldItalic).setFontSize(12));
-	    }
+		// --- BLOQUE IZQUIERDO: PRIMER COMPRADOR ---
+		ClienteResponseDTO c1 = clientes.get(0);
+		String nombreC1 = c1.getNombre().toUpperCase() + " " + c1.getApellidos().toUpperCase();
+		String dniC1 = "DNI N°" + c1.getNumDoc();
 
-	    // --- COLUMNA DERECHA: LA VENDEDORA (Alineada al margen derecho) ---
-	    Cell celdaV = new Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
-	            .setTextAlignment(TextAlignment.CENTER); // Centra el contenido dentro de su mitad
-	    
-	    celdaV.add(new Paragraph("................................................")
-	            .setMarginBottom(0));
-	    celdaV.add(new Paragraph("“LA VENDEDORA”")
-	            .setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0));
-	    celdaV.add(new Paragraph("DNI N°19404451")
-	            .setFont(arialBoldItalic).setFontSize(12));
+		// Generar línea de puntos proporcional al largo del nombre
+		String lineaPuntosC1 = ".".repeat(Math.max(nombreC1.length() + 10, 30));
 
-	    tablaFirmas.addCell(celdaC1);
-	    tablaFirmas.addCell(celdaV);
-	    document.add(tablaFirmas);
+		Cell celdaC1 = new Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
+				.setTextAlignment(TextAlignment.CENTER)
+				.setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.LEFT); // Alinea al margen izquierdo
 
-	    // --- FILAS SIGUIENTES: COMPRADORES ADICIONALES (Debajo del primero) ---
-	    if (clientes.size() > 1) {
-	        for (int i = 1; i < clientes.size(); i++) {
-	            document.add(new Paragraph("\n\n")); 
-	            ClienteResponseDTO ci = clientes.get(i);
-	            
-	            // Creamos otra tabla de una sola columna alineada a la izquierda
-	            // para que los compradores extra no se centren en toda la hoja, sino en la columna 1
-	            Table tablaExtra = new Table(new float[]{1f})
-	                    .setWidth(com.itextpdf.layout.properties.UnitValue.createPercentValue(50)) // Solo ocupa la mitad izquierda
-	                    .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
+		celdaC1.add(new Paragraph(lineaPuntosC1).setMarginBottom(0).setFixedLeading(10f));
+		celdaC1.add(new Paragraph(nombreC1).setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0).setFixedLeading(12f));
+		celdaC1.add(new Paragraph(dniC1).setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0).setFixedLeading(12f));
 
-	            Cell celdaExtra = new Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
-	                    .setTextAlignment(TextAlignment.CENTER);
+		if (clientes.size() == 1) {
+			celdaC1.add(new Paragraph("“EL COMPRADOR”").setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f));
+		}
 
-	            celdaExtra.add(new Paragraph("....................................................................")
-	                    .setMarginBottom(0));
-	            celdaExtra.add(new Paragraph(ci.getNombre().toUpperCase() + " " + ci.getApellidos().toUpperCase())
-	                    .setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0));
-	            celdaExtra.add(new Paragraph("DNI N°" + ci.getNumDoc())
-	                    .setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0));
-	            
-	            if (i == clientes.size() - 1) {
-	                celdaExtra.add(new Paragraph("“LOS COMPRADORES”")
-	                        .setFont(arialBoldItalic).setFontSize(12));
-	            }
-	            
-	            tablaExtra.addCell(celdaExtra);
-	            document.add(tablaExtra);
-	        }
-	    }
+		// --- BLOQUE DERECHO: LA VENDEDORA ---
+		String textoVendedora = "“LA VENDEDORA”";
+		String dniVendedora = "DNI N°19404451";
+		String lineaPuntosV = ".".repeat(35); // Longitud fija para la vendedora
+
+		Cell celdaV = new Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
+				.setTextAlignment(TextAlignment.CENTER)
+				.setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.RIGHT); // Alinea al margen derecho
+
+		celdaV.add(new Paragraph(lineaPuntosV).setMarginBottom(0).setFixedLeading(10f));
+		celdaV.add(new Paragraph(textoVendedora).setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0).setFixedLeading(12f));
+		celdaV.add(new Paragraph(dniVendedora).setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f));
+
+		tablaPrincipal.addCell(celdaC1);
+		tablaPrincipal.addCell(celdaV);
+		document.add(tablaPrincipal);
+
+		// --- COMPRADORES ADICIONALES (Debajo del primero) ---
+		if (clientes.size() > 1) {
+			for (int i = 1; i < clientes.size(); i++) {
+				document.add(new Paragraph("\n\n")); 
+				ClienteResponseDTO ci = clientes.get(i);
+				String nombreCi = ci.getNombre().toUpperCase() + " " + ci.getApellidos().toUpperCase();
+				String lineaPuntosCi = ".".repeat(Math.max(nombreCi.length() + 10, 30));
+
+				// Tabla de una sola columna alineada a la izquierda
+				Table tablaExtra = new Table(1)
+						.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
+						.setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.LEFT);
+
+				Cell celdaExtra = new Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
+						.setTextAlignment(TextAlignment.CENTER);
+
+				celdaExtra.add(new Paragraph(lineaPuntosCi).setMarginBottom(0).setFixedLeading(10f));
+				celdaExtra.add(new Paragraph(nombreCi).setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0).setFixedLeading(12f));
+				celdaExtra.add(new Paragraph("DNI N°" + ci.getNumDoc()).setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0).setFixedLeading(12f));
+
+				if (i == clientes.size() - 1) {
+					celdaExtra.add(new Paragraph("“LOS COMPRADORES”").setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f));
+				}
+
+				tablaExtra.addCell(celdaExtra);
+				document.add(tablaExtra);
+			}
+		}
 	}
 }
