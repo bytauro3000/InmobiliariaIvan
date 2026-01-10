@@ -67,6 +67,21 @@ public class PdfGenerator {
 		}
 
 
+		// --- CONVERSIÓN DE FECHA DEL CONTRATO ---
+		java.util.Date fechaUtil = contrato.getFechaContrato();
+		java.time.LocalDate fechaRegistro = fechaUtil.toInstant()
+				.atZone(java.time.ZoneId.systemDefault())
+				.toLocalDate();
+
+		String[] nombresMeses = {"Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", 
+				"Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"};
+
+		String diaNum = String.format("%02d", fechaRegistro.getDayOfMonth());
+		String mesNombre = nombresMeses[fechaRegistro.getMonthValue() - 1];
+		String mesNum = String.format("%02d", fechaRegistro.getMonthValue());
+		int anioNum = fechaRegistro.getYear();
+
+
 		// --- PROCESAMIENTO DINÁMICO DE CLIENTES ---
 		List<ClienteResponseDTO> clientes = contrato.getClientes();
 		int numClientes = clientes.size();
@@ -820,31 +835,18 @@ public class PdfGenerator {
 		// Párrafo de Aceptación
 		cierreFinal.add("Las partes contratantes declaran aceptar todas y cada una de las cláusulas contenidas en el presente contrato, expresando que suscriben la misma bajo libre expresión de su voluntad, no habiendo mediado presión, dolo, violencia u otro medio ilícito análogo, renunciando a cualquier acción legal ulterior destinado a enervar los efectos legales del presente contrato. ");
 
-		// --- LÓGICA DE FECHA DINÁMICA CORREGIDA ---
-				java.time.LocalDate hoy = java.time.LocalDate.now();
-				String[] nombresMeses = {"Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", 
-						"Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"};
+		// --- REEMPLAZA EL BLOQUE DE FECHA AL FINAL DEL CONTRATO POR ESTE ---
+		java.math.BigDecimal diaLetrasBD = java.math.BigDecimal.valueOf(fechaRegistro.getDayOfMonth());
+		String diaLetras = NumeroALetras.convertir(diaLetrasBD).split(" CON ")[0].trim().toLowerCase(); 
 
-				String diaNum = String.format("%02d", hoy.getDayOfMonth());
-				String mesNombre = nombresMeses[hoy.getMonthValue() - 1];
-				String mesNum = String.format("%02d", hoy.getMonthValue());
-				int anioNum = hoy.getYear();
+		java.math.BigDecimal anioBigDecimal = java.math.BigDecimal.valueOf(anioNum);
+		String anioLetras = NumeroALetras.convertir(anioBigDecimal).split(" CON ")[0].trim(); 
 
-				// Convertimos DIA y AÑO a letras
-				java.math.BigDecimal diaBigDecimal = java.math.BigDecimal.valueOf(hoy.getDayOfMonth());
-				String diaLetras = NumeroALetras.convertir(diaBigDecimal).split(" CON ")[0].trim().toLowerCase(); 
-				
-				java.math.BigDecimal anioBigDecimal = java.math.BigDecimal.valueOf(anioNum);
-				String anioLetras = NumeroALetras.convertir(anioBigDecimal).split(" CON ")[0].trim(); 
+		cierreFinal.add("Leído el presente contrato y estando las partes contratantes conformes con las cláusulas establecidas en el presente contrato, proceden a suscribirlo ");
+		cierreFinal.add(new Text("a los " + diaLetras + " (" + diaNum + ") días del mes de " + mesNombre + " (" + mesNum + ") del Año " + anioLetras + " (" + anioNum + ").")
+				.setFont(arialItalic)); 
 
-				cierreFinal.add("Leído el presente contrato y estando las partes contratantes conformes con las cláusulas establecidas en el presente contrato, proceden a suscribirlo ");
-				
-				// 🔹 CAMBIO: "a los [letras] ([número])" y usamos arialItalic para que sea texto normal (no negrita)
-				cierreFinal.add(new Text("a los " + diaLetras + " (" + diaNum + ") días del mes de " + mesNombre + " (" + mesNum + ") del Año " + anioLetras + " (" + anioNum + ").")
-						.setFont(arialItalic)); // 👈 Usamos arialItalic para quitar la negrita
-
-				document.add(cierreFinal);
-
+		document.add(cierreFinal);
 
 		/* ==================================================================================
 		 * FIRMAS DEL CONTRATO
@@ -927,7 +929,7 @@ public class PdfGenerator {
         CLAUSULA PRIMERA: DETALLE DEL LOTE (DINÁMICO)
 ==============================================================================================*/
 
-		// 1. Lógica de agrupación (Reutilizada del contrato)
+		// 1. Lógica de agrupación (Ya la tienes bien, se mantiene igual)
 		StringBuilder ubicacionPosesion = new StringBuilder();
 		java.math.BigDecimal areaTotalPosesion = java.math.BigDecimal.ZERO;
 		List<LoteResponseDTO> listaLotesPosesion = contrato.getLotes();
@@ -966,9 +968,10 @@ public class PdfGenerator {
 		primeroCuerpo.add(" en virtud del presente contrato de Compra - Venta celebrado con ");
 		primeroCuerpo.add(new Text("\"" + etiquetaComprador + "\"").setFont(arialBold));
 
+		// 🔹 CORRECCIÓN AQUÍ: Usamos fechaRegistro en lugar de hoy
 		java.time.format.DateTimeFormatter fmtFecha = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
 		primeroCuerpo.add(" con fecha ");
-		primeroCuerpo.add(new Text(hoy.format(fmtFecha)).setFont(arialBold)); 
+		primeroCuerpo.add(new Text(fechaRegistro.format(fmtFecha)).setFont(arialBold)); 
 
 		primeroCuerpo.add(" dio en venta real " + ubicacionPosesion.toString());
 		primeroCuerpo.add(" correspondiente al Programa de Vivienda ");
@@ -1127,8 +1130,8 @@ public class PdfGenerator {
 		document.add(quintoCuerpo);
 
 		/* ===========================================================================================  
-			PARRAFO DE CIERRE: DEL DOCUMENTO DE SEÑALIZACION 
-        ===============================================================================================*/
+		PARRAFO DE CIERRE: DEL DOCUMENTO DE SEÑALIZACION 
+===============================================================================================*/
 		Paragraph cierrePosesion = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialItalic)
@@ -1136,12 +1139,12 @@ public class PdfGenerator {
 				.setMarginTop(20)
 				.setMultipliedLeading(1.0f);
 
+		cierrePosesion.add("Conformes ambas partes con el contenido del presente documento, lo firman por duplicado a los ");
 
-		cierrePosesion.add("Conformes ambas partes con el contenido del presente documento, lo firman por duplicado del día ");
-
-		// Fecha dinámica en negrita para el cierre
-		String fechaCierre = hoy.getDayOfMonth() + " de " + mesNombre.toLowerCase() + " del año " + hoy.getYear() + ".";
-		cierrePosesion.add(new Text(fechaCierre).setFont(arialBold));
+		// 🔹 CORRECCIÓN FINAL: Usamos las variables globales diaNum, mesNombre y anioNum
+		// Se quita el setBold() para que sea texto normal como pediste en el contrato
+		String fechaTextoCierre = diaNum + " días del mes de " + mesNombre.toLowerCase() + " del año " + anioNum + ".";
+		cierrePosesion.add(new Text(fechaTextoCierre).setFont(arialItalic));
 
 		document.add(cierrePosesion);
 
