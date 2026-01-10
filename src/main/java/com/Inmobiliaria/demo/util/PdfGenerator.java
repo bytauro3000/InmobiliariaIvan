@@ -17,6 +17,9 @@ import com.itextpdf.layout.properties.TextAlignment;
 import java.io.ByteArrayOutputStream;
 import java.text.DecimalFormat;
 import java.util.List;
+import java.util.Date;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import com.itextpdf.layout.element.ListItem;
 import com.itextpdf.io.font.PdfEncodings;
 import com.itextpdf.kernel.font.PdfFont;
@@ -68,10 +71,10 @@ public class PdfGenerator {
 
 
 		// --- CONVERSIÓN DE FECHA DEL CONTRATO ---
-		java.util.Date fechaUtil = contrato.getFechaContrato();
-		java.time.LocalDate fechaRegistro = fechaUtil.toInstant()
-				.atZone(java.time.ZoneId.systemDefault())
-				.toLocalDate();
+		Date fechaUtil = contrato.getFechaContrato();
+		LocalDate fechaRegistro = fechaUtil.toInstant()
+		    .atZone(ZoneId.systemDefault())
+		    .toLocalDate();
 
 		String[] nombresMeses = {"Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", 
 				"Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"};
