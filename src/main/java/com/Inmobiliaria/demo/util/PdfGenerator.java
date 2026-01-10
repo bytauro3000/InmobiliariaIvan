@@ -272,15 +272,18 @@ public class PdfGenerator {
 
 		document.add(segundaIntro);
 
-		// --- 3. BUCLE PARA MOSTRAR LINDEROS DE CADA LOTE (Como la Imagen) ---
+		// --- 3. BUCLE PARA MOSTRAR LINDEROS DE CADA LOTE ---
 		for (LoteResponseDTO loteItem : listaLotes) {
-		    // Encabezado del Lote: MZ. XX LT.XX ÀREA:XXXM2
-		    document.add(new Paragraph()
-		            .add(new Text("MZ. " + loteItem.getManzana() + " LT." + loteItem.getNumeroLote() + " ÀREA:" + loteItem.getArea() + "M2")
-		            .setFont(arialBoldItalic))
-		            .setFontSize(11)
-		            .setMarginTop(10)
-		            .setMarginBottom(2));
+		    
+		    // 🔹 AJUSTE: Solo muestra el encabezado MZ/LT/ÀREA si hay más de un lote
+		    if (listaLotes.size() > 1) {
+		        document.add(new Paragraph()
+		                .add(new Text("MZ. " + loteItem.getManzana() + " LT." + loteItem.getNumeroLote() + " ÀREA:" + loteItem.getArea() + "M2")
+		                .setFont(arialBoldItalic))
+		                .setFontSize(11)
+		                .setMarginTop(10)
+		                .setMarginBottom(2));
+		    }
 
 		    float[] colWidths = {120f, 200f, 100f}; 
 		    Table tablaLinderos = new Table(colWidths)
@@ -295,7 +298,6 @@ public class PdfGenerator {
 
 		    document.add(tablaLinderos);
 		}
-
 		// 4. Bloque descriptivo Final
 		Paragraph segundaFinal = new Paragraph()
 		        .setTextAlignment(TextAlignment.JUSTIFIED)
@@ -651,9 +653,6 @@ public class PdfGenerator {
 		pc.add("La devolución del dinero abonado por ");
 		pc.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
 		pc.add(" se realizará cuando el lote materia de renuncia y/o resolución sea vendido y conforme a lo aportado.");
-
-		// Línea de separación punteada (estética como en la imagen)
-		pc.add("\n------------------------------------------------------------------------------------------");
 
 		itemC.add(pc);
 		listaRenuncia.add(itemC);
