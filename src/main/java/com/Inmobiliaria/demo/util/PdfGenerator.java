@@ -1210,7 +1210,7 @@ public class PdfGenerator {
 
 	// 🔹 MÉTODO REUTILIZABLE DE FIRMAS (Arial 12 Bold Italic)
 	private static void agregarBloqueFirmas(Document document, List<ClienteResponseDTO> clientes, PdfFont arialBoldItalic) {
-		document.add(new Paragraph("\n\n")); 
+		document.add(new Paragraph("\n\n\n")); 
 
 		// 1. Tabla principal al 100% de ancho. 
 		// Los anchos de columna fijos aseguran que no se muevan de su lugar.
