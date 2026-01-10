@@ -871,7 +871,7 @@ public class PdfGenerator {
 	private static void agregarBloqueFirmas(Document document, List<ClienteResponseDTO> clientes, PdfFont arialBoldItalic) {
 	    document.add(new Paragraph("\n\n\n\n")); 
 
-	    // 1. Tabla principal al 100% de ancho sin bordes
+	    // 1. Tabla principal al 100% de ancho para separar los extremos
 	    Table tablaFirmas = new Table(com.itextpdf.layout.properties.UnitValue.createPercentArray(new float[]{1f, 1f}))
 	            .useAllAvailableWidth()
 	            .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
@@ -880,14 +880,15 @@ public class PdfGenerator {
 	    ClienteResponseDTO c1 = clientes.get(0);
 	    String nombreC1 = c1.getNombre().toUpperCase() + " " + c1.getApellidos().toUpperCase();
 	    
-	    // 🔹 LÍNEA AGRANDADA: Multiplicador aumentado a 2.1 para dar el 30% extra de ancho
-	    String lineaPuntosC1 = ".".repeat((int)(nombreC1.length() * 2.1));
+	    // 🔹 LÍNEA SÓLIDA LARGA (Ajustada al 30% más del nombre)
+	    String lineaSolidaC1 = "_".repeat((int)(nombreC1.length() * 2.2));
 
 	    Cell celdaC1 = new Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
 	            .setTextAlignment(TextAlignment.CENTER)
+	            .setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.LEFT)
 	            .setPaddingLeft(0); // 🔹 Pegado al ras del margen izquierdo
 
-	    celdaC1.add(new Paragraph(lineaPuntosC1).setMarginBottom(0).setFixedLeading(10f));
+	    celdaC1.add(new Paragraph(lineaSolidaC1).setMarginBottom(0).setFixedLeading(10f));
 	    celdaC1.add(new Paragraph(nombreC1).setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0).setFixedLeading(12f));
 	    celdaC1.add(new Paragraph("DNI N°" + c1.getNumDoc()).setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0).setFixedLeading(12f));
 	    
@@ -897,14 +898,15 @@ public class PdfGenerator {
 
 	    // --- BLOQUE DERECHO: LA VENDEDORA ---
 	    String textoV = "“LA VENDEDORA”";
-	    // 🔹 LÍNEA DE VENDEDORA: También escalada proporcionalmente
-	    String lineaPuntosV = ".".repeat((int)(textoV.length() * 3.5)); 
+	    // 🔹 LÍNEA SÓLIDA VENDEDORA (Escalada proporcionalmente igual)
+	    String lineaSolidaV = "_".repeat((int)(textoV.length() * 4.2)); 
 
 	    Cell celdaV = new Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
 	            .setTextAlignment(TextAlignment.CENTER)
+	            .setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.RIGHT)
 	            .setPaddingRight(0); // 🔹 Pegado al ras del margen derecho
 
-	    celdaV.add(new Paragraph(lineaPuntosV).setMarginBottom(0).setFixedLeading(10f));
+	    celdaV.add(new Paragraph(lineaSolidaV).setMarginBottom(0).setFixedLeading(10f));
 	    celdaV.add(new Paragraph(textoV).setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0).setFixedLeading(12f));
 	    celdaV.add(new Paragraph("DNI N°19404451").setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f));
 
@@ -918,9 +920,9 @@ public class PdfGenerator {
 	            document.add(new Paragraph("\n\n")); 
 	            ClienteResponseDTO ci = clientes.get(i);
 	            String nombreCi = ci.getNombre().toUpperCase() + " " + ci.getApellidos().toUpperCase();
-	            String lineaPuntosCi = ".".repeat((int)(nombreCi.length() * 2.1)); // 🔹 Misma escala
+	            String lineaSolidaCi = "_".repeat((int)(nombreCi.length() * 2.2));
 
-	            // Tabla de 50% de ancho alineada a la izquierda
+	            // Tabla de 50% de ancho alineada a la IZQUIERDA
 	            Table tablaExtra = new Table(1)
 	                    .setWidth(com.itextpdf.layout.properties.UnitValue.createPercentValue(50))
 	                    .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
@@ -928,9 +930,9 @@ public class PdfGenerator {
 
 	            Cell celdaExtra = new Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
 	                    .setTextAlignment(TextAlignment.CENTER)
-	                    .setPaddingLeft(0); // 🔹 Alineación al ras izquierdo
+	                    .setPaddingLeft(0);
 
-	            celdaExtra.add(new Paragraph(lineaPuntosCi).setMarginBottom(0).setFixedLeading(10f));
+	            celdaExtra.add(new Paragraph(lineaSolidaCi).setMarginBottom(0).setFixedLeading(10f));
 	            celdaExtra.add(new Paragraph(nombreCi).setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0).setFixedLeading(12f));
 	            celdaExtra.add(new Paragraph("DNI N°" + ci.getNumDoc()).setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0).setFixedLeading(12f));
 	            
