@@ -869,9 +869,9 @@ public class PdfGenerator {
 
 	// 🔹 MÉTODO REUTILIZABLE DE FIRMAS (Arial 12 Bold Italic)
 	private static void agregarBloqueFirmas(Document document, List<ClienteResponseDTO> clientes, PdfFont arialBoldItalic) {
-	    document.add(new Paragraph("\n\n\n\n")); // Espacio para firmar
+	    document.add(new Paragraph("\n\n\n\n")); 
 
-	    // Tabla principal de 2 columnas al 100% de ancho
+	    // 1. Tabla principal al 100% de ancho sin bordes
 	    Table tablaFirmas = new Table(com.itextpdf.layout.properties.UnitValue.createPercentArray(new float[]{1f, 1f}))
 	            .useAllAvailableWidth()
 	            .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
@@ -880,14 +880,12 @@ public class PdfGenerator {
 	    ClienteResponseDTO c1 = clientes.get(0);
 	    String nombreC1 = c1.getNombre().toUpperCase() + " " + c1.getApellidos().toUpperCase();
 	    
-	    // Calculamos la línea de puntos para que coincida con el largo del nombre
-	    // Aproximadamente 1.2 puntos por cada letra para cubrir el ancho de Arial Bold Italic
-	    String lineaPuntosC1 = ".".repeat((int)(nombreC1.length() * 1.5));
+	    // 🔹 LÍNEA AGRANDADA: Multiplicador aumentado a 2.1 para dar el 30% extra de ancho
+	    String lineaPuntosC1 = ".".repeat((int)(nombreC1.length() * 2.1));
 
-	    // Celda alineada a la IZQUIERDA, pero contenido interno CENTRADO entre sí
 	    Cell celdaC1 = new Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
 	            .setTextAlignment(TextAlignment.CENTER)
-	            .setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.LEFT);
+	            .setPaddingLeft(0); // 🔹 Pegado al ras del margen izquierdo
 
 	    celdaC1.add(new Paragraph(lineaPuntosC1).setMarginBottom(0).setFixedLeading(10f));
 	    celdaC1.add(new Paragraph(nombreC1).setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0).setFixedLeading(12f));
@@ -899,12 +897,12 @@ public class PdfGenerator {
 
 	    // --- BLOQUE DERECHO: LA VENDEDORA ---
 	    String textoV = "“LA VENDEDORA”";
-	    String lineaPuntosV = ".".repeat((int)(textoV.length() * 2.5)); // Proporcional al texto de vendedora
+	    // 🔹 LÍNEA DE VENDEDORA: También escalada proporcionalmente
+	    String lineaPuntosV = ".".repeat((int)(textoV.length() * 3.5)); 
 
-	    // Celda alineada a la DERECHA, pero contenido interno CENTRADO entre sí
 	    Cell celdaV = new Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
 	            .setTextAlignment(TextAlignment.CENTER)
-	            .setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.RIGHT);
+	            .setPaddingRight(0); // 🔹 Pegado al ras del margen derecho
 
 	    celdaV.add(new Paragraph(lineaPuntosV).setMarginBottom(0).setFixedLeading(10f));
 	    celdaV.add(new Paragraph(textoV).setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0).setFixedLeading(12f));
@@ -920,16 +918,17 @@ public class PdfGenerator {
 	            document.add(new Paragraph("\n\n")); 
 	            ClienteResponseDTO ci = clientes.get(i);
 	            String nombreCi = ci.getNombre().toUpperCase() + " " + ci.getApellidos().toUpperCase();
-	            String lineaPuntosCi = ".".repeat((int)(nombreCi.length() * 1.5));
+	            String lineaPuntosCi = ".".repeat((int)(nombreCi.length() * 2.1)); // 🔹 Misma escala
 
-	            // Tabla de una columna alineada a la izquierda (ocupa el 50% izquierdo)
+	            // Tabla de 50% de ancho alineada a la izquierda
 	            Table tablaExtra = new Table(1)
 	                    .setWidth(com.itextpdf.layout.properties.UnitValue.createPercentValue(50))
 	                    .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
 	                    .setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.LEFT);
 
 	            Cell celdaExtra = new Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
-	                    .setTextAlignment(TextAlignment.CENTER); // Mantiene DNI y etiqueta al centro de la línea
+	                    .setTextAlignment(TextAlignment.CENTER)
+	                    .setPaddingLeft(0); // 🔹 Alineación al ras izquierdo
 
 	            celdaExtra.add(new Paragraph(lineaPuntosCi).setMarginBottom(0).setFixedLeading(10f));
 	            celdaExtra.add(new Paragraph(nombreCi).setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0).setFixedLeading(12f));
