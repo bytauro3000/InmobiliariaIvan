@@ -245,35 +245,17 @@ public class PdfGenerator {
 
 		document.add(segundaCuerpo);
 
-		// 3. Tabla de Linderos (Para alineamiento perfecto como en la imagen)
-		// Usamos una tabla sin bordes de 3 columnas
+		// 3. Tabla de Linderos optimizada
 		float[] columnWidths = {120f, 200f, 100f}; 
 		Table tablaLinderos = new Table(columnWidths)
-				.setMarginLeft(10)
+		    .setMarginLeft(10).setMarginTop(5)
+		    .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
 
-				.setMarginTop(5)
-
-				.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
-
-		// Fila: Por el Frente
-		tablaLinderos.addCell(new Cell().add(new Paragraph("Por el frente").setFont(arialItalic).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
-		tablaLinderos.addCell(new Cell().add(new Paragraph(lote.getColindanteNorte()).setFont(arialItalic).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
-		tablaLinderos.addCell(new Cell().add(new Paragraph("Con    " + lote.getAncho1() + "  m.l.").setFont(arialItalic).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
-
-		// Fila: Por la Derecha
-		tablaLinderos.addCell(new Cell().add(new Paragraph("Por la derecha").setFont(arialItalic).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
-		tablaLinderos.addCell(new Cell().add(new Paragraph(lote.getColindanteEste()).setFont(arialItalic).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
-		tablaLinderos.addCell(new Cell().add(new Paragraph("Con  " + lote.getLargo1() + "  m.l.").setFont(arialItalic).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
-
-		// Fila: Por la Izquierda
-		tablaLinderos.addCell(new Cell().add(new Paragraph("Por la Izquierda").setFont(arialItalic).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
-		tablaLinderos.addCell(new Cell().add(new Paragraph(lote.getColindanteOeste()).setFont(arialItalic).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
-		tablaLinderos.addCell(new Cell().add(new Paragraph("Con    " + lote.getLargo2() + "  m.l.").setFont(arialItalic).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
-
-		// Fila: Por el Fondo
-		tablaLinderos.addCell(new Cell().add(new Paragraph("Por el fondo").setFont(arialItalic).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
-		tablaLinderos.addCell(new Cell().add(new Paragraph(lote.getColindanteSur()).setFont(arialItalic).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
-		tablaLinderos.addCell(new Cell().add(new Paragraph("Con    " + lote.getAncho2() + "  m.l.").setFont(arialItalic).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
+		// Usamos un método auxiliar para no repetir .addCell(...) y .setBorder(Border.NO_BORDER)
+		agregarFilaLinderos(tablaLinderos, "Por el frente", lote.getColindanteNorte(), "Con    " + lote.getAncho1() + "  m.l.", arialItalic);
+		agregarFilaLinderos(tablaLinderos, "Por la derecha", lote.getColindanteEste(), "Con  " + lote.getLargo1() + "  m.l.", arialItalic);
+		agregarFilaLinderos(tablaLinderos, "Por la Izquierda", lote.getColindanteOeste(), "Con    " + lote.getLargo2() + "  m.l.", arialItalic);
+		agregarFilaLinderos(tablaLinderos, "Por el fondo", lote.getColindanteSur(), "Con    " + lote.getAncho2() + "  m.l.", arialItalic);
 
 		document.add(tablaLinderos);
 
@@ -931,20 +913,19 @@ public class PdfGenerator {
 
 	     document.add(primeroCuerpo);
 
-	     // --- TABLA DE LINDEROS (Formato Arial 12 Cursiva) ---
-	     float[] colWidthsLinderos = {120f, 180f, 40f, 60f, 30f};
+	  // --- TABLA DE LINDEROS POSESIÓN (Unificada a 3 columnas / 5 parámetros) ---
+	     float[] colWidthsLinderos = {120f, 200f, 100f}; // 3 columnas igual que contrato
 	     Table tablaPosesionLinderos = new Table(colWidthsLinderos)
 	         .setMarginLeft(20).setMarginTop(5).setMarginBottom(10)
 	         .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
 
-	     // Función auxiliar para celdas de linderos
-	     agregarFilaLinderosPosesion(tablaPosesionLinderos, "Por el frente", lote.getColindanteNorte(), "Con", lote.getAncho1().toString(), "m.l.", arialItalic);
-	     agregarFilaLinderosPosesion(tablaPosesionLinderos, "Por la derecha", lote.getColindanteEste(), "con el lote Nº" + (Integer.parseInt(lote.getNumeroLote())-1), "12.57", "m.l.", arialItalic); // Ejemplo estático según imagen
-	     agregarFilaLinderosPosesion(tablaPosesionLinderos, "Por la Izquierda", lote.getColindanteOeste(), "con el lote Nº" + (Integer.parseInt(lote.getNumeroLote())+1), "16.47", "m.l.", arialItalic);
-	     agregarFilaLinderosPosesion(tablaPosesionLinderos, "Por el fondo", lote.getColindanteSur(), "Con", lote.getAncho2().toString(), "m.l.", arialItalic);
+	     // Ahora enviamos 5 argumentos: (Tabla, Etiqueta, Colindante, Medida Completa, Fuente)
+	     agregarFilaLinderos(tablaPosesionLinderos, "Por el frente", lote.getColindanteNorte(), "Con    " + lote.getAncho1() + "  m.l.", arialItalic);
+	     agregarFilaLinderos(tablaPosesionLinderos, "Por la derecha", "con el lote Nº" + (Integer.parseInt(lote.getNumeroLote()) - 1), "Con    12.57  m.l.", arialItalic);
+	     agregarFilaLinderos(tablaPosesionLinderos, "Por la Izquierda", "con el lote Nº" + (Integer.parseInt(lote.getNumeroLote()) + 1), "Con    16.47  m.l.", arialItalic);
+	     agregarFilaLinderos(tablaPosesionLinderos, "Por el fondo", lote.getColindanteSur(), "Con    " + lote.getAncho2() + "  m.l.", arialItalic);
 
 	     document.add(tablaPosesionLinderos);
-
 	     // --- PÁRRAFO FINAL: UBICACIÓN MAYOR ---
 	     Paragraph parrafoFinalPosesion = new Paragraph()
 	         .setTextAlignment(TextAlignment.JUSTIFIED)
@@ -971,6 +952,13 @@ public class PdfGenerator {
 	 * METODOS AUXILIARES
 	 * ==================================================================================*/
 
+	// 🔹 Versión para el CONTRATO (5 parámetros)
+	private static void agregarFilaLinderos(Table tabla, String etiqueta, String colindante, String medidaCompleta, PdfFont font) {
+	    tabla.addCell(new Cell().add(new Paragraph(etiqueta).setFont(font).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
+	    tabla.addCell(new Cell().add(new Paragraph(colindante).setFont(font).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
+	    tabla.addCell(new Cell().add(new Paragraph(medidaCompleta).setFont(font).setFontSize(11)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
+	}
+	
 	private static String extraerNacionalidad(String celular, boolean esFemenino) {
 		if (celular == null) return esFemenino ? "peruana" : "peruano";
 		if (celular.startsWith("+51")) return esFemenino ? "peruana" : "peruano";
@@ -980,13 +968,6 @@ public class PdfGenerator {
 		return esFemenino ? "peruana" : "peruano";
 	}
 	
-	private static void agregarFilaLinderosPosesion(Table tabla, String etiqueta, String colindante, String prefijoMedida, String medida, String unidad, PdfFont font) {
-	    tabla.addCell(new Cell().add(new Paragraph(etiqueta).setFont(font).setFontSize(12)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
-	    tabla.addCell(new Cell().add(new Paragraph(colindante).setFont(font).setFontSize(12)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
-	    tabla.addCell(new Cell().add(new Paragraph(prefijoMedida).setFont(font).setFontSize(12)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
-	    tabla.addCell(new Cell().add(new Paragraph(medida).setFont(font).setFontSize(12)).setTextAlignment(TextAlignment.RIGHT).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
-	    tabla.addCell(new Cell().add(new Paragraph(unidad).setFont(font).setFontSize(12)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
-	}
 
 	// 🔹 MÉTODO REUTILIZABLE DE FIRMAS (Arial 12 Bold Italic)
 	private static void agregarBloqueFirmas(Document document, List<ClienteResponseDTO> clientes, PdfFont arialBoldItalic) {
