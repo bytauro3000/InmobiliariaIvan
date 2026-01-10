@@ -1268,7 +1268,7 @@ public class PdfGenerator {
 						.setWidth(com.itextpdf.layout.properties.UnitValue.createPercentValue(45))
 						.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
 						.setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.LEFT)
-						.setMarginTop(35f);
+						.setMarginTop(25f);
 
 				Cell celdaExtra = new Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
 						.setTextAlignment(TextAlignment.CENTER).setPadding(0);
