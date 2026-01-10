@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.Date;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.math.BigDecimal;
+import java.time.format.DateTimeFormatter;
 import com.itextpdf.layout.element.ListItem;
 import com.itextpdf.io.font.PdfEncodings;
 import com.itextpdf.kernel.font.PdfFont;
@@ -839,15 +841,16 @@ public class PdfGenerator {
 		cierreFinal.add("Las partes contratantes declaran aceptar todas y cada una de las cláusulas contenidas en el presente contrato, expresando que suscriben la misma bajo libre expresión de su voluntad, no habiendo mediado presión, dolo, violencia u otro medio ilícito análogo, renunciando a cualquier acción legal ulterior destinado a enervar los efectos legales del presente contrato. ");
 
 		// --- REEMPLAZA EL BLOQUE DE FECHA AL FINAL DEL CONTRATO POR ESTE ---
-		java.math.BigDecimal diaLetrasBD = java.math.BigDecimal.valueOf(fechaRegistro.getDayOfMonth());
+		// --- CIERRE DINÁMICO DEL CONTRATO (Versión limpia) ---
+		BigDecimal diaLetrasBD = BigDecimal.valueOf(fechaRegistro.getDayOfMonth());
 		String diaLetras = NumeroALetras.convertir(diaLetrasBD).split(" CON ")[0].trim().toLowerCase(); 
 
-		java.math.BigDecimal anioBigDecimal = java.math.BigDecimal.valueOf(anioNum);
+		BigDecimal anioBigDecimal = BigDecimal.valueOf(anioNum);
 		String anioLetras = NumeroALetras.convertir(anioBigDecimal).split(" CON ")[0].trim(); 
 
 		cierreFinal.add("Leído el presente contrato y estando las partes contratantes conformes con las cláusulas establecidas en el presente contrato, proceden a suscribirlo ");
 		cierreFinal.add(new Text("a los " + diaLetras + " (" + diaNum + ") días del mes de " + mesNombre + " (" + mesNum + ") del Año " + anioLetras + " (" + anioNum + ").")
-				.setFont(arialItalic)); 
+		        .setFont(arialItalic));
 
 		document.add(cierreFinal);
 
@@ -934,7 +937,7 @@ public class PdfGenerator {
 
 		// 1. Lógica de agrupación (Ya la tienes bien, se mantiene igual)
 		StringBuilder ubicacionPosesion = new StringBuilder();
-		java.math.BigDecimal areaTotalPosesion = java.math.BigDecimal.ZERO;
+		BigDecimal areaTotalPosesion = BigDecimal.ZERO; // 👈 Ya no necesitas java.math.
 		List<LoteResponseDTO> listaLotesPosesion = contrato.getLotes();
 
 		if (listaLotesPosesion.size() == 1) {
@@ -972,10 +975,10 @@ public class PdfGenerator {
 		primeroCuerpo.add(new Text("\"" + etiquetaComprador + "\"").setFont(arialBold));
 
 		// 🔹 CORRECCIÓN AQUÍ: Usamos fechaRegistro en lugar de hoy
-		java.time.format.DateTimeFormatter fmtFecha = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+		DateTimeFormatter fmtFecha = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 		primeroCuerpo.add(" con fecha ");
 		primeroCuerpo.add(new Text(fechaRegistro.format(fmtFecha)).setFont(arialBold));
-
+		
 		primeroCuerpo.add(" dio en venta real " + ubicacionPosesion.toString());
 		primeroCuerpo.add(" correspondiente al Programa de Vivienda ");
 		primeroCuerpo.add(new Text("“LA FLORIDA DE TORRE BLANCA”").setFont(arialBold));
