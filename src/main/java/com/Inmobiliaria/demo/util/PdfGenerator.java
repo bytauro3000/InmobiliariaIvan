@@ -1021,7 +1021,7 @@ public class PdfGenerator {
 	    // --- COMPRADORES ADICIONALES (Exactamente debajo del primer bloque) ---
 	    if (clientes.size() > 1) {
 	        for (int i = 1; i < clientes.size(); i++) {
-	            document.add(new Paragraph("\n\n\\n\\n")); 
+	            document.add(new Paragraph("\n\n\n\\n")); 
 	            ClienteResponseDTO ci = clientes.get(i);
 
 	            // Tabla de una sola columna alineada a la izquierda (ocupa 45% igual que arriba)
