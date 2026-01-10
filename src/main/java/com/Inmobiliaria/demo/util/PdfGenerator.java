@@ -832,7 +832,7 @@ public class PdfGenerator {
 	     Paragraph introPosesion = new Paragraph()
 	         .setTextAlignment(TextAlignment.JUSTIFIED)
 	         .setFont(arialItalic) // Fuente base cursiva según tu imagen
-	         .setFontSize(12)
+	         .setFontSize(11)
 	         .setMultipliedLeading(1.2f);
 
 	     introPosesion.add("Conste por el presente documento de Contrato privado de Compra-Venta de terreno rústico con Reserva de Propiedad que celebran de una parte ");
@@ -887,7 +887,7 @@ public class PdfGenerator {
 	     Paragraph primeroCuerpo = new Paragraph()
 	         .setTextAlignment(TextAlignment.JUSTIFIED)
 	         .setFont(arialItalic) // Fuente base cursiva
-	         .setFontSize(12)
+	         .setFontSize(11)
 	         .setMarginTop(10);
 
 	     primeroCuerpo.add(new Text("PRIMERO.").setFont(arialBold).setUnderline()); // Título subrayado y negrita
@@ -930,7 +930,7 @@ public class PdfGenerator {
 	     Paragraph parrafoFinalPosesion = new Paragraph()
 	         .setTextAlignment(TextAlignment.JUSTIFIED)
 	         .setFont(arialItalic)
-	         .setFontSize(12)
+	         .setFontSize(11)
 	         .setMultipliedLeading(1.1f);
 
 	     parrafoFinalPosesion.add("Dicho lote se encuentra ubicado en el predio denominado lote de terreno rústico con un área superficial de 201,224.03 m2 Equivalente a 20 Has. 1,224.03 m2, que corresponde al 100% de las acciones y derechos del Predio denominado Sector Pampa San Antonio, Margen derecha del Kilómetro 23 de La Avenida Túpac Amaru, Distrito de Carabayllo, Provincia y Departamento De Lima, el cual forma parte de un predio de mayor extensión ubicado en las Provincia de Huarochirí, Lima y Canta, inscrito a fojas 515 del tomo 10-H, actualmente ");
