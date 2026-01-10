@@ -971,7 +971,7 @@ public class PdfGenerator {
 		// 🔹 CORRECCIÓN AQUÍ: Usamos fechaRegistro en lugar de hoy
 		java.time.format.DateTimeFormatter fmtFecha = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
 		primeroCuerpo.add(" con fecha ");
-		primeroCuerpo.add(new Text(fechaRegistro.format(fmtFecha)).setFont(arialBold)); 
+		primeroCuerpo.add(new Text(fechaRegistro.format(fmtFecha)).setFont(arialBold));
 
 		primeroCuerpo.add(" dio en venta real " + ubicacionPosesion.toString());
 		primeroCuerpo.add(" correspondiente al Programa de Vivienda ");
