@@ -950,7 +950,7 @@ public class PdfGenerator {
 				.setFont(arialItalic) // Fuente base cursiva
 				.setFontSize(11)      // Tamaño de letra 11 solicitado
 				.setMarginTop(15)	    // Espacio respecto a la tabla anterior
-				.setMultipliedLeading(1.0f);
+				.setMultipliedLeading(1.0f);  //epacio interleniado
 
 
 		// Título: SEGUNDO en Negrita, Cursiva y Subrayado
