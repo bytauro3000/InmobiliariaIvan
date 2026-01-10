@@ -871,21 +871,23 @@ public class PdfGenerator {
 	private static void agregarBloqueFirmas(Document document, List<ClienteResponseDTO> clientes, PdfFont arialBoldItalic) {
 	    document.add(new Paragraph("\n\n\n\n")); // Espacio para firmar
 
-	    // Tabla de 2 columnas que ocupa el 100% del ancho disponible
-	    float[] columnWidths = {1f, 1f}; 
-	    Table tablaFirmas = new Table(com.itextpdf.layout.properties.UnitValue.createPercentArray(columnWidths))
+	    // Tabla principal de 2 columnas al 100% de ancho
+	    Table tablaFirmas = new Table(com.itextpdf.layout.properties.UnitValue.createPercentArray(new float[]{1f, 1f}))
 	            .useAllAvailableWidth()
 	            .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
 
-	    // --- BLOQUE IZQUIERDO: PRIMER COMPRADOR (Al ras del margen izquierdo) ---
+	    // --- BLOQUE IZQUIERDO: PRIMER COMPRADOR ---
 	    ClienteResponseDTO c1 = clientes.get(0);
 	    String nombreC1 = c1.getNombre().toUpperCase() + " " + c1.getApellidos().toUpperCase();
 	    
-	    // Ajuste dinámico de la línea de puntos al largo del nombre
-	    String lineaPuntosC1 = ".".repeat(Math.max(nombreC1.length() + 5, 30));
+	    // Calculamos la línea de puntos para que coincida con el largo del nombre
+	    // Aproximadamente 1.2 puntos por cada letra para cubrir el ancho de Arial Bold Italic
+	    String lineaPuntosC1 = ".".repeat((int)(nombreC1.length() * 1.5));
 
+	    // Celda alineada a la IZQUIERDA, pero contenido interno CENTRADO entre sí
 	    Cell celdaC1 = new Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
-	            .setTextAlignment(TextAlignment.LEFT); // Alinea el contenido de la celda a la IZQUIERDA
+	            .setTextAlignment(TextAlignment.CENTER)
+	            .setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.LEFT);
 
 	    celdaC1.add(new Paragraph(lineaPuntosC1).setMarginBottom(0).setFixedLeading(10f));
 	    celdaC1.add(new Paragraph(nombreC1).setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0).setFixedLeading(12f));
@@ -895,35 +897,39 @@ public class PdfGenerator {
 	        celdaC1.add(new Paragraph("“EL COMPRADOR”").setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f));
 	    }
 
-	    // --- BLOQUE DERECHO: LA VENDEDORA (Al ras del margen derecho) ---
-	    String lineaPuntosV = "............................................";
+	    // --- BLOQUE DERECHO: LA VENDEDORA ---
+	    String textoV = "“LA VENDEDORA”";
+	    String lineaPuntosV = ".".repeat((int)(textoV.length() * 2.5)); // Proporcional al texto de vendedora
+
+	    // Celda alineada a la DERECHA, pero contenido interno CENTRADO entre sí
 	    Cell celdaV = new Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
-	            .setTextAlignment(TextAlignment.RIGHT); // Alinea el contenido de la celda a la DERECHA
+	            .setTextAlignment(TextAlignment.CENTER)
+	            .setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.RIGHT);
 
 	    celdaV.add(new Paragraph(lineaPuntosV).setMarginBottom(0).setFixedLeading(10f));
-	    celdaV.add(new Paragraph("“LA VENDEDORA”").setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0).setFixedLeading(12f));
+	    celdaV.add(new Paragraph(textoV).setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0).setFixedLeading(12f));
 	    celdaV.add(new Paragraph("DNI N°19404451").setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f));
 
 	    tablaFirmas.addCell(celdaC1);
 	    tablaFirmas.addCell(celdaV);
 	    document.add(tablaFirmas);
 
-	    // --- FILAS ADICIONALES: OTROS COMPRADORES (Debajo del primero a la izquierda) ---
+	    // --- FILAS ADICIONALES: COMPRADORES EXTRA ---
 	    if (clientes.size() > 1) {
 	        for (int i = 1; i < clientes.size(); i++) {
 	            document.add(new Paragraph("\n\n")); 
 	            ClienteResponseDTO ci = clientes.get(i);
 	            String nombreCi = ci.getNombre().toUpperCase() + " " + ci.getApellidos().toUpperCase();
-	            String lineaPuntosCi = ".".repeat(Math.max(nombreCi.length() + 5, 30));
+	            String lineaPuntosCi = ".".repeat((int)(nombreCi.length() * 1.5));
 
-	            // Tabla de una sola columna alineada a la izquierda para los compradores extra
-	            Table tablaExtra = new Table(new float[]{1f})
+	            // Tabla de una columna alineada a la izquierda (ocupa el 50% izquierdo)
+	            Table tablaExtra = new Table(1)
 	                    .setWidth(com.itextpdf.layout.properties.UnitValue.createPercentValue(50))
 	                    .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
 	                    .setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.LEFT);
 
 	            Cell celdaExtra = new Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
-	                    .setTextAlignment(TextAlignment.LEFT);
+	                    .setTextAlignment(TextAlignment.CENTER); // Mantiene DNI y etiqueta al centro de la línea
 
 	            celdaExtra.add(new Paragraph(lineaPuntosCi).setMarginBottom(0).setFixedLeading(10f));
 	            celdaExtra.add(new Paragraph(nombreCi).setFont(arialBoldItalic).setFontSize(12).setMarginBottom(0).setFixedLeading(12f));
