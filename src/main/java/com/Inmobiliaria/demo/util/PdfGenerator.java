@@ -72,14 +72,25 @@ public class PdfGenerator {
 		}
 
 
-		// --- CONVERSIÓN DE FECHA DEL CONTRATO ---
+		// --- CONVERSIÓN DE FECHA DEL CONTRATO SEGURA (Solución al Error 403) ---
 		Date fechaUtil = contrato.getFechaContrato();
-		LocalDate fechaRegistro = fechaUtil.toInstant()
-		    .atZone(ZoneId.systemDefault())
-		    .toLocalDate();
+		LocalDate fechaRegistro;
+
+		if (fechaUtil != null) {
+		    // Usamos Calendar para extraer los datos sin importar si es java.util.Date o java.sql.Date
+		    java.util.Calendar cal = java.util.Calendar.getInstance();
+		    cal.setTime(fechaUtil);
+		    fechaRegistro = LocalDate.of(
+		        cal.get(java.util.Calendar.YEAR),
+		        cal.get(java.util.Calendar.MONTH) + 1,
+		        cal.get(java.util.Calendar.DAY_OF_MONTH)
+		    );
+		} else {
+		    fechaRegistro = LocalDate.now(); // Respaldo por si la base de datos devuelve nulo
+		}
 
 		String[] nombresMeses = {"Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", 
-				"Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"};
+		        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"};
 
 		String diaNum = String.format("%02d", fechaRegistro.getDayOfMonth());
 		String mesNombre = nombresMeses[fechaRegistro.getMonthValue() - 1];
