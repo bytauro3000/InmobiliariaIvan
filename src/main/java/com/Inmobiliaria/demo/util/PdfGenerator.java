@@ -1260,7 +1260,7 @@ public class PdfGenerator {
 		// --- COMPRADORES ADICIONALES (Exactamente debajo del primer bloque) ---
 		if (clientes.size() > 1) {
 			for (int i = 1; i < clientes.size(); i++) {
-				document.add(new Paragraph("\n\n\n")); 
+				document.add(new Paragraph("\n\n")); 
 				ClienteResponseDTO ci = clientes.get(i);
 
 				// Tabla de una sola columna alineada a la izquierda (ocupa 45% igual que arriba)
@@ -1268,7 +1268,7 @@ public class PdfGenerator {
 						.setWidth(com.itextpdf.layout.properties.UnitValue.createPercentValue(45))
 						.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
 						.setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.LEFT)
-						.setMarginTop(25f);
+						.setMarginTop(15f);
 
 				Cell celdaExtra = new Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
 						.setTextAlignment(TextAlignment.CENTER).setPadding(0);
