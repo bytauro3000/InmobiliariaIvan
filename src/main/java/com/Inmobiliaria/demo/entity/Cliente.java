@@ -4,6 +4,7 @@ import java.util.Date;
 
 import org.hibernate.annotations.CreationTimestamp;
 
+import com.Inmobiliaria.demo.enums.EstadoCivil;
 import com.Inmobiliaria.demo.enums.EstadoCliente;
 import com.Inmobiliaria.demo.enums.Genero;
 import com.Inmobiliaria.demo.enums.TipoCliente;
@@ -43,6 +44,10 @@ public class Cliente {
 
     @Column(name = "apellidos", length = 100)
     private String apellidos;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estadoCivil",nullable = false)
+    private EstadoCivil estadoCivil = EstadoCivil.Soltero;
     
     @Enumerated(EnumType.STRING)
     @Column(name = "tipoCliente", nullable = false)
