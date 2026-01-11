@@ -33,7 +33,7 @@ public class PdfGenerator {
 		PdfWriter writer = new PdfWriter(out);
 		PdfDocument pdf = new PdfDocument(writer);
 		Document document = new Document(pdf);
-		document.setMargins(114, 85, 85, 85); //multiplicar los cm * 28.35 = margenes
+		document.setMargins(122, 85, 68, 85); //multiplicar los cm * 28.35 = margenes
 
 		// 🔹 CARGA DE FUENTES (NORMAL, NEGRITA Y NEGRITA-CURSIVA)
 		PdfFont arialNormal;
@@ -209,7 +209,7 @@ public class PdfGenerator {
 		 * ========================================================= */
 		// Título de la cláusula (Arial 11, Negrita y Cursiva)
 		document.add(new Paragraph()
-				.add(new Text("PRIMERA:      PROPIEDAD").setFont(arialBoldItalic).setUnderline())
+				.add(new Text("PRIMERA: PROPIEDAD").setFont(arialBoldItalic).setUnderline())
 				.setFontSize(11)
 				.setMarginTop(10));
 
@@ -250,7 +250,7 @@ public class PdfGenerator {
 
 		// 1. Título de la Cláusula
 		document.add(new Paragraph()
-				.add(new Text("SEGUNDA:      OBJETO DEL CONTRATO").setFont(arialBoldItalic).setUnderline())
+				.add(new Text("SEGUNDA: OBJETO DEL CONTRATO").setFont(arialBoldItalic).setUnderline())
 				.setFontSize(11)
 				.setMarginTop(15));
 
@@ -356,7 +356,7 @@ public class PdfGenerator {
 
 		// 1. Título de la Cláusula
 		document.add(new Paragraph()
-				.add(new Text("TERCERA:      PRECIO").setFont(arialBoldItalic).setUnderline())
+				.add(new Text("TERCERA: PRECIO").setFont(arialBoldItalic).setUnderline())
 				.setFontSize(11)
 				.setMarginTop(15));
 
