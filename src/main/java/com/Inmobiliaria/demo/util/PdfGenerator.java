@@ -486,7 +486,7 @@ public class PdfGenerator {
 
 			terceraFinal.add("Así mismo a efectos de garantizar el cumplimiento de su obligación ");
 			terceraFinal.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
-			terceraFinal.add(" giran a favor de ");
+			terceraFinal.add(" " + verboGira + " a favor de ");
 			terceraFinal.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
 			terceraFinal.add(" letras de cambio que se detallan en la cláusula tercera que serán cancelados en la fecha de vencimiento de los respectivos cambiales, más los correspondientes intereses en caso de mora. El lugar de pago de todas las armadas será el domicilio de ");
 			terceraFinal.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
@@ -673,7 +673,7 @@ public class PdfGenerator {
 
 		octavaIntro.add("Por tratarse de un contrato de compra venta con pago por armadas las partes conviene que ");
 		octavaIntro.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
-		octavaIntro.add(" puede solicitar a ");
+		octavaIntro.add(" " + verboPuede + " solicitar a ");
 		octavaIntro.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
 		octavaIntro.add(" la renuncia, justificando la razón o circunstancias; debiendo cumplir las siguientes condiciones:");
 
@@ -752,7 +752,7 @@ public class PdfGenerator {
 		novenaCuerpo.add(new Text("LA VENDEDORA ").setFont(arialBoldItalic));
 		novenaCuerpo.add("se obliga a entregar el bien objeto del presente contrato, cuando a su vez ");
 		novenaCuerpo.add(new Text(etiquetaComprador + " ").setFont(arialBoldItalic));
-		novenaCuerpo.add("haya cancelado el íntegro del saldo deudor especificado en la cláusula tercera.");
+		novenaCuerpo.add(" " + verboHaya + " cancelado el íntegro del saldo deudor especificado en la cláusula tercera.");
 
 		document.add(novenaCuerpo);
 
@@ -774,7 +774,7 @@ public class PdfGenerator {
 				.setMultipliedLeading(1.0f);
 
 		decimaCuerpo.add(new Text(etiquetaComprador + " ").setFont(arialBoldItalic));
-		decimaCuerpo.add("declara que la entrega física y real del predio objeto del presente contrato se realizara a la suscripción y legalización del presente contrato, por lo que a partir de ello el cuidado, administración y conservación del bien lo asume ");
+		decimaCuerpo.add(verboDeclara + " que la entrega física y real del predio objeto del presente contrato se realizara a la suscripción y legalización del presente contrato, por lo que a partir de ello el cuidado, administración y conservación del bien lo asume ");
 		decimaCuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
 		decimaCuerpo.add(". Así mismo ");
 		decimaCuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
