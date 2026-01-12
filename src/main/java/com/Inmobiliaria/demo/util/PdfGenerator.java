@@ -572,7 +572,7 @@ public class PdfGenerator {
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialItalic)
 				.setFontSize(11)
-				.setMultipliedLeading(1.0f); // Interlineado 1.0 aplicado
+				.setMultipliedLeading(1.0f); // Interlineado 1.0 aplicadoS
 
 		sextaCuerpo.add("Las partes contratantes acuerdan al amparo de lo dispuesto por del artículo 1583° del Código Civil incorporar en el presente contrato el pacto de reserva de propiedad a favor de ");
 		sextaCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
