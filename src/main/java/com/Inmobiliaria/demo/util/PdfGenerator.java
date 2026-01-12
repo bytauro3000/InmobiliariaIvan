@@ -107,7 +107,7 @@ public class PdfGenerator {
 		String ubicacionLima = ", Distrito de " + nombreDistrito + ", Provincia y Departamento de Lima";
 		String direccionRealParaContrato = domicilioCalle + ubicacionLima;
 
-		// 1. Construcción del bloque de compradores dinámica
+		// 1. Construcción del bloque de compradores dinámic
 		Paragraph bloqueCompradores = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setFontSize(10);
 		for (int i = 0; i < numClientes; i++) {
 		    ClienteResponseDTO c = clientes.get(i);
