@@ -157,7 +157,10 @@ public class PdfGenerator {
 		String verboSeObliga = (numClientes > 1) ? "se obligan" : "se obliga"; // <--- NUEVA
 		String verboGira = (numClientes > 1) ? "giran" : "gira";          // <--- NUEVA
 		String verboCumpla = (clientes.size() > 1) ? "cumplan" : "cumpla";
-		
+		String verboTenga = (numClientes > 1) ? "tengan" : "tenga";
+		String verboDeje = (numClientes > 1) ? "dejen" : "deje";
+		String verboDebera = (numClientes > 1) ? "deberán" : "deberá";
+		String verboDesea = (numClientes > 1) ? "desean" : "desea";
 		
 
 		// --- DATOS DEL LOTE Y PRECIO (RESTAURADO) ---
@@ -601,17 +604,18 @@ public class PdfGenerator {
 
 		septimaIntro.add("Queda establecido que así ");
 		septimaIntro.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
-		septimaIntro.add(" tenga cancelado el ");
+		// 🔹 CAMBIO: verboTenga (tenga / tengan)
+		septimaIntro.add(" " + verboTenga + " cancelado el ");
 		septimaIntro.add(new Text("50%").setFont(arialBoldItalic));
 		septimaIntro.add(" del valor del predio objeto del presente contrato y/o ");
-		septimaIntro.add(new Text("dejen de pagar dos (02) letras consecutivas o alternadas").setUnderline());
+		// 🔹 CAMBIO: verboDeje (deje / dejen)
+		septimaIntro.add(new Text(verboDeje + " de pagar dos (02) letras consecutivas o alternadas").setUnderline());
 		septimaIntro.add(", ");
 		septimaIntro.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
 		septimaIntro.add(" quedara facultada para ejercer las acciones legales correspondientes haciendo valer su derecho, siendo estas las siguientes:");
 
 		document.add(septimaIntro);
 
-		// USAMOS EL NOMBRE COMPLETO PARA EVITAR CONFLICTO CON java.util.List
 		com.itextpdf.layout.element.List listaObligaciones = new com.itextpdf.layout.element.List()
 				.setListSymbol("• ") 
 				.setFont(arialItalic)
@@ -639,7 +643,8 @@ public class PdfGenerator {
 		p2.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
 		p2.add(" sin desembolso alguno para ella las mejoras introducidas en el inmueble o lote, sin obligación de reembolso de ninguna clase por parte de esta ni el pago de mejoras por acuerdo libre de ambas partes. Estipulándose así mismo que durante todo el tiempo que demore la devolución de dicho inmueble ");
 		p2.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
-		p2.add(" deberá pagar mensualmente al a vendedora el ");
+		// 🔹 CAMBIO: verboDebera (deberá / deberán)
+		p2.add(" " + verboDebera + " pagar mensualmente al a vendedora el ");
 		p2.add(new Text("3% del precio total").setFont(arialBoldItalic));
 		p2.add(" estipulado en calidad de merced conductiva; incrementándose esta en un 50% cada año que venza, hasta su desocupación total.");
 		item2.add(p2);
@@ -650,12 +655,12 @@ public class PdfGenerator {
 		Paragraph p3 = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setMultipliedLeading(1.0f);
 		p3.add("En caso de resolución de contrato por motivos precedentes ");
 		p3.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
-		p3.add(", desea continuar conservando el predio objeto del presente contrato, se restaurará al precio y/o valor por metro cuadra del momento en que se actualice el contrato.");
+		// 🔹 CAMBIO: verboDesea (desea / desean)
+		p3.add(", " + verboDesea + " continuar conservando el predio objeto del presente contrato, se restaurará al precio y/o valor por metro cuadra del momento en que se actualice el contrato.");
 		item3.add(p3);
 		listaObligaciones.add(item3); 
 
 		document.add(listaObligaciones);
-
 
 		/* =================================================================
 		 * PAGINA 3: CLAUSULA OCTAVA: RENUNCIA
