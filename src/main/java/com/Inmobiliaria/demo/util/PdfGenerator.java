@@ -148,8 +148,16 @@ public class PdfGenerator {
 		    }
 		}
 
+		// Variables de concordancia (Singular/Plural)
 		String etiquetaComprador = (numClientes > 1) ? "LOS COMPRADORES" : "EL COMPRADOR";
 		String pronombreDenom = (numClientes > 1) ? "les" : "le";
+		String verboPuede = (numClientes > 1) ? "pueden" : "puede";        // <--- NUEVA
+		String verboHaya = (numClientes > 1) ? "hayan" : "haya";          // <--- NUEVA
+		String verboDeclara = (numClientes > 1) ? "declaran" : "declara";  // <--- NUEVA
+		String verboSeObliga = (numClientes > 1) ? "se obligan" : "se obliga"; // <--- NUEVA
+		String verboGira = (numClientes > 1) ? "giran" : "gira";          // <--- NUEVA
+		
+		
 
 		// --- DATOS DEL LOTE Y PRECIO (RESTAURADO) ---
 		LoteResponseDTO lote = contrato.getLotes().get(0);
@@ -157,6 +165,9 @@ public class PdfGenerator {
 		LetraResponseDTO uL = contrato.getLetras().get(contrato.getLetras().size() - 1);
 		String montoTexto = pL.getImporteLetras().split(" POR ")[0];
 
+		
+		
+		
 		/* =========================================================
 		 *  PAGINA 1: ENCABEZADO DEL CONTRATO
 		 * ========================================================= */
@@ -399,7 +410,7 @@ public class PdfGenerator {
 			terceraCuerpo.add(new Text(" (" + montoTotalLetras + ")").setFont(arialBoldItalic));
 			terceraCuerpo.add(", que ");
 			terceraCuerpo.add(new Text("“" + etiquetaComprador + "”").setFont(arialBoldItalic));
-			terceraCuerpo.add(" se obliga a cancelar en dinero, íntegramente y por armadas, según el cronograma de la siguiente forma:");
+			terceraCuerpo.add(" " + verboSeObliga + " a cancelar en dinero, íntegramente y por armadas, según el cronograma de la siguiente forma:");	
 			document.add(terceraCuerpo);
 
 			// 3. Sub-cláusulas 3.1, 3.2 y 3.3 con sangría (Margen izquierdo)
