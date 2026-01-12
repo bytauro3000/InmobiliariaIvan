@@ -107,25 +107,45 @@ public class PdfGenerator {
 		String ubicacionLima = ", Distrito de " + nombreDistrito + ", Provincia y Departamento de Lima";
 		String direccionRealParaContrato = domicilioCalle + ubicacionLima;
 
-		// 1. Construcción del bloque de compradores (Ajuste de minúsculas y concordancia)
+		// 1. Construcción del bloque de compradores dinámica
 		Paragraph bloqueCompradores = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setFontSize(10);
 		for (int i = 0; i < numClientes; i++) {
-			ClienteResponseDTO c = clientes.get(i);
-			boolean esFemenino = (c.getGenero() != null && c.getGenero().equals(Genero.Femenino));
+		    ClienteResponseDTO c = clientes.get(i);
+		    boolean esFemenino = (c.getGenero() != null && c.getGenero().equals(Genero.Femenino));
 
-			String prefijo = esFemenino ? "la Sra. " : "el Sr. ";
-			String nacionalidad = extraerNacionalidad(c.getCelular(), esFemenino);
-			String identif = esFemenino ? "identificada" : "identificado";
-			String estCivil = esFemenino ? "casada" : "casado";
+		    String prefijo = esFemenino ? "la Sra. " : "el Sr. ";
+		    String nacionalidad = extraerNacionalidad(c.getCelular(), esFemenino);
+		    String identif = esFemenino ? "identificada" : "identificado";
+		    
+		    // 🔹 LÓGICA DINÁMICA DE ESTADO CIVIL SEGÚN EL DTO
+		    String estCivil = "";
+		    if (c.getEstadoCivil() != null) {
+		        // Convierte el Enum a String y ajusta el género (ej: "Soltero" -> "soltera")
+		        estCivil = c.getEstadoCivil().toString().toLowerCase();
+		        if (esFemenino) {
+		            if (estCivil.equals("soltero")) estCivil = "soltera";
+		            if (estCivil.equals("casado")) estCivil = "casada";
+		            if (estCivil.equals("viudo")) estCivil = "viuda";
+		        }
+		    } else {
+		        estCivil = esFemenino ? "soltera" : "soltero"; // Respaldo por si es nulo
+		    }
 
-			bloqueCompradores.add(prefijo);
-			bloqueCompradores.add(new Text(c.getNombre().toUpperCase() + " " + c.getApellidos().toUpperCase()).setBold());
-			bloqueCompradores.add(" , " + nacionalidad + ", " + identif + " con ");
-			bloqueCompradores.add(new Text("DNI N°" + c.getNumDoc()).setBold());
+		    bloqueCompradores.add(prefijo);
+		    bloqueCompradores.add(new Text(c.getNombre().toUpperCase() + " " + c.getApellidos().toUpperCase()).setBold());
+		    
+		    // Mostramos: ", peruano, soltero, identificado con..."
+		    bloqueCompradores.add(", " + nacionalidad + ", " + estCivil + ", " + identif + " con ");
+		    bloqueCompradores.add(new Text("DNI N°" + c.getNumDoc()).setBold());
 
-			if (numClientes > 1 && i == 0) {
-				bloqueCompradores.add(", " + estCivil + ", con ");
-			}
+		    // Si hay más de un cliente, añadimos el separador "y" antes del último
+		    if (numClientes > 1 && i < numClientes - 1) {
+		        if (i == numClientes - 2) {
+		            bloqueCompradores.add(", y ");
+		        } else {
+		            bloqueCompradores.add(", ");
+		        }
+		    }
 		}
 
 		String etiquetaComprador = (numClientes > 1) ? "LOS COMPRADORES" : "EL COMPRADOR";

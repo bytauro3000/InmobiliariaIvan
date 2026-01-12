@@ -1,6 +1,7 @@
 package com.Inmobiliaria.demo.dto;
 
 import com.Inmobiliaria.demo.entity.Distrito;
+import com.Inmobiliaria.demo.enums.EstadoCivil;
 import com.Inmobiliaria.demo.enums.Genero;
 
 import lombok.AllArgsConstructor;
@@ -14,6 +15,7 @@ public class ClienteResponseDTO {
     private Integer idCliente; // Opcional, si lo necesitas en el frontend
     private String nombre;
     private String apellidos;
+    private EstadoCivil estadoCivil;
     private String numDoc; // Esto es el DNI
     private String direccion;
     private String celular;

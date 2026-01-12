@@ -191,6 +191,7 @@ public class ContratoServiceImpl implements ContratoService {
                         c.getIdCliente(), 
                         c.getNombre(),
                         c.getApellidos(), 
+                        c.getEstadoCivil(),
                         c.getNumDoc(),
                         c.getDireccion(),
                         c.getCelular(),
