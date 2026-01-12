@@ -775,18 +775,19 @@ public class PdfGenerator {
 		 * PAGINA 4: CLAUSULA DECIMA PRIMERA: GASTOS Y TRIBUTOS
 		 * ================================================================= */
 		document.add(new Paragraph()
-				.add(new Text("DECIMA PRIMERA: GASTOS Y TRIBUTOS").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11)
-				.setMarginTop(15));
+		        .add(new Text("DECIMA PRIMERA: GASTOS Y TRIBUTOS").setFont(arialBoldItalic).setUnderline())
+		        .setFontSize(11)
+		        .setMarginTop(15));
 
 		Paragraph undecimaCuerpo = new Paragraph()
-				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic)
-				.setFontSize(11)
-				.setMultipliedLeading(1.0f);
+		        .setTextAlignment(TextAlignment.JUSTIFIED)
+		        .setFont(arialItalic)
+		        .setFontSize(11)
+		        .setMultipliedLeading(1.0f);
 
 		undecimaCuerpo.add("Así mismo las partes contratantes establecen de mutuo acuerdo que todos los gastos que origine la formalización del presente contrato serán asumidos por ");
-		undecimaCuerpo.add(new Text("LA COMPRADORA").setFont(arialBoldItalic)); // En tu imagen aparece en femenino específico
+		// 🔹 CAMBIO AQUÍ: Usamos etiquetaComprador (EL COMPRADOR / LOS COMPRADORES)
+		undecimaCuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic)); 
 		undecimaCuerpo.add(", incluyendo el impuesto de alcabala si estuviera afecto.");
 		document.add(undecimaCuerpo);
 
@@ -931,26 +932,43 @@ public class PdfGenerator {
 
 		introPosesion.add("y de la otra parte ");
 
-		// 4. Bloque dinámico de COMPRADORES en Negrita
+		// 4. Bloque dinámico de COMPRADORES en Negrita con lógica de Estado Civil
 		for (int i = 0; i < numClientes; i++) {
-			ClienteResponseDTO c = clientes.get(i);
-			boolean esFem = (c.getGenero() != null && c.getGenero().equals(Genero.Femenino));
+		    ClienteResponseDTO c = clientes.get(i);
+		    boolean esFem = (c.getGenero() != null && c.getGenero().equals(Genero.Femenino));
 
-			String pref = esFem ? "la Sra. " : "el Sr. ";
-			String ident = esFem ? "identificada" : "identificado";
-			String nacion = extraerNacionalidad(c.getCelular(), esFem);
-			String estCiv = esFem ? "casada" : "casado";
+		    String pref = esFem ? "la Sra. " : "el Sr. ";
+		    String ident = esFem ? "identificada" : "identificado";
+		    String nacion = extraerNacionalidad(c.getCelular(), esFem);
+		    
+		    // 🔹 LÓGICA DINÁMICA DE ESTADO CIVIL (Corregido)
+		    String estCivTexto = "";
+		    if (c.getEstadoCivil() != null) {
+		        estCivTexto = c.getEstadoCivil().toString().toLowerCase();
+		        // Ajuste de género: soltero -> soltera / casado -> casada
+		        if (esFem) {
+		            if (estCivTexto.equals("soltero")) estCivTexto = "soltera";
+		            else if (estCivTexto.equals("casado")) estCivTexto = "casada";
+		            else if (estCivTexto.equals("viudo")) estCivTexto = "viuda";
+		        }
+		    } else {
+		        estCivTexto = esFem ? "soltera" : "soltero"; // Respaldo
+		    }
 
-			introPosesion.add(pref);
-			// Nombre en Negrita
-			introPosesion.add(new Text(c.getNombre().toUpperCase() + " " + c.getApellidos().toUpperCase()).setFont(arialBold));
-			introPosesion.add(", " + nacion + ", " + ident + " con ");
-			// DNI en Negrita
-			introPosesion.add(new Text("DNI N°" + c.getNumDoc()).setFont(arialBold));
+		    introPosesion.add(pref);
+		    // Nombre en Negrita
+		    introPosesion.add(new Text(c.getNombre().toUpperCase() + " " + c.getApellidos().toUpperCase()).setFont(arialBold));
+		    
+		    // Resultado: ", peruana, soltera, identificada con DNI..."
+		    introPosesion.add(", " + nacion + ", " + estCivTexto + ", " + ident + " con ");
+		    
+		    // DNI en Negrita
+		    introPosesion.add(new Text("DNI N°" + c.getNumDoc()).setFont(arialBold));
 
-			if (numClientes > 1 && i == 0) {
-				introPosesion.add(", " + estCiv + ", con ");
-			}
+		    // Separador inteligente entre compradores
+		    if (numClientes > 1 && i < numClientes - 1) {
+		        introPosesion.add(i == numClientes - 2 ? " y " : ", ");
+		    }
 		}
 
 		introPosesion.add(", " + etiquetaDomicilio + direccionRealParaContrato);
@@ -962,8 +980,8 @@ public class PdfGenerator {
 		document.add(introPosesion);
 
 		/* ===========================================================================================  
-        CLAUSULA PRIMERA: DETALLE DEL LOTE (DINÁMICO)
-==============================================================================================*/
+        * CLAUSULA PRIMERA: DETALLE DEL LOTE (DINÁMICO)
+		==============================================================================================*/
 
 		// 1. Lógica de agrupación (Ya la tienes bien, se mantiene igual)
 		StringBuilder ubicacionPosesion = new StringBuilder();
@@ -1166,8 +1184,8 @@ public class PdfGenerator {
 		document.add(quintoCuerpo);
 
 		/* ===========================================================================================  
-		PARRAFO DE CIERRE: DEL DOCUMENTO DE SEÑALIZACION 
-===============================================================================================*/
+		* PARRAFO DE CIERRE: DEL DOCUMENTO DE SEÑALIZACION 
+		* ===============================================================================================*/
 		Paragraph cierrePosesion = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialItalic)
