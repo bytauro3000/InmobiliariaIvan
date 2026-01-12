@@ -161,7 +161,8 @@ public class PdfGenerator {
 		String verboDeje = (numClientes > 1) ? "dejen" : "deje";
 		String verboDebera = (numClientes > 1) ? "deberán" : "deberá";
 		String verboDesea = (numClientes > 1) ? "desean" : "desea";
-		
+		String verboCompromete = (numClientes > 1) ? "se comprometen" : "se compromete";
+	
 
 		// --- DATOS DEL LOTE Y PRECIO (RESTAURADO) ---
 		LoteResponseDTO lote = contrato.getLotes().get(0);
@@ -730,9 +731,9 @@ public class PdfGenerator {
 		com.itextpdf.layout.element.ListItem itemD = new com.itextpdf.layout.element.ListItem();
 		Paragraph pd = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setMultipliedLeading(1.0f);
 		pd.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
-		pd.add(" se compromete a respetar exactamente las medidas perimétricas de su lote, materia de este contrato. En caso contrario es el único responsable de los daños y perjuicios que se puede ocasionar a sus vecinos colindantes. Asimismo, queda convenido que ");
+		pd.add(" " + verboCompromete + " a respetar exactamente las medidas perimétricas de su lote, materia de este contrato. En caso contrario es el único responsable de los daños y perjuicios que se puede ocasionar a sus vecinos colindantes. Asimismo, queda convenido que ");
 		pd.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
-		pd.add(" para construir su vivienda deberá realizarla conforme a los planos elaborados por profesionales competentes, en consecuencia, queda ");
+		pd.add(" para construir su vivienda " + verboDebera + " realizarla conforme a los planos elaborados por profesionales competentes, en consecuencia, queda ");
 		pd.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
 		pd.add(" liberada de errores, fallas y demás anomalías que puedan presentarse en la construcción de sus viviendas y su correspondiente aprobación por el municipio.");
 		itemD.add(pd);
@@ -786,7 +787,7 @@ public class PdfGenerator {
 		decimaCuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
 		decimaCuerpo.add(". Así mismo ");
 		decimaCuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
-		decimaCuerpo.add(", declara conocer la situación física, real y legal del predio objeto de transferencia, el mismo que lo encuentra a su entera satisfacción, por tanto, renuncia a toda acción rescisoria por dolo, error, lesión y cualquiera que tienda a invalidar el presente contrato.");
+		decimaCuerpo.add(", "+ verboDeclara +" conocer la situación física, real y legal del predio objeto de transferencia, el mismo que lo encuentra a su entera satisfacción, por tanto, renuncia a toda acción rescisoria por dolo, error, lesión y cualquiera que tienda a invalidar el presente contrato.");
 
 		document.add(decimaCuerpo);
 
