@@ -156,6 +156,7 @@ public class PdfGenerator {
 		String verboDeclara = (numClientes > 1) ? "declaran" : "declara";  // <--- NUEVA
 		String verboSeObliga = (numClientes > 1) ? "se obligan" : "se obliga"; // <--- NUEVA
 		String verboGira = (numClientes > 1) ? "giran" : "gira";          // <--- NUEVA
+		String verboCumpla = (clientes.size() > 1) ? "cumplan" : "cumpla";
 		
 		
 
@@ -576,8 +577,10 @@ public class PdfGenerator {
 		sextaCuerpo.add("Las partes contratantes acuerdan al amparo de lo dispuesto por del artículo 1583° del Código Civil incorporar en el presente contrato el pacto de reserva de propiedad a favor de ");
 		sextaCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
 		sextaCuerpo.add(". En consecuencia, este conservara la propiedad del bien materia del presente contrato aun cuando la posesión del mismo haya sido entregada a ");
-		sextaCuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic)); // LOS COMPRADORES o EL COMPRADOR
-		sextaCuerpo.add(". Así mismo se deja establecido que el pacto de reserva de propiedad a quien se refiere la cláusula anterior, tendrá vigencia hasta que la compradora cumpla con pagar la totalidad del precio pactado en la cláusula tercera de este contrato, más los intereses devengados.");
+		sextaCuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));     
+		sextaCuerpo.add(". Así mismo se deja establecido que el pacto de reserva de propiedad a quien se refiere la cláusula anterior, tendrá vigencia hasta que ");
+		sextaCuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+		sextaCuerpo.add(" " + verboCumpla + " con pagar la totalidad del precio pactado en la cláusula tercera de este contrato, más los intereses devengados.");
 
 		document.add(sextaCuerpo);
 
