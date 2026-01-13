@@ -1013,32 +1013,10 @@ public class PdfGenerator {
 		 * CLAUSULA PRIMERA: DETALLE DEL LOTE (DINÁMICO)
 		==============================================================================================*/
 
-		// 1. Lógica de agrupación (Ya la tienes bien, se mantiene igual)
-		StringBuilder ubicacionPosesion = new StringBuilder();
-		BigDecimal areaTotalPosesion = BigDecimal.ZERO; // 👈 Ya no necesitas java.math.
+		// 1. Lógica de agrupación y cálculo de área (Se mantiene intacta)
+		BigDecimal areaTotalPosesion = BigDecimal.ZERO; 
 		List<LoteResponseDTO> listaLotesPosesion = contrato.getLotes();
-
-		if (listaLotesPosesion.size() == 1) {
-			LoteResponseDTO single = listaLotesPosesion.get(0);
-			ubicacionPosesion.append("un lote de terreno rústico de ").append(single.getArea()).append("M2. El mismo que se ubica en la Manzana “").append(single.getManzana()).append("” y se encuentra signado con el lote Nº ").append(single.getNumeroLote());
-			areaTotalPosesion = single.getArea();
-		} else {
-			boolean mismaMz = listaLotesPosesion.stream().map(LoteResponseDTO::getManzana).distinct().count() == 1;
-			ubicacionPosesion.append("lotes de terreno rústico ubicados ");
-			if (mismaMz) {
-				ubicacionPosesion.append("en la Manzana “").append(listaLotesPosesion.get(0).getManzana()).append("” y asignados con los lotes ");
-				for (int i = 0; i < listaLotesPosesion.size(); i++) {
-					ubicacionPosesion.append("Nº ").append(listaLotesPosesion.get(i).getNumeroLote());
-					if (i < listaLotesPosesion.size() - 1) ubicacionPosesion.append(" y ");
-				}
-			} else {
-				for (int i = 0; i < listaLotesPosesion.size(); i++) {
-					ubicacionPosesion.append("en la Manzana “").append(listaLotesPosesion.get(i).getManzana()).append("” lote ").append(listaLotesPosesion.get(i).getNumeroLote());
-					if (i < listaLotesPosesion.size() - 1) ubicacionPosesion.append(" y ");
-				}
-			}
-			for (LoteResponseDTO l : listaLotesPosesion) { areaTotalPosesion = areaTotalPosesion.add(l.getArea()); }
-		}
+		for (LoteResponseDTO l : listaLotesPosesion) { areaTotalPosesion = areaTotalPosesion.add(l.getArea()); }
 
 		Paragraph primeroCuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
@@ -1052,12 +1030,43 @@ public class PdfGenerator {
 		primeroCuerpo.add(" en virtud del presente contrato de Compra - Venta celebrado con ");
 		primeroCuerpo.add(new Text("\"" + etiquetaComprador + "\"").setFont(arialBold));
 
-		// 🔹 CORRECCIÓN AQUÍ: Usamos fechaRegistro en lugar de hoy
 		DateTimeFormatter fmtFecha = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 		primeroCuerpo.add(" con fecha ");
 		primeroCuerpo.add(new Text(fechaRegistro.format(fmtFecha)).setFont(arialBold));
+		primeroCuerpo.add(" dio en venta real ");
 
-		primeroCuerpo.add(" dio en venta real " + ubicacionPosesion.toString());
+		// 🔹 INICIO DE CONSTRUCCIÓN DINÁMICA CON NEGRITAS (Reemplaza al ubicacionPosesion.toString())
+		if (listaLotesPosesion.size() == 1) {
+			LoteResponseDTO single = listaLotesPosesion.get(0);
+			primeroCuerpo.add("un lote de terreno rústico de ");
+			primeroCuerpo.add(new Text(single.getArea() + "M2").setFont(arialBold)); // 🔹 Área Negrita
+			primeroCuerpo.add(". El mismo que se ubica en la Manzana “");
+			primeroCuerpo.add(new Text(single.getManzana()).setFont(arialBold));      // 🔹 Manzana Negrita
+			primeroCuerpo.add("” y se encuentra signado con el lote Nº ");
+			primeroCuerpo.add(new Text(single.getNumeroLote()).setFont(arialBold));  // 🔹 Lote Negrita
+		} else {
+			boolean mismaMz = listaLotesPosesion.stream().map(LoteResponseDTO::getManzana).distinct().count() == 1;
+			primeroCuerpo.add("lotes de terreno rústico ubicados ");
+			if (mismaMz) {
+				primeroCuerpo.add("en la Manzana “");
+				primeroCuerpo.add(new Text(listaLotesPosesion.get(0).getManzana()).setFont(arialBold)); // 🔹 Manzana Negrita
+				primeroCuerpo.add("” y asignados con los lotes ");
+				for (int i = 0; i < listaLotesPosesion.size(); i++) {
+					primeroCuerpo.add("Nº ");
+					primeroCuerpo.add(new Text(listaLotesPosesion.get(i).getNumeroLote()).setFont(arialBold)); // 🔹 Lote Negrita
+					if (i < listaLotesPosesion.size() - 1) primeroCuerpo.add(" y ");
+				}
+			} else {
+				for (int i = 0; i < listaLotesPosesion.size(); i++) {
+					primeroCuerpo.add("en la Manzana “");
+					primeroCuerpo.add(new Text(listaLotesPosesion.get(i).getManzana()).setFont(arialBold)); // 🔹 Manzana Negrita
+					primeroCuerpo.add("” lote ");
+					primeroCuerpo.add(new Text(listaLotesPosesion.get(i).getNumeroLote()).setFont(arialBold)); // 🔹 Lote Negrita
+					if (i < listaLotesPosesion.size() - 1) primeroCuerpo.add(" y ");
+				}
+			}
+		}
+
 		primeroCuerpo.add(" correspondiente al Programa de Vivienda ");
 		primeroCuerpo.add(new Text("“LA FLORIDA DE TORRE BLANCA”").setFont(arialBold));
 		primeroCuerpo.add(" del Distrito de Carabayllo, Provincia y Departamento de Lima; cuyos linderos y medidas perimétricas son las siguientes:");
