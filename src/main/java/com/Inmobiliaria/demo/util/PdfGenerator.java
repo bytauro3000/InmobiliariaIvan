@@ -296,42 +296,9 @@ public class PdfGenerator {
 
 		// --- LÓGICA DINÁMICA PARA AGRUPAR MANZANAS Y LOTES ---
 		List<LoteResponseDTO> listaLotes = contrato.getLotes();
-		Paragraph ubicacionTexto = new Paragraph().setFont(arialItalic).setFontSize(11); // 🔹 Cambiado a Paragraph para soportar negritas
 		java.math.BigDecimal areaTotal = java.math.BigDecimal.ZERO;
+		for (LoteResponseDTO l : listaLotes) { areaTotal = areaTotal.add(l.getArea()); }
 
-		if (listaLotes.size() == 1) {
-			LoteResponseDTO single = listaLotes.get(0);
-			ubicacionTexto.add("ubicado la Manzana “");
-			ubicacionTexto.add(new Text(single.getManzana()).setFont(arialBoldItalic)); // 🔹 Negrita
-			ubicacionTexto.add("” y asignado, con el lote Nº ");
-			ubicacionTexto.add(new Text(single.getNumeroLote()).setFont(arialBoldItalic)); // 🔹 Negrita
-			areaTotal = single.getArea();
-		} else {
-			// Si hay más de uno, verificamos si son de la misma manzana
-			boolean mismaManzana = listaLotes.stream().map(LoteResponseDTO::getManzana).distinct().count() == 1;
-
-			if (mismaManzana) {
-				ubicacionTexto.add("ubicado la Manzana “");
-				ubicacionTexto.add(new Text(listaLotes.get(0).getManzana()).setFont(arialBoldItalic)); // 🔹 Negrita
-				ubicacionTexto.add("” y asignado, con los lotes ");
-				for (int i = 0; i < listaLotes.size(); i++) {
-					ubicacionTexto.add("Nº ");
-					ubicacionTexto.add(new Text(listaLotes.get(i).getNumeroLote()).setFont(arialBoldItalic)); // 🔹 Negrita
-					if (i < listaLotes.size() - 1) ubicacionTexto.add(" y ");
-				}
-			} else {
-				// Si son manzanas distintas
-				for (int i = 0; i < listaLotes.size(); i++) {
-					ubicacionTexto.add("la Manzana “");
-					ubicacionTexto.add(new Text(listaLotes.get(i).getManzana()).setFont(arialBoldItalic)); // 🔹 Negrita
-					ubicacionTexto.add("” asignado, con el lote ");
-					ubicacionTexto.add(new Text(listaLotes.get(i).getNumeroLote()).setFont(arialBoldItalic)); // 🔹 Negrita
-					if (i < listaLotes.size() - 1) ubicacionTexto.add(" y ");
-				}
-			}
-			// Sumamos áreas
-			for (LoteResponseDTO l : listaLotes) { areaTotal = areaTotal.add(l.getArea()); }
-		}
 		// 2. Bloque descriptivo inicial
 		Paragraph segundaIntro = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
@@ -341,10 +308,42 @@ public class PdfGenerator {
 
 		segundaIntro.add("Por el presente contrato ");
 		segundaIntro.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
-		segundaIntro.add(" transfiere los derechos y acciones de un lote de terreno rústico " + ubicacionTexto.toString());
+		segundaIntro.add(" transfiere los derechos y acciones de un lote de terreno rústico ");
+
+		// 🔹 INICIO DE CONSTRUCCIÓN DINÁMICA CON NEGRITAS
+		if (listaLotes.size() == 1) {
+			LoteResponseDTO single = listaLotes.get(0);
+			segundaIntro.add("ubicado la Manzana “");
+			segundaIntro.add(new Text(single.getManzana()).setFont(arialBoldItalic)); // 🔹 Manzana Negrita
+			segundaIntro.add("” y asignado, con el lote Nº ");
+			segundaIntro.add(new Text(single.getNumeroLote()).setFont(arialBoldItalic)); // 🔹 Lote Negrita
+		} else {
+			boolean mismaManzana = listaLotes.stream().map(LoteResponseDTO::getManzana).distinct().count() == 1;
+			if (mismaManzana) {
+				segundaIntro.add("ubicado la Manzana “");
+				segundaIntro.add(new Text(listaLotes.get(0).getManzana()).setFont(arialBoldItalic));
+				segundaIntro.add("” y asignado, con los lotes ");
+				for (int i = 0; i < listaLotes.size(); i++) {
+					segundaIntro.add("Nº ");
+					segundaIntro.add(new Text(listaLotes.get(i).getNumeroLote()).setFont(arialBoldItalic));
+					if (i < listaLotes.size() - 1) segundaIntro.add(" y ");
+				}
+			} else {
+				for (int i = 0; i < listaLotes.size(); i++) {
+					segundaIntro.add("la Manzana “");
+					segundaIntro.add(new Text(listaLotes.get(i).getManzana()).setFont(arialBoldItalic));
+					segundaIntro.add("” asignado, con el lote ");
+					segundaIntro.add(new Text(listaLotes.get(i).getNumeroLote()).setFont(arialBoldItalic));
+					if (i < listaLotes.size() - 1) segundaIntro.add(" y ");
+				}
+			}
+		}
+
 		segundaIntro.add(" del Programa de Vivienda ");
 		segundaIntro.add(new Text("“LA FLORIDA DE TORRE BLANCA”").setFont(arialBoldItalic));
 		segundaIntro.add(" con un área total de ");
+        
+		// 🔹 Área en Negrita
 		segundaIntro.add(new Text(areaTotal + "M2.").setFont(arialBoldItalic));
 		segundaIntro.add(" Encerrado dentro de los siguientes linderos y medidas perimétricas:");
 
