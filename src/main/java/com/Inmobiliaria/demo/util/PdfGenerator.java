@@ -76,20 +76,20 @@ public class PdfGenerator {
 		LocalDate fechaRegistro;
 
 		if (fechaUtil != null) {
-		    // Usamos Calendar para extraer los datos sin importar si es java.util.Date o java.sql.Date
-		    java.util.Calendar cal = java.util.Calendar.getInstance();
-		    cal.setTime(fechaUtil);
-		    fechaRegistro = LocalDate.of(
-		        cal.get(java.util.Calendar.YEAR),
-		        cal.get(java.util.Calendar.MONTH) + 1,
-		        cal.get(java.util.Calendar.DAY_OF_MONTH)
-		    );
+			// Usamos Calendar para extraer los datos sin importar si es java.util.Date o java.sql.Date
+			java.util.Calendar cal = java.util.Calendar.getInstance();
+			cal.setTime(fechaUtil);
+			fechaRegistro = LocalDate.of(
+					cal.get(java.util.Calendar.YEAR),
+					cal.get(java.util.Calendar.MONTH) + 1,
+					cal.get(java.util.Calendar.DAY_OF_MONTH)
+					);
 		} else {
-		    fechaRegistro = LocalDate.now(); // Respaldo por si la base de datos devuelve nulo
+			fechaRegistro = LocalDate.now(); // Respaldo por si la base de datos devuelve nulo
 		}
 
 		String[] nombresMeses = {"Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", 
-		        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"};
+				"Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"};
 
 		String diaNum = String.format("%02d", fechaRegistro.getDayOfMonth());
 		String mesNombre = nombresMeses[fechaRegistro.getMonthValue() - 1];
@@ -110,42 +110,42 @@ public class PdfGenerator {
 		// 1. Construcción del bloque de compradores dinámica
 		Paragraph bloqueCompradores = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setFontSize(10);
 		for (int i = 0; i < numClientes; i++) {
-		    ClienteResponseDTO c = clientes.get(i);
-		    boolean esFemenino = (c.getGenero() != null && c.getGenero().equals(Genero.Femenino));
+			ClienteResponseDTO c = clientes.get(i);
+			boolean esFemenino = (c.getGenero() != null && c.getGenero().equals(Genero.Femenino));
 
-		    String prefijo = esFemenino ? "la Sra. " : "el Sr. ";
-		    String nacionalidad = extraerNacionalidad(c.getCelular(), esFemenino);
-		    String identif = esFemenino ? "identificada" : "identificado";
-		    
-		    // 🔹 LÓGICA DINÁMICA DE ESTADO CIVIL SEGÚN EL DTO
-		    String estCivil = "";
-		    if (c.getEstadoCivil() != null) {
-		        // Convierte el Enum a String y ajusta el género (ej: "Soltero" -> "soltera")
-		        estCivil = c.getEstadoCivil().toString().toLowerCase();
-		        if (esFemenino) {
-		            if (estCivil.equals("soltero")) estCivil = "soltera";
-		            if (estCivil.equals("casado")) estCivil = "casada";
-		            if (estCivil.equals("viudo")) estCivil = "viuda";
-		        }
-		    } else {
-		        estCivil = esFemenino ? "soltera" : "soltero"; // Respaldo por si es nulo
-		    }
+			String prefijo = esFemenino ? "la Sra. " : "el Sr. ";
+			String nacionalidad = extraerNacionalidad(c.getCelular(), esFemenino);
+			String identif = esFemenino ? "identificada" : "identificado";
 
-		    bloqueCompradores.add(prefijo);
-		    bloqueCompradores.add(new Text(c.getNombre().toUpperCase() + " " + c.getApellidos().toUpperCase()).setBold());
-		    
-		    // Mostramos: ", peruano, soltero, identificado con..."
-		    bloqueCompradores.add(", " + nacionalidad + ", " + estCivil + ", " + identif + " con ");
-		    bloqueCompradores.add(new Text("DNI N°" + c.getNumDoc()).setBold());
+			// 🔹 LÓGICA DINÁMICA DE ESTADO CIVIL SEGÚN EL DTO
+			String estCivil = "";
+			if (c.getEstadoCivil() != null) {
+				// Convierte el Enum a String y ajusta el género (ej: "Soltero" -> "soltera")
+				estCivil = c.getEstadoCivil().toString().toLowerCase();
+				if (esFemenino) {
+					if (estCivil.equals("soltero")) estCivil = "soltera";
+					if (estCivil.equals("casado")) estCivil = "casada";
+					if (estCivil.equals("viudo")) estCivil = "viuda";
+				}
+			} else {
+				estCivil = esFemenino ? "soltera" : "soltero"; // Respaldo por si es nulo
+			}
 
-		    // Si hay más de un cliente, añadimos el separador "y" antes del último
-		    if (numClientes > 1 && i < numClientes - 1) {
-		        if (i == numClientes - 2) {
-		            bloqueCompradores.add(", y ");
-		        } else {
-		            bloqueCompradores.add(", ");
-		        }
-		    }
+			bloqueCompradores.add(prefijo);
+			bloqueCompradores.add(new Text(c.getNombre().toUpperCase() + " " + c.getApellidos().toUpperCase()).setBold());
+
+			// Mostramos: ", peruano, soltero, identificado con..."
+			bloqueCompradores.add(", " + nacionalidad + ", " + estCivil + ", " + identif + " con ");
+			bloqueCompradores.add(new Text("DNI N°" + c.getNumDoc()).setBold());
+
+			// Si hay más de un cliente, añadimos el separador "y" antes del último
+			if (numClientes > 1 && i < numClientes - 1) {
+				if (i == numClientes - 2) {
+					bloqueCompradores.add(", y ");
+				} else {
+					bloqueCompradores.add(", ");
+				}
+			}
 		}
 
 		// Variables de concordancia (Singular/Plural)
@@ -165,8 +165,8 @@ public class PdfGenerator {
 		String verboAdeude = (numClientes > 1) ? "adeuden" : "adeude";
 		String verboReconoce = (numClientes > 1) ? "reconocen" : "reconoce";
 		String verboCancele = (numClientes > 1) ? "cancelen" : "cancele";
-		
-	
+
+
 
 		// --- DATOS DEL LOTE Y PRECIO (RESTAURADO) ---
 		LoteResponseDTO lote = contrato.getLotes().get(0);
@@ -174,9 +174,9 @@ public class PdfGenerator {
 		LetraResponseDTO uL = contrato.getLetras().get(contrato.getLetras().size() - 1);
 		String montoTexto = pL.getImporteLetras().split(" POR ")[0];
 
-		
-		
-		
+
+
+
 		/* =========================================================
 		 *  PAGINA 1: ENCABEZADO DEL CONTRATO
 		 * ========================================================= */
@@ -295,43 +295,43 @@ public class PdfGenerator {
 				.setMarginTop(15));
 
 		// --- LÓGICA DINÁMICA PARA AGRUPAR MANZANAS Y LOTES ---
-				List<LoteResponseDTO> listaLotes = contrato.getLotes();
-				Paragraph ubicacionTexto = new Paragraph().setFont(arialItalic).setFontSize(11); // 🔹 Cambiado a Paragraph para soportar negritas
-				java.math.BigDecimal areaTotal = java.math.BigDecimal.ZERO;
+		List<LoteResponseDTO> listaLotes = contrato.getLotes();
+		Paragraph ubicacionTexto = new Paragraph().setFont(arialItalic).setFontSize(11); // 🔹 Cambiado a Paragraph para soportar negritas
+		java.math.BigDecimal areaTotal = java.math.BigDecimal.ZERO;
 
-				if (listaLotes.size() == 1) {
-					LoteResponseDTO single = listaLotes.get(0);
-					ubicacionTexto.add("ubicado la Manzana “");
-					ubicacionTexto.add(new Text(single.getManzana()).setFont(arialBoldItalic)); // 🔹 Negrita
-					ubicacionTexto.add("” y asignado, con el lote Nº ");
-					ubicacionTexto.add(new Text(single.getNumeroLote()).setFont(arialBoldItalic)); // 🔹 Negrita
-					areaTotal = single.getArea();
-				} else {
-					// Si hay más de uno, verificamos si son de la misma manzana
-					boolean mismaManzana = listaLotes.stream().map(LoteResponseDTO::getManzana).distinct().count() == 1;
+		if (listaLotes.size() == 1) {
+			LoteResponseDTO single = listaLotes.get(0);
+			ubicacionTexto.add("ubicado la Manzana “");
+			ubicacionTexto.add(new Text(single.getManzana()).setFont(arialBoldItalic)); // 🔹 Negrita
+			ubicacionTexto.add("” y asignado, con el lote Nº ");
+			ubicacionTexto.add(new Text(single.getNumeroLote()).setFont(arialBoldItalic)); // 🔹 Negrita
+			areaTotal = single.getArea();
+		} else {
+			// Si hay más de uno, verificamos si son de la misma manzana
+			boolean mismaManzana = listaLotes.stream().map(LoteResponseDTO::getManzana).distinct().count() == 1;
 
-					if (mismaManzana) {
-						ubicacionTexto.add("ubicado la Manzana “");
-						ubicacionTexto.add(new Text(listaLotes.get(0).getManzana()).setFont(arialBoldItalic)); // 🔹 Negrita
-						ubicacionTexto.add("” y asignado, con los lotes ");
-						for (int i = 0; i < listaLotes.size(); i++) {
-							ubicacionTexto.add("Nº ");
-							ubicacionTexto.add(new Text(listaLotes.get(i).getNumeroLote()).setFont(arialBoldItalic)); // 🔹 Negrita
-							if (i < listaLotes.size() - 1) ubicacionTexto.add(" y ");
-						}
-					} else {
-						// Si son manzanas distintas
-						for (int i = 0; i < listaLotes.size(); i++) {
-							ubicacionTexto.add("la Manzana “");
-							ubicacionTexto.add(new Text(listaLotes.get(i).getManzana()).setFont(arialBoldItalic)); // 🔹 Negrita
-							ubicacionTexto.add("” asignado, con el lote ");
-							ubicacionTexto.add(new Text(listaLotes.get(i).getNumeroLote()).setFont(arialBoldItalic)); // 🔹 Negrita
-							if (i < listaLotes.size() - 1) ubicacionTexto.add(" y ");
-						}
-					}
-					// Sumamos áreas
-					for (LoteResponseDTO l : listaLotes) { areaTotal = areaTotal.add(l.getArea()); }
+			if (mismaManzana) {
+				ubicacionTexto.add("ubicado la Manzana “");
+				ubicacionTexto.add(new Text(listaLotes.get(0).getManzana()).setFont(arialBoldItalic)); // 🔹 Negrita
+				ubicacionTexto.add("” y asignado, con los lotes ");
+				for (int i = 0; i < listaLotes.size(); i++) {
+					ubicacionTexto.add("Nº ");
+					ubicacionTexto.add(new Text(listaLotes.get(i).getNumeroLote()).setFont(arialBoldItalic)); // 🔹 Negrita
+					if (i < listaLotes.size() - 1) ubicacionTexto.add(" y ");
 				}
+			} else {
+				// Si son manzanas distintas
+				for (int i = 0; i < listaLotes.size(); i++) {
+					ubicacionTexto.add("la Manzana “");
+					ubicacionTexto.add(new Text(listaLotes.get(i).getManzana()).setFont(arialBoldItalic)); // 🔹 Negrita
+					ubicacionTexto.add("” asignado, con el lote ");
+					ubicacionTexto.add(new Text(listaLotes.get(i).getNumeroLote()).setFont(arialBoldItalic)); // 🔹 Negrita
+					if (i < listaLotes.size() - 1) ubicacionTexto.add(" y ");
+				}
+			}
+			// Sumamos áreas
+			for (LoteResponseDTO l : listaLotes) { areaTotal = areaTotal.add(l.getArea()); }
+		}
 		// 2. Bloque descriptivo inicial
 		Paragraph segundaIntro = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
@@ -512,7 +512,6 @@ public class PdfGenerator {
 			document.add(terceraFinal);
 
 		}
-
 
 		/* =========================================================
 		 * PAGINA 2: CLAUSULA CUARTA - EQUIVALENCIA
@@ -807,15 +806,15 @@ public class PdfGenerator {
 		 * PAGINA 4: CLAUSULA DECIMA PRIMERA: GASTOS Y TRIBUTOS
 		 * ================================================================= */
 		document.add(new Paragraph()
-		        .add(new Text("DECIMA PRIMERA: GASTOS Y TRIBUTOS").setFont(arialBoldItalic).setUnderline())
-		        .setFontSize(11)
-		        .setMarginTop(15));
+				.add(new Text("DECIMA PRIMERA: GASTOS Y TRIBUTOS").setFont(arialBoldItalic).setUnderline())
+				.setFontSize(11)
+				.setMarginTop(15));
 
 		Paragraph undecimaCuerpo = new Paragraph()
-		        .setTextAlignment(TextAlignment.JUSTIFIED)
-		        .setFont(arialItalic)
-		        .setFontSize(11)
-		        .setMultipliedLeading(1.0f);
+				.setTextAlignment(TextAlignment.JUSTIFIED)
+				.setFont(arialItalic)
+				.setFontSize(11)
+				.setMultipliedLeading(1.0f);
 
 		undecimaCuerpo.add("Así mismo las partes contratantes establecen de mutuo acuerdo que todos los gastos que origine la formalización del presente contrato serán asumidos por ");
 		// 🔹 CAMBIO AQUÍ: Usamos etiquetaComprador (EL COMPRADOR / LOS COMPRADORES)
@@ -913,7 +912,7 @@ public class PdfGenerator {
 
 		cierreFinal.add("Leído el presente contrato y estando las partes contratantes conformes con las cláusulas establecidas en el presente contrato, proceden a suscribirlo ");
 		cierreFinal.add(new Text("a los " + diaLetras + " (" + diaNum + ") días del mes de " + mesNombre + " (" + mesNum + ") del Año " + anioLetras + " (" + anioNum + ").")
-		        .setFont(arialItalic));
+				.setFont(arialItalic));
 
 		document.add(cierreFinal);
 
@@ -966,41 +965,41 @@ public class PdfGenerator {
 
 		// 4. Bloque dinámico de COMPRADORES en Negrita con lógica de Estado Civil
 		for (int i = 0; i < numClientes; i++) {
-		    ClienteResponseDTO c = clientes.get(i);
-		    boolean esFem = (c.getGenero() != null && c.getGenero().equals(Genero.Femenino));
+			ClienteResponseDTO c = clientes.get(i);
+			boolean esFem = (c.getGenero() != null && c.getGenero().equals(Genero.Femenino));
 
-		    String pref = esFem ? "la Sra. " : "el Sr. ";
-		    String ident = esFem ? "identificada" : "identificado";
-		    String nacion = extraerNacionalidad(c.getCelular(), esFem);
-		    
-		    // 🔹 LÓGICA DINÁMICA DE ESTADO CIVIL (Corregido)
-		    String estCivTexto = "";
-		    if (c.getEstadoCivil() != null) {
-		        estCivTexto = c.getEstadoCivil().toString().toLowerCase();
-		        // Ajuste de género: soltero -> soltera / casado -> casada
-		        if (esFem) {
-		            if (estCivTexto.equals("soltero")) estCivTexto = "soltera";
-		            else if (estCivTexto.equals("casado")) estCivTexto = "casada";
-		            else if (estCivTexto.equals("viudo")) estCivTexto = "viuda";
-		        }
-		    } else {
-		        estCivTexto = esFem ? "soltera" : "soltero"; // Respaldo
-		    }
+			String pref = esFem ? "la Sra. " : "el Sr. ";
+			String ident = esFem ? "identificada" : "identificado";
+			String nacion = extraerNacionalidad(c.getCelular(), esFem);
 
-		    introPosesion.add(pref);
-		    // Nombre en Negrita
-		    introPosesion.add(new Text(c.getNombre().toUpperCase() + " " + c.getApellidos().toUpperCase()).setFont(arialBold));
-		    
-		    // Resultado: ", peruana, soltera, identificada con DNI..."
-		    introPosesion.add(", " + nacion + ", " + estCivTexto + ", " + ident + " con ");
-		    
-		    // DNI en Negrita
-		    introPosesion.add(new Text("DNI N°" + c.getNumDoc()).setFont(arialBold));
+			// 🔹 LÓGICA DINÁMICA DE ESTADO CIVIL (Corregido)
+			String estCivTexto = "";
+			if (c.getEstadoCivil() != null) {
+				estCivTexto = c.getEstadoCivil().toString().toLowerCase();
+				// Ajuste de género: soltero -> soltera / casado -> casada
+				if (esFem) {
+					if (estCivTexto.equals("soltero")) estCivTexto = "soltera";
+					else if (estCivTexto.equals("casado")) estCivTexto = "casada";
+					else if (estCivTexto.equals("viudo")) estCivTexto = "viuda";
+				}
+			} else {
+				estCivTexto = esFem ? "soltera" : "soltero"; // Respaldo
+			}
 
-		    // Separador inteligente entre compradores
-		    if (numClientes > 1 && i < numClientes - 1) {
-		        introPosesion.add(i == numClientes - 2 ? " y " : ", ");
-		    }
+			introPosesion.add(pref);
+			// Nombre en Negrita
+			introPosesion.add(new Text(c.getNombre().toUpperCase() + " " + c.getApellidos().toUpperCase()).setFont(arialBold));
+
+			// Resultado: ", peruana, soltera, identificada con DNI..."
+			introPosesion.add(", " + nacion + ", " + estCivTexto + ", " + ident + " con ");
+
+			// DNI en Negrita
+			introPosesion.add(new Text("DNI N°" + c.getNumDoc()).setFont(arialBold));
+
+			// Separador inteligente entre compradores
+			if (numClientes > 1 && i < numClientes - 1) {
+				introPosesion.add(i == numClientes - 2 ? " y " : ", ");
+			}
 		}
 
 		introPosesion.add(", " + etiquetaDomicilio + direccionRealParaContrato);
@@ -1012,7 +1011,7 @@ public class PdfGenerator {
 		document.add(introPosesion);
 
 		/* ===========================================================================================  
-        * CLAUSULA PRIMERA: DETALLE DEL LOTE (DINÁMICO)
+		 * CLAUSULA PRIMERA: DETALLE DEL LOTE (DINÁMICO)
 		==============================================================================================*/
 
 		// 1. Lógica de agrupación (Ya la tienes bien, se mantiene igual)
@@ -1058,7 +1057,7 @@ public class PdfGenerator {
 		DateTimeFormatter fmtFecha = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 		primeroCuerpo.add(" con fecha ");
 		primeroCuerpo.add(new Text(fechaRegistro.format(fmtFecha)).setFont(arialBold));
-		
+
 		primeroCuerpo.add(" dio en venta real " + ubicacionPosesion.toString());
 		primeroCuerpo.add(" correspondiente al Programa de Vivienda ");
 		primeroCuerpo.add(new Text("“LA FLORIDA DE TORRE BLANCA”").setFont(arialBold));
@@ -1216,8 +1215,8 @@ public class PdfGenerator {
 		document.add(quintoCuerpo);
 
 		/* ===========================================================================================  
-		* PARRAFO DE CIERRE: DEL DOCUMENTO DE SEÑALIZACION 
-		* ===============================================================================================*/
+		 * PARRAFO DE CIERRE: DEL DOCUMENTO DE SEÑALIZACION 
+		 * ===============================================================================================*/
 		Paragraph cierrePosesion = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialItalic)
