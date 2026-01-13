@@ -295,35 +295,43 @@ public class PdfGenerator {
 				.setMarginTop(15));
 
 		// --- LÓGICA DINÁMICA PARA AGRUPAR MANZANAS Y LOTES ---
-		List<LoteResponseDTO> listaLotes = contrato.getLotes();
-		StringBuilder ubicacionTexto = new StringBuilder();
-		java.math.BigDecimal areaTotal = java.math.BigDecimal.ZERO;
+				List<LoteResponseDTO> listaLotes = contrato.getLotes();
+				Paragraph ubicacionTexto = new Paragraph().setFont(arialItalic).setFontSize(11); // 🔹 Cambiado a Paragraph para soportar negritas
+				java.math.BigDecimal areaTotal = java.math.BigDecimal.ZERO;
 
-		if (listaLotes.size() == 1) {
-			LoteResponseDTO single = listaLotes.get(0);
-			ubicacionTexto.append("ubicado la Manzana “").append(single.getManzana()).append("” y asignado, con el lote Nº ").append(single.getNumeroLote());
-			areaTotal = single.getArea();
-		} else {
-			// Si hay más de uno, verificamos si son de la misma manzana
-			boolean mismaManzana = listaLotes.stream().map(LoteResponseDTO::getManzana).distinct().count() == 1;
+				if (listaLotes.size() == 1) {
+					LoteResponseDTO single = listaLotes.get(0);
+					ubicacionTexto.add("ubicado la Manzana “");
+					ubicacionTexto.add(new Text(single.getManzana()).setFont(arialBoldItalic)); // 🔹 Negrita
+					ubicacionTexto.add("” y asignado, con el lote Nº ");
+					ubicacionTexto.add(new Text(single.getNumeroLote()).setFont(arialBoldItalic)); // 🔹 Negrita
+					areaTotal = single.getArea();
+				} else {
+					// Si hay más de uno, verificamos si son de la misma manzana
+					boolean mismaManzana = listaLotes.stream().map(LoteResponseDTO::getManzana).distinct().count() == 1;
 
-			if (mismaManzana) {
-				ubicacionTexto.append("ubicado la Manzana “").append(listaLotes.get(0).getManzana()).append("” y asignado, con los lotes ");
-				for (int i = 0; i < listaLotes.size(); i++) {
-					ubicacionTexto.append("Nº ").append(listaLotes.get(i).getNumeroLote());
-					if (i < listaLotes.size() - 1) ubicacionTexto.append(" y ");
+					if (mismaManzana) {
+						ubicacionTexto.add("ubicado la Manzana “");
+						ubicacionTexto.add(new Text(listaLotes.get(0).getManzana()).setFont(arialBoldItalic)); // 🔹 Negrita
+						ubicacionTexto.add("” y asignado, con los lotes ");
+						for (int i = 0; i < listaLotes.size(); i++) {
+							ubicacionTexto.add("Nº ");
+							ubicacionTexto.add(new Text(listaLotes.get(i).getNumeroLote()).setFont(arialBoldItalic)); // 🔹 Negrita
+							if (i < listaLotes.size() - 1) ubicacionTexto.add(" y ");
+						}
+					} else {
+						// Si son manzanas distintas
+						for (int i = 0; i < listaLotes.size(); i++) {
+							ubicacionTexto.add("la Manzana “");
+							ubicacionTexto.add(new Text(listaLotes.get(i).getManzana()).setFont(arialBoldItalic)); // 🔹 Negrita
+							ubicacionTexto.add("” asignado, con el lote ");
+							ubicacionTexto.add(new Text(listaLotes.get(i).getNumeroLote()).setFont(arialBoldItalic)); // 🔹 Negrita
+							if (i < listaLotes.size() - 1) ubicacionTexto.add(" y ");
+						}
+					}
+					// Sumamos áreas
+					for (LoteResponseDTO l : listaLotes) { areaTotal = areaTotal.add(l.getArea()); }
 				}
-			} else {
-				// Si son manzanas distintas
-				for (int i = 0; i < listaLotes.size(); i++) {
-					ubicacionTexto.append("la Manzana “").append(listaLotes.get(i).getManzana()).append("” asignado, con el lote ").append(listaLotes.get(i).getNumeroLote());
-					if (i < listaLotes.size() - 1) ubicacionTexto.append(" y ");
-				}
-			}
-			// Sumamos áreas
-			for (LoteResponseDTO l : listaLotes) { areaTotal = areaTotal.add(l.getArea()); }
-		}
-
 		// 2. Bloque descriptivo inicial
 		Paragraph segundaIntro = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
