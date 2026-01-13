@@ -162,6 +162,10 @@ public class PdfGenerator {
 		String verboDebera = (numClientes > 1) ? "deberán" : "deberá";
 		String verboDesea = (numClientes > 1) ? "desean" : "desea";
 		String verboCompromete = (numClientes > 1) ? "se comprometen" : "se compromete";
+		String verboAdeude = (numClientes > 1) ? "adeuden" : "adeude";
+		String verboReconoce = (numClientes > 1) ? "reconocen" : "reconoce";
+		String verboCancele = (numClientes > 1) ? "cancele" : "cancelen";
+		
 	
 
 		// --- DATOS DEL LOTE Y PRECIO (RESTAURADO) ---
@@ -847,7 +851,7 @@ public class PdfGenerator {
 		decimaTerceraCuerpo.add(new Text("LA VENDEDORA ").setFont(arialBoldItalic));
 		decimaTerceraCuerpo.add("haya concluido con todos los trámites pertinentes a la formalización de su derecho de propiedad, siempre y cuando que ");
 		decimaTerceraCuerpo.add(new Text(etiquetaComprador + " ").setFont(arialBoldItalic));
-		decimaTerceraCuerpo.add("no adeude suma alguna, ello toda vez que las partes declaran conocer el hecho que el presente contrato es privado y quedara sujeto al cumplimiento de los acuerdos establecidos en cada una de las cláusulas de este instrumento legal, para que opere la traslación de dominio; obligándose la compradora a no condicionar el cumplimiento de su obligación ante la eventual demora que pudiera resultar de la tramitación del mismo por parte de las autoridades competentes, gestión que se encuentra en proceso; Las partes contratantes de mutuo acuerdo se compromete a firmar una Minuta y la correspondiente Escritura Pública de compraventa cuando estas condiciones se materialicen, respetándose el integro de los pactos contenidos en el presente contrato.");
+		decimaTerceraCuerpo.add("no "+verboAdeude+" suma alguna, ello toda vez que las partes declaran conocer el hecho que el presente contrato es privado y quedara sujeto al cumplimiento de los acuerdos establecidos en cada una de las cláusulas de este instrumento legal, para que opere la traslación de dominio; obligándose la compradora a no condicionar el cumplimiento de su obligación ante la eventual demora que pudiera resultar de la tramitación del mismo por parte de las autoridades competentes, gestión que se encuentra en proceso; Las partes contratantes de mutuo acuerdo se compromete a firmar una Minuta y la correspondiente Escritura Pública de compraventa cuando estas condiciones se materialicen, respetándose el integro de los pactos contenidos en el presente contrato.");
 		document.add(decimaTerceraCuerpo);
 
 		/* =================================================================
@@ -1130,7 +1134,7 @@ public class PdfGenerator {
 
 		// Cuerpo de la cláusula con negritas dinámicas
 		terceroCuerpo.add(new Text("“" + etiquetaComprador + "”").setFont(arialBold));
-		terceroCuerpo.add(" reconoce encontrarse adeudando a ");
+		terceroCuerpo.add(" "+verboReconoce+" encontrarse adeudando a ");
 		terceroCuerpo.add(new Text("\"LA VENDEDORA\"").setFont(arialBold));
 		terceroCuerpo.add(" a la fecha de la entrega y toma de posesión del terreno, la cantidad de ");
 
@@ -1178,7 +1182,7 @@ public class PdfGenerator {
 		cuartoCuerpo.add(new Text("\"LA VENDEDORA\"").setFont(arialBold));
 		cuartoCuerpo.add(" se reserva la Propiedad hasta que ");
 		cuartoCuerpo.add(new Text("“" + etiquetaComprador + "”").setFont(arialBold));
-		cuartoCuerpo.add(" cancelen las cuotas estipuladas en la cláusula Tercera del Contrato de Compra-Venta, conforme a lo dispuesto por el artículo 1583 del Código Civil, no pudiendo en consecuencia, gravar, vender ni afectar en forma alguna el lote de terreno materia de la presente venta, mientras no consolide su derecho de propiedad con el pago total del precio de venta, salvo con autorización e intervención expresa de la ");
+		cuartoCuerpo.add(" "+verboCancele+" las cuotas estipuladas en la cláusula Tercera del Contrato de Compra-Venta, conforme a lo dispuesto por el artículo 1583 del Código Civil, no pudiendo en consecuencia, gravar, vender ni afectar en forma alguna el lote de terreno materia de la presente venta, mientras no consolide su derecho de propiedad con el pago total del precio de venta, salvo con autorización e intervención expresa de la ");
 		cuartoCuerpo.add(new Text("“PROPIETARIA”").setFont(arialBold));
 		cuartoCuerpo.add(" o ");
 		cuartoCuerpo.add(new Text("\"VENDEDORA.---").setFont(arialBold));
