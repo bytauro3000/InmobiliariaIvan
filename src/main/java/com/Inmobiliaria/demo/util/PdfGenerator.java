@@ -164,7 +164,7 @@ public class PdfGenerator {
 		String verboCompromete = (numClientes > 1) ? "se comprometen" : "se compromete";
 		String verboAdeude = (numClientes > 1) ? "adeuden" : "adeude";
 		String verboReconoce = (numClientes > 1) ? "reconocen" : "reconoce";
-		String verboCancele = (numClientes > 1) ? "cancele" : "cancelen";
+		String verboCancele = (numClientes > 1) ? "cancelen" : "cancele";
 		
 	
 
@@ -450,7 +450,7 @@ public class PdfGenerator {
 			subclausula32.add(" de ");
 			subclausula32.add(new Text("US$" + df.format(ultimaLetra.getImporte())).setFont(arialBoldItalic));
 			subclausula32.add(") debidamente aceptadas por ");
-			subclausula32.add(new Text("“" + etiquetaComprador).setFont(arialBoldItalic));
+			subclausula32.add(new Text("“" + etiquetaComprador + "”").setFont(arialBoldItalic));
 			subclausula32.add(", según el detalle siguiente:");
 
 			document.add(subclausula32);
@@ -649,7 +649,7 @@ public class PdfGenerator {
 		p2.add(" sin desembolso alguno para ella las mejoras introducidas en el inmueble o lote, sin obligación de reembolso de ninguna clase por parte de esta ni el pago de mejoras por acuerdo libre de ambas partes. Estipulándose así mismo que durante todo el tiempo que demore la devolución de dicho inmueble ");
 		p2.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
 		// 🔹 CAMBIO: verboDebera (deberá / deberán)
-		p2.add(" " + verboDebera + " pagar mensualmente al a vendedora el ");
+		p2.add(" " + verboDebera + " pagar mensualmente a la vendedora el ");
 		p2.add(new Text("3% del precio total").setFont(arialBoldItalic));
 		p2.add(" estipulado en calidad de merced conductiva; incrementándose esta en un 50% cada año que venza, hasta su desocupación total.");
 		item2.add(p2);
