@@ -56,6 +56,14 @@ public class Lote {
 
     @Column(name = "colindante_oeste", length = 100)
     private String colindanteOeste;
+    
+    @Transient //Esto evita que se cree una columna en la BD
+    public BigDecimal getPrecioListaTotal() {
+        if (this.area != null && this.precioM2 != null) {
+            return this.area.multiply(this.precioM2);
+        }
+        return BigDecimal.ZERO;
+    }
 
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", length = 20)

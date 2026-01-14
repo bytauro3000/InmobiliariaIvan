@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -46,10 +47,11 @@ public class LoteController {
         return (lote != null) ? ResponseEntity.ok(lote) : ResponseEntity.notFound().build();
     }
 
-    @PostMapping("/{id}")
-    public Lote actualizarLote(@PathVariable Integer id, @RequestBody Lote lote) {
+    @PutMapping("/{id}")
+    public ResponseEntity<Lote> actualizarLote(@PathVariable Integer id, @RequestBody Lote lote) {
         lote.setIdLote(id);
-        return loteService.actualizarLote(lote);
+        Lote actualizado = loteService.actualizarLote(lote);
+        return (actualizado != null) ? ResponseEntity.ok(actualizado) : ResponseEntity.badRequest().build();
     }
 
     @PostMapping
