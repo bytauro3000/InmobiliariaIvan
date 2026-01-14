@@ -22,5 +22,5 @@ public interface ClienteRepository extends JpaRepository<Cliente, Integer> {
     
     Cliente findByNumDoc(String numDocumento);
     Cliente findTopByOrderByIdClienteDesc();
-    List<Cliente> findAll();
+    List<Cliente> findAllByOrderByIdClienteDesc();
 }
