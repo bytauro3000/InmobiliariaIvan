@@ -155,7 +155,29 @@ public class ContratoServiceImpl implements ContratoService {
     @Override
     @Transactional
     public void eliminarContrato(Integer idContrato) {
-        contratoRepository.deleteById(idContrato);
+        // 1. Buscamos el contrato con sus lotes asociados antes de eliminarlo
+        Contrato contrato = contratoRepository.findById(idContrato)
+                .orElseThrow(() -> new RuntimeException("No se encontró el contrato con ID: " + idContrato));
+
+        // 2. Si el contrato tiene lotes, debemos regresarlos a estado "Disponible"
+        if (contrato.getLotes() != null && !contrato.getLotes().isEmpty()) {
+            for (ContratoLote contratoLote : contrato.getLotes()) {
+                Lote lote = contratoLote.getLote();
+                if (lote != null) {
+                    // Cambiamos el estado de 'Vendido' a 'Disponible'
+                    lote.setEstado(EstadoLote.Disponible); 
+                    loteService.actualizarLote(lote);
+                }
+            }
+        }
+
+        // 3. Si el contrato vino de una separación, SE FINALIZARA
+        if (contrato.getSeparacion() != null) {
+            Separacion sep = contrato.getSeparacion();
+            sep.setEstado(EstadoSeparacion.FINALIZADO); 
+            separacionService.actualizarSeparacion(sep);
+        }
+        contratoRepository.delete(contrato);
     }
 
     // 🟢 NUEVO: Implementación para generar el PDF
