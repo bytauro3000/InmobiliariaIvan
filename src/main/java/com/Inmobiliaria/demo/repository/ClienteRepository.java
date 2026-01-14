@@ -11,13 +11,16 @@ import com.Inmobiliaria.demo.entity.Cliente;
 public interface ClienteRepository extends JpaRepository<Cliente, Integer> {
 
 	 
-    Cliente findByNumDoc(String numDocumento);
-
-    // Consulta JPQL con concatenación para filtrar por nombres + apellidos o apellidos + nombres
-    @Query("SELECT c FROM Cliente c WHERE LOWER(CONCAT(c.apellidos, ' ', c.nombre)) LIKE LOWER(CONCAT('%', :filtro, '%'))")
-    List<Cliente> buscarPorApellidosYNombres(@Param("filtro") String filtro);
-
-    Cliente findTopByOrderByIdClienteDesc();
+	// 🔹 Filtro específico para Nombres + Apellidos
+    @Query("SELECT c FROM Cliente c WHERE " +
+           "LOWER(CONCAT(c.nombre, ' ', c.apellidos)) LIKE LOWER(CONCAT('%', :filtro, '%'))")
+    List<Cliente> buscarPorNombresYApellidos(@Param("filtro") String filtro);
     
+ // 🔹 Filtro específico para Documento (usando LIKE para que sea búsqueda parcial)
+    @Query("SELECT c FROM Cliente c WHERE c.numDoc LIKE CONCAT('%', :filtro, '%')")
+    List<Cliente> buscarPorDocumento(@Param("filtro") String filtro);
+    
+    Cliente findByNumDoc(String numDocumento);
+    Cliente findTopByOrderByIdClienteDesc();
     List<Cliente> findAll();
 }

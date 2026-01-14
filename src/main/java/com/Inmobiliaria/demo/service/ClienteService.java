@@ -12,6 +12,8 @@ public interface ClienteService {
 	    
 	 Cliente buscarClientePorId(Integer idCliente);
 	 Cliente buscarClientePorNumDoc(String numDoc);
-	// Nuevo método para buscar por apellidos y nombres concatenados
-	 List<Cliente> buscarPorApellidosYNombres(String filtro);
+	
+	// 🔹 Nuevos métodos para los filtros independientes
+	 List<Cliente> buscarPorNombresYApellidos(String filtro);
+	 List<Cliente> buscarPorDocumento(String filtro);
 }

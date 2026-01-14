@@ -35,9 +35,19 @@ public class ClienteController {
         return clienteService.buscarClientePorNumDoc(numDoc);
     }
   
-    @GetMapping("/buscar/filtro/{filtro}")
-    public List<Cliente> buscarClientesPorFiltro(@PathVariable String filtro) {
-        return clienteService.buscarPorApellidosYNombres(filtro);
+ // 🔹 NUEVO ENDPOINT DE BÚSQUEDA DINÁMICA
+    @GetMapping("/buscar/filtro")
+    public List<Cliente> buscarClientes(
+            @RequestParam("termino") String termino, 
+            @RequestParam("tipo") String tipo) {
+        
+        if ("documento".equals(tipo)) {
+            // Si el select en Angular es 'documento'
+            return clienteService.buscarPorDocumento(termino);
+        } else {
+            // Por defecto busca por nombres y apellidos
+            return clienteService.buscarPorNombresYApellidos(termino);
+        }
     }
 
     @PostMapping("/agregar")

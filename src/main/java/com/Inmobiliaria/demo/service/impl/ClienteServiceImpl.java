@@ -44,8 +44,15 @@ public class ClienteServiceImpl implements ClienteService {
     }
     
     @Override
-    public List<Cliente> buscarPorApellidosYNombres(String filtro) {
-        return clienteRepository.buscarPorApellidosYNombres(filtro);
+    public List<Cliente> buscarPorNombresYApellidos(String filtro) {
+        // Llama al método del repositorio que hace el CONCAT de nombre y apellidos
+        return clienteRepository.buscarPorNombresYApellidos(filtro);
+    }
+
+    @Override
+    public List<Cliente> buscarPorDocumento(String filtro) {
+        // Llama al método del repositorio que busca solo en numDoc
+        return clienteRepository.buscarPorDocumento(filtro);
     }
 
     @Override
