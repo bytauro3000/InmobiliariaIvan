@@ -24,6 +24,12 @@ public class LoteServiceImpl implements LoteService {
     public List<Object[]> obtenerConteoPorEstadoYPrograma() {
         return loteRepository.contarLotesPorProgramaYEstado();
     }
+    
+    @Override
+    public List<Lote> listarLotesPorProgramaGestion(Integer idPrograma) {
+        // 🔹 Llama al método que ya tienes en el Repository que no filtra por estado
+        return loteRepository.findByProgramaIdPrograma(idPrograma);
+    }
 
     @Override
     public List<LoteProgramaResponseDTO> listarLotesPorPrograma(Integer idPrograma) {

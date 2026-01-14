@@ -13,6 +13,8 @@ public interface LoteService {
 	
 	List<LoteProgramaResponseDTO> listarLotesPorPrograma(Integer idPrograma);
 	
+	List<Lote> listarLotesPorProgramaGestion(Integer idPrograma);
+	
 	Lote actualizarLote(Lote reg);
 	
 	Lote obtenerLotePorId(Integer id);

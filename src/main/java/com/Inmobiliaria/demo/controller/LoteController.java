@@ -62,5 +62,12 @@ public class LoteController {
     public void EliminarLote(@PathVariable Integer id) {
     	loteService.eliminarLote(id);
     }
+    
+ // URL: GET /api/lotes/gestion/programa/{idPrograma}
+    @GetMapping("/gestion/programa/{idPrograma}")
+    public ResponseEntity<List<Lote>> obtenerLotesParaGestion(@PathVariable Integer idPrograma) {
+        List<Lote> lotes = loteService.listarLotesPorProgramaGestion(idPrograma);
+        return ResponseEntity.ok(lotes);
+    }
 
 }

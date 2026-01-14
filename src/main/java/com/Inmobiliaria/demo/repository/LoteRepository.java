@@ -23,4 +23,5 @@ public interface LoteRepository extends JpaRepository<Lote, Integer>{
 
     //Este es el método que necesitas para filtrar por programa Y estado
     List<Lote> findByProgramaIdProgramaAndEstadoEquals(Integer idPrograma, EstadoLote estado);
+    
 }
