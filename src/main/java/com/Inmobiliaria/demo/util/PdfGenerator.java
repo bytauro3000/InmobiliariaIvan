@@ -1333,7 +1333,7 @@ public class PdfGenerator {
 				.useAllAvailableWidth()
 				.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
 
-		// --- BLOQUE IZQUIERDO: PRIMER COMPRADOR (Al ras del margen izquierdo) ---
+		// --- BLOQUE IZQUIERDO: PRIMER COMPRADOR (Al ras del margen izquierdo) -
 		ClienteResponseDTO c1 = clientes.get(0);
 		Cell celdaC1 = new Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
 				.setTextAlignment(TextAlignment.CENTER)
