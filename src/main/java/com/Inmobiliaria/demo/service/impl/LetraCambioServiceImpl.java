@@ -74,7 +74,6 @@ public class LetraCambioServiceImpl implements LetraCambioService {
             ReporteLetraCambioDTO dto = new ReporteLetraCambioDTO();
             dto.setNumeroLetra((String) row[0]);
 
-            // Si la fecha es de tipo java.sql.Date, convertirla a LocalDate
             java.sql.Date sqlFechaGiro = (java.sql.Date) row[1];
             LocalDate fechaGiro = sqlFechaGiro != null ? sqlFechaGiro.toLocalDate() : null;
             dto.setFechaGiro(fechaGiro);
@@ -99,7 +98,6 @@ public class LetraCambioServiceImpl implements LetraCambioService {
         return reportes;
     }
     
- // Nuevo método para obtener el reporte del cronograma de pagos con múltiples clientes y lotes
     @Override
     @Transactional
     public List<ReporteCronogramaPagosClientesDTO> obtenerReporteCronogramaPagosPorContrato(Integer idContrato) {
@@ -108,7 +106,7 @@ public class LetraCambioServiceImpl implements LetraCambioService {
 
         for (Object[] row : results) {
             ReporteCronogramaPagosClientesDTO dto = new ReporteCronogramaPagosClientesDTO();
-            int i = 0; // Usar un índice para mayor claridad y seguridad
+            int i = 0; 
 
             dto.setIdLetra((Integer) row[i++]);
             dto.setCantidadLetras((Integer) row[i++]);
@@ -119,7 +117,6 @@ public class LetraCambioServiceImpl implements LetraCambioService {
             dto.setVendedorApellidos((String) row[i++]);
             dto.setNumeroLetra((String) row[i++]);
 
-            // Conversión de fecha
             java.sql.Date sqlFechaVencimiento = (java.sql.Date) row[i++];
             dto.setFechaVencimiento(sqlFechaVencimiento != null ? sqlFechaVencimiento.toLocalDate() : null);
 
@@ -170,17 +167,18 @@ public class LetraCambioServiceImpl implements LetraCambioService {
                 throw new IllegalArgumentException("El saldo del contrato es inválido o cero");
             }
 
-            // Trabajar con saldo entero (redondeado)
             BigDecimal saldoEntero = saldo.setScale(0, BigDecimal.ROUND_HALF_UP);
-
             importePorLetra = saldoEntero.divide(new BigDecimal(cantidad), 0, BigDecimal.ROUND_DOWN);
             BigDecimal sumaParcial = importePorLetra.multiply(new BigDecimal(cantidad - 1));
-            // La última letra es el resto del saldo menos la suma parcial, redondeada al entero más cercano
             importeUltimaLetra = saldoEntero.subtract(sumaParcial).setScale(0, BigDecimal.ROUND_HALF_UP);
         } else {
             try {
-                String importeStr = generarLetrasRequest.getImporte().replaceAll("[^\\d]", "");
-                importePorLetra = new BigDecimal(importeStr).setScale(0, BigDecimal.ROUND_HALF_UP);
+                // 🔹 CORRECCIÓN: Mantener el punto decimal y limpiar solo símbolos de moneda/comas
+                String importeStr = generarLetrasRequest.getImporte()
+                                    .replace("$", "")
+                                    .replace(",", "")
+                                    .trim();
+                importePorLetra = new BigDecimal(importeStr).setScale(2, BigDecimal.ROUND_HALF_UP);
             } catch (NumberFormatException e) {
                 throw new IllegalArgumentException("Importe inválido: " + generarLetrasRequest.getImporte());
             }
@@ -229,32 +227,24 @@ public class LetraCambioServiceImpl implements LetraCambioService {
         LetraCambio letraExistente = letraCambioRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Letra de cambio no encontrada con el ID: " + id));
 
-        // Actualizar campos
         letraExistente.setFechaGiro(letraCambioDTO.getFechaGiro());
         letraExistente.setFechaVencimiento(letraCambioDTO.getFechaVencimiento());
         letraExistente.setImporte(letraCambioDTO.getImporte());
-
-        // Agregar esta línea para actualizar importeLetras:
         letraExistente.setImporteLetras(letraCambioDTO.getImporteLetras());
-
         letraExistente.setEstadoLetra(EstadoLetra.valueOf(letraCambioDTO.getEstadoLetra()));
         letraExistente.setNumeroComprobante(letraCambioDTO.getNumeroComprobante());
         letraExistente.setObservaciones(letraCambioDTO.getObservaciones());
 
-        // Guardar y retornar
         LetraCambio letraActualizada = letraCambioRepository.save(letraExistente);
         return modelMapper.map(letraActualizada, LetraCambioDTO.class);
     }
     
-    
     @Override
     @Transactional
     public void eliminarPorContrato(Integer idContrato) {
-        // Verifica si el contrato existe antes de intentar eliminar
         contratoRepository.findById(idContrato)
             .orElseThrow(() -> new IllegalArgumentException("Contrato no encontrado con el ID: " + idContrato));
         
-        // Llama al nuevo método del repositorio para la eliminación masiva
         letraCambioRepository.deleteByContratoIdContrato(idContrato);
     }
 }
