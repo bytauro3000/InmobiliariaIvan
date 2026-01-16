@@ -17,7 +17,10 @@ import com.itextpdf.layout.properties.TextAlignment;
 import java.io.ByteArrayOutputStream;
 import java.text.DecimalFormat;
 import java.util.List;
+import java.util.Map;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.time.LocalDate;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -421,78 +424,91 @@ public class PdfGenerator {
 
 		// --- Validación de Letras para evitar errores NullPointer ---
 		if (contrato.getLetras() != null && !contrato.getLetras().isEmpty()) {
-			LetraResponseDTO primeraLetra = contrato.getLetras().get(0);
+		    List<LetraResponseDTO> listaLetras = contrato.getLetras();
+		    int totalLetras = contrato.getCantidadLetras();
+		    
+		    // 🔹 DECLARACIÓN DE VARIABLES PARA USO EN TODAS LAS SUBCLÁUSULAS
+		    LetraResponseDTO primeraLetra = listaLetras.get(0);
+		    LetraResponseDTO ultimaLetra = listaLetras.get(totalLetras - 1); 
 
-			terceraCuerpo.add(new Text("US$." + df.format(contrato.getMontoTotal())).setFont(arialBoldItalic));
-			terceraCuerpo.add(new Text(" (" + montoTotalLetras + ")").setFont(arialBoldItalic));
-			terceraCuerpo.add(", que ");
-			terceraCuerpo.add(new Text("“" + etiquetaComprador + "”").setFont(arialBoldItalic));
-			terceraCuerpo.add(" " + verboSeObliga + " a cancelar en dinero, íntegramente y por armadas, según el cronograma de la siguiente forma:");	
-			document.add(terceraCuerpo);
+		    terceraCuerpo.add(new Text("US$." + df.format(contrato.getMontoTotal())).setFont(arialBoldItalic));
+		    terceraCuerpo.add(new Text(" (" + montoTotalLetras + ")").setFont(arialBoldItalic));
+		    terceraCuerpo.add(", que ");
+		    terceraCuerpo.add(new Text("“" + etiquetaComprador + "”").setFont(arialBoldItalic));
+		    terceraCuerpo.add(" " + verboSeObliga + " a cancelar en dinero, íntegramente y por armadas, según el cronograma de la siguiente forma:");    
+		    document.add(terceraCuerpo);
 
-			// 3. Sub-cláusulas 3.1, 3.2 y 3.3 con sangría (Margen izquierdo)
-			// 3.1 Cuota Inicial
-			// Subcláusula 3.1 (Cuota inicial)
-			String textoInicial = (contrato.getInicial().doubleValue() > 0) ? "US$." + df.format(contrato.getInicial()) : "Sin Cuota inicial.";
-			document.add(new Paragraph("3.1 " + textoInicial).setFont(arialItalic).setFontSize(11).setMarginLeft(40).setMarginTop(10));
+		    // --- 3.1 CUOTA INICIAL ---
+		    String textoInicial = (contrato.getInicial().doubleValue() > 0) ? "US$." + df.format(contrato.getInicial()) : "Sin Cuota inicial.";
+		    document.add(new Paragraph("3.1 " + textoInicial).setFont(arialItalic).setFontSize(11).setMarginLeft(40).setMarginTop(10));
 
-			// Subcláusula 3.2 (Saldo)
-			Paragraph subclausula32 = new Paragraph()
-					.setTextAlignment(TextAlignment.JUSTIFIED)
-					.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f).setMarginLeft(40).setMarginTop(10);
+		    // --- 3.2 SALDO Y AGRUPACIÓN DINÁMICA ---
+		    Paragraph subclausula32 = new Paragraph()
+		            .setTextAlignment(TextAlignment.JUSTIFIED)
+		            .setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f).setMarginLeft(40).setMarginTop(10);
 
-			subclausula32.add("3.2 El saldo del precio de ");
-			subclausula32.add(new Text("US$." + df.format(contrato.getSaldo())).setFont(arialBoldItalic));
-			subclausula32.add(new Text(" (" + montoSaldoLetras + ")").setFont(arialBoldItalic));
-			subclausula32.add(", que será cancelado en ");
+		    subclausula32.add("3.2 El saldo del precio de ");
+		    subclausula32.add(new Text("US$." + df.format(contrato.getSaldo())).setFont(arialBoldItalic));
+		    subclausula32.add(new Text(" (" + montoSaldoLetras + ")").setFont(arialBoldItalic));
+		    subclausula32.add(", que será cancelado en ");
 
-			// Cálculo de letras (139 normales y 1 última diferente según tu ejemplo)
-			int totalLetras = contrato.getCantidadLetras();
-			LetraResponseDTO ultimaLetra = contrato.getLetras().get(totalLetras - 1);
+		    // Lógica de agrupación por montos
+		    Map<BigDecimal, Integer> gruposMonto = new LinkedHashMap<>();
+		    for (LetraResponseDTO letra : listaLetras) {
+		        BigDecimal importe = letra.getImporte();
+		        gruposMonto.put(importe, gruposMonto.getOrDefault(importe, 0) + 1);
+		    }
 
-			subclausula32.add(new Text(totalLetras + " letras de cambio ").setFont(arialBoldItalic));
-			subclausula32.add("(" + (totalLetras - 1) + " letras de cambio de ");
-			subclausula32.add(new Text("US$" + df.format(primeraLetra.getImporte())).setFont(arialBoldItalic));
-			subclausula32.add(" y la última letra la ");
-			subclausula32.add(new Text("Nº" + totalLetras).setFont(arialBoldItalic));
-			subclausula32.add(" de ");
-			subclausula32.add(new Text("US$" + df.format(ultimaLetra.getImporte())).setFont(arialBoldItalic));
-			subclausula32.add(") debidamente aceptadas por ");
-			subclausula32.add(new Text("“" + etiquetaComprador + "”").setFont(arialBoldItalic));
-			subclausula32.add(", según el detalle siguiente:");
+		    subclausula32.add(new Text(totalLetras + " letras de cambio ").setFont(arialBoldItalic));
 
-			document.add(subclausula32);
+		    if (gruposMonto.size() == 1) {
+		        // Todas las letras tienen el mismo monto
+		        BigDecimal montoUnico = gruposMonto.keySet().iterator().next();
+		        subclausula32.add("de ");
+		        subclausula32.add(new Text("US$" + df.format(montoUnico)).setFont(arialBoldItalic));
+		    } else {
+		        // Hay variantes de montos (ej: última letra diferente)
+		        subclausula32.add("(");
+		        List<String> partes = new ArrayList<>();
+		        gruposMonto.forEach((monto, cantidad) -> {
+		            partes.add(cantidad + (cantidad == 1 ? " letra de " : " letras de cambio de ") + "US$" + df.format(monto));
+		        });
+		        for (int i = 0; i < partes.size(); i++) {
+		            subclausula32.add(new Text(partes.get(i)).setFont(arialBoldItalic));
+		            if (i < partes.size() - 2) subclausula32.add(", ");
+		            else if (i == partes.size() - 2) subclausula32.add(" y ");
+		        }
+		        subclausula32.add(")");
+		    }
 
-			// 3.3 Fechas de Vencimiento
-			Paragraph subclausula33 = new Paragraph()
-					.setFont(arialItalic).setFontSize(11)
-					.setMarginLeft(40).setMarginTop(10);
+		    subclausula32.add(" debidamente aceptadas por ");
+		    subclausula32.add(new Text("“" + etiquetaComprador + "”").setFont(arialBoldItalic));
+		    subclausula32.add(", según el detalle siguiente:");
+		    document.add(subclausula32);
 
-			// Definimos el formato: DIA/MES/AÑO
-			java.time.format.DateTimeFormatter formatoLindo = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+		    // --- 3.3 DETALLE DE VENCIMIENTOS ---
+		    Paragraph subclausula33 = new Paragraph()
+		            .setFont(arialItalic).setFontSize(11)
+		            .setMarginLeft(40).setMarginTop(10);
 
-			subclausula33.add("3.3 Letra ");
-			subclausula33.add(new Text("No.01").setFont(arialBoldItalic));
-			subclausula33.add(" por ");
-			subclausula33.add(new Text("US$" + df.format(primeraLetra.getImporte())).setFont(arialBoldItalic)); // Con comas
-			subclausula33.add(" con vencimiento el día ");
-			subclausula33.add(new Text(primeraLetra.getFechaVencimiento().format(formatoLindo)).setFont(arialBoldItalic));
+		    DateTimeFormatter formatoLindo = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
+		    subclausula33.add("3.3 Letra ");
+		    subclausula33.add(new Text("No.01").setFont(arialBoldItalic));
+		    subclausula33.add(" por ");
+		    subclausula33.add(new Text("US$" + df.format(primeraLetra.getImporte())).setFont(arialBoldItalic));
+		    subclausula33.add(" con vencimiento el día ");
+		    subclausula33.add(new Text(primeraLetra.getFechaVencimiento().format(formatoLindo)).setFont(arialBoldItalic));
 
-			subclausula33.add(" y la última ");
-			subclausula33.add(new Text("Letra No." + totalLetras).setFont(arialBoldItalic));
-			subclausula33.add(" por ");
-			subclausula33.add(new Text("US$" + ultimaLetra.getImporte()).setFont(arialBoldItalic));
-			subclausula33.add(" con vencimiento el día ");
+		    subclausula33.add(" y la última ");
+		    subclausula33.add(new Text("Letra No." + totalLetras).setFont(arialBoldItalic));
+		    subclausula33.add(" por ");
+		    subclausula33.add(new Text("US$" + df.format(ultimaLetra.getImporte())).setFont(arialBoldItalic)); 
+		    subclausula33.add(" con vencimiento el día ");
+		    subclausula33.add(new Text(ultimaLetra.getFechaVencimiento().format(formatoLindo)).setFont(arialBoldItalic));
+		    subclausula33.add(".");
 
-			// Formateo directo asumiendo que el dato siempre existe
-			subclausula33.add(new Text(ultimaLetra.getFechaVencimiento().format(formatoLindo)).setFont(arialBoldItalic));
-
-			subclausula33.add(".");
-
-			document.add(subclausula33);
-
-
+		    document.add(subclausula33);
 
 			// 4. Párrafo final de garantía y domicilio de pago
 			Paragraph terceraFinal = new Paragraph()
