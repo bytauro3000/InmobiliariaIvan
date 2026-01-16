@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Date;
 import java.time.LocalDate;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.format.DateTimeFormatter;
 import com.itextpdf.layout.element.ListItem;
 import com.itextpdf.io.font.PdfEncodings;
@@ -342,7 +343,7 @@ public class PdfGenerator {
 		segundaIntro.add(" del Programa de Vivienda ");
 		segundaIntro.add(new Text("“LA FLORIDA DE TORRE BLANCA”").setFont(arialBoldItalic));
 		segundaIntro.add(" con un área total de ");
-        
+
 		// 🔹 Área en Negrita
 		segundaIntro.add(new Text(areaTotal + "M2.").setFont(arialBoldItalic));
 		segundaIntro.add(" Encerrado dentro de los siguientes linderos y medidas perimétricas:");
@@ -1132,50 +1133,71 @@ public class PdfGenerator {
 		document.add(segundoCuerpo);
 
 		/* ===========================================================================================  
-         						CLAUSULA TERCERA: DEL DOCUMENTO DE SEÑALIZACION 
-         ==============================================================================================*/  
-		// --- CLAUSULA TERCERA: RECONOCIMIENTO DE DEUDA E HIPOTECA ---
+			CLAUSULA TERCERA: RECONOCIMIENTO DE DEUDA E HIPOTECA 
+		==============================================================================================*/  
+		//--- LÓGICA DE CÁLCULO DINÁMICO ---
+		BigDecimal saldoParaClausula;
+		int cantidadLetrasParaClausula;
+
+		//Obtenemos los valores base del contrato
+		BigDecimal saldoContrato = contrato.getSaldo();
+		BigDecimal inicialContrato = contrato.getInicial();
+		int totalLetras = contrato.getCantidadLetras();
+
+		//Lógica de validación: ¿Paga la primera letra hoy? (Inicial = 0)
+		if (inicialContrato == null || inicialContrato.compareTo(BigDecimal.ZERO) == 0) {
+			// Si no hay inicial, se asume que pagó la 1ra letra hoy.
+			// Calculamos el monto de una letra promedio (Saldo / TotalLetras)
+			BigDecimal montoUnaLetra = saldoContrato.divide(new BigDecimal(totalLetras), 2, RoundingMode.HALF_UP);
+
+			// El reconocimiento de deuda es por el saldo menos la letra ya pagada
+			saldoParaClausula = saldoContrato.subtract(montoUnaLetra);
+			cantidadLetrasParaClausula = totalLetras - 1;
+		} else {
+			// Si hubo inicial, el reconocimiento es por el saldo total y todas las letras
+			saldoParaClausula = saldoContrato;
+			cantidadLetrasParaClausula = totalLetras;
+		}
+
+		//Convertimos el nuevo saldo y cantidad a letras para el documento
+		String saldoTextoClausula = NumeroALetras.convertir(saldoParaClausula);
+		BigDecimal cantLetrasBD = BigDecimal.valueOf(cantidadLetrasParaClausula);
+		String letrasEnTextoClausula = NumeroALetras.convertir(cantLetrasBD).split(" CON ")[0];
+
+		//--- CONSTRUCCIÓN DEL PÁRRAFO ---
 		Paragraph terceroCuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialItalic)
 				.setFontSize(11)
 				.setMarginTop(15)
-				.setMultipliedLeading(1.0f);
+				.setMultipliedLeading(1.2f);
 
-
-		// Título: TERCERO en Negrita, Cursiva y Subrayado
 		terceroCuerpo.add(new Text("TERCERO.").setFont(arialBoldItalic).setUnderline());
 		terceroCuerpo.add(" - ");
 
-		// Cuerpo de la cláusula con negritas dinámicas
 		terceroCuerpo.add(new Text("“" + etiquetaComprador + "”").setFont(arialBold));
-		terceroCuerpo.add(" "+verboReconoce+" encontrarse adeudando a ");
+		terceroCuerpo.add(" " + verboReconoce + " encontrarse adeudando a ");
 		terceroCuerpo.add(new Text("\"LA VENDEDORA\"").setFont(arialBold));
 		terceroCuerpo.add(" a la fecha de la entrega y toma de posesión del terreno, la cantidad de ");
 
-		// Monto del saldo en Negrita
-		terceroCuerpo.add(new Text("US$." + df.format(contrato.getSaldo())).setFont(arialBold));
-		terceroCuerpo.add(new Text(" (" + montoSaldoLetras + ")").setFont(arialBold));
+		//Monto calculado (Saldo Real Adeudado)
+		terceroCuerpo.add(new Text("US$." + df.format(saldoParaClausula)).setFont(arialBold));
+		terceroCuerpo.add(new Text(" (" + saldoTextoClausula + ")").setFont(arialBold));
 
 		terceroCuerpo.add(" representado por ");
 
-		// Cantidad de letras en Negrita (usando NumeroALetras para el texto entre paréntesis)
-		int totalLetrasPosesion = contrato.getCantidadLetras();
-		java.math.BigDecimal totalLetrasBD = java.math.BigDecimal.valueOf(totalLetrasPosesion);
-		String letrasEnTexto = NumeroALetras.convertir(totalLetrasBD).split(" CON ")[0];
-
-		terceroCuerpo.add(new Text(totalLetrasPosesion + "(" + letrasEnTexto + ")").setFont(arialBold));
+		//Cantidad calculada (Total letras - 1 si aplica)
+		terceroCuerpo.add(new Text(cantidadLetrasParaClausula + " (" + letrasEnTextoClausula + ")").setFont(arialBold));
 		terceroCuerpo.add(" letras de cambio aceptadas e Impagadas por cuyo saldo de precio y posibles costas de juicio, faculta expresamente otorgar garantía real hipotecaria a favor de los propietarios del inmueble que se viene adquiriendo, consintiendo en consecuencia y constituyendo ");
 
-		// Resaltado de Hipoteca en Negrita
 		terceroCuerpo.add(new Text("primera y preferencia Hipoteca ").setFont(arialBold));
 		terceroCuerpo.add("a favor de ");
 		terceroCuerpo.add(new Text("\"LA VENDEDORA\"").setFont(arialBold));
 		terceroCuerpo.add(", hasta por la suma de ");
 
-		// Repetición del monto en Negrita
-		terceroCuerpo.add(new Text("US$." + df.format(contrato.getSaldo())).setFont(arialBold));
-		terceroCuerpo.add(new Text(" (" + montoSaldoLetras + ")").setFont(arialBold));
+		//Repetición del monto calculado para la Hipoteca
+		terceroCuerpo.add(new Text("US$." + df.format(saldoParaClausula)).setFont(arialBold));
+		terceroCuerpo.add(new Text(" (" + saldoTextoClausula + ")").setFont(arialBold));
 
 		terceroCuerpo.add(" conforme a los Artículos 1118 y 1119 Código Civil Vigente, la presente hipoteca se hace extensiva a todas sus partes integrantes, accesorias y anexos, y a todo cuanto en el futuro se edifique, instale o implante sobre el inmueble materia de la presente, conforme lo faculta el artículo 1101 del Código Civil Vigente.");
 
