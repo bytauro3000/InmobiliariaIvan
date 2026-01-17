@@ -108,8 +108,19 @@ public class PdfGenerator {
 
 		String nombreDistrito = (titular.getDistrito() != null) ? titular.getDistrito().getNombre() : "";
 		String domicilioCalle = (titular.getDireccion() != null) ? titular.getDireccion().toUpperCase() : "";
-		String ubicacionLima = ", Distrito de " + nombreDistrito + ", Provincia y Departamento de Lima";
-		String direccionRealParaContrato = domicilioCalle + ubicacionLima;
+
+		// 🔹 INICIO DEL AJUSTE PARA EL CALLAO
+		String ubicacionDinamica;
+		if (nombreDistrito.toUpperCase().contains("CALLAO")) {
+		    // Si el distrito es Callao, se usa Provincia del Callao y no Departamento de Lima
+		    ubicacionDinamica = ", Distrito del Callao, Provincia Constitucional del Callao";
+		} else {
+		    // Caso estándar para los distritos de Lima
+		    ubicacionDinamica = ", Distrito de " + nombreDistrito + ", Provincia y Departamento de Lima";
+		}
+
+		String direccionRealParaContrato = domicilioCalle + ubicacionDinamica;
+		
 
 		// 1. Construcción del bloque de compradores dinámica
 		Paragraph bloqueCompradores = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setFontSize(10);
