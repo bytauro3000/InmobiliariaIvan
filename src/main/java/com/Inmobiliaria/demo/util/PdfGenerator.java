@@ -571,6 +571,15 @@ public class PdfGenerator {
 		/* =========================================================
 		 * PAGINA 2: CLAUSULA CUARTA - EQUIVALENCIA
 		 * ========================================================= */
+		// 1. Obtenemos la posición Y actual (en puntos)
+				float yActual3 = document.getRenderer().getCurrentArea().getBBox().getBottom();
+				float altoPagina3 = pdf.getDefaultPageSize().getHeight();
+
+				// 2. Definimos el límite (50% de la página)
+				// Si yActual es menor al 50% del alto, significa que ya pasamos la mitad hacia abajo
+				if (yActual3 < (altoPagina3 / 2)) {
+				    document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
+				}
 
 		// 1. Título de la Cláusula (Negrita, Cursiva y Subrayado)
 		document.add(new Paragraph()
