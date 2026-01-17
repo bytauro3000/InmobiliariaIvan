@@ -442,13 +442,15 @@ public class PdfGenerator {
 		    String textoInicial = (contrato.getInicial().doubleValue() > 0) ? "US$." + df.format(contrato.getInicial()) : "Sin Cuota inicial.";
 		    document.add(new Paragraph("3.1 " + textoInicial).setFont(arialItalic).setFontSize(11).setMarginLeft(40).setMarginTop(10));
 
-		    // --- 3.2 SALDO Y AGRUPACIÓN DINÁMICA ---
+		 // --- 3.2 SALDO Y AGRUPACIÓN DINÁMICA CORREGIDO ---
 		    Paragraph subclausula32 = new Paragraph()
 		            .setTextAlignment(TextAlignment.JUSTIFIED)
 		            .setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f).setMarginLeft(40).setMarginTop(10);
 
 		    subclausula32.add("3.2 El saldo del precio de ");
+		    // Solo el monto numérico en negrita
 		    subclausula32.add(new Text("US$." + df.format(contrato.getSaldo())).setFont(arialBoldItalic));
+		    // El monto en letras en negrita
 		    subclausula32.add(new Text(" (" + montoSaldoLetras + ")").setFont(arialBoldItalic));
 		    subclausula32.add(", que será cancelado en ");
 
@@ -459,31 +461,48 @@ public class PdfGenerator {
 		        gruposMonto.put(importe, gruposMonto.getOrDefault(importe, 0) + 1);
 		    }
 
-		    subclausula32.add(new Text(totalLetras + " letras de cambio ").setFont(arialBoldItalic));
+		    // Resaltamos solo el número total de letras
+		    subclausula32.add(new Text(totalLetras + "").setFont(arialBoldItalic));
+		    subclausula32.add(" letras de cambio "); // Texto normal
 
 		    if (gruposMonto.size() == 1) {
-		        // Todas las letras tienen el mismo monto
+		        // CASO 1: Todas iguales - Solo resaltamos el monto
 		        BigDecimal montoUnico = gruposMonto.keySet().iterator().next();
 		        subclausula32.add("de ");
 		        subclausula32.add(new Text("US$" + df.format(montoUnico)).setFont(arialBoldItalic));
 		    } else {
-		        // Hay variantes de montos (ej: última letra diferente)
+		        // CASO 2: Variantes - Resaltamos cantidad y monto de cada grupo
 		        subclausula32.add("(");
-		        List<String> partes = new ArrayList<>();
-		        gruposMonto.forEach((monto, cantidad) -> {
-		            partes.add(cantidad + (cantidad == 1 ? " letra de " : " letras de cambio de ") + "US$" + df.format(monto));
-		        });
-		        for (int i = 0; i < partes.size(); i++) {
-		            subclausula32.add(new Text(partes.get(i)).setFont(arialBoldItalic));
-		            if (i < partes.size() - 2) subclausula32.add(", ");
-		            else if (i == partes.size() - 2) subclausula32.add(" y ");
+		        List<String> partesPrendidas = new ArrayList<>();
+		        
+		        int indexGrupo = 0;
+		        for (Map.Entry<BigDecimal, Integer> entry : gruposMonto.entrySet()) {
+		            BigDecimal monto = entry.getKey();
+		            Integer cantidad = entry.getValue();
+		            
+		            // Añadimos la cantidad en negrita
+		            subclausula32.add(new Text(cantidad + "").setFont(arialBoldItalic));
+		            // Texto descriptivo normal
+		            subclausula32.add(cantidad == 1 ? " letra de " : " letras de cambio de ");
+		            // Monto en negrita
+		            subclausula32.add(new Text("US$" + df.format(monto)).setFont(arialBoldItalic));
+		            
+		            // Manejo de comas y "y" entre grupos
+		            if (indexGrupo < gruposMonto.size() - 2) {
+		                subclausula32.add(", ");
+		            } else if (indexGrupo == gruposMonto.size() - 2) {
+		                subclausula32.add(" y ");
+		            }
+		            indexGrupo++;
 		        }
 		        subclausula32.add(")");
 		    }
 
 		    subclausula32.add(" debidamente aceptadas por ");
+		    // Etiqueta de comprador en negrita (pero sin cursiva según imagen 1, o arialBoldItalic si prefieres mantener el estilo)
 		    subclausula32.add(new Text("“" + etiquetaComprador + "”").setFont(arialBoldItalic));
 		    subclausula32.add(", según el detalle siguiente:");
+
 		    document.add(subclausula32);
 
 		    // --- 3.3 DETALLE DE VENCIMIENTOS ---
