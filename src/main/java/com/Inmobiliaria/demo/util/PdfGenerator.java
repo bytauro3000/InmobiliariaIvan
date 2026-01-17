@@ -943,11 +943,24 @@ public class PdfGenerator {
 		String diaLetras = NumeroALetras.convertir(diaLetrasBD).split(" CON ")[0].trim().toLowerCase(); 
 
 		BigDecimal anioBigDecimal = BigDecimal.valueOf(anioNum);
-		String anioLetras = NumeroALetras.convertir(anioBigDecimal).split(" CON ")[0].trim(); 
+		// 1. Obtenemos el año en minúsculas primero
+		String anioBase = NumeroALetras.convertir(anioBigDecimal).split(" CON ")[0].trim().toLowerCase(); 
+
+		// 2. Convertimos a formato Título (Primeras letras Mayúsculas)
+		StringBuilder formatAnio = new StringBuilder();
+		for (String palabra : anioBase.split(" ")) {
+		    if (palabra.length() > 0) {
+		        formatAnio.append(Character.toUpperCase(palabra.charAt(0)))
+		                  .append(palabra.substring(1)).append(" ");
+		    }
+		}
+		String anioLetrasFinal = formatAnio.toString().trim();
 
 		cierreFinal.add("Leído el presente contrato y estando las partes contratantes conformes con las cláusulas establecidas en el presente contrato, proceden a suscribirlo ");
-		cierreFinal.add(new Text("a los " + diaLetras + " (" + diaNum + ") días del mes de " + mesNombre + " (" + mesNum + ") del Año " + anioLetras + " (" + anioNum + ").")
-				.setFont(arialItalic));
+
+		// 3. Añadimos el texto usando arialItalic (que no es negrita) para que coincida con la imagen 1
+		cierreFinal.add(new Text("a los " + diaLetras + " (" + diaNum + ") días del mes de " + mesNombre + " (" + mesNum + ") del año " + anioLetrasFinal + " (" + anioNum + ").")
+		        .setFont(arialItalic));
 
 		document.add(cierreFinal);
 
