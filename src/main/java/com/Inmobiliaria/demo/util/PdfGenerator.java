@@ -37,7 +37,7 @@ public class PdfGenerator {
 		PdfWriter writer = new PdfWriter(out);
 		PdfDocument pdf = new PdfDocument(writer);
 		Document document = new Document(pdf);
-		document.setMargins(122, 85, 68, 85); //multiplicar los cm * 28.35 = margenes
+		document.setMargins(122, 85, 62, 85); //multiplicar los cm * 28.35 = margenes
 
 		// 🔹 CARGA DE FUENTES (NORMAL, NEGRITA Y NEGRITA-CURSIVA)
 		PdfFont arialNormal;
