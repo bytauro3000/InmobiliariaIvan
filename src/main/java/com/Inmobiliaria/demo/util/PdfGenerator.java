@@ -1180,14 +1180,13 @@ public class PdfGenerator {
          				 CLAUSULA SEGUNDA: DEL DOCUMENTO DE SEÑALIZACION
          ==============================================================================================*/
 		//salto de pagina solo si el contenido de la pagina supera el 50%
-		verificarEspacioYSalto(document, pdf, 0.2f);
 		Paragraph segundoCuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialItalic) // Fuente base cursiva
 				.setFontSize(11)      // Tamaño de letra 11 solicitado
 				.setMarginTop(15)	    // Espacio respecto a la tabla anterior
-				.setMultipliedLeading(1.0f);  //epacio interleniado
-
+				.setMultipliedLeading(1.0f)  //epacio interleniado
+				.setKeepTogether(true);
 
 		// Título: SEGUNDO en Negrita, Cursiva y Subrayado
 		segundoCuerpo.add(new Text("SEGUNDO.").setFont(arialBoldItalic).setUnderline());
