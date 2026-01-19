@@ -571,23 +571,8 @@ public class PdfGenerator {
 		/* =========================================================
 		 * PAGINA 2: CLAUSULA CUARTA - EQUIVALENCIA
 		 * ========================================================= */
-		// 1. Obtenemos el renderizador raíz para saber la posición exacta del cursor
-		com.itextpdf.layout.renderer.IRenderer renderer1 = document.getRenderer().getNextRenderer();
-		if (renderer1 instanceof com.itextpdf.layout.renderer.DocumentRenderer) {
-		    com.itextpdf.layout.layout.LayoutArea area1 = ((com.itextpdf.layout.renderer.DocumentRenderer) document.getRenderer()).getCurrentArea();
-		    
-		    if (area1 != null) {
-		        float altoPagina1 = pdf.getDefaultPageSize().getHeight();
-		        // getBBox().getHeight() nos dice cuánto espacio QUEDA libre en la página
-		        float espacioLibre = area1.getBBox().getHeight();
-		        
-		        // Si el espacio libre es MENOR al 40% de la página, significa que está llena más del 60%
-		        // Ajusta el 0.4f (40%) según prefieras (0.5f es 50%)
-		        if (espacioLibre < (altoPagina1 * 0.4f)) {
-		            document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
-		        }
-		    }
-		}
+		//salto de pagina solo si el contenido de la pagina supera el 50%
+		verificarEspacioYSalto(document, pdf, 0.4f);
 		
 		// 1. Título de la Cláusula (Negrita, Cursiva y Subrayado)
 		document.add(new Paragraph()
@@ -851,6 +836,9 @@ public class PdfGenerator {
 		/* =================================================================
 		 * PAGINA 4: CLAUSULA DECIMA: ENTREGA DEL BIEN OBJETO DEL PRESENTE CONTRATO
 		 * ================================================================= */
+		//salto de pagina solo si el contenido de la pagina supera el 50%
+		verificarEspacioYSalto(document, pdf, 0.4f);
+				
 
 		// 1. Título de la Cláusula
 		document.add(new Paragraph()
@@ -1472,5 +1460,22 @@ public class PdfGenerator {
 				document.add(tablaExtra);
 			}
 		}
+	}
+	
+	private static void verificarEspacioYSalto(Document document, PdfDocument pdf, float porcentajeRequerido) {
+	    com.itextpdf.layout.renderer.IRenderer renderer = document.getRenderer().getNextRenderer();
+	    if (renderer instanceof com.itextpdf.layout.renderer.DocumentRenderer) {
+	        com.itextpdf.layout.layout.LayoutArea area = ((com.itextpdf.layout.renderer.DocumentRenderer) document.getRenderer()).getCurrentArea();
+	        
+	        if (area != null) {
+	            float altoPagina = pdf.getDefaultPageSize().getHeight();
+	            float espacioLibre = area.getBBox().getHeight();
+	            
+	            // Si el espacio libre es menor al porcentaje solicitado (ej. 0.4f), salta de página
+	            if (espacioLibre < (altoPagina * porcentajeRequerido)) {
+	                document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
+	            }
+	        }
+	    }
 	}
 }
