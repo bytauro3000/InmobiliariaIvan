@@ -1180,7 +1180,7 @@ public class PdfGenerator {
          				 CLAUSULA SEGUNDA: DEL DOCUMENTO DE SEÑALIZACION
          ==============================================================================================*/
 		//salto de pagina solo si el contenido de la pagina supera el 50%
-		verificarEspacioYSalto(document, pdf, 0.4f);
+		verificarEspacioYSalto(document, pdf, 0.2f);
 		Paragraph segundoCuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialItalic) // Fuente base cursiva
