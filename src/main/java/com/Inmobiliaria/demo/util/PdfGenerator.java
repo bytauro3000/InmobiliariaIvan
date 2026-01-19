@@ -571,20 +571,22 @@ public class PdfGenerator {
 		/* =========================================================
 		 * PAGINA 2: CLAUSULA CUARTA - EQUIVALENCIA
 		 * ========================================================= */
-		// 1. Forzamos al documento a procesar lo anterior para que la coordenada Y sea real
-		document.flush(); 
-
-		// 2. Obtenemos la posición Y del área de dibujo actual
-		// Nota: getBottom() nos dice dónde terminó el último elemento.
-		float yActualPos = document.getRenderer().getCurrentArea().getBBox().getBottom();
-		float altoPaginaTotal = pdf.getDefaultPageSize().getHeight();
-
-		// 3. Lógica del 50%: 
-		// Si yActualPos es MENOR a la mitad (ej. 300), significa que el texto ya bajó mucho.
-		// Pero en tu imagen 3, la línea está arriba, por lo que yActualPos es ALTO (ej. 700).
-		// Agregamos una validación para que NO salte si el cursor está en la parte superior.
-		if (yActualPos > 0 && yActualPos < (altoPaginaTotal / 2)) {
-		    document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
+		// 1. Obtenemos el renderizador raíz para saber la posición exacta del cursor
+		com.itextpdf.layout.renderer.IRenderer renderer1 = document.getRenderer().getNextRenderer();
+		if (renderer1 instanceof com.itextpdf.layout.renderer.DocumentRenderer) {
+		    com.itextpdf.layout.layout.LayoutArea area1 = ((com.itextpdf.layout.renderer.DocumentRenderer) document.getRenderer()).getCurrentArea();
+		    
+		    if (area1 != null) {
+		        float altoPagina1 = pdf.getDefaultPageSize().getHeight();
+		        // getBBox().getHeight() nos dice cuánto espacio QUEDA libre en la página
+		        float espacioLibre = area1.getBBox().getHeight();
+		        
+		        // Si el espacio libre es MENOR al 40% de la página, significa que está llena más del 60%
+		        // Ajusta el 0.4f (40%) según prefieras (0.5f es 50%)
+		        if (espacioLibre < (altoPagina1 * 0.4f)) {
+		            document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
+		        }
+		    }
 		}
 		
 		// 1. Título de la Cláusula (Negrita, Cursiva y Subrayado)
