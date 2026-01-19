@@ -7,6 +7,7 @@ import com.Inmobiliaria.demo.dto.ClienteResponseDTO;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
+import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.element.AreaBreak;
 import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Paragraph;
@@ -1346,23 +1347,25 @@ public class PdfGenerator {
 
 	// 🔹 Versión para el CONTRATO (5 parámetros)
 	private static void agregarFilaLinderos(Table tabla, String etiqueta, String colindante, String medidaCompleta, PdfFont font) {
-		// Celda 1
-		tabla.addCell(new Cell()
-				.add(new Paragraph(etiqueta).setFont(font).setFontSize(11).setFixedLeading(11f)) // Leading igual al tamaño de fuente
-				.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
-				.setPaddingTop(0f).setPaddingBottom(0f)); // Elimina espacios arriba y abajo
+	    // Celda 1: Posición (frente, derecha, etc.)
+	    tabla.addCell(new Cell()
+	            .add(new Paragraph(etiqueta).setFont(font).setFontSize(11).setFixedLeading(11f))
+	            .setBorder(Border.NO_BORDER)
+	            .setPaddingTop(0f).setPaddingBottom(0f));
 
-		// Celda 2
-		tabla.addCell(new Cell()
-				.add(new Paragraph(colindante).setFont(font).setFontSize(11).setFixedLeading(11f))
-				.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
-				.setPaddingTop(0f).setPaddingBottom(0f));
+	    // Celda 2: Colindante (Calle, Lote, etc.)
+	    tabla.addCell(new Cell()
+	            .add(new Paragraph(colindante).setFont(font).setFontSize(11).setFixedLeading(11f))
+	            .setBorder(Border.NO_BORDER)
+	            .setPaddingTop(0f).setPaddingBottom(0f));
 
-		// Celda 3
-		tabla.addCell(new Cell()
-				.add(new Paragraph(medidaCompleta).setFont(font).setFontSize(11).setFixedLeading(11f))
-				.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
-				.setPaddingTop(0f).setPaddingBottom(0f));
+	    // Celda 3: Medida (LA QUE QUIERES ALINEAR)
+	    tabla.addCell(new Cell()
+	            // 🔹 CAMBIO AQUÍ: Alineamos el texto a la derecha para que los "m.l." coincidan
+	            .setTextAlignment(TextAlignment.RIGHT) 
+	            .add(new Paragraph(medidaCompleta).setFont(font).setFontSize(11).setFixedLeading(11f))
+	            .setBorder(Border.NO_BORDER)
+	            .setPaddingTop(0f).setPaddingBottom(0f));
 	}
 
 	private static String extraerNacionalidad(String celular, boolean esFemenino) {
