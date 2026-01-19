@@ -1240,7 +1240,9 @@ public class PdfGenerator {
 				.setFont(arialItalic)
 				.setFontSize(11)
 				.setMarginTop(15)
-				.setMultipliedLeading(1.2f);
+				.setMultipliedLeading(1.2f)
+				.setKeepTogether(true);
+
 
 		terceroCuerpo.add(new Text("TERCERO.").setFont(arialBoldItalic).setUnderline());
 		terceroCuerpo.add(" - ");
