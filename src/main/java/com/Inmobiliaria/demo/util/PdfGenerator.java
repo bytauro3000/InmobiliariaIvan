@@ -528,7 +528,7 @@ public class PdfGenerator {
 		    // --- 3.3 DETALLE DE VENCIMIENTOS ---
 		    Paragraph subclausula33 = new Paragraph()
 		            .setFont(arialItalic).setFontSize(11)
-		            .setMarginLeft(40).setMarginTop(10);
+		            .setMarginLeft(40).setMarginTop(8);
 
 		    DateTimeFormatter formatoLindo = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
@@ -554,7 +554,7 @@ public class PdfGenerator {
 					.setTextAlignment(TextAlignment.JUSTIFIED)
 					.setFont(arialItalic).setFontSize(11)
 					.setMultipliedLeading(1.0f)
-					.setMarginTop(15);
+					.setMarginTop(10);
 
 			terceraFinal.add("Así mismo a efectos de garantizar el cumplimiento de su obligación ");
 			terceraFinal.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
