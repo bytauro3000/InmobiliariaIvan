@@ -302,16 +302,8 @@ public class PdfGenerator {
 		/* =========================================================
 		 * PAGINA 2: CLAUSULA SEGUNDA - OBJETO DEL CONTRATO
 		 * ========================================================= */
-
-		// 1. Obtenemos la posición Y actual (en puntos)
-		float yActual = document.getRenderer().getCurrentArea().getBBox().getBottom();
-		float altoPagina = pdf.getDefaultPageSize().getHeight();
-
-		// 2. Definimos el límite (50% de la página)
-		// Si yActual es menor al 50% del alto, significa que ya pasamos la mitad hacia abajo
-		if (yActual < (altoPagina / 2)) {
-		    document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
-		}
+		//salto de pagina solo si el contenido de la pagina supera el 50%
+		verificarEspacioYSalto(document, pdf, 0.4f);
 		// 1. Título de la Cláusula
 		document.add(new Paragraph()
 				.add(new Text("SEGUNDA: OBJETO DEL CONTRATO").setFont(arialBoldItalic).setUnderline())
@@ -941,6 +933,8 @@ public class PdfGenerator {
 		/* =================================================================
 		 * PÁGINA FINAL: CLÁUSULA DÉCIMA QUINTA Y CIERRE DEL CONTRATO
 		 * ================================================================= */
+		//salto de pagina solo si el contenido de la pagina supera el 50%
+		verificarEspacioYSalto(document, pdf, 0.4f);
 
 		// 1. Título de la Cláusula Décima Quinta
 		document.add(new Paragraph()
