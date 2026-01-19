@@ -15,6 +15,8 @@ import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.element.Text;
 import com.itextpdf.layout.properties.AreaBreakType;
 import com.itextpdf.layout.properties.TextAlignment;
+import com.itextpdf.layout.properties.UnitValue;
+
 import java.io.ByteArrayOutputStream;
 import java.text.DecimalFormat;
 import java.util.List;
@@ -379,10 +381,10 @@ public class PdfGenerator {
 						.setMarginBottom(2));
 			}
 
-			float[] colWidths = {120f, 200f, 100f}; 
-			Table tablaLinderos = new Table(colWidths)
-					.setMarginLeft(10)
-					.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
+			
+			Table tablaLinderos = new Table(UnitValue.createPercentArray(new float[]{30f, 45f, 25f}))
+			        .useAllAvailableWidth()
+			        .setBorder(Border.NO_BORDER);
 
 			// Reutilizamos tu método de 5 parámetros
 			agregarFilaLinderos(tablaLinderos, "Por el frente", loteItem.getColindanteNorte(), "Con    " + loteItem.getAncho1() + "  m.l.", arialItalic);
