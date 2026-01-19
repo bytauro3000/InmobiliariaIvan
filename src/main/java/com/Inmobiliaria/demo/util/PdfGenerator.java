@@ -320,7 +320,7 @@ public class PdfGenerator {
 
 		// --- LÓGICA DINÁMICA PARA AGRUPAR MANZANAS Y LOTES ---
 		List<LoteResponseDTO> listaLotes = contrato.getLotes();
-		java.math.BigDecimal areaTotal = java.math.BigDecimal.ZERO;
+		BigDecimal areaTotal = BigDecimal.ZERO;
 		for (LoteResponseDTO l : listaLotes) { areaTotal = areaTotal.add(l.getArea()); }
 
 		// 2. Bloque descriptivo inicial
@@ -571,16 +571,18 @@ public class PdfGenerator {
 		/* =========================================================
 		 * PAGINA 2: CLAUSULA CUARTA - EQUIVALENCIA
 		 * ========================================================= */
-		// 1. Obtenemos la posición Y actual (en puntos)
-				float yActual1 = document.getRenderer().getCurrentArea().getBBox().getBottom();
-				float altoPagina1 = pdf.getDefaultPageSize().getHeight();
+		// 1. Forzamos la actualización del renderizador para obtener la posición real
+		document.flush(); 
+		float yActual1 = document.getRenderer().getCurrentArea().getBBox().getBottom();
+		float altoPagina1 = pdf.getDefaultPageSize().getHeight();
 
-				// 2. Definimos el límite (50% de la página)
-				// Si yActual es menor al 50% del alto, significa que ya pasamos la mitad hacia abajo
-				if (yActual1 < (altoPagina1 / 2)) {
-				    document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
-				}
-
+		// 2. Ajuste de Límite: 
+		// Usamos altoPagina1 / 2 (La mitad). 
+		// Si yActual1 es un número GRANDE (ej. 700), hay mucho espacio arriba.
+		// Si yActual1 es un número PEQUEÑO (ej. 100), estamos cerca del final de la hoja.
+		if (yActual1 > 0 && yActual1 < (altoPagina1 / 2)) {
+		    document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
+		}
 		// 1. Título de la Cláusula (Negrita, Cursiva y Subrayado)
 		document.add(new Paragraph()
 				.add(new Text("CUARTA: EQUIVALENCIA:").setFont(arialBoldItalic).setUnderline())
