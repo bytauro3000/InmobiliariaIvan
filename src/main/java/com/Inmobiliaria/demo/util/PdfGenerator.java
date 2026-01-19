@@ -839,7 +839,6 @@ public class PdfGenerator {
 		//salto de pagina solo si el contenido de la pagina supera el 50%
 		verificarEspacioYSalto(document, pdf, 0.4f);
 				
-
 		// 1. Título de la Cláusula
 		document.add(new Paragraph()
 				.add(new Text("DECIMA: ENTREGA DEL BIEN OBJETO DEL PRESENTE CONTRATO").setFont(arialBoldItalic).setUnderline())
