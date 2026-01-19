@@ -571,18 +571,22 @@ public class PdfGenerator {
 		/* =========================================================
 		 * PAGINA 2: CLAUSULA CUARTA - EQUIVALENCIA
 		 * ========================================================= */
-		// 1. Forzamos la actualización del renderizador para obtener la posición real
+		// 1. Forzamos al documento a procesar lo anterior para que la coordenada Y sea real
 		document.flush(); 
-		float yActual1 = document.getRenderer().getCurrentArea().getBBox().getBottom();
-		float altoPagina1 = pdf.getDefaultPageSize().getHeight();
 
-		// 2. Ajuste de Límite: 
-		// Usamos altoPagina1 / 2 (La mitad). 
-		// Si yActual1 es un número GRANDE (ej. 700), hay mucho espacio arriba.
-		// Si yActual1 es un número PEQUEÑO (ej. 100), estamos cerca del final de la hoja.
-		if (yActual1 > 0 && yActual1 < (altoPagina1 / 2)) {
+		// 2. Obtenemos la posición Y del área de dibujo actual
+		// Nota: getBottom() nos dice dónde terminó el último elemento.
+		float yActualPos = document.getRenderer().getCurrentArea().getBBox().getBottom();
+		float altoPaginaTotal = pdf.getDefaultPageSize().getHeight();
+
+		// 3. Lógica del 50%: 
+		// Si yActualPos es MENOR a la mitad (ej. 300), significa que el texto ya bajó mucho.
+		// Pero en tu imagen 3, la línea está arriba, por lo que yActualPos es ALTO (ej. 700).
+		// Agregamos una validación para que NO salte si el cursor está en la parte superior.
+		if (yActualPos > 0 && yActualPos < (altoPaginaTotal / 2)) {
 		    document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
 		}
+		
 		// 1. Título de la Cláusula (Negrita, Cursiva y Subrayado)
 		document.add(new Paragraph()
 				.add(new Text("CUARTA: EQUIVALENCIA:").setFont(arialBoldItalic).setUnderline())
