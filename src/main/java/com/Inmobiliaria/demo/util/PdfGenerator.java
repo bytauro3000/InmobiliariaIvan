@@ -1387,7 +1387,7 @@ public class PdfGenerator {
 	    Table contenedorPrincipal = new Table(1)
 	            .useAllAvailableWidth()
 	            .setBorder(Border.NO_BORDER)
-	            .setMarginTop(35f)
+	            .setMarginTop(42f)
 	            .setKeepTogether(true); 
 
 	    // 2. Tabla para la primera fila (Comprador 1 y Vendedora)
@@ -1435,7 +1435,7 @@ public class PdfGenerator {
 	            Table tablaExtra = new Table(new float[]{45f})
 	                    .setWidth(UnitValue.createPercentValue(45))
 	                    .setBorder(Border.NO_BORDER)
-	                    .setMarginTop(35f); // Espacio entre firmas
+	                    .setMarginTop(42f); // Espacio entre firmas
 
 	            Cell celdaExtra = new Cell().setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.CENTER).setPadding(0);
 	            Paragraph pLineaExtra = new Paragraph().setBorderTop(new com.itextpdf.layout.borders.SolidBorder(1f))
