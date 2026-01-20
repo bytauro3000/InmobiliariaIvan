@@ -1184,7 +1184,7 @@ public class PdfGenerator {
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialItalic) // Fuente base cursiva
 				.setFontSize(11)      // Tamaño de letra 11 solicitado
-				.setMarginTop(15)	    // Espacio respecto a la tabla anterior
+				.setMarginTop(10)	    // Espacio respecto a la tabla anterior
 				.setMultipliedLeading(1.0f)  //epacio interleniado
 				.setKeepTogether(true);
 
@@ -1239,7 +1239,7 @@ public class PdfGenerator {
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialItalic)
 				.setFontSize(11)
-				.setMarginTop(15)
+				.setMarginTop(10)
 				.setMultipliedLeading(1.2f)
 				.setKeepTogether(true);
 
@@ -1282,7 +1282,7 @@ public class PdfGenerator {
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialItalic)
 				.setFontSize(11)
-				.setMarginTop(15)
+				.setMarginTop(10)
 				.setMultipliedLeading(1.0f);
 
 
