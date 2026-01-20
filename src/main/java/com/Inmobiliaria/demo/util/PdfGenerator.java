@@ -1294,7 +1294,7 @@ public class PdfGenerator {
 		cuartoCuerpo.add(" "+verboCancele+" las cuotas estipuladas en la cláusula Tercera del Contrato de Compra-Venta, conforme a lo dispuesto por el artículo 1583 del Código Civil, no pudiendo en consecuencia, gravar, vender ni afectar en forma alguna el lote de terreno materia de la presente venta, mientras no consolide su derecho de propiedad con el pago total del precio de venta, salvo con autorización e intervención expresa de la ");
 		cuartoCuerpo.add(new Text("“PROPIETARIA”").setFont(arialBold));
 		cuartoCuerpo.add(" o ");
-		cuartoCuerpo.add(new Text("\"VENDEDORA.---").setFont(arialBold));
+		cuartoCuerpo.add(new Text("\"VENDEDORA.").setFont(arialBold));
 
 		document.add(cuartoCuerpo);
 
@@ -1387,9 +1387,10 @@ public class PdfGenerator {
 
 		// 1. Tabla principal al 100% de ancho. 
 		// Los anchos de columna fijos aseguran que no se muevan de su lugar.
-		Table tablaFirmas = new Table(com.itextpdf.layout.properties.UnitValue.createPercentArray(new float[]{45f, 10f, 45f}))
+		Table tablaFirmas = new Table(UnitValue.createPercentArray(new float[]{45f, 10f, 45f}))
 				.useAllAvailableWidth()
-				.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
+				.setBorder(Border.NO_BORDER)
+				.setKeepTogether(true);
 
 		// --- BLOQUE IZQUIERDO: PRIMER COMPRADOR (Al ras del margen izquierdo) -
 		ClienteResponseDTO c1 = clientes.get(0);
