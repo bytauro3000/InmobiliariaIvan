@@ -1387,6 +1387,7 @@ public class PdfGenerator {
 	    Table contenedorPrincipal = new Table(1)
 	            .useAllAvailableWidth()
 	            .setBorder(Border.NO_BORDER)
+	            .setMarginTop(35f)
 	            .setKeepTogether(true); 
 
 	    // 2. Tabla para la primera fila (Comprador 1 y Vendedora)
@@ -1454,8 +1455,6 @@ public class PdfGenerator {
 	        }
 	    }
 
-	    // Finalmente añadimos el contenedor único al documento con un margen inicial
-	    document.add(new Paragraph("\n\n")); 
 	    document.add(contenedorPrincipal);
 	}
 	
