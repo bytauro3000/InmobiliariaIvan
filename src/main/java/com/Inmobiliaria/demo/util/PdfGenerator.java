@@ -30,6 +30,7 @@ import java.math.RoundingMode;
 import java.time.format.DateTimeFormatter;
 import com.itextpdf.layout.element.ListItem;
 import com.itextpdf.io.font.PdfEncodings;
+import com.itextpdf.io.util.StreamUtil;
 import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.font.PdfFontFactory;
 
@@ -50,25 +51,25 @@ public class PdfGenerator {
 
 		try {
 			// 1. Arial Normal (Para el cuerpo del texto)
-			byte[] nBytes = com.itextpdf.io.util.StreamUtil.inputStreamToArray(
+			byte[] nBytes = StreamUtil.inputStreamToArray(
 					PdfGenerator.class.getClassLoader().getResourceAsStream("fonts/ARIAL.TTF")
 					);
 			arialNormal = PdfFontFactory.createFont(nBytes, PdfEncodings.WINANSI);
 
 			// 2. Arial Bold (Para nombres y datos en negrita)
-			byte[] bBytes = com.itextpdf.io.util.StreamUtil.inputStreamToArray(
+			byte[] bBytes = StreamUtil.inputStreamToArray(
 					PdfGenerator.class.getClassLoader().getResourceAsStream("fonts/ARIALBD.TTF")
 					);
 			arialBold = PdfFontFactory.createFont(bBytes, PdfEncodings.WINANSI);
 
 			// 3. Arial Bold Italic (Para el título del contrato)
-			byte[] biBytes = com.itextpdf.io.util.StreamUtil.inputStreamToArray(
+			byte[] biBytes = StreamUtil.inputStreamToArray(
 					PdfGenerator.class.getClassLoader().getResourceAsStream("fonts/ARIALBI.TTF")
 					);
 			arialBoldItalic = PdfFontFactory.createFont(biBytes, PdfEncodings.WINANSI);
 
 			// 4. Carga de Arial Italic (Solo Cursiva)
-			byte[] iBytes = com.itextpdf.io.util.StreamUtil.inputStreamToArray(
+			byte[] iBytes = StreamUtil.inputStreamToArray(
 					PdfGenerator.class.getClassLoader().getResourceAsStream("fonts/ARIALI.TTF")
 					);
 			arialItalic = PdfFontFactory.createFont(iBytes, PdfEncodings.WINANSI);
@@ -998,6 +999,8 @@ public class PdfGenerator {
 
 		// 1. Salto de página para iniciar el nuevo documento
 		document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
+		
+		document.setMargins(122, 85, 30, 85);
 
 		// 2. Título: Arial 12, Negrita, Cursiva y Subrayado
 		document.add(new Paragraph()
@@ -1387,7 +1390,7 @@ public class PdfGenerator {
 	    Table contenedorPrincipal = new Table(1)
 	            .useAllAvailableWidth()
 	            .setBorder(Border.NO_BORDER)
-	            .setMarginTop(37f)
+	            .setMarginTop(45f)
 	            .setKeepTogether(true); 
 
 	    // 2. Tabla para la primera fila (Comprador 1 y Vendedora)
@@ -1435,7 +1438,7 @@ public class PdfGenerator {
 	            Table tablaExtra = new Table(new float[]{45f})
 	                    .setWidth(UnitValue.createPercentValue(45))
 	                    .setBorder(Border.NO_BORDER)
-	                    .setMarginTop(37f); // Espacio entre firmas
+	                    .setMarginTop(45f); // Espacio entre firmas
 
 	            Cell celdaExtra = new Cell().setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.CENTER).setPadding(0);
 	            Paragraph pLineaExtra = new Paragraph().setBorderTop(new com.itextpdf.layout.borders.SolidBorder(1f))
