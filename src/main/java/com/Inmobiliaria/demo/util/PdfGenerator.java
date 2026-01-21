@@ -1356,44 +1356,44 @@ public class PdfGenerator {
 
 	// 🔹 Versión para el CONTRATO (5 parámetros)
 	private static void agregarFilaLinderos(Table tabla, String etiqueta, String colindante, String medidaCompleta, PdfFont font) {
-	    // Celda 1: Posición (Mantenemos igual)
-	    tabla.addCell(new Cell()
-	            .add(new Paragraph(etiqueta).setFont(font).setFontSize(11).setFixedLeading(11f))
-	            .setBorder(Border.NO_BORDER)
-	            .setPaddingTop(0f).setPaddingBottom(0f));
+	    // 🔹 Definimos un interlineado más pequeño (ejemplo: 9 o 10)
+	    float leadingCompacto = 9f; 
 
-	    // Celda 2: Colindante (Mantenemos igual)
+	    // Celda 1
 	    tabla.addCell(new Cell()
-	            .add(new Paragraph(colindante).setFont(font).setFontSize(11).setFixedLeading(11f))
+	            .add(new Paragraph(etiqueta).setFont(font).setFontSize(11)
+	                .setFixedLeading(leadingCompacto).setMarginBottom(0)) // 🔹 Ajuste aquí
 	            .setBorder(Border.NO_BORDER)
-	            .setPaddingTop(0f).setPaddingBottom(0f));
+	            .setPadding(0f)); // 🔹 Eliminamos todo el padding de la celda
 
-	    // Celda 3: Medida (REDISEÑO PARA ALINEACIÓN PERFECTA)
-	    // Extraemos el número de la cadena "Con 8.00 m.l."
+	    // Celda 2
+	    tabla.addCell(new Cell()
+	            .add(new Paragraph(colindante).setFont(font).setFontSize(11)
+	                .setFixedLeading(leadingCompacto).setMarginBottom(0)) // 🔹 Ajuste aquí
+	            .setBorder(Border.NO_BORDER)
+	            .setPadding(0f));
+
+	    // Celda 3: Medida
 	    String numero = medidaCompleta.replace("Con", "").replace("m.l.", "").trim();
 
-	    // Creamos una tabla interna de 3 columnas para la medida
 	    Table subTablaMedida = new Table(UnitValue.createPercentArray(new float[]{25f, 45f, 30f}))
 	            .useAllAvailableWidth()
 	            .setBorder(Border.NO_BORDER);
 
-	    // Columna A: "Con" (Siempre alineado a la izquierda)
-	    subTablaMedida.addCell(new Cell().add(new Paragraph("Con").setFont(font).setFontSize(11))
+	    // Aplicamos los mismos ajustes a las sub-celdas para que no ensanchen la fila
+	    subTablaMedida.addCell(new Cell().add(new Paragraph("Con").setFont(font).setFontSize(11).setFixedLeading(leadingCompacto))
 	            .setBorder(Border.NO_BORDER).setPadding(0));
 
-	    // Columna B: El Número (Alineado a la derecha del centro)
-	    subTablaMedida.addCell(new Cell().add(new Paragraph(numero).setFont(font).setFontSize(11).setTextAlignment(TextAlignment.RIGHT))
+	    subTablaMedida.addCell(new Cell().add(new Paragraph(numero).setFont(font).setFontSize(11).setFixedLeading(leadingCompacto).setTextAlignment(TextAlignment.RIGHT))
 	            .setBorder(Border.NO_BORDER).setPadding(0));
 
-	    // Columna C: "m.l." (Siempre alineado a la izquierda)
-	    subTablaMedida.addCell(new Cell().add(new Paragraph("m.l.").setFont(font).setFontSize(11))
-	            .setBorder(Border.NO_BORDER).setPaddingLeft(5f)); // Espacio corto entre número y unidad
+	    subTablaMedida.addCell(new Cell().add(new Paragraph("m.l.").setFont(font).setFontSize(11).setFixedLeading(leadingCompacto))
+	            .setBorder(Border.NO_BORDER).setPaddingLeft(5f).setPaddingTop(0).setPaddingBottom(0));
 
-	    // Metemos la sub-tabla en la Celda 3 de la tabla principal
 	    tabla.addCell(new Cell()
 	            .add(subTablaMedida)
 	            .setBorder(Border.NO_BORDER)
-	            .setPaddingTop(0f).setPaddingBottom(0f));
+	            .setPadding(0f)); // 🔹 Padding 0 fundamental para reducir espacio entre filas
 	}
 
 	private static String extraerNacionalidad(String celular, boolean esFemenino) {
