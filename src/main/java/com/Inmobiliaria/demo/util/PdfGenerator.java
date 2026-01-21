@@ -1357,7 +1357,7 @@ public class PdfGenerator {
 	// 🔹 Versión para el CONTRATO (5 parámetros)
 	private static void agregarFilaLinderos(Table tabla, String etiqueta, String colindante, String medidaCompleta, PdfFont font) {
 	    // 🔹 Definimos un interlineado más pequeño (ejemplo: 9 o 10)
-	    float leadingCompacto = 9f; 
+	    float leadingCompacto = 11f; 
 
 	    // Celda 1
 	    tabla.addCell(new Cell()
