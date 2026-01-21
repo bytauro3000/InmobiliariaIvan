@@ -989,6 +989,11 @@ public class PdfGenerator {
 		/* ==================================================================================
 		 * FIRMAS DEL CONTRATO
 		 * ==================================================================================*/
+		/* ==================================================================================
+		 * FIRMAS DEL CONTRATO
+		 * ==================================================================================*/
+		// 1. Crea un párrafo vacío que solo sirva de margen/espacio
+		document.add(new Paragraph("").setMarginTop(20f));
 
 		// 1. Firmas al final del contrato (Página 1 o la que corresponda)
 		agregarBloqueFirmas(document, clientes, arialBoldItalic);
