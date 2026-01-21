@@ -989,9 +989,7 @@ public class PdfGenerator {
 		/* ==================================================================================
 		 * FIRMAS DEL CONTRATO
 		 * ==================================================================================*/
-		/* ==================================================================================
-		 * FIRMAS DEL CONTRATO
-		 * ==================================================================================*/
+
 		// 1. Crea un párrafo vacío que solo sirva de margen/espacio
 		document.add(new Paragraph("").setMarginTop(20f));
 
@@ -1372,8 +1370,8 @@ public class PdfGenerator {
 
 	    // Celda 3: Medida (LA QUE QUIERES ALINEAR)
 	    tabla.addCell(new Cell()
-	            // 🔹 CAMBIO AQUÍ: Alineamos el texto a la derecha para que los "m.l." coincidan
-	            .setTextAlignment(TextAlignment.RIGHT) 
+	            .setTextAlignment(TextAlignment.LEFT) 
+	            .setPaddingLeft(15f)                 
 	            .add(new Paragraph(medidaCompleta).setFont(font).setFontSize(11).setFixedLeading(11f))
 	            .setBorder(Border.NO_BORDER)
 	            .setPaddingTop(0f).setPaddingBottom(0f));
