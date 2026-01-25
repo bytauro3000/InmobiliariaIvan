@@ -1,7 +1,10 @@
 package com.Inmobiliaria.demo.controller;
 
+import com.Inmobiliaria.demo.dto.ConsultaDniDTO;
 import com.Inmobiliaria.demo.entity.Cliente;
 import com.Inmobiliaria.demo.service.ClienteService;
+import com.Inmobiliaria.demo.service.ConsultaDniService;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,9 +18,11 @@ import java.util.List;
 public class ClienteController {
 
     private final ClienteService clienteService;
+    private final ConsultaDniService consultaDniService;
 
-    public ClienteController(ClienteService clienteService) {
+    public ClienteController(ClienteService clienteService, ConsultaDniService consultaDniService) {
         this.clienteService = clienteService;
+        this.consultaDniService = consultaDniService;
     }
 
     @GetMapping("/listar")
@@ -33,6 +38,18 @@ public class ClienteController {
     @GetMapping("/buscar/numDoc/{numDoc}")
     public Cliente obtenerClientePorNumDoc(@PathVariable String numDoc) {
         return clienteService.buscarClientePorNumDoc(numDoc);
+    }
+    
+    @GetMapping("/externo/reniec/{dni}")
+    public ResponseEntity<ConsultaDniDTO> consultarReniec(@PathVariable String dni) {
+        ConsultaDniDTO resultado = consultaDniService.buscarEnReniec(dni);
+        
+        if (resultado.isSuccess()) {
+            return ResponseEntity.ok(resultado);
+        } else {
+            // Si falla el API (limite excedido o error), devolvemos 404 para que Angular permita ingreso manual
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
     }
   
  // 🔹 NUEVO ENDPOINT DE BÚSQUEDA DINÁMICA
