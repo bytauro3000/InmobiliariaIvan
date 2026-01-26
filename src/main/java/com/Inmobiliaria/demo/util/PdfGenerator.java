@@ -2,6 +2,7 @@ package com.Inmobiliaria.demo.util;
 import com.Inmobiliaria.demo.dto.ContratoResponseDTO;
 import com.Inmobiliaria.demo.dto.LetraResponseDTO;
 import com.Inmobiliaria.demo.dto.LoteResponseDTO;
+import com.Inmobiliaria.demo.entity.LetraCambio;
 import com.Inmobiliaria.demo.enums.Genero;
 import com.Inmobiliaria.demo.dto.ClienteResponseDTO;
 import com.itextpdf.kernel.pdf.PdfDocument;
@@ -36,7 +37,7 @@ import com.itextpdf.kernel.font.PdfFontFactory;
 
 public class PdfGenerator {
 
-	public static byte[] generarContratoFlorida(ContratoResponseDTO contrato) {
+	public static byte[] generarContratoFlorida(ContratoResponseDTO contrato, LetraCambio primeraLetraEntidad) {
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		PdfWriter writer = new PdfWriter(out);
 		PdfDocument pdf = new PdfDocument(writer);
@@ -1215,24 +1216,24 @@ public class PdfGenerator {
 		BigDecimal saldoParaClausula;
 		int cantidadLetrasParaClausula;
 
-		//Obtenemos los valores base del contrato
-		BigDecimal saldoContrato = contrato.getSaldo();
+		BigDecimal saldoContrato = contrato.getSaldo(); 
 		BigDecimal inicialContrato = contrato.getInicial();
-		int totalLetras = contrato.getCantidadLetras();
+		int totalLetras = contrato.getCantidadLetras(); 
 
-		//Lógica de validación: ¿Paga la primera letra hoy? (Inicial = 0)
+		// Lógica de validación: ¿Paga la primera letra hoy? (Inicial = 0)
 		if (inicialContrato == null || inicialContrato.compareTo(BigDecimal.ZERO) == 0) {
-			// Si no hay inicial, se asume que pagó la 1ra letra hoy.
-			// Calculamos el monto de una letra promedio (Saldo / TotalLetras)
-			BigDecimal montoUnaLetra = saldoContrato.divide(new BigDecimal(totalLetras), 2, RoundingMode.HALF_UP);
+		    
+		    // 🔹 USAMOS EL PARÁMETRO 'primeraLetraEntidad' QUE VIENE DEL SERVICIO
+		    BigDecimal montoPrimeraLetra = (primeraLetraEntidad != null) 
+		                                    ? primeraLetraEntidad.getImporte() 
+		                                    : BigDecimal.ZERO;
 
-			// El reconocimiento de deuda es por el saldo menos la letra ya pagada
-			saldoParaClausula = saldoContrato.subtract(montoUnaLetra);
-			cantidadLetrasParaClausula = totalLetras - 1;
+		    // Cálculo exacto: 31200.00 - 231.00 = 30969.00
+		    saldoParaClausula = saldoContrato.subtract(montoPrimeraLetra); 
+		    cantidadLetrasParaClausula = totalLetras - 1; 
 		} else {
-			// Si hubo inicial, el reconocimiento es por el saldo total y todas las letras
-			saldoParaClausula = saldoContrato;
-			cantidadLetrasParaClausula = totalLetras;
+		    saldoParaClausula = saldoContrato;
+		    cantidadLetrasParaClausula = totalLetras;
 		}
 
 		//Convertimos el nuevo saldo y cantidad a letras para el documento

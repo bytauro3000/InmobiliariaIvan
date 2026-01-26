@@ -19,6 +19,7 @@ import com.Inmobiliaria.demo.enums.EstadoSeparacion;
 import com.Inmobiliaria.demo.enums.TipoContrato;
 import com.Inmobiliaria.demo.enums.TipoPropietario;
 import com.Inmobiliaria.demo.repository.ContratoRepository;
+import com.Inmobiliaria.demo.repository.LetraCambioRepository;
 import com.Inmobiliaria.demo.service.*;
 import com.Inmobiliaria.demo.util.PdfGenerator; // 👈 Importamos tu utilidad
 
@@ -33,6 +34,7 @@ public class ContratoServiceImpl implements ContratoService {
     @Autowired private UsuarioService usuarioService;
     @Autowired private SeparacionService separacionService; 
     @Autowired private VendedorService vendedorService;
+    @Autowired private LetraCambioRepository letraCambioRepository;
 
     private void setearValoresPorDefecto(Contrato contrato) {
         if (contrato.getTipoContrato() == TipoContrato.CONTADO) {
@@ -184,13 +186,22 @@ public class ContratoServiceImpl implements ContratoService {
     @Override
     @Transactional(readOnly = true)
     public byte[] generarPdf(Integer idContrato) {
+        // 1. Buscamos los datos para el DTO
         ContratoResponseDTO dto = buscarPorId(idContrato);
         if (dto == null) {
             throw new RuntimeException("No se encontró el contrato con ID: " + idContrato);
         }
-        return PdfGenerator.generarContratoFlorida(dto);
-    }
 
+        // 2. 🔹 IMPORTANTE: Recuperamos la entidad real de la primera letra para obtener el monto exacto
+        // Esto evita que el PDF intente calcular un promedio y falle con los decimales
+        LetraCambio primeraLetra = letraCambioRepository
+                .findFirstByContratoIdContratoOrderByNumeroLetraAsc(idContrato)
+                .orElse(null);
+
+        // 3. Pasamos el DTO y la Entidad de la letra al generador
+        return PdfGenerator.generarContratoFlorida(dto, primeraLetra);
+    }
+    
     private ContratoResponseDTO mapToContratoResponseDTO(Contrato contrato) {
         if (contrato == null) return null;
         

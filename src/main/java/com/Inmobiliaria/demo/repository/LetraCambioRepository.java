@@ -1,6 +1,7 @@
 package com.Inmobiliaria.demo.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -18,6 +19,8 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
     @Transactional
     void deleteByContratoIdContrato(Integer idContrato);
 
+    //metodo para buscar la primera letra y restarla al saldo para la clausula tercer
+    Optional<LetraCambio> findFirstByContratoIdContratoOrderByNumeroLetraAsc(Integer idContrato);
     
     @Query(value = "SELECT " +
             "lc.numero_letra, " +
