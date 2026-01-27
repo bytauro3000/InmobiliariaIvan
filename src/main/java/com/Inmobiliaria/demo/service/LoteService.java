@@ -22,4 +22,6 @@ public interface LoteService {
 	Lote crearLote(Lote reg);
 
 	void eliminarLote(Integer id);
+	
+	List<Lote> buscarLotesPorGestion(Integer idPrograma, String manzana, String numeroLote);
 }

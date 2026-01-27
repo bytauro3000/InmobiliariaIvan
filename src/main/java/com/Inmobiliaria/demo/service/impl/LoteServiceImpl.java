@@ -27,8 +27,20 @@ public class LoteServiceImpl implements LoteService {
     
     @Override
     public List<Lote> listarLotesPorProgramaGestion(Integer idPrograma) {
-        // 🔹 Llama al método que ya tienes en el Repository que no filtra por estado
-        return loteRepository.findByProgramaIdProgramaOrderByManzanaAscNumeroLoteAsc(idPrograma);
+        // Llama al método que ya tienes en el Repository que no filtra por estado
+        return loteRepository.findByProgramaIdProgramaOrderByManzanaAscNumeroLoteAsc(idPrograma);    
+    }
+    
+    @Override
+    public List<Lote> buscarLotesPorGestion(Integer idPrograma, String manzana, String numeroLote) {
+        // Si no se envía texto en los filtros, usamos el método que ya tienes de listar todos
+        if ((manzana == null || manzana.isEmpty()) && (numeroLote == null || numeroLote.isEmpty())) {
+            return loteRepository.findByProgramaIdProgramaOrderByManzanaAscNumeroLoteAsc(idPrograma);
+        }
+        // Si hay texto, filtramos
+        return loteRepository.findByProgramaIdProgramaAndManzanaContainingAndNumeroLoteContainingOrderByManzanaAscNumeroLoteAsc(
+            idPrograma, manzana, numeroLote
+        );
     }
 
     @Override

@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.Inmobiliaria.demo.dto.LoteProgramaResponseDTO;
@@ -72,4 +73,13 @@ public class LoteController {
         return ResponseEntity.ok(lotes);
     }
 
+    @GetMapping("/buscar")
+    public ResponseEntity<List<Lote>> buscarLotes(
+            @RequestParam Integer idPrograma,
+            @RequestParam(required = false, defaultValue = "") String manzana,
+            @RequestParam(required = false, defaultValue = "") String numeroLote) {
+            
+        List<Lote> resultados = loteService.buscarLotesPorGestion(idPrograma, manzana, numeroLote);
+        return ResponseEntity.ok(resultados);
+    }
 }
