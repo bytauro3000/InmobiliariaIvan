@@ -19,17 +19,32 @@ public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
 	    
 	List<Contrato> findAllByOrderByIdContratoDesc();
 	
+	//USAR ESTE PARA GUARDAR (Nuevos registros)
+    @Query("SELECT COUNT(cl) > 0 FROM ContratoLote cl " +
+           "JOIN cl.lote l " +
+           "JOIN l.programa p " +
+           "WHERE p.idPrograma = :idPrograma " +
+           "AND l.manzana = :manzana " +
+           "AND l.numeroLote = :numeroLote")
+    boolean existeContratoDuplicado(
+        @Param("idPrograma") Integer idPrograma, 
+        @Param("manzana") String manzana, 
+        @Param("numeroLote") String numeroLote
+    );
 	
+	//USO ESTE PARA CUANDO VOY ACTUALIZAR Y NO ME SALTE ERROR QUE EL CONTRATO YA EXISTE 
 	@Query("SELECT COUNT(cl) > 0 FROM ContratoLote cl " +
 	           "JOIN cl.lote l " +
 	           "JOIN l.programa p " +
 	           "WHERE p.idPrograma = :idPrograma " +
 	           "AND l.manzana = :manzana " +
-	           "AND l.numeroLote = :numeroLote")
-	    boolean existeContratoDuplicado(
+	           "AND l.numeroLote = :numeroLote " +
+	           "AND cl.contrato.idContrato <> :idContratoActual")
+	    boolean existeContratoDuplicadoParaOtroContrato(
 	        @Param("idPrograma") Integer idPrograma, 
 	        @Param("manzana") String manzana, 
-	        @Param("numeroLote") String numeroLote
+	        @Param("numeroLote") String numeroLote,
+	        @Param("idContratoActual") Integer idContratoActual
 	    );
 
 }
