@@ -15,5 +15,7 @@ public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
 	           "FROM Contrato c JOIN c.lotes cl " +
 	           "GROUP BY cl.lote.programa.nombrePrograma, c.tipoContrato")
 	    List<Object[]> contarContratosPorProgramaYTipo();
+	    
+	List<Contrato> findAllByOrderByIdContratoDesc();
 
 }

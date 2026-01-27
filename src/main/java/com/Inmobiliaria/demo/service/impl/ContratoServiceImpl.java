@@ -143,7 +143,7 @@ public class ContratoServiceImpl implements ContratoService {
     @Override
     @Transactional(readOnly = true)
     public List<ContratoResponseDTO> listarContratos() {
-        return contratoRepository.findAll().stream()
+        return contratoRepository.findAllByOrderByIdContratoDesc().stream()
                 .map(this::mapToContratoResponseDTO).collect(Collectors.toList());
     }
 
