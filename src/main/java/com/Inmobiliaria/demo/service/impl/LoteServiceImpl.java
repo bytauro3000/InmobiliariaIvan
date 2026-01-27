@@ -33,7 +33,7 @@ public class LoteServiceImpl implements LoteService {
 
     @Override
     public List<LoteProgramaResponseDTO> listarLotesPorPrograma(Integer idPrograma) {
-        // Filtrar lotes disponibles por programa
+        //Filtrar lotes disponibles por programa
         List<Lote> lotes = loteRepository.findByProgramaIdProgramaAndEstadoEqualsOrderByManzanaAscNumeroLoteAsc(idPrograma, EstadoLote.Disponible);
         
         return lotes.stream().map(lote -> {
