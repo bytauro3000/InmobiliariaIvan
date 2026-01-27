@@ -47,7 +47,44 @@ public class ContratoServiceImpl implements ContratoService {
     @Override
     @Transactional
     public ContratoResponseDTO guardarContrato(ContratoRequestDTO requestDTO, Principal principal) {
-        Contrato contrato = new Contrato();
+    	// 1. Identificar los lotes involucrados (Reutilizando tu lógica existente)
+        List<Integer> idsLotesAValidar;
+        if (requestDTO.getIdSeparacion() != null) {
+            Separacion separacion = separacionService.buscarPorId(requestDTO.getIdSeparacion());
+            if (separacion == null) {
+                throw new RuntimeException("La separación con ID " + requestDTO.getIdSeparacion() + " no existe.");
+            }
+            idsLotesAValidar = separacion.getLotes().stream()
+                    .map(sl -> sl.getLote().getIdLote()).collect(Collectors.toList());
+        } else {
+            idsLotesAValidar = requestDTO.getIdLotes();
+        }
+
+        // 2. 🔹 VALIDACIÓN TRIPLE (Programa + MZ + Lote)
+        if (idsLotesAValidar != null) {
+            for (Integer idLote : idsLotesAValidar) {
+                // Obtenemos el objeto lote completo para saber su Programa, Mz y número
+                Lote loteDB = loteService.obtenerLotePorId(idLote);
+                
+                if (loteDB != null) {
+                    // Verificamos si existe un contrato con estos 3 datos específicos
+                    boolean duplicado = contratoRepository.existeContratoDuplicado(
+                        loteDB.getPrograma().getIdPrograma(), 
+                        loteDB.getManzana(), 
+                        loteDB.getNumeroLote()
+                    );
+
+                    if (duplicado) {
+                        throw new RuntimeException("El lote " + loteDB.getNumeroLote() + 
+                            " de la Manzana " + loteDB.getManzana() + 
+                            " en el programa " + loteDB.getPrograma().getNombrePrograma() + 
+                            " ya tiene un contrato registrado.");
+                    }
+                }
+            }
+        }
+    	
+    	Contrato contrato = new Contrato();
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         try {
             Date fecha = dateFormat.parse(requestDTO.getFechaContrato());
