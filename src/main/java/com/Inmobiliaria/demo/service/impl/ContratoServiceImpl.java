@@ -163,6 +163,76 @@ public class ContratoServiceImpl implements ContratoService {
 
         return mapToContratoResponseDTO(contratoGuardado);
     }
+    
+    
+    @Override
+    @Transactional
+    public ContratoResponseDTO actualizarContrato(Integer id, ContratoRequestDTO requestDTO) {
+        // 1. Buscar el contrato existente
+        Contrato contrato = contratoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Contrato no encontrado"));
+
+        // 2. Gestión de Lotes (Regresar los anteriores a 'Disponible')
+        for (ContratoLote cl : contrato.getLotes()) {
+            Lote loteAnterior = cl.getLote();
+            loteAnterior.setEstado(EstadoLote.Disponible);
+            loteService.actualizarLote(loteAnterior);
+        }
+        // Limpiamos la lista de lotes actual en el contrato para insertar los nuevos
+        contrato.getLotes().clear();
+
+        // 3. Actualizar datos básicos
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        try {
+            contrato.setFechaContrato(dateFormat.parse(requestDTO.getFechaContrato()));
+        } catch (ParseException e) {
+            throw new RuntimeException("Error en formato de fecha");
+        }
+        contrato.setMontoTotal(BigDecimal.valueOf(requestDTO.getMontoTotal()));
+        contrato.setInicial(BigDecimal.valueOf(requestDTO.getInicial()));
+        contrato.setSaldo(BigDecimal.valueOf(requestDTO.getSaldo()));
+        contrato.setCantidadLetras(requestDTO.getCantidadLetras());
+        contrato.setObservaciones(requestDTO.getObservaciones());
+
+        // 4. Actualizar Vendedor
+        if (requestDTO.getIdVendedor() != null) {
+            Vendedor v = vendedorService.obtenerVendedorPorId(requestDTO.getIdVendedor())
+                    .orElseThrow(() -> new RuntimeException("Vendedor no encontrado"));
+            contrato.setVendedor(v);
+        }
+
+        // 5. Borrar letras de cambio antiguas y clientes antiguos ( orphanRemoval=true se encargará en el flush)
+        contrato.getLetrasCambio().clear();
+        contrato.getClientes().clear();
+
+        // 6. Guardar cambios preliminares para limpiar tablas intermedias
+        Contrato contratoActualizado = contratoRepository.saveAndFlush(contrato);
+
+        // 7. Asociar Nuevos Lotes
+        if (requestDTO.getIdLotes() != null) {
+            for (Integer idLote : requestDTO.getIdLotes()) {
+                registrarLoteEnContrato(contratoActualizado, idLote);
+            }
+        }
+
+        // 8. Asociar Nuevos Clientes
+        if (requestDTO.getIdClientes() != null) {
+            for (Integer idCliente : requestDTO.getIdClientes()) {
+                Cliente cliente = clienteService.buscarClientePorId(idCliente);
+                ContratoCliente cc = new ContratoCliente();
+                cc.setId(new ContratoClienteId(contratoActualizado.getIdContrato(), idCliente));
+                cc.setContrato(contratoActualizado);
+                cc.setCliente(cliente);
+                cc.setTipoPropietario(TipoPropietario.TITULAR);
+                contratoClienteService.guardar(cc);
+            }
+        }
+
+        // 9. IMPORTANTE: Aquí deberías llamar a tu lógica de generación de letras si el contrato es CRÉDITO
+        // (Asumiendo que tienes un servicio de letras que lo hace automáticamente al detectar el cambio)
+
+        return mapToContratoResponseDTO(contratoActualizado);
+    }
 
     private void registrarLoteEnContrato(Contrato contrato, Integer idLote) {
         Lote lote = loteService.obtenerLotePorId(idLote);

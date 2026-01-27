@@ -27,6 +27,15 @@ public class ContratoController {
         return new ResponseEntity<>(contratoGuardado, HttpStatus.CREATED);
     }
     
+    @PutMapping("/actualizar/{id}")
+    public ResponseEntity<ContratoResponseDTO> actualizarContrato(
+        @PathVariable Integer id,
+        @RequestBody ContratoRequestDTO requestDTO
+    ) {
+        ContratoResponseDTO actualizado = contratoService.actualizarContrato(id, requestDTO);
+        return new ResponseEntity<>(actualizado, HttpStatus.OK);
+    }
+    
     @GetMapping("/listar")
     public List<ContratoResponseDTO> listarContratos() {
         return contratoService.listarContratos();

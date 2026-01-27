@@ -20,4 +20,6 @@ public interface ContratoService {
     
  // 🟢 NUEVO: Método para generar el PDF desde el Service
     byte[] generarPdf(Integer idContrato);
+    
+    ContratoResponseDTO actualizarContrato(Integer id, ContratoRequestDTO requestDTO);
 }
