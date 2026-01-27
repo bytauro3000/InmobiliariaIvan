@@ -18,10 +18,12 @@ public interface LoteRepository extends JpaRepository<Lote, Integer>{
 		       "GROUP BY l.programa.nombrePrograma, l.estado")
 		List<Object[]> contarLotesPorProgramaYEstado();
 
-	 //Método para obtener lotes por programa (sin filtrar por estado)
-    List<Lote> findByProgramaIdPrograma(Integer idPrograma);
+	//Método para obtener lotes por programa (sin filtrar por estado)
+	//ordenar por Manzana y luego por Lote
+	List<Lote> findByProgramaIdProgramaOrderByManzanaAscNumeroLoteAsc(Integer idPrograma);
 
     //Este es el método que necesitas para filtrar por programa Y estado
-    List<Lote> findByProgramaIdProgramaAndEstadoEquals(Integer idPrograma, EstadoLote estado);
+	//Cambiado para ordenar por Manzana y luego por Lote
+    List<Lote> findByProgramaIdProgramaAndEstadoEqualsOrderByManzanaAscNumeroLoteAsc(Integer idPrograma, EstadoLote estado);
     
 }

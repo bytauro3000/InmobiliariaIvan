@@ -28,13 +28,13 @@ public class LoteServiceImpl implements LoteService {
     @Override
     public List<Lote> listarLotesPorProgramaGestion(Integer idPrograma) {
         // 🔹 Llama al método que ya tienes en el Repository que no filtra por estado
-        return loteRepository.findByProgramaIdPrograma(idPrograma);
+        return loteRepository.findByProgramaIdProgramaOrderByManzanaAscNumeroLoteAsc(idPrograma);
     }
 
     @Override
     public List<LoteProgramaResponseDTO> listarLotesPorPrograma(Integer idPrograma) {
         // Filtrar lotes disponibles por programa
-        List<Lote> lotes = loteRepository.findByProgramaIdProgramaAndEstadoEquals(idPrograma, EstadoLote.Disponible);
+        List<Lote> lotes = loteRepository.findByProgramaIdProgramaAndEstadoEqualsOrderByManzanaAscNumeroLoteAsc(idPrograma, EstadoLote.Disponible);
         
         return lotes.stream().map(lote -> {
             LoteProgramaResponseDTO dto = new LoteProgramaResponseDTO();
