@@ -143,6 +143,8 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
         "lc.numero_letra, " +
         "lc.fecha_vencimiento, " +
         "lc.importe, " +
-        "p.nombre_programa", nativeQuery = true)
+        "p.nombre_programa " + 
+        "ORDER BY lc.id_letra ASC", 
+        nativeQuery = true)
     List<Object[]> obtenerCronogramaPagosPorContrato(@Param("idContrato") Integer idContrato);
 }
