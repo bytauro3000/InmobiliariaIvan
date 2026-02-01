@@ -2,6 +2,10 @@ package com.Inmobiliaria.demo.service.impl;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheConfig;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import com.Inmobiliaria.demo.dto.LoteProgramaResponseDTO;
 import com.Inmobiliaria.demo.entity.Lote;
@@ -10,32 +14,37 @@ import com.Inmobiliaria.demo.repository.LoteRepository;
 import com.Inmobiliaria.demo.service.LoteService;
 
 @Service
+@CacheConfig (cacheNames = "lotes")
 public class LoteServiceImpl implements LoteService {
 
     @Autowired
     private LoteRepository loteRepository;
 
     @Override
+    @Cacheable(key = "'todos'")
     public List<Lote> listarLotes() {
         return loteRepository.findAll();
     }
     
     @Override
+    @Cacheable(key = "'conteo'")
     public List<Object[]> obtenerConteoPorEstadoYPrograma() {
         return loteRepository.contarLotesPorProgramaYEstado();
     }
     
     @Override
+    @Cacheable(key = "'prog_' + #idPrograma")
     public List<Lote> listarLotesPorProgramaGestion(Integer idPrograma) {
         // Llama al método que ya tienes en el Repository que no filtra por estado
         return loteRepository.findByProgramaIdProgramaOrderByManzanaAscNumeroLoteAsc(idPrograma);    
     }
     
     @Override
+    @Cacheable(key = "{#idPrograma, #manzana, #numeroLote}")
     public List<Lote> buscarLotesPorGestion(Integer idPrograma, String manzana, String numeroLote) {
         // Si no se envía texto en los filtros, usamos el método que ya tienes de listar todos
         if ((manzana == null || manzana.isEmpty()) && (numeroLote == null || numeroLote.isEmpty())) {
-            return loteRepository.findByProgramaIdProgramaOrderByManzanaAscNumeroLoteAsc(idPrograma);
+        	return listarLotesPorProgramaGestion(idPrograma);
         }
         // Si hay texto, filtramos
         return loteRepository.findByProgramaIdProgramaAndManzanaContainingAndNumeroLoteContainingOrderByManzanaAscNumeroLoteAsc(
@@ -44,6 +53,7 @@ public class LoteServiceImpl implements LoteService {
     }
 
     @Override
+    @Cacheable(key = "#idPrograma")
     public List<LoteProgramaResponseDTO> listarLotesPorPrograma(Integer idPrograma) {
         //Filtrar lotes disponibles por programa
         List<Lote> lotes = loteRepository.findByProgramaIdProgramaAndEstadoEqualsOrderByManzanaAscNumeroLoteAsc(idPrograma, EstadoLote.Disponible);
@@ -65,6 +75,9 @@ public class LoteServiceImpl implements LoteService {
     }
 
     @Override
+    @Caching(evict = {
+            @CacheEvict(allEntries = true) // 👈 Limpia TODO el caché de lotes al actualizar uno
+        })
     public Lote actualizarLote(Lote lote) {
         Lote loteAct = obtenerLotePorId(lote.getIdLote());
         if (loteAct == null || loteAct.getEstado() == EstadoLote.Separado) {
@@ -75,16 +88,19 @@ public class LoteServiceImpl implements LoteService {
     }
 
     @Override
+    @Cacheable(key = "#id")
     public Lote obtenerLotePorId(Integer id) {
         return loteRepository.findById(id).orElse(null);
     }
 
     @Override
+    @CacheEvict(allEntries = true)
     public Lote crearLote(Lote reg) {
         return loteRepository.save(reg);
     }
 
     @Override
+    @CacheEvict(allEntries = true)
     public void eliminarLote(Integer id) {
         loteRepository.deleteById(id);
     }

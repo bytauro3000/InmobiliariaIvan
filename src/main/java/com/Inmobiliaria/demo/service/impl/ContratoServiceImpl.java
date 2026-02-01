@@ -275,7 +275,8 @@ public class ContratoServiceImpl implements ContratoService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true) // Añade esto para cachear contratos individuales
+    @Cacheable(key = "#idContrato")
     public ContratoResponseDTO buscarPorId(Integer idContrato) {
         return contratoRepository.findById(idContrato)
                 .map(this::mapToContratoResponseDTO).orElse(null);
