@@ -9,6 +9,9 @@ import java.text.SimpleDateFormat;
 import java.text.ParseException;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheConfig;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +27,7 @@ import com.Inmobiliaria.demo.service.*;
 import com.Inmobiliaria.demo.util.PdfGenerator; // 👈 Importamos tu utilidad
 
 @Service
+@CacheConfig(cacheNames = "contratos")
 public class ContratoServiceImpl implements ContratoService {
 
     @Autowired private ContratoRepository contratoRepository;
@@ -46,6 +50,7 @@ public class ContratoServiceImpl implements ContratoService {
 
     @Override
     @Transactional
+    @CacheEvict(allEntries = true) //Borra toda la lista de contratos del caché
     public ContratoResponseDTO guardarContrato(ContratoRequestDTO requestDTO, Principal principal) {
     	// 1. Identificar los lotes involucrados (Reutilizando tu lógica existente)
         List<Integer> idsLotesAValidar;
@@ -168,6 +173,7 @@ public class ContratoServiceImpl implements ContratoService {
     
     @Override
     @Transactional
+    @CacheEvict(allEntries = true) //Borra el caché para forzar la actualización
     public ContratoResponseDTO actualizarContrato(Integer id, ContratoRequestDTO requestDTO) {
         // 1. Buscar el contrato existente
         Contrato contrato = contratoRepository.findById(id)
@@ -262,6 +268,7 @@ public class ContratoServiceImpl implements ContratoService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable
     public List<ContratoResponseDTO> listarContratos() {
         return contratoRepository.findAllByOrderByIdContratoDesc().stream()
                 .map(this::mapToContratoResponseDTO).collect(Collectors.toList());
@@ -276,6 +283,7 @@ public class ContratoServiceImpl implements ContratoService {
 
     @Override
     @Transactional
+    @CacheEvict(allEntries = true) //Limpia el caché tras eliminar
     public void eliminarContrato(Integer idContrato) {
         // 1. Buscamos el contrato con sus lotes asociados antes de eliminarlo
         Contrato contrato = contratoRepository.findById(idContrato)
