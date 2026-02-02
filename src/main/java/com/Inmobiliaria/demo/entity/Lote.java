@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 import com.Inmobiliaria.demo.enums.EstadoLote;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -57,14 +58,27 @@ public class Lote {
     @Column(name = "colindante_oeste", length = 100)
     private String colindanteOeste;
     
-    @Transient //Esto evita que se cree una columna en la BD
+ // 1. MÉTODO PARA AUTOCALCULAR EL ÁREA (Llamado antes de persistir o actualizar)
+    @PrePersist
+    @PreUpdate
+    public void ajustarDecimales() {
+        if (this.area != null) {
+            this.area = this.area.setScale(2, java.math.RoundingMode.HALF_UP);
+        }
+    }
+
+    // 2. MÉTODO PARA EL PRECIO TOTAL REDONDEADO A ENTERO
+    @Transient 
     public BigDecimal getPrecioListaTotal() {
         if (this.area != null && this.precioM2 != null) {
-            return this.area.multiply(this.precioM2);
+            // Usa el área digitada (ej. la del plano) para el precio
+            BigDecimal total = this.area.multiply(this.precioM2);
+            return total.setScale(0, java.math.RoundingMode.HALF_UP);
         }
         return BigDecimal.ZERO;
     }
-
+    
+    
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", length = 20)
     private EstadoLote estado = EstadoLote.Disponible;
