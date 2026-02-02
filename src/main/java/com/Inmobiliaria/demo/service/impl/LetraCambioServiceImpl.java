@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 
 import com.Inmobiliaria.demo.entity.Contrato;
@@ -148,6 +149,7 @@ public class LetraCambioServiceImpl implements LetraCambioService {
    
     @Override
     @Transactional
+    @CacheEvict(value = "contratos", key = "#idContrato")
     public void generarLetrasDesdeContrato(Integer idContrato, GenerarLetrasRequest generarLetrasRequest) {
         Contrato contrato = contratoRepository.findById(idContrato)
             .orElseThrow(() -> new IllegalArgumentException("Contrato no encontrado con el ID: " + idContrato));
@@ -225,6 +227,7 @@ public class LetraCambioServiceImpl implements LetraCambioService {
     
     @Override
     @Transactional
+    @CacheEvict(value = "contratos", key = "#letraCambioDTO.idContrato")
     public LetraCambioDTO actualizarLetra(Integer id, LetraCambioDTO letraCambioDTO) {
         LetraCambio letraExistente = letraCambioRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Letra de cambio no encontrada con el ID: " + id));
@@ -243,6 +246,7 @@ public class LetraCambioServiceImpl implements LetraCambioService {
     
     @Override
     @Transactional
+    @CacheEvict(value = "contratos", key = "#idContrato")
     public void eliminarPorContrato(Integer idContrato) {
         contratoRepository.findById(idContrato)
             .orElseThrow(() -> new IllegalArgumentException("Contrato no encontrado con el ID: " + idContrato));

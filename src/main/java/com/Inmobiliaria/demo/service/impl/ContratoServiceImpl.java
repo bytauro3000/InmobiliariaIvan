@@ -315,19 +315,19 @@ public class ContratoServiceImpl implements ContratoService {
     @Override
     @Transactional(readOnly = true)
     public byte[] generarPdf(Integer idContrato) {
-        // 1. Buscamos los datos para el DTO
-        ContratoResponseDTO dto = buscarPorId(idContrato);
-        if (dto == null) {
-            throw new RuntimeException("No se encontró el contrato con ID: " + idContrato);
-        }
+        
+    	// Se consulta directamente al repositorio ignorando el caché para garantizar 
+        // que el PDF incluya las letras de cambio recién generadas o actualizadas.
+        Contrato contrato = contratoRepository.findById(idContrato)
+                .orElseThrow(() -> new RuntimeException("No se encontró el contrato con ID: " + idContrato));
+    
+        // Mapeo manual a DTO para procesar la entidad fresca de la base de datos.
+        ContratoResponseDTO dto = this.mapToContratoResponseDTO(contrato);
 
-        // 2. 🔹 IMPORTANTE: Recuperamos la entidad real de la primera letra para obtener el monto exacto
-        // Esto evita que el PDF intente calcular un promedio y falle con los decimales
         LetraCambio primeraLetra = letraCambioRepository
                 .findFirstByContratoIdContratoOrderByNumeroLetraAsc(idContrato)
                 .orElse(null);
 
-        // 3. Pasamos el DTO y la Entidad de la letra al generador
         return PdfGenerator.generarContratoFlorida(dto, primeraLetra);
     }
     
