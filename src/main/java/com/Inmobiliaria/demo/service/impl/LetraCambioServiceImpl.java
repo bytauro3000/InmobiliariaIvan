@@ -149,7 +149,7 @@ public class LetraCambioServiceImpl implements LetraCambioService {
    
     @Override
     @Transactional
-    @CacheEvict(value = "contratos", key = "#idContrato")
+    @CacheEvict(value = "contratos", allEntries = true)
     public void generarLetrasDesdeContrato(Integer idContrato, GenerarLetrasRequest generarLetrasRequest) {
         Contrato contrato = contratoRepository.findById(idContrato)
             .orElseThrow(() -> new IllegalArgumentException("Contrato no encontrado con el ID: " + idContrato));
@@ -246,7 +246,7 @@ public class LetraCambioServiceImpl implements LetraCambioService {
     
     @Override
     @Transactional
-    @CacheEvict(value = "contratos", key = "#idContrato")
+    @CacheEvict(value = "contratos", allEntries = true)
     public void eliminarPorContrato(Integer idContrato) {
         contratoRepository.findById(idContrato)
             .orElseThrow(() -> new IllegalArgumentException("Contrato no encontrado con el ID: " + idContrato));
