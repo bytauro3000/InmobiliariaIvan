@@ -1210,16 +1210,34 @@ public class PdfGenerator {
 			document.add(tablaPosesionLinderos);
 		}
 
-		// --- 3. PÁRRAFO FINAL: UBICACIÓN MAYOR ---
+		// --- 3. PÁRRAFO FINAL: UBICACIÓN MAYOR (DINÁMICO) ---
 		Paragraph parrafoFinalPosesion = new Paragraph()
-				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.1f);
+		        .setTextAlignment(TextAlignment.JUSTIFIED)
+		        .setFont(arialItalic)
+		        .setFontSize(11)
+		        .setMultipliedLeading(1.1f);
 
-		parrafoFinalPosesion.add("Dicho lote se encuentra ubicado en el predio denominado lote de terreno rústico con un área superficial de 201,224.03 m2 Equivalente a 20 Has. 1,224.03 m2, que corresponde al 100% de las acciones y derechos del Predio denominado Sector Pampa San Antonio, Margen derecha del Kilómetro 23 de La Avenida Túpac Amaru, Distrito de Carabayllo, Provincia y Departamento De Lima, el cual forma parte de un predio de mayor extensión ubicado en las Provincia de Huarochirí, Lima y Canta, inscrito a fojas 515 del tomo 10-H, actualmente ");
-		parrafoFinalPosesion.add(new Text("Partida Electrónica 11049870 del Registro de Predios de Lima.").setFont(arialItalic));
+		// 🟢 REUTILIZAMOS LA LÓGICA DE FILTRO (Asegúrate de que nombreProgFiltro esté definido)
+		String nombreProgFiltroPosesion = lote.getNombrePrograma().toUpperCase();
+
+		if (nombreProgFiltroPosesion.contains("2DA ETAPA") || nombreProgFiltroPosesion.contains("SEGUNDA ETAPA")) {
+		    
+		    // --- TEXTO PARA SEGUNDA ETAPA (15 Has - 74.54%) --- 
+		    parrafoFinalPosesion.add("Dicho lote se encuentra ubicado en el predio denominado lote de terreno rústico con un área superficial de 150,000.00 m2 Equivalente a 15 Has., que corresponde al 74.543780% de las acciones y derechos del Predio denominado Sector Pampa San Antonio, Margen derecha del Kilómetro 23 de La Avenida Túpac Amaru, Distrito de Carabayllo, Provincia y Departamento De Lima, el cual forma parte de un predio de mayor extensión ubicado en las Provincia de Huarochirí, Lima y Canta, inscrito a fojas 515 del tomo 10-H, actualmente ");
+		    parrafoFinalPosesion.add(new Text("Partida Electrónica 11049870 del Registro de Predios de Lima.").setFont(arialItalic));
+
+		} else if (nombreProgFiltroPosesion.contains("LA FLORIDA DE TORRE BLANCA")) {
+		    
+		    // --- TEXTO PARA PRIMERA ETAPA / NORMAL (20 Has - 100%) --- [cite: 9, 10, 306, 307]
+		    parrafoFinalPosesion.add("Dicho lote se encuentra ubicado en el predio denominado lote de terreno rústico con un área superficial de 201,224.03 m2 Equivalente a 20 Has. 1,224.03 m2, que corresponde al 100% de las acciones y derechos del Predio denominado Sector Pampa San Antonio, Margen derecha del Kilómetro 23 de La Avenida Túpac Amaru, Distrito de Carabayllo, Provincia y Departamento De Lima, el cual forma parte de un predio de mayor extensión ubicado en las Provincia de Huarochirí, Lima y Canta, inscrito a fojas 515 del tomo 10-H, actualmente ");
+		    parrafoFinalPosesion.add(new Text("Partida Electrónica 11049870 del Registro de Predios de Lima.").setFont(arialItalic));
+
+		} else {
+		    // Respaldo para otros programas
+		    parrafoFinalPosesion.add("Dicho lote se encuentra ubicado dentro de los linderos y medidas perimétricas del programa correspondiente, según los registros de propiedad vigentes.");
+		}
 
 		document.add(parrafoFinalPosesion);
-
 		/* ===========================================================================================  
          				 CLAUSULA SEGUNDA: DEL DOCUMENTO DE SEÑALIZACION
          ==============================================================================================*/
