@@ -87,4 +87,14 @@ public class LoteController {
         List<Lote> resultados = loteService.buscarLotesPorGestion(idPrograma, manzana, numeroLote);
         return ResponseEntity.ok(resultados);
     }
+    
+    //VALIDAMOS LA EXISTENCIA DE LOTES DUPLICADOS PARA EVITAR SU REGISTRO 
+    @GetMapping("/validar-duplicado")
+    public ResponseEntity<Boolean> verificarDuplicado(
+            @RequestParam Integer idPrograma,
+            @RequestParam String manzana,
+            @RequestParam String numeroLote) {
+        boolean existe = loteService.existeLote(idPrograma, manzana, numeroLote);
+        return ResponseEntity.ok(existe);
+    }
 }

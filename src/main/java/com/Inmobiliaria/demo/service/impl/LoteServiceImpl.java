@@ -130,4 +130,10 @@ public class LoteServiceImpl implements LoteService {
     public void eliminarLote(Integer id) {
         loteRepository.deleteById(id);
     }
+    
+    //VERIFICAMOS LA EXISTECIA DEL LOTE
+    @Override
+    public boolean existeLote(Integer idPrograma, String manzana, String numeroLote) {
+        return loteRepository.existsByProgramaIdProgramaAndManzanaAndNumeroLote(idPrograma, manzana, numeroLote);
+    }
 }

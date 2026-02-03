@@ -24,4 +24,6 @@ public interface LoteService {
 	void eliminarLote(Integer id);
 	
 	List<Lote> buscarLotesPorGestion(Integer idPrograma, String manzana, String numeroLote);
+	
+	boolean existeLote(Integer idPrograma, String manzana, String numeroLote);
 }
