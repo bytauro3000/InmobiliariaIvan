@@ -16,7 +16,7 @@ public class ClienteServiceImpl implements ClienteService {
 
     @Override
     public Cliente guardarCliente(Cliente cliente) { 
-        // ✅ Validar duplicados con el nuevo campo 'numDoc'
+        //Validar duplicados con el nuevo campo 'numDoc'
     	 if (cliente.getNumDoc() != null && clienteRepository.findByNumDoc(cliente.getNumDoc()) != null) {
              throw new IllegalArgumentException("Cliente ya Registrado.");
         }
@@ -59,7 +59,7 @@ public class ClienteServiceImpl implements ClienteService {
 
     @Override
     public Cliente buscarClientePorNumDoc(String numDoc) {
-        // ✅ Implementar el nuevo método de la interfaz
+        //Implementar el nuevo método de la interfaz
         return clienteRepository.findByNumDoc(numDoc);
     }
 }

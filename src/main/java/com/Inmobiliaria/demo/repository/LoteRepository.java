@@ -26,10 +26,16 @@ public interface LoteRepository extends JpaRepository<Lote, Integer>{
 	//Cambiado para ordenar por Manzana y luego por Lote
     List<Lote> findByProgramaIdProgramaAndEstadoEqualsOrderByManzanaAscNumeroLoteAsc(Integer idPrograma, EstadoLote estado);
     
- // 🔹 Nuevo método de búsqueda combinada con ordenamiento
+    //método de búsqueda combinada con ordenamiento
     List<Lote> findByProgramaIdProgramaAndManzanaContainingAndNumeroLoteContainingOrderByManzanaAscNumeroLoteAsc(
         Integer idPrograma, 
         String manzana, 
         String numeroLote
     );
+    
+    // Método para validar duplicados exactos
+    boolean existsByProgramaIdProgramaAndManzanaAndNumeroLote(Integer idPrograma, String manzana, String numeroLote);
+
+    //metodo para validar al editar (excluyendo el ID actual)
+    boolean existsByProgramaIdProgramaAndManzanaAndNumeroLoteAndIdLoteNot(Integer idPrograma, String manzana, String numeroLote, Integer idLote);
 }

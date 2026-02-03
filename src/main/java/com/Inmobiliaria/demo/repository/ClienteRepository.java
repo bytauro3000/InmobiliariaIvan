@@ -11,12 +11,12 @@ import com.Inmobiliaria.demo.entity.Cliente;
 public interface ClienteRepository extends JpaRepository<Cliente, Integer> {
 
 	 
-	// 🔹 Filtro específico para Nombres + Apellidos
+	//Filtro específico para Nombres + Apellidos
     @Query("SELECT c FROM Cliente c WHERE " +
            "LOWER(CONCAT(c.nombre, ' ', c.apellidos)) LIKE LOWER(CONCAT('%', :filtro, '%'))")
     List<Cliente> buscarPorNombresYApellidos(@Param("filtro") String filtro);
     
- // 🔹 Filtro específico para Documento (usando LIKE para que sea búsqueda parcial)
+    //Filtro específico para Documento (usando LIKE para que sea búsqueda parcial)
     @Query("SELECT c FROM Cliente c WHERE c.numDoc LIKE CONCAT('%', :filtro, '%')")
     List<Cliente> buscarPorDocumento(@Param("filtro") String filtro);
     

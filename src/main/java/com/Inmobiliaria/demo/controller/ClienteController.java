@@ -52,7 +52,7 @@ public class ClienteController {
         }
     }
   
- // 🔹 NUEVO ENDPOINT DE BÚSQUEDA DINÁMICA
+    //ENDPOINT DE BÚSQUEDA DINÁMICA
     @GetMapping("/buscar/filtro")
     public List<Cliente> buscarClientes(
             @RequestParam("termino") String termino, 
@@ -84,7 +84,7 @@ public class ClienteController {
         clienteService.eliminarClienteById(id);
     }
 
-    // ✅ Nuevo método para manejar la excepción y devolver el mensaje al frontend
+    //método para manejar la excepción y devolver el mensaje al frontend
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<String> handleIllegalArgumentException(IllegalArgumentException ex) {
         // Devuelve un código de estado 409 (Conflict) y el mensaje de la excepción

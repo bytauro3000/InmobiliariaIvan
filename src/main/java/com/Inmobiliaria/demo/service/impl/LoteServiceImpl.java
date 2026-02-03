@@ -75,18 +75,27 @@ public class LoteServiceImpl implements LoteService {
     }
 
     @Override
-    @Caching(evict = {
-            @CacheEvict(allEntries = true) // 👈 Limpia TODO el caché de lotes al actualizar uno
-        })
     public Lote actualizarLote(Lote lote) {
         Lote loteAct = obtenerLotePorId(lote.getIdLote());
         if (loteAct == null || loteAct.getEstado() == EstadoLote.Separado) {
             return null;
-        } else {
-            return loteRepository.save(lote);
         }
-    }
 
+        // Validar que al cambiar los datos de este lote, no choquen con otro ya existente
+        boolean existeOtro = loteRepository.existsByProgramaIdProgramaAndManzanaAndNumeroLoteAndIdLoteNot(
+                lote.getPrograma().getIdPrograma(), 
+                lote.getManzana(), 
+                lote.getNumeroLote(),
+                lote.getIdLote()
+        );
+
+        if (existeOtro) {
+            throw new RuntimeException("No se puede actualizar: Los datos coinciden con otro lote ya registrado.");
+        }
+
+        return loteRepository.save(lote);
+    }
+    
     @Override
     @Cacheable(key = "#id")
     public Lote obtenerLotePorId(Integer id) {
@@ -96,6 +105,23 @@ public class LoteServiceImpl implements LoteService {
     @Override
     @CacheEvict(allEntries = true)
     public Lote crearLote(Lote reg) {
+        // 1. Validar que los datos no vengan nulos
+        if (reg.getPrograma() == null || reg.getManzana() == null || reg.getNumeroLote() == null) {
+            throw new RuntimeException("Datos incompletos para la validación.");
+        }
+
+        // 2. Verificar si ya existe un lote igual en el mismo programa
+        boolean existe = loteRepository.existsByProgramaIdProgramaAndManzanaAndNumeroLote(
+                reg.getPrograma().getIdPrograma(), 
+                reg.getManzana(), 
+                reg.getNumeroLote()
+        );
+
+        if (existe) {
+            // 🟢 Aquí lanzamos una excepción para que el controlador la capture
+            throw new RuntimeException("El lote " + reg.getNumeroLote() + " de la manzana " + reg.getManzana() + " ya existe en este programa.");
+        }
+
         return loteRepository.save(reg);
     }
 

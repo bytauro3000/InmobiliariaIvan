@@ -8,13 +8,13 @@ import org.springframework.http.*;
 @Service
 public class ConsultaDniService {
 
-    private final String TOKEN = "sk_13021.AR1OXiT2iR6aLPUIKNr7oL1bAD6tr8GS"; // Tu token verificado
+    private final String TOKEN = "sk_13021.AR1OXiT2iR6aLPUIKNr7oL1bAD6tr8GS"; //token verificado
     private final String URL = "https://api.decolecta.com/v1/reniec/dni?numero=";
 
     public ConsultaDniDTO buscarEnReniec(String dni) {
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(TOKEN); // Configuración Bearer igual que en Postman
+        headers.setBearerAuth(TOKEN); //Configuración Bearer igual que en Postman
         headers.set("Accept", "application/json");
 
         HttpEntity<String> entity = new HttpEntity<>(headers);
