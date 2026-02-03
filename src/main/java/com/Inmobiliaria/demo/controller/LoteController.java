@@ -56,11 +56,16 @@ public class LoteController {
     }
 
     @PostMapping
-    public ResponseEntity<Lote> crearLote(@RequestBody Lote lote) {
-        Lote nuevo = loteService.crearLote(lote);
-        return ResponseEntity.ok(nuevo);
+    public ResponseEntity<?> crearLote(@RequestBody Lote lote) {
+        try {
+            Lote nuevo = loteService.crearLote(lote);
+            return ResponseEntity.ok(nuevo);
+        } catch (RuntimeException e) {
+            // 🟢 Retornamos un 400 (Bad Request) con el mensaje de error personalizado
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
-
+    
     @DeleteMapping("/{id}")
     public void EliminarLote(@PathVariable Integer id) {
     	loteService.eliminarLote(id);
