@@ -265,42 +265,70 @@ public class PdfGenerator {
 		document.add(intro);
 
 		/* =========================================================
-		 *  PAGINA 1: CLAUSULA PRIMERA:	PROPIEDAD
+		 * PAGINA 1: CLAUSULA PRIMERA: PROPIEDAD (DINÁMICA)
 		 * ========================================================= */
-		// Título de la cláusula (Arial 11, Negrita y Cursiva)
 		document.add(new Paragraph()
-				.add(new Text("PRIMERA: PROPIEDAD").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11)
-				.setMarginTop(10));
+		        .add(new Text("PRIMERA: PROPIEDAD").setFont(arialBoldItalic).setUnderline())
+		        .setFontSize(11)
+		        .setMarginTop(10));
 
-		// Cuerpo de la cláusula
-		// Seteamos arialItalic como fuente base del párrafo
 		Paragraph primeraCuerpo = new Paragraph()
-				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic) 
-				.setFontSize(11)
-				.setMultipliedLeading(1.0f);
+		        .setTextAlignment(TextAlignment.JUSTIFIED)
+		        .setFont(arialItalic) 
+		        .setFontSize(11)
+		        .setMultipliedLeading(1.0f);
 
 		primeraCuerpo.add(new Text("“LA VENDEDORA”").setFont(arialBoldItalic));
-		primeraCuerpo.add(" es propietaria de un lote de terreno rústico con un área superficial de 201,224.03 m2 Equivalente a 20 Has. 1,224.03 m2, que corresponde al 100% de las acciones y derechos del Predio denominado Sector Pampa San Antonio, Margen derecha del Kilómetro 23 de La Avenida Túpac Amaru, Distrito de Carabayllo, Provincia y Departamento De Lima, el cual forma parte de un predio de mayor extensión ubicado en las Provincia de Huarochirí, Lima y Canta, inscrito a fojas 515 del tomo 10-H, actualmente ");
-		primeraCuerpo.add(new Text("Partida Electrónica 11049870 del Registro de Predios de Lima. ").setFont(arialBoldItalic));
-		primeraCuerpo.add("\nFue adquirido mediante la minuta de Compra- Venta de Acciones y Derechos de Predio Rustico de la fecha ");
-		primeraCuerpo.add(new Text("06/11/2019").setFont(arialBoldItalic));
-		primeraCuerpo.add(" (15 Has.) y con fecha ");
-		primeraCuerpo.add(new Text("29/03/2021").setFont(arialBoldItalic));
-		primeraCuerpo.add(" (51,224.03 m2). Que le otorgo su anterior Propietaria ");
-		primeraCuerpo.add(new Text("INVERSIONES INMOBILIARIAS LAS PRADERAS S.A.C").setFont(arialBoldItalic));
-		primeraCuerpo.add(", identificada con ");
-		primeraCuerpo.add(new Text("RUC. N°20601878616").setFont(arialBoldItalic));
-		primeraCuerpo.add(", debidamente representada por su Gerente General ");
-		primeraCuerpo.add(new Text("DON JOSE ANTONIO ESPINOZA TENA").setFont(arialBoldItalic));
-		primeraCuerpo.add(", identificado con ");
-		primeraCuerpo.add(new Text("DNI N°09403557").setFont(arialBoldItalic));
-		primeraCuerpo.add(". Sobre dicho terreno, ");
-		primeraCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
-		primeraCuerpo.add(" ha proyectado el Programa de Vivienda denominado ");
-		primeraCuerpo.add(new Text("“LA FLORIDA DE TORRE BLANCA 1ERA.ETAPA”").setFont(arialBoldItalic));
-		primeraCuerpo.add(", el mismo que se distribuye en los lotes y manzanas con sus respectivas áreas conforme al plano de Lotización.");
+
+		// 🟢 LÓGICA DINÁMICA SEGÚN EL PROGRAMA
+		String nombreProgFiltro = lote.getNombrePrograma().toUpperCase();
+
+		if (nombreProgFiltro.contains("SEGUNDA ETAPA")) {
+		    // --- TEXTO PARA LA SEGUNDA ETAPA (Basado en el PDF de 20 Has) ---
+		    primeraCuerpo.add(" es propietaria de un lote de terreno rústico con un área superficial de 201,224.03 m2 Equivalente a 20 Has. 1,224.03 m2, que corresponde al 100% de las acciones y derechos del Predio denominado Sector Pampa San Antonio, Margen derecha del Kilómetro 23 de La Avenida Túpac Amaru, Distrito de Carabayllo, Provincia y Departamento De Lima, el cual forma parte de un predio de mayor extensión ubicado en las Provincia de Huarochirí, Lima y Canta, inscrito a fojas 515 del tomo 10-H, actualmente ");
+		    primeraCuerpo.add(new Text("Partida Electrónica 11049870 del Registro de Predios de Lima. ").setFont(arialBoldItalic));
+		    primeraCuerpo.add("\nFue adquirido mediante la minuta de Compra- Venta de Acciones y Derechos de Predio Rustico de la fecha ");
+		    primeraCuerpo.add(new Text("06/11/2019").setFont(arialBoldItalic));
+		    primeraCuerpo.add(" (15 Has.) y con fecha ");
+		    primeraCuerpo.add(new Text("29/03/2021").setFont(arialBoldItalic));
+		    primeraCuerpo.add(" (51,224.03 m2). Que le otorgo su anterior Propietaria ");
+		    primeraCuerpo.add(new Text("INVERSIONES INMOBILIARIAS LAS PRADERAS S.A.C").setFont(arialBoldItalic));
+		    primeraCuerpo.add(", identificada con ");
+		    primeraCuerpo.add(new Text("RUC. N°20601878616").setFont(arialBoldItalic));
+		    primeraCuerpo.add(", debidamente representada por su Gerente General ");
+		    primeraCuerpo.add(new Text("DON JOSE ANTONIO ESPINOZA TENA").setFont(arialBoldItalic));
+		    primeraCuerpo.add(", identificado con ");
+		    primeraCuerpo.add(new Text("DNI N°09403557").setFont(arialBoldItalic));
+		    primeraCuerpo.add(". Sobre dicho terreno, ");
+		    primeraCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		    primeraCuerpo.add(" ha proyectado el Programa de Vivienda denominado ");
+		    primeraCuerpo.add(new Text("“LA FLORIDA DE TORRE BLANCA 2DA ETAPA”").setFont(arialBoldItalic));
+		    primeraCuerpo.add(", el mismo que se distribuye en los lotes y manzanas con sus respectivas áreas conforme al plano de Lotización.");
+
+		} else {
+		    // --- TEXTO PARA LA FLORIDA DE TORRE BLANCA (Basado en el PDF de 15 Has) ---
+		    primeraCuerpo.add(" es propietaria de un lote de terreno rústico con un área superficial de 150,000.00 m2 Equivalente a 15 Has., que corresponde al 74.543780% de las acciones y derechos del Predio denominado Sector Pampa San Antonio, Margen derecha del Kilómetro 23 de la Avenida Túpac Amaru el cual forma parte de un área superficial de 201,224.03m2 equivalente a 20has. 1,224.04m2, ubicado en el Distrito de Carabayllo, Provincia y Departamento De Lima, formando parte de un predio de mayor extensión ubicado en las Provincia de Huarochirí, Lima y Canta, inscrito a fojas 515 del tomo 10-H, actualmente ");
+		    primeraCuerpo.add(new Text("Partida Electrónica 11049870 del Registro de Predios de Lima. ").setFont(arialBoldItalic));
+		    primeraCuerpo.add("\nFue adquirido mediante contrato Privado de Compra- Venta de Acciones y Derechos a plazos de un Predio Rustico de fecha ");
+		    primeraCuerpo.add(new Text("06/11/2019").setFont(arialBoldItalic));
+		    primeraCuerpo.add(". Que le otorgo su anterior Propietaria ");
+		    primeraCuerpo.add(new Text("INVERSIONES INMOBILIARIAS LAS PRADERAS S.A.C").setFont(arialBoldItalic));
+		    primeraCuerpo.add(", identificada con ");
+		    primeraCuerpo.add(new Text("RUC. N°20601878616").setFont(arialBoldItalic));
+		    primeraCuerpo.add(", debidamente representada por su Gerente General ");
+		    primeraCuerpo.add(new Text("DON JOSE ANTONIO ESPINOZA TENA").setFont(arialBoldItalic));
+		    primeraCuerpo.add(", identificado con ");
+		    primeraCuerpo.add(new Text("DNI N°09403557").setFont(arialBoldItalic));
+		    primeraCuerpo.add(" y su SubGerente ");
+		    primeraCuerpo.add(new Text("DON JHAMPIERE ULISES COSTILLA ESTRADA").setFont(arialBoldItalic));
+		    primeraCuerpo.add(", identificado con ");
+		    primeraCuerpo.add(new Text("DNI Nº4512577").setFont(arialBoldItalic));
+		    primeraCuerpo.add(". Sobre dicho terreno, ");
+		    primeraCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		    primeraCuerpo.add(" ha proyectado el Programa de Vivienda denominado ");
+		    primeraCuerpo.add(new Text("“LA FLORIDA DE TORRE BLANCA”").setFont(arialBoldItalic));
+		    primeraCuerpo.add(", el mismo que se distribuye en los lotes y manzanas con sus respectivas áreas conforme al plano de Lotización.");
+		}
 
 		document.add(primeraCuerpo);
 
