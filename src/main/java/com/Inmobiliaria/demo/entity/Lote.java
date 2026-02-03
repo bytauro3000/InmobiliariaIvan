@@ -63,7 +63,7 @@ public class Lote {
     @PreUpdate
     public void ajustarDecimales() {
         if (this.area != null) {
-            this.area = this.area.setScale(2, java.math.RoundingMode.HALF_UP);
+            this.area = this.area.setScale(2, RoundingMode.HALF_UP);
         }
     }
 
@@ -73,7 +73,7 @@ public class Lote {
         if (this.area != null && this.precioM2 != null) {
             // Usa el área digitada (ej. la del plano) para el precio
             BigDecimal total = this.area.multiply(this.precioM2);
-            return total.setScale(0, java.math.RoundingMode.HALF_UP);
+            return total.setScale(0, RoundingMode.HALF_UP);
         }
         return BigDecimal.ZERO;
     }

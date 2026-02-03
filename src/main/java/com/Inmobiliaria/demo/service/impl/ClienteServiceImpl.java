@@ -2,6 +2,7 @@ package com.Inmobiliaria.demo.service.impl;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import com.Inmobiliaria.demo.entity.Cliente;
 import com.Inmobiliaria.demo.repository.ClienteRepository;
@@ -24,6 +25,7 @@ public class ClienteServiceImpl implements ClienteService {
     }
 
     @Override
+    @CacheEvict(value = "contratos", allEntries = true)
     public Cliente editarCliente(Cliente cliente) {      
         return clienteRepository.save(cliente);
     }
