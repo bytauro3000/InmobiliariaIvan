@@ -2,8 +2,11 @@ package com.Inmobiliaria.demo.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
+
 import com.Inmobiliaria.demo.enums.EstadoLetra;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -49,18 +52,10 @@ public class LetraCambio {
     @Enumerated(EnumType.STRING)
     @Column(name = "estado_letra", nullable = false)
     private EstadoLetra estadoLetra = EstadoLetra.PENDIENTE;
+    
+ // Relación para ver los pagos asociados a esta letra
+    @OneToMany(mappedBy = "letra", cascade = CascadeType.ALL)
+    @JsonIgnore
+    private List<PagoLetras> pagos;
 
-    @Temporal(TemporalType.DATE)
-    @Column(name = "fecha_pago", nullable = true)
-    private LocalDate fechaPago;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "tipo_comprobante", nullable = true)
-    private TipoComprobante tipoComprobante;
-
-    @Column(name = "numero_comprobante", length = 50)
-    private String numeroComprobante;
-
-    @Column(name = "observaciones", nullable = true)
-    private String observaciones;
 }

@@ -1217,7 +1217,7 @@ public class PdfGenerator {
 		        .setFontSize(11)
 		        .setMultipliedLeading(1.1f);
 
-		// 🟢 REUTILIZAMOS LA LÓGICA DE FILTRO (Asegúrate de que nombreProgFiltro esté definido)
+		//REUTILIZAMOS LA LÓGICA DE FILTRO (Asegúrate de que nombreProgFiltro esté definido)
 		String nombreProgFiltroPosesion = lote.getNombrePrograma().toUpperCase();
 
 		if (nombreProgFiltroPosesion.contains("2DA ETAPA") || nombreProgFiltroPosesion.contains("SEGUNDA ETAPA")) {
