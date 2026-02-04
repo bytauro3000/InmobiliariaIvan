@@ -216,11 +216,6 @@ public class LetraCambioServiceImpl implements LetraCambioService {
             letra.setImporteLetras(NumeroALetras.convertir(letra.getImporte()));
             letra.setEstadoLetra(EstadoLetra.PENDIENTE);
             letra.setNumeroLetra(i + "/" + cantidad);
-            letra.setFechaPago(null);
-            letra.setTipoComprobante(null);
-            letra.setNumeroComprobante("");
-            letra.setObservaciones("");
-
             letraCambioRepository.save(letra);
         }
     }
@@ -237,8 +232,7 @@ public class LetraCambioServiceImpl implements LetraCambioService {
         letraExistente.setImporte(letraCambioDTO.getImporte());
         letraExistente.setImporteLetras(letraCambioDTO.getImporteLetras());
         letraExistente.setEstadoLetra(EstadoLetra.valueOf(letraCambioDTO.getEstadoLetra()));
-        letraExistente.setNumeroComprobante(letraCambioDTO.getNumeroComprobante());
-        letraExistente.setObservaciones(letraCambioDTO.getObservaciones());
+        
 
         LetraCambio letraActualizada = letraCambioRepository.save(letraExistente);
         return modelMapper.map(letraActualizada, LetraCambioDTO.class);
