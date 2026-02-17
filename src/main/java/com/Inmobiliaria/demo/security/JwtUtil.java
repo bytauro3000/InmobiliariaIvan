@@ -79,10 +79,16 @@ public class JwtUtil {
     // Método para validar si un token es válido, incluyendo la lista negra
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
-        // La validación comprueba: 1) si el usuario coincide, 2) si no ha expirado y 3) si no está en la lista negra
-        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token) && !tokenBlacklistService.isBlacklisted(token));
+        
+        // Verificamos si el token está en la lista negra
+        boolean estaRevocado = tokenBlacklistService.isBlacklisted(token);
+        
+        // El token es válido SOLO SI: el usuario coincide, no expiró Y NO está revocado
+        return (username.equals(userDetails.getUsername()) 
+                && !isTokenExpired(token) 
+                && !estaRevocado); 
     }
-
+    
     // Verifica si el token ha expirado
     private boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());

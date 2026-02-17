@@ -55,10 +55,13 @@ public class AuthController {
     
     //exponer los tocken den la lista negra para que el microservicio no los use como validos para sus consultas
     @GetMapping("/validate-token")
-    public ResponseEntity<Boolean> validateToken(@RequestParam("token") String token) {
-        // Verificamos si está en la lista negra
+    public ResponseEntity<Boolean> validateToken(@RequestParam(value = "token", required = false) String token) {
+        // Si no envían token, por seguridad decimos que es "inválido" (false)
+        if (token == null || token.isEmpty()) {
+            return ResponseEntity.ok(false);
+        }
+        
         boolean isBlacklisted = tokenBlacklistService.isBlacklisted(token);
-        // Si NO está en la lista negra, devolvemos true (es válido)
         return ResponseEntity.ok(!isBlacklisted);
     }
 }

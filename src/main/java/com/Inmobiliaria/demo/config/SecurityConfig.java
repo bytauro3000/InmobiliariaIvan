@@ -37,9 +37,11 @@ public class SecurityConfig {
             	// RUTAS PARA EL ACCEDSO A ANGULAR UNIFICADO
                 .requestMatchers("/", "/index.html", "/favicon.ico", "/static/**", "/img/**", "/media/**", "/**/*.js", "/**/*.css", "/**/*.woff2", "/**/*.woff", "/**/*.ttf", "/**/*.svg", "/**/*.png", "/**/*.jpg", "/**/*.jpeg", "/**/*.map").permitAll()
             	// 1. Permite acceso a la ruta de login sin autenticación (la más específica)
-                .requestMatchers("/api/auth/login").permitAll()
-                // 2. Permite el acceso a la lista negra de los token expirados
                 .requestMatchers("/api/auth/validate-token").permitAll()
+                .requestMatchers("/api/auth/login").permitAll()
+                .requestMatchers("/api/auth/logout").permitAll()
+                // 2. Permite el acceso a la lista negra de los token expirados
+    
                 // 🟢 NUEVO: Permitir la ruta del Health Check (PING) sin autenticación
                 .requestMatchers("/api/public/**").permitAll()
                                
