@@ -14,7 +14,6 @@ import com.Inmobiliaria.demo.service.ParceleroService;
 
 @RestController
 @RequestMapping("/api/parceleros")
-@CrossOrigin(origins = "http://localhost:4200")
 public class ParceleroController {
 
     @Autowired

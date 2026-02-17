@@ -12,7 +12,6 @@ import com.Inmobiliaria.demo.service.ContratoService;
 
 @RestController
 @RequestMapping("/api/contratos")
-@CrossOrigin(origins = "*")
 public class ContratoController {
 
     @Autowired

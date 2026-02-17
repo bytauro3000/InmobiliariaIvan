@@ -15,7 +15,6 @@ import com.Inmobiliaria.demo.service.LetraCambioService;
 
 @RestController
 @RequestMapping("/api/letras")
-@CrossOrigin(origins = "*")
 public class LetrasCambioController {
 
     @Autowired

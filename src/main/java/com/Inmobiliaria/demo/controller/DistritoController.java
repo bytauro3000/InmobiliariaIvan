@@ -8,7 +8,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/distritos")
-@CrossOrigin(origins = "http://localhost:4200") // 👈 Permite llamadas desde Angular
 public class DistritoController {
     private final DistritoService distritoService;
 

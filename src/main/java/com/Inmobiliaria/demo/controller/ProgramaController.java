@@ -19,7 +19,6 @@ import com.Inmobiliaria.demo.service.ProgramaService;
 
 @RestController
 @RequestMapping("/api/programas")
-@CrossOrigin(origins = "http://localhost:4200") // 👈 habilita Angular
 public class ProgramaController {
 
     @Autowired

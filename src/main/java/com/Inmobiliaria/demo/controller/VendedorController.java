@@ -19,7 +19,6 @@ import com.Inmobiliaria.demo.service.VendedorService;
 
 @RestController
 @RequestMapping("/api/vendedores")
-@CrossOrigin(origins = "http://localhost:4200") // permite peticiones desde Angular
 public class VendedorController {
 
     @Autowired

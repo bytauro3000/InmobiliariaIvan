@@ -14,7 +14,6 @@ import com.Inmobiliaria.demo.service.SeparacionService;
 
 @RestController
 @RequestMapping("/api/separaciones")
-@CrossOrigin(origins = "*")
 public class SeparacionController {
 
     @Autowired
