@@ -5,7 +5,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheConfig;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import com.Inmobiliaria.demo.dto.LoteProgramaResponseDTO;
 import com.Inmobiliaria.demo.entity.Lote;
@@ -77,6 +76,7 @@ public class LoteServiceImpl implements LoteService {
 	}
 
 	@Override
+	@CacheEvict(allEntries = true)
 	public Lote actualizarLote(Lote lote) {
 		Lote loteAct = obtenerLotePorId(lote.getIdLote());
 		if (loteAct == null || loteAct.getEstado() == EstadoLote.Separado) {
