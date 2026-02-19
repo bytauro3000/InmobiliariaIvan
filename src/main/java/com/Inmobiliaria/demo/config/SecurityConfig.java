@@ -40,6 +40,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/validate-token").permitAll()
                 .requestMatchers("/api/auth/login").permitAll()
                 .requestMatchers("/api/auth/logout").permitAll()
+                
                 // 2. Permite el acceso a la lista negra de los token expirados
     
                 // 🟢 NUEVO: Permitir la ruta del Health Check (PING) sin autenticación
