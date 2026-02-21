@@ -3,6 +3,8 @@ package com.Inmobiliaria.demo.controller;
 import com.Inmobiliaria.demo.client.InscripcionClient;
 import com.Inmobiliaria.demo.dto.InscripcionServicioDTO;
 import feign.FeignException;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -13,6 +15,9 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/gateway/inscripciones")
 public class InscripcionGatewayController {
+	
+	@Autowired
+	private org.springframework.cache.CacheManager cacheManager;
 
     private final InscripcionClient inscripcionClient;
 
@@ -25,6 +30,9 @@ public class InscripcionGatewayController {
     public ResponseEntity<?> registrarInscripcion(@RequestBody InscripcionServicioDTO dto) {
         try {
             InscripcionServicioDTO resultado = inscripcionClient.crearInscripcion(dto);
+            if (cacheManager.getCache("contratos") != null) {
+                cacheManager.getCache("contratos").clear();
+            }
             return ResponseEntity.status(HttpStatus.CREATED).body(resultado);
         } catch (FeignException e) {
             // El microservicio devolvió un error controlado

@@ -8,6 +8,7 @@ import java.security.Principal;
 import java.text.SimpleDateFormat;
 import java.text.ParseException;
 
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheConfig;
 import org.springframework.cache.annotation.CacheEvict;
@@ -15,6 +16,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.Inmobiliaria.demo.client.InscripcionClient;
 import com.Inmobiliaria.demo.dto.*;
 import com.Inmobiliaria.demo.entity.*;
 import com.Inmobiliaria.demo.enums.EstadoLote;
@@ -39,6 +41,8 @@ public class ContratoServiceImpl implements ContratoService {
     @Autowired private SeparacionService separacionService; 
     @Autowired private VendedorService vendedorService;
     @Autowired private LetraCambioRepository letraCambioRepository;
+    @Autowired private InscripcionClient inscripcionClient;
+    @Autowired private ModelMapper modelMapper;
 
     private void setearValoresPorDefecto(Contrato contrato) {
         if (contrato.getTipoContrato() == TipoContrato.CONTADO) {
@@ -50,9 +54,9 @@ public class ContratoServiceImpl implements ContratoService {
 
     @Override
     @Transactional
-    @CacheEvict(allEntries = true) //Borra toda la lista de contratos del caché
+    @CacheEvict(allEntries = true)
     public ContratoResponseDTO guardarContrato(ContratoRequestDTO requestDTO, Principal principal) {
-    	// 1. Identificar los lotes involucrados (Reutilizando tu lógica existente)
+        // 1. Identificar los lotes involucrados (Mantiene tu lógica original)
         List<Integer> idsLotesAValidar;
         if (requestDTO.getIdSeparacion() != null) {
             Separacion separacion = separacionService.buscarPorId(requestDTO.getIdSeparacion());
@@ -65,21 +69,16 @@ public class ContratoServiceImpl implements ContratoService {
             idsLotesAValidar = requestDTO.getIdLotes();
         }
 
-        // 2. 🔹 VALIDACIÓN TRIPLE (Programa + MZ + Lote)
+        // 2. 🔹 VALIDACIÓN TRIPLE (Programa + MZ + Lote - Mantiene tu lógica original)
         if (idsLotesAValidar != null) {
             for (Integer idLote : idsLotesAValidar) {
-                // Obtenemos el objeto lote completo para saber su Programa, Mz y número
                 Lote loteDB = loteService.obtenerLotePorId(idLote);
-                
                 if (loteDB != null) {
-                    // Verificamos si existe un contrato con estos 3 datos específicos
                     boolean duplicado = contratoRepository.existeContratoDuplicado(
                         loteDB.getPrograma().getIdPrograma(), 
                         loteDB.getManzana(), 
                         loteDB.getNumeroLote()
-                        
                     );
-
                     if (duplicado) {
                         throw new RuntimeException("El lote " + loteDB.getNumeroLote() + 
                             " de la Manzana " + loteDB.getManzana() + 
@@ -89,8 +88,12 @@ public class ContratoServiceImpl implements ContratoService {
                 }
             }
         }
-    	
-    	Contrato contrato = new Contrato();
+
+        // 3. 🟢 MAPEO INTELIGENTE: Reemplaza los 'set' manuales de monto, inicial, saldo, etc.
+        // ModelMapper convierte automáticamente el DTO a Entidad basándose en nombres de campos.
+        Contrato contrato = modelMapper.map(requestDTO, Contrato.class);
+
+        // 4. Parseo de fecha (Se mantiene manual para asegurar el formato yyyyy-MM-dd)
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         try {
             Date fecha = dateFormat.parse(requestDTO.getFechaContrato());
@@ -99,21 +102,13 @@ public class ContratoServiceImpl implements ContratoService {
             throw new RuntimeException("Error al parsear la fecha del contrato.", e);
         }
 
-        contrato.setTipoContrato(TipoContrato.valueOf(requestDTO.getTipoContrato()));
-        contrato.setMontoTotal(BigDecimal.valueOf(requestDTO.getMontoTotal()));
-        contrato.setInicial(BigDecimal.valueOf(requestDTO.getInicial()));
-        contrato.setSaldo(BigDecimal.valueOf(requestDTO.getSaldo()));
-        contrato.setCantidadLetras(requestDTO.getCantidadLetras());
-        contrato.setObservaciones(requestDTO.getObservaciones());
-
+        // 5. Lógica de Vendedor (Mantiene tu lógica original)
         Vendedor vendedor = null;
         if (requestDTO.getIdSeparacion() != null) {
             Separacion separacion = separacionService.buscarPorId(requestDTO.getIdSeparacion());
             if (separacion != null) {
                 contrato.setSeparacion(separacion);
                 vendedor = separacion.getVendedor();
-            } else {
-                throw new RuntimeException("La separación con ID " + requestDTO.getIdSeparacion() + " no existe.");
             }
         } else if (requestDTO.getIdVendedor() != null) {
             vendedor = vendedorService.obtenerVendedorPorId(requestDTO.getIdVendedor())
@@ -121,14 +116,15 @@ public class ContratoServiceImpl implements ContratoService {
         }
         contrato.setVendedor(vendedor);
 
+        // 6. Lógica de Usuario (Mantiene tu lógica original)
         String correo = principal.getName();
         Usuario usuario = usuarioService.buscarByUsuario(correo);
         contrato.setUsuario(usuario);
 
         setearValoresPorDefecto(contrato);
-
         Contrato contratoGuardado = contratoRepository.save(contrato);
 
+        // 7. Gestión de Relaciones (Clientes y Lotes - Mantiene tu lógica original)
         List<Integer> idsClientesAAsociar;
         if (requestDTO.getIdSeparacion() != null) {
             Separacion separacion = contratoGuardado.getSeparacion();
@@ -166,10 +162,8 @@ public class ContratoServiceImpl implements ContratoService {
                 }
             }
         }
-
         return mapToContratoResponseDTO(contratoGuardado);
     }
-    
     
     @Override
     @Transactional
@@ -252,6 +246,7 @@ public class ContratoServiceImpl implements ContratoService {
 
         return mapToContratoResponseDTO(contratoActualizado);
     }
+    
 
     private void registrarLoteEnContrato(Contrato contrato, Integer idLote) {
         Lote lote = loteService.obtenerLotePorId(idLote);
@@ -270,17 +265,59 @@ public class ContratoServiceImpl implements ContratoService {
     @Transactional(readOnly = true)
     @Cacheable
     public List<ContratoResponseDTO> listarContratos() {
-        return contratoRepository.findAllByOrderByIdContratoDesc().stream()
-                .map(this::mapToContratoResponseDTO).collect(Collectors.toList());
-    }
+        // 1. Obtener todos los contratos
+        List<Contrato> contratos = contratoRepository.findAllByOrderByIdContratoDesc();
 
+        // 2. Obtener listas de IDs inscritos desde el Microservicio
+        // Usamos listas vacías por defecto por si el MS falla o no hay datos
+        List<Integer> idsConLuz = List.of();
+        List<Integer> idsConAgua = List.of();
+
+        try {
+            idsConLuz = inscripcionClient.obtenerContratosPorServicio("LUZ");
+            idsConAgua = inscripcionClient.obtenerContratosPorServicio("AGUA");
+        } catch (Exception e) {
+            // Logueamos el error pero permitimos que la lista de contratos cargue
+            System.err.println("Error al consultar Microservicio de Inscripciones: " + e.getMessage());
+        }
+
+        // 3. Mapear y asignar booleanos
+        final List<Integer> finalIdsConLuz = idsConLuz;
+        final List<Integer> finalIdsConAgua = idsConAgua;
+
+        return contratos.stream()
+                .map(contrato -> {
+                    ContratoResponseDTO dto = this.mapToContratoResponseDTO(contrato);
+                    //Llenamos los booleanos comparando el ID del contrato actual
+                    dto.setTieneLuz(finalIdsConLuz.contains(contrato.getIdContrato()));
+                    dto.setTieneAgua(finalIdsConAgua.contains(contrato.getIdContrato()));
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+    
     @Override
-    @Transactional(readOnly = true) // Añade esto para cachear contratos individuales
+    @Transactional(readOnly = true)
     @Cacheable(key = "#idContrato")
     public ContratoResponseDTO buscarPorId(Integer idContrato) {
-        return contratoRepository.findById(idContrato)
-                .map(this::mapToContratoResponseDTO).orElse(null);
+        Contrato contrato = contratoRepository.findById(idContrato).orElse(null);
+        if (contrato == null) return null;
+
+        ContratoResponseDTO dto = this.mapToContratoResponseDTO(contrato);
+
+        try {
+            // Verificamos si este ID específico está en las listas del MS
+            boolean luz = inscripcionClient.obtenerContratosPorServicio("LUZ").contains(idContrato);
+            boolean agua = inscripcionClient.obtenerContratosPorServicio("AGUA").contains(idContrato);
+            dto.setTieneLuz(luz);
+            dto.setTieneAgua(agua);
+        } catch (Exception e) {
+            System.err.println("Error al consultar servicios para contrato individual: " + idContrato);
+        }
+
+        return dto;
     }
+    
 
     @Override
     @Transactional
@@ -331,24 +368,28 @@ public class ContratoServiceImpl implements ContratoService {
         return PdfGenerator.generarContratoFlorida(dto, primeraLetra);
     }
     
+    
+ // Este método sirve para cuando NO conoces el estado de luz/agua todavía
     private ContratoResponseDTO mapToContratoResponseDTO(Contrato contrato) {
+        return mapToContratoResponseDTO(contrato, false, false);
+    } 
+    
+    
+    private ContratoResponseDTO mapToContratoResponseDTO(Contrato contrato, boolean luz, boolean agua) {
         if (contrato == null) return null;
-        
-        ContratoResponseDTO dto = new ContratoResponseDTO();
-        dto.setIdContrato(contrato.getIdContrato());
-        dto.setFechaContrato(contrato.getFechaContrato());
-        dto.setTipoContrato(contrato.getTipoContrato());
-        dto.setMontoTotal(contrato.getMontoTotal());
-        dto.setInicial(contrato.getInicial());
-        dto.setSaldo(contrato.getSaldo());
-        dto.setCantidadLetras(contrato.getCantidadLetras());
-        dto.setObservaciones(contrato.getObservaciones());
 
-     // 🟢 MAPEADO CORREGIDO: Ahora incluye los 7 parámetros requeridos por el DTO
+        // 1. ModelMapper mapea los datos básicos que coinciden directamente (ID, Fecha, Montos, etc.)
+        ContratoResponseDTO dto = modelMapper.map(contrato, ContratoResponseDTO.class);
+
+        // 2. Asignamos los booleanos que vienen calculados desde el Microservicio
+        dto.setTieneLuz(luz);
+        dto.setTieneAgua(agua);
+
+        // 3. 🚨 MAPEADO DE CLIENTES: Navegamos manualmente por la tabla intermedia ContratoCliente
         if (contrato.getClientes() != null) {
             dto.setClientes(contrato.getClientes().stream()
                 .map(cc -> {
-                    Cliente c = cc.getCliente();
+                    Cliente c = cc.getCliente(); // Extraemos la entidad Cliente
                     return new ClienteResponseDTO(
                         c.getIdCliente(), 
                         c.getNombre(),
@@ -363,26 +404,35 @@ public class ContratoServiceImpl implements ContratoService {
                 }).collect(Collectors.toList()));
         }
 
+        // 4. 🚨 MAPEADO DE LOTES: Navegamos manualmente por la tabla intermedia ContratoLote
         if (contrato.getLotes() != null) {
             dto.setLotes(contrato.getLotes().stream()
                 .map(cl -> {
-                    Lote l = cl.getLote();
+                    Lote l = cl.getLote(); // Extraemos la entidad Lote
                     return new LoteResponseDTO(
-                        l.getManzana(), l.getNumeroLote(), l.getArea(),
-                        l.getLargo1(), l.getLargo2(), l.getAncho1(), l.getAncho2(),
-                        l.getColindanteNorte(), l.getColindanteSur(),
-                        l.getColindanteEste(), l.getColindanteOeste(),
-                        l.getPrograma().getNombrePrograma()
+                        l.getManzana(), 
+                        l.getNumeroLote(), 
+                        l.getArea(),
+                        l.getLargo1(), 
+                        l.getLargo2(), 
+                        l.getAncho1(), 
+                        l.getAncho2(),
+                        l.getColindanteNorte(), 
+                        l.getColindanteSur(),
+                        l.getColindanteEste(), 
+                        l.getColindanteOeste(),
+                        l.getPrograma().getNombrePrograma() // Obtenemos el nombre del programa
                     );
                 }).collect(Collectors.toList()));
         }
 
+        // 5. 🚨 MAPEADO DE LETRAS: Mantenemos la estructura de conversión de letras de cambio
         if (contrato.getLetrasCambio() != null) {
             dto.setLetras(contrato.getLetrasCambio().stream()
                 .map(letra -> new LetraResponseDTO(
-                    letra.getNumeroLetra(),
+                    letra.getNumeroLetra(), 
                     letra.getFechaVencimiento(),
-                    letra.getImporte(),
+                    letra.getImporte(), 
                     letra.getImporteLetras()
                 )).collect(Collectors.toList()));
         }

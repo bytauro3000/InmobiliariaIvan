@@ -24,4 +24,8 @@ public class ContratoResponseDTO {
  // Dentro de tu ContratoResponseDTO.java actual agregas:
     private List<LoteResponseDTO> lotes;
     private List<LetraResponseDTO> letras;
+    
+ // campos para validar si los contratos cuentan con algun servicio
+    private boolean tieneLuz;
+    private boolean tieneAgua;
 }

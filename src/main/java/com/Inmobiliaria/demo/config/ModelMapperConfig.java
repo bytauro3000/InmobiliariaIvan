@@ -6,6 +6,7 @@ import java.util.Date;
 
 import org.modelmapper.ModelMapper;
 import org.modelmapper.Converter;
+import org.modelmapper.convention.MatchingStrategies;
 import org.modelmapper.spi.MappingContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,6 +18,13 @@ public class ModelMapperConfig {
     public ModelMapper modelMapper() {
         ModelMapper modelMapper = new ModelMapper();
 
+        // 🟢 MEJORA: Configuración de Estrategia Estricta
+        // Esto evita que ModelMapper intente adivinar campos y cometa errores
+        modelMapper.getConfiguration()
+            .setMatchingStrategy(MatchingStrategies.STRICT)
+            .setFieldMatchingEnabled(true)
+            .setSkipNullEnabled(true);
+
         // ✅ Converter: Date → LocalDate
         Converter<Date, LocalDate> toLocalDate = new Converter<Date, LocalDate>() {
             public LocalDate convert(MappingContext<Date, LocalDate> context) {
@@ -25,7 +33,7 @@ public class ModelMapperConfig {
             }
         };
 
-        //Converter: LocalDate → Date
+        // ✅ Converter: LocalDate → Date
         Converter<LocalDate, Date> toDate = new Converter<LocalDate, Date>() {
             public Date convert(MappingContext<LocalDate, Date> context) {
                 LocalDate source = context.getSource();

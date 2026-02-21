@@ -57,7 +57,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/letras/**").hasAnyRole("SECRETARIA")
                 .requestMatchers("/api/programas/reporte-excel").hasAnyRole("SECRETARIA")
                 .requestMatchers("/api/dashboard/**").hasRole("SECRETARIA")
-                .requestMatchers("/api/gateway/**").hasRole("SECRETARIA")
+                .requestMatchers("/api/gateway/inscripciones/**").hasRole("SECRETARIA")
                     // ==== 1️⃣ Recursos públicos (Angular, login, letras) ====
                     
        
