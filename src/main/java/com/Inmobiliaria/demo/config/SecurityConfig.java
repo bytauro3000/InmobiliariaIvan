@@ -14,86 +14,55 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(securedEnabled = true)
 public class SecurityConfig {
+
     @Bean
-    public SecurityFilterChain filterChain(
-        HttpSecurity http,
-        JwtAuthenticationFilter jwtAuthenticationFilter
-    ) throws Exception {
-        http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtFilter) throws Exception {
+        return http
+            .cors(AbstractHttpConfigurer::disable)
             .csrf(AbstractHttpConfigurer::disable)
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // 1. RUTAS PÚBLICAS: Libre acceso (Login y endpoints marcados como public)
+                .requestMatchers("/api/auth/**", "/api/public/**").permitAll()
 
-            	// RUTAS PARA EL ACCEDSO A ANGULAR UNIFICADO
-                .requestMatchers("/", "/index.html", "/favicon.ico", "/static/**", "/img/**", "/media/**", "/**/*.js", "/**/*.css", "/**/*.woff2", "/**/*.woff", "/**/*.ttf", "/**/*.svg", "/**/*.png", "/**/*.jpg", "/**/*.jpeg", "/**/*.map").permitAll()
-            	// 1. Permite acceso a la ruta de login sin autenticación (la más específica)
-                .requestMatchers("/api/auth/validate-token").permitAll()
-                .requestMatchers("/api/auth/login").permitAll()
-                .requestMatchers("/api/auth/logout").permitAll()
-                .requestMatchers("/chat/**").permitAll()
-                
-                // 2. Permite el acceso a la lista negra de los token expirados
-    
-                // 🟢 NUEVO: Permitir la ruta del Health Check (PING) sin autenticación
-                .requestMatchers("/api/public/**").permitAll()
-                               
-                // 2. Reglas para el rol SOPORTE
-                .requestMatchers("/api/distritos/**").hasAnyRole("SECRETARIA")              
-                .requestMatchers("/api/separaciones/**").hasRole("SECRETARIA")
-                .requestMatchers("/api/clientes/**").hasRole("SECRETARIA")
-                .requestMatchers("/api/contratos/**").hasRole("SECRETARIA")
-                .requestMatchers("/api/vendedores/**").hasRole("SECRETARIA")
-                .requestMatchers("/api/lotes/**").hasRole("SECRETARIA")
-                .requestMatchers("/api/programas/**").hasAnyRole("SECRETARIA")
-                .requestMatchers("/api/letras/**").hasAnyRole("SECRETARIA")
-                .requestMatchers("/api/programas/reporte-excel").hasAnyRole("SECRETARIA")
-                .requestMatchers("/api/dashboard/**").hasRole("SECRETARIA")
-                .requestMatchers("/api/gateway/inscripciones/**").hasRole("SECRETARIA")
-                    // ==== 1️⃣ Recursos públicos (Angular, login, letras) ====
-                    
-       
-                    // ==== 5️⃣ Todas las demás rutas requieren autenticación ====
-                    .anyRequest().authenticated()
+                // 2. RUTAS DE SECRETARIA: Solo usuarios con ROLE_SECRETARIA pueden acceder
+                // Listamos todas las rutas que mencionaste
+                .requestMatchers(
+                    "/api/distritos/**", 
+                    "/api/separaciones/**", 
+                    "/api/clientes/**", 
+                    "/api/contratos/**", 
+                    "/api/vendedores/**", 
+                    "/api/lotes/**", 
+                    "/api/programas/**",
+                    "/api/parceleros/**", 
+                    "/api/letras/**", 
+                    "/api/dashboard/**", 
+                    "/api/gateway/inscripciones/**",
+                    "/chat/**"
+                ).hasAuthority("ROLE_SECRETARIA")
+
+                // 3. CUALQUIER OTRA PETICIÓN: Debe estar al menos autenticada
+                .anyRequest().authenticated()
+
             )
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
+            // Agregamos el filtro que lee las cabeceras X-Auth-User y X-Auth-Roles del Gateway
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+            .build();
     }
     
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-   
-
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
-        return authenticationConfiguration.getAuthenticationManager();
+    public PasswordEncoder passwordEncoder() { 
+        return new BCryptPasswordEncoder(); 
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        // 🟢 Agregamos la URL de producción de Vercel y mantenemos localhost
-        configuration.setAllowedOrigins(List.of(
-            "http://localhost:4200", 
-            "https://inmobiliaria-ivan.vercel.app"
-        ));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source; 
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 }

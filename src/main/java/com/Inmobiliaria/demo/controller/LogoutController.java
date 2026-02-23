@@ -1,9 +1,5 @@
 package com.Inmobiliaria.demo.controller;
 
-import com.Inmobiliaria.demo.dto.TokenRequest;
-import com.Inmobiliaria.demo.service.impl.TokenBlacklistService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 //Controlador para el cierre de sesión (logout)
@@ -11,7 +7,7 @@ import org.springframework.web.bind.annotation.*;
 //Endpoint para cerrar sesión
 @RequestMapping("/api/auth")
 public class LogoutController {
-
+/*
     @Autowired
     private TokenBlacklistService tokenBlacklistService;
 
@@ -22,4 +18,5 @@ public class LogoutController {
         //Devuelve una respuesta de éxito
         return ResponseEntity.ok().body("Token revocado con éxito");
     }
+    */
 }
