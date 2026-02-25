@@ -19,8 +19,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 	        throws ServletException, IOException {
 	    
+	    // 🟢 LOGS DE DEPURACIÓN
+	    String path = request.getRequestURI();
 	    String userEmail = request.getHeader("X-Auth-User");
 	    String userRole = request.getHeader("X-Auth-Roles");
+	    
+	    System.out.println("DEBUG GATEWAY -> Ruta: " + path);
+	    System.out.println("DEBUG GATEWAY -> Usuario: " + userEmail);
+	    System.out.println("DEBUG GATEWAY -> Rol: " + userRole);
 
 	    if (userEmail != null) {
 	        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(

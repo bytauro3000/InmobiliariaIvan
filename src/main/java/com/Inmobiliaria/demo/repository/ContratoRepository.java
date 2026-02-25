@@ -47,4 +47,5 @@ public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
 	        @Param("idContratoActual") Integer idContratoActual
 	    );
 
+	List<Contrato> findByLotesLoteProgramaIdPrograma(Integer idPrograma);
 }
