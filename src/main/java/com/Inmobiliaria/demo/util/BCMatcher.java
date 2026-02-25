@@ -4,8 +4,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 public class BCMatcher {
     public static void main(String[] args) {
-        String contrasenaIngresada = "inmobiliari@2026";
-        String hashDesdeDB = "$2a$10$t3OAOGUelbw/pvFVcI3fneOvoeqGkFFESWtY85yWcbKBWIV0c.LZq";
+        String contrasenaIngresada = "Oper@dor2026";
+        String hashDesdeDB = "$2a$10$0FTGrAqP/Fxr76Q.LtgTRuuFeRncxO5nXULYjiR0CQ/VXQXC0V3Bq";
 
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 

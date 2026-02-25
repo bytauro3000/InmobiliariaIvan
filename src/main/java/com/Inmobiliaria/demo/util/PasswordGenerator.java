@@ -6,7 +6,7 @@ public class PasswordGenerator {
 
     public static void main(String[] args) {
         // La contraseña que quieres cifrar
-        String plainPassword = "inmobiliari@2026";
+        String plainPassword = "Oper@dor2026";
 
         // Crea una instancia del codificador de contraseñas de Spring Security
         BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();

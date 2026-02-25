@@ -5,7 +5,6 @@ import java.time.LocalDate;
 import java.util.List;
 
 import com.Inmobiliaria.demo.enums.EstadoLetra;
-import com.Inmobiliaria.demo.enums.TipoComprobante;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.*;

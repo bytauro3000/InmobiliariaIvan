@@ -7,7 +7,6 @@ import java.time.LocalDate;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class InscripcionServicioDTO {
 
     private Integer idContrato;

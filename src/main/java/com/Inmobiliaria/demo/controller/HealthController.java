@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/public")
 public class HealthController {
-
+	
     @GetMapping("/ping")
     public ResponseEntity<Map<String, String>> ping() {
         Map<String, String> response = new HashMap<>();

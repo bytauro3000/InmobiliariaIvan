@@ -44,6 +44,7 @@ public class SecurityConfig {
                     "/api/letras/**", 
                     "/api/dashboard/**", 
                     "/api/gateway/inscripciones/**",
+                    "/api/gateway/recibos/**",
                     "/chat/**"
                 ).hasAuthority("ROLE_SECRETARIA")
 
