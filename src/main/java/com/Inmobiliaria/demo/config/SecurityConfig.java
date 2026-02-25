@@ -28,7 +28,7 @@ public class SecurityConfig {
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 // 1. RUTAS PÚBLICAS: Libre acceso (Login y endpoints marcados como public)
-                .requestMatchers("/api/auth/**", "/api/public/**").permitAll()
+                .requestMatchers("/api/auth/**", "/api/public/**","/api/gateway/recibos/**").permitAll()
 
                 // 2. RUTAS DE SECRETARIA: Solo usuarios con ROLE_SECRETARIA pueden acceder
                 // Listamos todas las rutas que mencionaste
