@@ -40,8 +40,6 @@ public class LetraCambioServiceImpl implements LetraCambioService {
     @Autowired
     private DistritoRepository distritoRepository;
     
-    
-    
     @Autowired
     private ModelMapper modelMapper;
 
@@ -177,7 +175,7 @@ public class LetraCambioServiceImpl implements LetraCambioService {
             importeUltimaLetra = saldoEntero.subtract(sumaParcial).setScale(0, BigDecimal.ROUND_HALF_UP);
         } else {
             try {
-                // 🔹 CORRECCIÓN: Mantener el punto decimal y limpiar solo símbolos de moneda/comas
+
                 String importeStr = generarLetrasRequest.getImporte()
                                     .replace("$", "")
                                     .replace(",", "")
@@ -189,13 +187,23 @@ public class LetraCambioServiceImpl implements LetraCambioService {
         }
 
         LocalDate fechaVencimientoInicial = generarLetrasRequest.getFechaVencimientoInicial();
-        int diaVencimientoOriginal = fechaVencimientoInicial.getDayOfMonth();
+ 
+        boolean esUltimoDia = fechaVencimientoInicial.getDayOfMonth() == fechaVencimientoInicial.lengthOfMonth();
 
         for (int i = 1; i <= cantidad; i++) {
             LocalDate fechaCalculada = fechaVencimientoInicial.plusMonths(i - 1);
-            int ultimoDiaDelMes = fechaCalculada.lengthOfMonth();
-            int diaAUsar = Math.min(diaVencimientoOriginal, ultimoDiaDelMes);
-            LocalDate fechaFinal = fechaCalculada.withDayOfMonth(diaAUsar);
+            LocalDate fechaFinal;
+
+            if (esUltimoDia) {
+               
+                fechaFinal = fechaCalculada.withDayOfMonth(fechaCalculada.lengthOfMonth());
+            } else {
+               
+                int diaOriginal = fechaVencimientoInicial.getDayOfMonth();
+                int ultimoDiaDelMes = fechaCalculada.lengthOfMonth();
+                int diaAUsar = Math.min(diaOriginal, ultimoDiaDelMes);
+                fechaFinal = fechaCalculada.withDayOfMonth(diaAUsar);
+            }
 
             LetraCambio letra = new LetraCambio();
             letra.setContrato(contrato);
