@@ -423,7 +423,8 @@ public class PdfGenerator {
 			
 			Table tablaLinderos = new Table(UnitValue.createPercentArray(new float[]{30f, 45f, 25f}))
 			        .useAllAvailableWidth()
-			        .setBorder(Border.NO_BORDER);
+			        .setBorder(Border.NO_BORDER)
+					.setMarginLeft(20);
 
 			// Reutilizamos tu método de 5 parámetros
 			agregarFilaLinderos(tablaLinderos, "Por el frente", loteItem.getColindanteNorte(), "Con    " + loteItem.getAncho1() + "  m.l.", arialItalic);
