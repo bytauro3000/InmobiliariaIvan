@@ -429,7 +429,10 @@ public class ContratoServiceImpl implements ContratoService {
         // 5. 🚨 MAPEADO DE LETRAS: Mantenemos la estructura de conversión de letras de cambio
         if (contrato.getLetrasCambio() != null) {
             dto.setLetras(contrato.getLetrasCambio().stream()
-                .sorted(Comparator.comparing(LetraCambio::getNumeroLetra))
+                .sorted(Comparator.comparing(l -> {
+                    String numStr = l.getNumeroLetra().split("/")[0];
+                    return Integer.parseInt(numStr);
+                }))
                 .map(letra -> new LetraResponseDTO(
                     letra.getNumeroLetra(), 
                     letra.getFechaVencimiento(),
@@ -437,7 +440,6 @@ public class ContratoServiceImpl implements ContratoService {
                     letra.getImporteLetras()
                 )).collect(Collectors.toList()));
         }
-
         return dto;
     }
 }
