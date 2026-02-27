@@ -16,4 +16,5 @@ public class ReciboDTO {
     private LocalDate fechaGiro;
     private LocalDate fechaVencimiento;
     private String estado;
+    private LocalDate fechaLectura;
 }

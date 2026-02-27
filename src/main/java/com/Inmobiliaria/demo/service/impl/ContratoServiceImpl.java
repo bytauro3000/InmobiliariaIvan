@@ -1,6 +1,7 @@
 package com.Inmobiliaria.demo.service.impl;
 
 import java.math.BigDecimal;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -89,7 +90,6 @@ public class ContratoServiceImpl implements ContratoService {
             }
         }
 
-        // 3. 🟢 MAPEO INTELIGENTE: Reemplaza los 'set' manuales de monto, inicial, saldo, etc.
         // ModelMapper convierte automáticamente el DTO a Entidad basándose en nombres de campos.
         Contrato contrato = modelMapper.map(requestDTO, Contrato.class);
 
@@ -429,6 +429,7 @@ public class ContratoServiceImpl implements ContratoService {
         // 5. 🚨 MAPEADO DE LETRAS: Mantenemos la estructura de conversión de letras de cambio
         if (contrato.getLetrasCambio() != null) {
             dto.setLetras(contrato.getLetrasCambio().stream()
+                .sorted(Comparator.comparing(LetraCambio::getNumeroLetra))
                 .map(letra -> new LetraResponseDTO(
                     letra.getNumeroLetra(), 
                     letra.getFechaVencimiento(),
