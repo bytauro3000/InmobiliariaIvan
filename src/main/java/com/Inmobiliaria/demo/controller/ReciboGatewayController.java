@@ -14,7 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -81,7 +83,7 @@ public class ReciboGatewayController {
             return dto;
         })
         .filter(Objects::nonNull)
-        // 🟢 ORDENAMIENTO POR MZ Y LOTE
+        //ORDENAMIENTO POR MZ Y LOTE
         .sorted((a, b) -> {
             int resMz = a.getManzana().compareToIgnoreCase(b.getManzana());
             if (resMz != 0) return resMz;
@@ -123,9 +125,19 @@ public class ReciboGatewayController {
                     reciboClient.registrarLectura(rAgua);
                 }
             }
-            return ResponseEntity.ok("Procesado");
+
+            // Respuesta JSON exitosa
+            Map<String, Object> response = new HashMap<>();
+            response.put("mensaje", "Planilla guardada correctamente");
+            response.put("registrosProcesados", planilla.size());
+            return ResponseEntity.ok(response);
+
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Error: " + e.getMessage());
+            // Respuesta JSON de error
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Error al guardar la planilla");
+            errorResponse.put("detalle", e.getMessage());
+            return ResponseEntity.internalServerError().body(errorResponse);
         }
     }
 }
