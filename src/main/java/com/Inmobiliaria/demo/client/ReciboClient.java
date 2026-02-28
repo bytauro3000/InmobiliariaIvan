@@ -15,4 +15,7 @@ public interface ReciboClient {
 
     @GetMapping
     List<ReciboDTO> listarTodos();
+    
+    @GetMapping("/filtrar")
+    List<ReciboDTO> filtrarPorMesYTipo(@RequestParam int mes, @RequestParam int anio, @RequestParam String tipoServicio);
 }

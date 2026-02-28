@@ -3,10 +3,16 @@ package com.Inmobiliaria.demo.controller;
 import com.Inmobiliaria.demo.client.InscripcionClient;
 import com.Inmobiliaria.demo.client.ReciboClient;
 import com.Inmobiliaria.demo.dto.LecturaUnificadaDTO;
+import com.Inmobiliaria.demo.dto.ReciboConClienteDTO;
 import com.Inmobiliaria.demo.dto.ReciboDTO;
+import com.Inmobiliaria.demo.entity.Cliente;
 import com.Inmobiliaria.demo.entity.Contrato;
 import com.Inmobiliaria.demo.entity.Lote;
 import com.Inmobiliaria.demo.repository.ContratoRepository;
+
+import feign.FeignException;
+
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -14,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +39,9 @@ public class ReciboGatewayController {
 
     @Autowired
     private ContratoRepository contratoRepository;
+    
+    @Autowired
+    private ModelMapper modelMapper;
 
     @GetMapping("/preparar-planilla-unificada")
     @PreAuthorize("hasAuthority('ROLE_SECRETARIA')")
@@ -99,8 +109,7 @@ public class ReciboGatewayController {
     public ResponseEntity<?> guardarPlanillaUnificada(
             @RequestBody List<LecturaUnificadaDTO> planilla,
             @RequestParam(required = false) String fechaGiro,
-            @RequestParam(required = false) String fechaLectura   // <--- NUEVO
-    ) {
+            @RequestParam(required = false) String fechaLectura) {
         try {
             LocalDate fechaParaRegistro = (fechaGiro != null) ? LocalDate.parse(fechaGiro) : LocalDate.now();
             LocalDate fechaLecturaParsed = (fechaLectura != null) ? LocalDate.parse(fechaLectura) : fechaParaRegistro;
@@ -113,7 +122,7 @@ public class ReciboGatewayController {
                     rLuz.setLecturaAnterior(u.getLecturaAntLuz());
                     rLuz.setLecturaActual(u.getLecturaActLuz());
                     rLuz.setFechaGiro(fechaParaRegistro);
-                    rLuz.setFechaLectura(fechaLecturaParsed);  // <--- ASIGNAR
+                    rLuz.setFechaLectura(fechaLecturaParsed);
                     reciboClient.registrarLectura(rLuz);
                 }
 
@@ -124,7 +133,7 @@ public class ReciboGatewayController {
                     rAgua.setLecturaAnterior(u.getLecturaAntAgua());
                     rAgua.setLecturaActual(u.getLecturaActAgua());
                     rAgua.setFechaGiro(fechaParaRegistro);
-                    rAgua.setFechaLectura(fechaLecturaParsed);  // <--- ASIGNAR
+                    rAgua.setFechaLectura(fechaLecturaParsed);
                     reciboClient.registrarLectura(rAgua);
                 }
             }
@@ -136,9 +145,45 @@ public class ReciboGatewayController {
 
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Error al guardar la planilla");
-            errorResponse.put("detalle", e.getMessage());
-            return ResponseEntity.internalServerError().body(errorResponse);
+            String mensajeError;
+
+            // Si es una excepción de Feign con código 400, extraemos el cuerpo (mensaje real)
+            if (e instanceof FeignException && ((FeignException) e).status() == 400) {
+                mensajeError = ((FeignException) e).contentUTF8();
+            } else {
+                mensajeError = e.getMessage();
+            }
+
+            errorResponse.put("error", mensajeError);
+            // También puedes poner "detalle" si lo deseas, pero "error" es suficiente
+            return ResponseEntity.badRequest().body(errorResponse);
         }
+    }
+    
+    @GetMapping("/listar-con-filtros")
+    @PreAuthorize("hasAuthority('ROLE_SECRETARIA')")
+    public ResponseEntity<List<ReciboConClienteDTO>> listarRecibosConFiltros(
+            @RequestParam int mes,
+            @RequestParam int anio,
+            @RequestParam String tipoServicio) {  // 👈 Cambiado a String
+        
+        // 1. Llamar al microservicio para obtener los recibos filtrados
+        List<ReciboDTO> recibos = reciboClient.filtrarPorMesYTipo(mes, anio, tipoServicio);
+        
+        // 2. Para cada recibo, obtener el nombre del cliente
+        List<ReciboConClienteDTO> resultado = new ArrayList<>();
+        for (ReciboDTO r : recibos) {
+            ReciboConClienteDTO dto = modelMapper.map(r, ReciboConClienteDTO.class);
+            Contrato contrato = contratoRepository.findById(r.getIdContrato()).orElse(null);
+            if (contrato != null && !contrato.getClientes().isEmpty()) {
+                Cliente cliente = contrato.getClientes().get(0).getCliente();
+                dto.setNombreCliente(cliente.getNombre() + " " + cliente.getApellidos());
+            } else {
+                dto.setNombreCliente("Cliente no encontrado");
+            }
+            resultado.add(dto);
+        }
+        
+        return ResponseEntity.ok(resultado);
     }
 }
