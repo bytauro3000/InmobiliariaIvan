@@ -46,9 +46,12 @@ public class SecurityConfig {
                     "/api/dashboard/**", 
                     "/api/gateway/inscripciones/**",
                     "/api/gateway/recibos/**",
+                    "/api/usuarios/**",
+                    "/api/mensajes/**",
                     "/chat/**",
                     "/api/archivos/**", 
                     "/ws/**"
+                   
                 ).hasAuthority("ROLE_SECRETARIA")
                 
              // 3. RUTAS DE ADMINISTRADOR: Solo gestión de usuarios
