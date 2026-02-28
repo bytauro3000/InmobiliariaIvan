@@ -97,13 +97,15 @@ public class ReciboGatewayController {
     @PostMapping("/guardar-planilla-unificada")
     @PreAuthorize("hasAuthority('ROLE_SECRETARIA')")
     public ResponseEntity<?> guardarPlanillaUnificada(
-            @RequestBody List<LecturaUnificadaDTO> planilla, 
-            @RequestParam(required = false) String fechaGiro) {
+            @RequestBody List<LecturaUnificadaDTO> planilla,
+            @RequestParam(required = false) String fechaGiro,
+            @RequestParam(required = false) String fechaLectura   // <--- NUEVO
+    ) {
         try {
             LocalDate fechaParaRegistro = (fechaGiro != null) ? LocalDate.parse(fechaGiro) : LocalDate.now();
-            
+            LocalDate fechaLecturaParsed = (fechaLectura != null) ? LocalDate.parse(fechaLectura) : fechaParaRegistro;
+
             for (LecturaUnificadaDTO u : planilla) {
-                // Registrar Luz
                 if (u.isInscritoLuz() && u.getLecturaActLuz() != null && u.getLecturaActLuz() > u.getLecturaAntLuz()) {
                     ReciboDTO rLuz = new ReciboDTO();
                     rLuz.setIdContrato(u.getIdContrato());
@@ -111,10 +113,10 @@ public class ReciboGatewayController {
                     rLuz.setLecturaAnterior(u.getLecturaAntLuz());
                     rLuz.setLecturaActual(u.getLecturaActLuz());
                     rLuz.setFechaGiro(fechaParaRegistro);
+                    rLuz.setFechaLectura(fechaLecturaParsed);  // <--- ASIGNAR
                     reciboClient.registrarLectura(rLuz);
                 }
 
-                // Registrar Agua
                 if (u.isInscritoAgua() && u.getLecturaActAgua() != null && u.getLecturaActAgua() > u.getLecturaAntAgua()) {
                     ReciboDTO rAgua = new ReciboDTO();
                     rAgua.setIdContrato(u.getIdContrato());
@@ -122,18 +124,17 @@ public class ReciboGatewayController {
                     rAgua.setLecturaAnterior(u.getLecturaAntAgua());
                     rAgua.setLecturaActual(u.getLecturaActAgua());
                     rAgua.setFechaGiro(fechaParaRegistro);
+                    rAgua.setFechaLectura(fechaLecturaParsed);  // <--- ASIGNAR
                     reciboClient.registrarLectura(rAgua);
                 }
             }
 
-            // Respuesta JSON exitosa
             Map<String, Object> response = new HashMap<>();
             response.put("mensaje", "Planilla guardada correctamente");
             response.put("registrosProcesados", planilla.size());
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            // Respuesta JSON de error
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Error al guardar la planilla");
             errorResponse.put("detalle", e.getMessage());
