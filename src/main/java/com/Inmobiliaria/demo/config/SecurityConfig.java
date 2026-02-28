@@ -27,6 +27,8 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+            	.requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+            	.requestMatchers("/api/auth/**", "/api/public/**","/api/gateway/recibos/**", "/error").permitAll()
                 // 1. RUTAS PÚBLICAS: Libre acceso (Login y endpoints marcados como public)
                 .requestMatchers("/api/auth/**", "/api/public/**","/api/gateway/recibos/**").permitAll()
 
@@ -47,8 +49,11 @@ public class SecurityConfig {
                     "/api/gateway/recibos/**",
                     "/chat/**"
                 ).hasAuthority("ROLE_SECRETARIA")
+                
+             // 3. RUTAS DE ADMINISTRADOR: Solo gestión de usuarios
+                .requestMatchers("/api/usuarios/**").hasAuthority("ROLE_ADMINISTRADOR")
 
-                // 3. CUALQUIER OTRA PETICIÓN: Debe estar al menos autenticada
+                // 4. CUALQUIER OTRA PETICIÓN: Debe estar al menos autenticada
                 .anyRequest().authenticated()
 
             )
@@ -58,8 +63,8 @@ public class SecurityConfig {
     }
     
     @Bean
-    public PasswordEncoder passwordEncoder() { 
-        return new BCryptPasswordEncoder(); 
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
