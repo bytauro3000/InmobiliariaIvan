@@ -17,5 +17,8 @@ public class ReciboConClienteDTO {
     private LocalDate fechaVencimiento;
     private String estado;
     private LocalDate fechaLectura;
-    private String nombreCliente; 
+    private String nombreCliente;
+    private String manzana;
+    private String lote;
+    private String nombrePrograma; 
 }

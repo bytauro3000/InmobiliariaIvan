@@ -9,6 +9,7 @@ import com.Inmobiliaria.demo.entity.Cliente;
 import com.Inmobiliaria.demo.entity.Contrato;
 import com.Inmobiliaria.demo.entity.Lote;
 import com.Inmobiliaria.demo.repository.ContratoRepository;
+import com.Inmobiliaria.demo.util.ReciboServiciosPdfGenerator;
 
 import feign.FeignException;
 
@@ -18,6 +19,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -162,28 +166,116 @@ public class ReciboGatewayController {
     
     @GetMapping("/listar-con-filtros")
     @PreAuthorize("hasAuthority('ROLE_SECRETARIA')")
+    @Transactional(readOnly = true)
     public ResponseEntity<List<ReciboConClienteDTO>> listarRecibosConFiltros(
             @RequestParam int mes,
             @RequestParam int anio,
-            @RequestParam String tipoServicio) {  // 👈 Cambiado a String
+            @RequestParam String tipoServicio) {
         
-        // 1. Llamar al microservicio para obtener los recibos filtrados
         List<ReciboDTO> recibos = reciboClient.filtrarPorMesYTipo(mes, anio, tipoServicio);
-        
-        // 2. Para cada recibo, obtener el nombre del cliente
         List<ReciboConClienteDTO> resultado = new ArrayList<>();
+        
         for (ReciboDTO r : recibos) {
             ReciboConClienteDTO dto = modelMapper.map(r, ReciboConClienteDTO.class);
             Contrato contrato = contratoRepository.findById(r.getIdContrato()).orElse(null);
-            if (contrato != null && !contrato.getClientes().isEmpty()) {
-                Cliente cliente = contrato.getClientes().get(0).getCliente();
-                dto.setNombreCliente(cliente.getNombre() + " " + cliente.getApellidos());
+            
+            if (contrato != null) {
+                // Cliente (ya lo tienes)
+                if (contrato.getClientes() != null && !contrato.getClientes().isEmpty()) {
+                    Cliente cliente = contrato.getClientes().get(0).getCliente();
+                    dto.setNombreCliente(cliente.getNombre() + " " + cliente.getApellidos());
+                } else {
+                    dto.setNombreCliente("Cliente no encontrado");
+                }
+                
+                // Lotes (tomamos el primer lote del contrato, asumiendo que es el principal)
+                if (contrato.getLotes() != null && !contrato.getLotes().isEmpty()) {
+                    Lote lote = contrato.getLotes().get(0).getLote();
+                    dto.setManzana(lote.getManzana());
+                    dto.setLote(lote.getNumeroLote());
+                    dto.setNombrePrograma(lote.getPrograma().getNombrePrograma()); // si necesitas el programa
+                } else {
+                    dto.setManzana("N/A");
+                    dto.setLote("N/A");
+                    dto.setNombrePrograma("N/A");
+                }
             } else {
                 dto.setNombreCliente("Cliente no encontrado");
+                dto.setManzana("N/A");
+                dto.setLote("N/A");
+                dto.setNombrePrograma("N/A");
             }
             resultado.add(dto);
         }
         
         return ResponseEntity.ok(resultado);
+    }
+    
+    /*========================================================================*/
+    @GetMapping("/generar-pdf/{idRecibo}")
+    @PreAuthorize("hasAuthority('ROLE_SECRETARIA')")
+    @Transactional(readOnly = true)
+    public ResponseEntity<byte[]> generarPdfRecibo(@PathVariable Long idRecibo) {
+        try {
+            // 1. Obtener el recibo del microservicio
+            ReciboDTO reciboDTO;
+            try {
+                reciboDTO = reciboClient.obtenerPorId(idRecibo);
+            } catch (FeignException e) {
+                if (e.status() == 404) {
+                    return ResponseEntity.notFound().build();
+                }
+                throw e;
+            }
+            
+            // 2. Crear DTO enriquecido
+            ReciboConClienteDTO dto = modelMapper.map(reciboDTO, ReciboConClienteDTO.class);
+            
+            // 3. Buscar el contrato para obtener datos adicionales
+            Contrato contrato = contratoRepository.findById(reciboDTO.getIdContrato()).orElse(null);
+            if (contrato != null) {
+                // Cliente
+                if (contrato.getClientes() != null && !contrato.getClientes().isEmpty()) {
+                    Cliente cliente = contrato.getClientes().get(0).getCliente();
+                    dto.setNombreCliente(cliente.getNombre() + " " + cliente.getApellidos());
+                } else {
+                    dto.setNombreCliente("Cliente no encontrado");
+                }
+                
+                // Lote (primer lote)
+                if (contrato.getLotes() != null && !contrato.getLotes().isEmpty()) {
+                    Lote lote = contrato.getLotes().get(0).getLote();
+                    dto.setManzana(lote.getManzana());
+                    dto.setLote(lote.getNumeroLote());
+                    dto.setNombrePrograma(lote.getPrograma().getNombrePrograma());
+                } else {
+                    dto.setManzana("N/A");
+                    dto.setLote("N/A");
+                    dto.setNombrePrograma("N/A");
+                }
+            }
+            
+            // 4. Generar PDF
+            byte[] pdf = ReciboServiciosPdfGenerator.generarRecibo(dto);
+
+            // 5. Construir nombre de archivo
+            String tipo = dto.getTipoServicio(); // "LUZ" o "AGUA"
+            String mz = dto.getManzana() != null ? dto.getManzana() : "NA";
+            String lt = dto.getLote() != null ? dto.getLote() : "NA";
+            String programa = dto.getNombrePrograma() != null ? dto.getNombrePrograma().replaceAll("\\s+", "_") : "NA";
+
+            String filename = String.format("Recibo-%s-%s-%s-%s.pdf", tipo, mz, lt, programa);
+
+            // 6. Devolver como adjunto
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+
+        } catch (Exception e) {
+            // Manejo de errores generales
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }
