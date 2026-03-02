@@ -29,7 +29,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
             	.requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                 // 1. RUTAS PÚBLICAS: Libre acceso (Login y endpoints marcados como public)
-                .requestMatchers("/api/auth/**", "/api/public/**","/api/gateway/recibos/**","/error").permitAll()
+                .requestMatchers("/api/auth/**", "/api/public/**","/error").permitAll()
 
                 // 2. RUTAS DE SECRETARIA: Solo usuarios con ROLE_SECRETARIA pueden acceder
                 // Listamos todas las rutas que mencionaste
@@ -55,7 +55,9 @@ public class SecurityConfig {
                 ).hasAuthority("ROLE_SECRETARIA")
                 
              // 3. RUTAS DE ADMINISTRADOR: Solo gestión de usuarios
-                //.requestMatchers("/api/usuarios/**").hasAuthority("ROLE_ADMINISTRADOR")
+                .requestMatchers(
+                	"/api/usuarios/**"       		
+                ).hasAuthority("ROLE_ADMINISTRADOR")
 
                 // 4. CUALQUIER OTRA PETICIÓN: Debe estar al menos autenticada
                 .anyRequest().authenticated()
