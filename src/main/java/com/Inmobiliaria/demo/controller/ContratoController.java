@@ -40,7 +40,7 @@ public class ContratoController {
         return contratoService.listarContratos();
     }
     
-    // Mantenlo: Sirve para visualización rápida y edición en Angular
+    //Buscar contrato por ID del contrato 
     @GetMapping("/{id}")
     public ResponseEntity<ContratoResponseDTO> buscarContratoPorId(@PathVariable Integer id) {
         ContratoResponseDTO contrato = contratoService.buscarPorId(id);
@@ -49,6 +49,17 @@ public class ContratoController {
         } else {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
+    }
+    
+    //Buscar contrato por  PROGRAMA-MZ-LT
+    @GetMapping("/buscar-por-lote")
+    public ResponseEntity<ContratoResponseDTO> buscarPorLote(
+            @RequestParam Integer idPrograma,
+            @RequestParam String manzana,
+            @RequestParam String numeroLote) {
+        
+        ContratoResponseDTO contrato = contratoService.buscarPorProgramaManzanaLote(idPrograma, manzana, numeroLote);
+        return ResponseEntity.ok(contrato);
     }
     
     @DeleteMapping("/eliminar/{id}")

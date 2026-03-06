@@ -50,7 +50,8 @@ public class SecurityConfig {
                     "/api/mensajes/**",
                     "/chat/**",
                     "/api/archivos/**", 
-                    "/ws/**"
+                    "/ws/**",
+                    "/api/pagos/**"
                    
                 ).hasAuthority("ROLE_SECRETARIA")
                 

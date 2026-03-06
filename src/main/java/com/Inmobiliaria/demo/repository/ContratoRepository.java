@@ -2,6 +2,7 @@
 package com.Inmobiliaria.demo.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -48,4 +49,13 @@ public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
 	    );
 
 	List<Contrato> findByLotesLoteProgramaIdPrograma(Integer idPrograma);
+	
+	//CONSULTAR CONTRATO POR PROGRAMA + MZ + LT 
+	@Query("SELECT cl.contrato FROM ContratoLote cl " +
+		       "WHERE cl.lote.programa.idPrograma = :idPrograma " +
+		       "AND cl.lote.manzana = :manzana " +
+		       "AND cl.lote.numeroLote = :numeroLote")
+		Optional<Contrato> findByProgramaManzanaLote(@Param("idPrograma") Integer idPrograma,
+		                                              @Param("manzana") String manzana,
+		                                              @Param("numeroLote") String numeroLote);
 }

@@ -318,6 +318,19 @@ public class ContratoServiceImpl implements ContratoService {
         return dto;
     }
     
+    @Override
+    @Transactional(readOnly = true)
+    public ContratoResponseDTO buscarPorProgramaManzanaLote(Integer idPrograma, String manzana, String numeroLote) {
+        Contrato contrato = contratoRepository.findByProgramaManzanaLote(idPrograma, manzana, numeroLote)
+                .orElseThrow(() -> new RuntimeException(
+                    "No se encontró un contrato para el lote: Programa " + idPrograma +
+                    ", Manzana " + manzana + ", Lote " + numeroLote
+                ));
+        
+        // Usamos el método existente para mapear a DTO (incluye clientes, lotes, letras)
+        return mapToContratoResponseDTO(contrato);
+    }
+    
 
     @Override
     @Transactional

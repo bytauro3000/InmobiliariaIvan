@@ -47,6 +47,16 @@ public class LetraCambioServiceImpl implements LetraCambioService {
     @Transactional
     public List<LetraCambioDTO> listarPorContrato(Integer idContrato) {
         List<LetraCambio> listaLetras = letraCambioRepository.findByContratoIdContrato(idContrato);
+        LocalDate hoy = LocalDate.now();
+
+        for (LetraCambio letra : listaLetras) {
+            // Si la letra está PENDIENTE y su fecha de vencimiento es anterior a hoy
+            if (letra.getEstadoLetra() == EstadoLetra.PENDIENTE && 
+                letra.getFechaVencimiento().isBefore(hoy)) {
+                letra.setEstadoLetra(EstadoLetra.VENCIDO);
+                // No es necesario guardar explícitamente porque @Transactional lo hará al final
+            }
+        }
 
         return listaLetras.stream()
             .map(letra -> {

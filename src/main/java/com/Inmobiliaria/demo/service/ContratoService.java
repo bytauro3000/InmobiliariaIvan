@@ -22,4 +22,6 @@ public interface ContratoService {
     byte[] generarPdf(Integer idContrato);
     
     ContratoResponseDTO actualizarContrato(Integer id, ContratoRequestDTO requestDTO);
+    
+    ContratoResponseDTO buscarPorProgramaManzanaLote(Integer idPrograma, String manzana, String numeroLote);
 }
