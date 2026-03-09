@@ -2,6 +2,9 @@ package com.Inmobiliaria.demo.controller;
 
 import com.Inmobiliaria.demo.dto.PagoLetraRequestDTO;
 import com.Inmobiliaria.demo.dto.PagoLetraResponseDTO;
+import com.Inmobiliaria.demo.dto.PagosMultiplesRequestDTO;
+import com.Inmobiliaria.demo.dto.SugerenciaNumeroComprobanteDTO;
+import com.Inmobiliaria.demo.enums.TipoComprobante;
 import com.Inmobiliaria.demo.service.PagoLetraService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,49 +23,56 @@ public class PagoLetraController {
 
     private final PagoLetraService pagoLetraService;
 
-    // Listar pagos por contrato
     @GetMapping("/contrato/{idContrato}")
     public ResponseEntity<List<PagoLetraResponseDTO>> listarPorContrato(@PathVariable Integer idContrato) {
         return ResponseEntity.ok(pagoLetraService.listarPorContrato(idContrato));
     }
 
-    // Listar pagos por letra
     @GetMapping("/letra/{idLetra}")
     public ResponseEntity<List<PagoLetraResponseDTO>> listarPorLetra(@PathVariable Integer idLetra) {
         return ResponseEntity.ok(pagoLetraService.listarPorLetra(idLetra));
     }
 
-    // Obtener un pago por ID
     @GetMapping("/{idPago}")
     public ResponseEntity<PagoLetraResponseDTO> obtenerPorId(@PathVariable Integer idPago) {
         return ResponseEntity.ok(pagoLetraService.obtenerPorId(idPago));
     }
 
-    // Registrar un nuevo pago (con voucher opcional)
     @PostMapping(value = "/registrar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PagoLetraResponseDTO> registrarPago(
             @RequestPart("pago") PagoLetraRequestDTO request,
-            @RequestPart(value = "voucher", required = false) MultipartFile voucher) throws IOException {
-
-        PagoLetraResponseDTO response = pagoLetraService.registrarPago(request, voucher);
+            @RequestPart(value = "vouchers", required = false) List<MultipartFile> vouchers) throws IOException {
+        PagoLetraResponseDTO response = pagoLetraService.registrarPago(request, vouchers);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-    // Actualizar un pago existente
+    @PostMapping(value = "/registrar-multiple", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<List<PagoLetraResponseDTO>> registrarPagosMultiples(
+            @RequestPart("pagos") PagosMultiplesRequestDTO request,
+            @RequestPart(value = "vouchers", required = false) List<MultipartFile> vouchers) throws IOException {
+        List<PagoLetraResponseDTO> responses = pagoLetraService.registrarPagosMultiples(request, vouchers);
+        return new ResponseEntity<>(responses, HttpStatus.CREATED);
+    }
+
     @PutMapping(value = "/actualizar/{idPago}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PagoLetraResponseDTO> actualizarPago(
             @PathVariable Integer idPago,
             @RequestPart("pago") PagoLetraRequestDTO request,
-            @RequestPart(value = "voucher", required = false) MultipartFile voucher) throws IOException {
-
-        PagoLetraResponseDTO response = pagoLetraService.actualizarPago(idPago, request, voucher);
+            @RequestPart(value = "vouchers", required = false) List<MultipartFile> vouchers) throws IOException {
+        PagoLetraResponseDTO response = pagoLetraService.actualizarPago(idPago, request, vouchers);
         return ResponseEntity.ok(response);
     }
 
-    // Eliminar un pago (cuidado con la consistencia)
     @DeleteMapping("/eliminar/{idPago}")
-    public ResponseEntity<Void> eliminarPago(@PathVariable Integer idPago) {
+    public ResponseEntity<Void> eliminarPago(@PathVariable Integer idPago) throws IOException {
         pagoLetraService.eliminarPago(idPago);
         return ResponseEntity.noContent().build();
+    }
+    
+    @GetMapping("/sugerir-numero")
+    public ResponseEntity<SugerenciaNumeroComprobanteDTO> sugerirNumeroComprobante(
+            @RequestParam TipoComprobante tipoComprobante) {
+        SugerenciaNumeroComprobanteDTO sugerencia = pagoLetraService.sugerirNumeroComprobante(tipoComprobante);
+        return ResponseEntity.ok(sugerencia);
     }
 }

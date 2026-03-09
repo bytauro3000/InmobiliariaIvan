@@ -5,6 +5,7 @@ import com.Inmobiliaria.demo.enums.TipoComprobante;
 import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 public class PagoLetraResponseDTO {
@@ -16,8 +17,8 @@ public class PagoLetraResponseDTO {
     private MedioPago medioPago;
     private String numeroOperacion;
     private LocalDate fechaOperacion;
-    private String urlVoucher;
     private TipoComprobante tipoComprobante;
     private String numeroComprobante;
     private String observaciones;
+    private List<String> urlsVoucher; 
 }

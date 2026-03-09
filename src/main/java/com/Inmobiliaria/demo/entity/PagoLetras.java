@@ -2,6 +2,8 @@ package com.Inmobiliaria.demo.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.Inmobiliaria.demo.enums.MedioPago;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
@@ -38,9 +40,6 @@ public class PagoLetras {
     @Column(name = "fecha_operacion")
     private LocalDate fechaOperacion;
 
-    @Column(name = "url_voucher", length = 500)  // URL de Cloudinary
-    private String urlVoucher;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_comprobante")
     private TipoComprobante tipoComprobante;
@@ -50,4 +49,7 @@ public class PagoLetras {
 
     @Column(name = "observaciones", length = 255)
     private String observaciones;
+    
+    @OneToMany(mappedBy = "pago", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Voucher> vouchers = new ArrayList<>();
 }
