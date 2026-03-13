@@ -32,7 +32,6 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**", "/api/public/**","/error").permitAll()
 
                 // 2. RUTAS DE SECRETARIA: Solo usuarios con ROLE_SECRETARIA pueden acceder
-                // Listamos todas las rutas que mencionaste
                 .requestMatchers(
                     "/api/distritos/**", 
                     "/api/separaciones/**", 
