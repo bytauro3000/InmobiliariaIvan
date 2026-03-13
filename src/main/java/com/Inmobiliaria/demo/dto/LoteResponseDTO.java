@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class LoteResponseDTO {
+	private Integer idLote;
     private String manzana;
     private String numeroLote;
     private BigDecimal area;

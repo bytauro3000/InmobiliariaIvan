@@ -3,7 +3,10 @@ package com.Inmobiliaria.demo.dto;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
+
+import com.Inmobiliaria.demo.entity.Vendedor;
 import com.Inmobiliaria.demo.enums.TipoContrato;
+import com.Inmobiliaria.demo.enums.EstadoContrato;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -15,6 +18,7 @@ public class ContratoResponseDTO {
     private Integer idContrato;
     private Date fechaContrato;
     private TipoContrato tipoContrato;
+    private EstadoContrato estadoContrato;
     private BigDecimal montoTotal;
     private BigDecimal inicial;
     private BigDecimal saldo;
@@ -24,6 +28,7 @@ public class ContratoResponseDTO {
  // Dentro de tu ContratoResponseDTO.java actual agregas:
     private List<LoteResponseDTO> lotes;
     private List<LetraResponseDTO> letras;
+    private Vendedor vendedor;
     
  // campos para validar si los contratos cuentan con algun servicio
     private boolean tieneLuz;

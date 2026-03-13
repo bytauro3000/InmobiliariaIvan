@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import com.Inmobiliaria.demo.entity.Programa;
 import com.Inmobiliaria.demo.repository.ProgramaRepository;
+import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.service.ProgramaService;
 
 @Service
@@ -50,13 +51,13 @@ public class ProgramaServiceImpl implements ProgramaService {
             }
 
             return programaRepository.save(p);
-        }).orElseThrow(() -> new RuntimeException("Programa no encontrado con id " + id));
+        }).orElseThrow(() -> new NegocioException("Programa no encontrado con id " + id));
     }
 
     @Override
     public void deletePrograma(Integer id) {
         if (!programaRepository.existsById(id)) {
-            throw new RuntimeException("No existe el Programa con id " + id);
+            throw new NegocioException("No existe el Programa con id " + id);
         }
         programaRepository.deleteById(id);
     }

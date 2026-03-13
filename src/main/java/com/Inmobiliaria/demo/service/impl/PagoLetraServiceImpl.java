@@ -9,12 +9,18 @@ import com.Inmobiliaria.demo.dto.SugerenciaNumeroComprobanteDTO;
 import com.Inmobiliaria.demo.entity.LetraCambio;
 import com.Inmobiliaria.demo.entity.PagoLetras;
 import com.Inmobiliaria.demo.entity.Voucher;
+import com.Inmobiliaria.demo.entity.Contrato;
+import com.Inmobiliaria.demo.enums.EstadoContrato;
 import com.Inmobiliaria.demo.enums.EstadoLetra;
+import com.Inmobiliaria.demo.enums.TipoContrato;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
+import com.Inmobiliaria.demo.repository.ContratoRepository;
 import com.Inmobiliaria.demo.repository.LetraCambioRepository;
 import com.Inmobiliaria.demo.repository.PagoLetraRepository;
 import com.Inmobiliaria.demo.repository.VoucherRepository;
+import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.service.PagoLetraService;
+import org.springframework.cache.annotation.CacheEvict;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,12 +38,59 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+
 public class PagoLetraServiceImpl implements PagoLetraService {
 
     private final PagoLetraRepository pagoLetraRepository;
     private final LetraCambioRepository letraCambioRepository;
     private final VoucherRepository voucherRepository;
+    private final ContratoRepository contratoRepository;
     private final Cloudinary cloudinary;
+
+
+    /**
+     * Después de registrar un pago:
+     * 1. Si todas las letras están PAGADAS → CANCELADO
+     * 2. Si estaba en MORA y ya no tiene letras VENCIDAS → ACTIVO
+     * En ambos casos invalida el caché de contratos.
+     */
+    @CacheEvict(cacheNames = "contratos", allEntries = true)
+    public void verificarYActualizarEstadoContrato(Contrato contrato) {
+        if (contrato.getTipoContrato() != TipoContrato.FINANCIADO) return;
+
+        EstadoContrato estadoActual = contrato.getEstadoContrato();
+        if (estadoActual == EstadoContrato.CANCELADO    ||
+            estadoActual == EstadoContrato.RESUELTO      ||
+            estadoActual == EstadoContrato.EN_RESOLUCION ||
+            estadoActual == EstadoContrato.RENUNCIA      ||
+            estadoActual == EstadoContrato.TRANSFERIDO) return;
+
+        List<LetraCambio> letras = contrato.getLetrasCambio();
+
+        // 1. ¿Todas pagadas? → CANCELADO
+        boolean todasPagadas = letras.stream()
+            .allMatch(l -> l.getEstadoLetra() == EstadoLetra.PAGADO);
+        if (todasPagadas) {
+            contrato.setEstadoContrato(EstadoContrato.CANCELADO);
+            contratoRepository.save(contrato);
+            return;
+        }
+
+        // 2. ¿Estaba en MORA y ya no quedan letras VENCIDAS? → ACTIVO
+        if (estadoActual == EstadoContrato.MORA) {
+            boolean sinVencidas = letras.stream()
+                .noneMatch(l -> l.getEstadoLetra() == EstadoLetra.VENCIDO);
+            if (sinVencidas) {
+                contrato.setEstadoContrato(EstadoContrato.ACTIVO);
+                contratoRepository.save(contrato);
+            }
+        }
+    }
+
+    // Alias para compatibilidad interna
+    private void verificarYCancelarContrato(Contrato contrato) {
+        verificarYActualizarEstadoContrato(contrato);
+    }
 
     private PagoLetraResponseDTO mapToDTO(PagoLetras pago) {
         PagoLetraResponseDTO dto = new PagoLetraResponseDTO();
@@ -101,22 +154,23 @@ public class PagoLetraServiceImpl implements PagoLetraService {
     @Transactional(readOnly = true)
     public PagoLetraResponseDTO obtenerPorId(Integer idPago) {
         PagoLetras pago = pagoLetraRepository.findById(idPago)
-                .orElseThrow(() -> new RuntimeException("Pago no encontrado con id: " + idPago));
+                .orElseThrow(() -> new NegocioException("Pago no encontrado con id: " + idPago));
         return mapToDTO(pago);
     }
 
     @Override
     @Transactional
+    @CacheEvict(value = "contratos", allEntries = true)
     public PagoLetraResponseDTO registrarPago(PagoLetraRequestDTO request, List<MultipartFile> vouchers) throws IOException {
         LetraCambio letra = letraCambioRepository.findById(request.getIdLetra())
-                .orElseThrow(() -> new RuntimeException("Letra no encontrada con id: " + request.getIdLetra()));
+                .orElseThrow(() -> new NegocioException("Letra no encontrada con id: " + request.getIdLetra()));
 
         if (letra.getEstadoLetra() == EstadoLetra.PAGADO) {
-            throw new RuntimeException("La letra ya se encuentra pagada");
+            throw new NegocioException("La letra ya se encuentra pagada");
         }
 
         if (request.getImportePagado().compareTo(letra.getImporte()) != 0) {
-            throw new RuntimeException("El importe pagado debe ser igual al importe de la letra");
+            throw new NegocioException("El importe pagado debe ser igual al importe de la letra");
         }
 
         // Validar unicidad del comprobante
@@ -124,7 +178,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             boolean existe = pagoLetraRepository.existsByTipoComprobanteAndNumeroComprobante(
                     request.getTipoComprobante(), request.getNumeroComprobante());
             if (existe) {
-                throw new RuntimeException("Ya existe un pago con el mismo tipo y número de comprobante.");
+                throw new NegocioException("Ya existe un pago con el mismo tipo y numero de comprobante.");
             }
         }
 
@@ -148,6 +202,9 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         letra.setEstadoLetra(EstadoLetra.PAGADO);
         letraCambioRepository.save(letra);
 
+        // Verificar si fue la última letra → pasar contrato a CANCELADO
+        verificarYCancelarContrato(letra.getContrato());
+
         return mapToDTO(pagoGuardado);
     }
 
@@ -157,7 +214,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         List<PagoLetraResponseDTO> responses = new ArrayList<>();
 
         if (request.getPagos() == null || request.getPagos().isEmpty()) {
-            throw new RuntimeException("La lista de pagos no puede estar vacía");
+            throw new NegocioException("La lista de pagos no puede estar vacia");
         }
 
         // Validar unicidad del comprobante (todos los pagos usan el mismo número)
@@ -166,7 +223,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             boolean existe = pagoLetraRepository.existsByTipoComprobanteAndNumeroComprobante(
                     primerPago.getTipoComprobante(), primerPago.getNumeroComprobante());
             if (existe) {
-                throw new RuntimeException("Ya existe un pago con el mismo tipo y número de comprobante.");
+                throw new NegocioException("Ya existe un pago con el mismo tipo y numero de comprobante.");
             }
         }
 
@@ -174,7 +231,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         if (vouchers != null && !vouchers.isEmpty()) {
             Integer idPrimeraLetra = request.getPagos().get(0).getIdLetra();
             LetraCambio letraEjemplo = letraCambioRepository.findById(idPrimeraLetra)
-                    .orElseThrow(() -> new RuntimeException("Letra no encontrada: " + idPrimeraLetra));
+                    .orElseThrow(() -> new NegocioException("Letra no encontrada: " + idPrimeraLetra));
             Integer idContrato = letraEjemplo.getContrato().getIdContrato();
             for (MultipartFile voucher : vouchers) {
                 String url = subirImagen(voucher, idContrato, null);
@@ -184,14 +241,14 @@ public class PagoLetraServiceImpl implements PagoLetraService {
 
         for (PagoLetraRequestDTO pagoReq : request.getPagos()) {
             LetraCambio letra = letraCambioRepository.findById(pagoReq.getIdLetra())
-                    .orElseThrow(() -> new RuntimeException("Letra no encontrada con id: " + pagoReq.getIdLetra()));
+                    .orElseThrow(() -> new NegocioException("Letra no encontrada con id: " + pagoReq.getIdLetra()));
 
             if (letra.getEstadoLetra() == EstadoLetra.PAGADO) {
-                throw new RuntimeException("La letra " + letra.getNumeroLetra() + " ya está pagada");
+                throw new NegocioException("La letra " + letra.getNumeroLetra() + " ya esta pagada");
             }
 
             if (pagoReq.getImportePagado().compareTo(letra.getImporte()) != 0) {
-                throw new RuntimeException("El importe pagado no coincide con el importe de la letra " + letra.getNumeroLetra());
+                throw new NegocioException("El importe pagado no coincide con el importe de la letra " + letra.getNumeroLetra());
             }
 
             PagoLetras pago = new PagoLetras();
@@ -220,6 +277,11 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             letraCambioRepository.save(letra);
         }
 
+        // Verificar si todas las letras del contrato quedaron PAGADAS → CANCELADO
+        // Usamos la primera letra para obtener el contrato (todas pertenecen al mismo)
+        letraCambioRepository.findById(request.getPagos().get(0).getIdLetra())
+            .ifPresent(l -> verificarYCancelarContrato(l.getContrato()));
+
         return responses;
     }
 
@@ -227,14 +289,14 @@ public class PagoLetraServiceImpl implements PagoLetraService {
     @Transactional
     public PagoLetraResponseDTO actualizarPago(Integer idPago, PagoLetraRequestDTO request, List<MultipartFile> vouchers) throws IOException {
         PagoLetras pago = pagoLetraRepository.findById(idPago)
-                .orElseThrow(() -> new RuntimeException("Pago no encontrado con id: " + idPago));
+                .orElseThrow(() -> new NegocioException("Pago no encontrado con id: " + idPago));
 
         // Validar unicidad excluyendo el propio pago
         if (request.getTipoComprobante() != null && request.getNumeroComprobante() != null) {
             boolean existe = pagoLetraRepository.existsByTipoComprobanteAndNumeroComprobanteAndIdPagoNot(
                     request.getTipoComprobante(), request.getNumeroComprobante(), idPago);
             if (existe) {
-                throw new RuntimeException("Ya existe otro pago con el mismo tipo y número de comprobante.");
+                throw new NegocioException("Ya existe otro pago con el mismo tipo y numero de comprobante.");
             }
         }
 
@@ -279,9 +341,10 @@ public class PagoLetraServiceImpl implements PagoLetraService {
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = "contratos", allEntries = true)
     public void eliminarPago(Integer idPago) throws IOException {
         PagoLetras pago = pagoLetraRepository.findById(idPago)
-                .orElseThrow(() -> new RuntimeException("Pago no encontrado con id: " + idPago));
+                .orElseThrow(() -> new NegocioException("Pago no encontrado con id: " + idPago));
 
         LetraCambio letra = pago.getLetra();
 
@@ -308,6 +371,45 @@ public class PagoLetraServiceImpl implements PagoLetraService {
                 letra.setEstadoLetra(EstadoLetra.PENDIENTE);
             }
             letraCambioRepository.save(letra);
+        }
+
+        // Después de eliminar el pago y actualizar la letra, recalcular el estado del contrato.
+        // Si la letra volvió a VENCIDO y el contrato estaba ACTIVO → debe pasar a MORA.
+        // Si no quedan letras vencidas y estaba en MORA → puede quedar ACTIVO (raro, pero correcto).
+        recalcularEstadoContrato(letra.getContrato());
+    }
+
+    /**
+     * Recalcula el estado ACTIVO/MORA del contrato basándose en las letras actuales.
+     * Usado al eliminar un pago para revertir el estado si corresponde.
+     */
+    @CacheEvict(cacheNames = "contratos", allEntries = true)
+    public void recalcularEstadoContrato(Contrato contrato) {
+        if (contrato.getTipoContrato() != TipoContrato.FINANCIADO) return;
+
+        EstadoContrato estadoActual = contrato.getEstadoContrato();
+        if (estadoActual == EstadoContrato.CANCELADO    ||
+            estadoActual == EstadoContrato.RESUELTO      ||
+            estadoActual == EstadoContrato.EN_RESOLUCION ||
+            estadoActual == EstadoContrato.RENUNCIA      ||
+            estadoActual == EstadoContrato.TRANSFERIDO) return;
+
+        // Recargar letras frescas desde BD (el estado de la letra ya fue actualizado antes)
+        Contrato contratoFresco = contratoRepository.findById(contrato.getIdContrato())
+            .orElse(null);
+        if (contratoFresco == null) return;
+
+        long letrasVencidas = contratoFresco.getLetrasCambio().stream()
+            .filter(l -> l.getEstadoLetra() == EstadoLetra.VENCIDO)
+            .count();
+
+        EstadoContrato nuevoEstado = letrasVencidas > 0
+            ? EstadoContrato.MORA
+            : EstadoContrato.ACTIVO;
+
+        if (nuevoEstado != estadoActual) {
+            contratoFresco.setEstadoContrato(nuevoEstado);
+            contratoRepository.save(contratoFresco);
         }
     }
 

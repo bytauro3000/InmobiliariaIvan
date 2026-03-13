@@ -102,7 +102,7 @@ public class VendedorController {
                 row.createCell(5).setCellValue(v.getEmail() != null ? v.getEmail() : "");
                 row.createCell(6).setCellValue(v.getDireccion() != null ? v.getDireccion() : "");
                 row.createCell(7).setCellValue(v.getFechaNacimiento() != null ? v.getFechaNacimiento().toString() : "");
-                row.createCell(8).setCellValue(v.getGenero());
+                row.createCell(8).setCellValue(v.getGenero() != null ? v.getGenero().name() : "");
                 row.createCell(9).setCellValue(v.getComision() != null ? v.getComision().doubleValue() : 0);
                 row.createCell(10).setCellValue(v.getDistrito() != null ? v.getDistrito().getNombre() : "");
             }

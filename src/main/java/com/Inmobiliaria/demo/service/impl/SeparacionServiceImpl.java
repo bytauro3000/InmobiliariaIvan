@@ -14,6 +14,7 @@ import com.Inmobiliaria.demo.entity.*;
 import com.Inmobiliaria.demo.enums.EstadoLote;
 import com.Inmobiliaria.demo.enums.EstadoSeparacion;
 import com.Inmobiliaria.demo.repository.*;
+import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.service.SeparacionService;
 
 @Service
@@ -83,10 +84,10 @@ public class SeparacionServiceImpl implements SeparacionService {
             if (lotesReq != null) {
                 for (SeparacionLote sl : lotesReq) {
                     Lote loteDB = loteRepository.findById(sl.getLote().getIdLote())
-                        .orElseThrow(() -> new RuntimeException("Lote no encontrado"));
+                        .orElseThrow(() -> new NegocioException("Lote no encontrado"));
 
                     if (loteDB.getEstado() != EstadoLote.Disponible) {
-                        throw new RuntimeException("El lote " + loteDB.getNumeroLote() + " ya no está disponible");
+                        throw new NegocioException("El lote " + loteDB.getNumeroLote() + " ya no esta disponible");
                     }
 
                     loteDB.setEstado(EstadoLote.Separado);
@@ -112,7 +113,7 @@ public class SeparacionServiceImpl implements SeparacionService {
             return this.obtenerPorId(separacionGuardada.getIdSeparacion());
             
         } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
+            throw new NegocioException(e.getMessage());
         }
     }
 
@@ -134,7 +135,7 @@ public class SeparacionServiceImpl implements SeparacionService {
     @Transactional
     public Separacion actualizarSeparacion(Separacion separacionEntrante) {
         Separacion existente = separacionRepository.findById(separacionEntrante.getIdSeparacion())
-                .orElseThrow(() -> new RuntimeException("Separación no encontrada"));
+                .orElseThrow(() -> new NegocioException("Separacion no encontrada"));
 
         existente.setMonto(separacionEntrante.getMonto());
         existente.setFechaLimite(separacionEntrante.getFechaLimite());

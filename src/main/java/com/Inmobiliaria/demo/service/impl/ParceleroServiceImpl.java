@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import com.Inmobiliaria.demo.entity.Parcelero;
 import com.Inmobiliaria.demo.repository.ParceleroRepository;
+import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.service.ParceleroService;
 
 @Service
@@ -44,7 +45,7 @@ public class ParceleroServiceImpl implements ParceleroService {
                     p.setDistrito(parcelero.getDistrito());
                     return parceleroRepository.save(p);
                 })
-                .orElseThrow(() -> new RuntimeException("Parcelero no encontrado con id " + id));
+                .orElseThrow(() -> new NegocioException("Parcelero no encontrado con id " + id));
     }
 
     @Override

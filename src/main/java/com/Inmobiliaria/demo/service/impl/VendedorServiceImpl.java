@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import com.Inmobiliaria.demo.entity.Vendedor;
 import com.Inmobiliaria.demo.repository.VendedorRepository;
+import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.service.VendedorService;
 
 
@@ -50,7 +51,7 @@ public class VendedorServiceImpl implements VendedorService{
                     v.setDistrito(vendedor.getDistrito());
                     return vendedorRepository.save(v);
                 })
-                .orElseThrow(() -> new RuntimeException("Vendedor no encontrado con id " + id));
+                .orElseThrow(() -> new NegocioException("Vendedor no encontrado con id " + id));
     }
 
     @Override

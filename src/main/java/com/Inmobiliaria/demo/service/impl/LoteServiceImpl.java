@@ -10,6 +10,7 @@ import com.Inmobiliaria.demo.dto.LoteProgramaResponseDTO;
 import com.Inmobiliaria.demo.entity.Lote;
 import com.Inmobiliaria.demo.enums.EstadoLote;
 import com.Inmobiliaria.demo.repository.LoteRepository;
+import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.service.LoteService;
 
 @Service
@@ -89,7 +90,7 @@ public class LoteServiceImpl implements LoteService {
 				lote.getPrograma().getIdPrograma(), lote.getManzana(), lote.getNumeroLote(), lote.getIdLote());
 
 		if (existeOtro) {
-			throw new RuntimeException("No se puede actualizar: Los datos coinciden con otro lote ya registrado.");
+			throw new NegocioException("No se puede actualizar: Los datos coinciden con otro lote ya registrado.");
 		}
 
 		return loteRepository.save(lote);
@@ -106,7 +107,7 @@ public class LoteServiceImpl implements LoteService {
 	public Lote crearLote(Lote reg) {
 		// 1. Validar que los datos no vengan nulos
 		if (reg.getPrograma() == null || reg.getManzana() == null || reg.getNumeroLote() == null) {
-			throw new RuntimeException("Datos incompletos para la validación.");
+			throw new NegocioException("Datos incompletos para la validacion.");
 		}
 
 		// 2. Verificar si ya existe un lote igual en el mismo programa
@@ -115,7 +116,7 @@ public class LoteServiceImpl implements LoteService {
 
 		if (existe) {
 			// Aquí lanzamos una excepción para que el controlador la capture
-			throw new RuntimeException("El lote " + reg.getNumeroLote() + " de la manzana " + reg.getManzana()
+			throw new NegocioException("El lote " + reg.getNumeroLote() + " de la manzana " + reg.getManzana()
 					+ " ya existe en este programa.");
 		}
 

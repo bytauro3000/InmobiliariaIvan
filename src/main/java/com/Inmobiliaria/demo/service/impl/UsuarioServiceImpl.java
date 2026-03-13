@@ -20,6 +20,7 @@ import com.Inmobiliaria.demo.entity.Usuario;
 import com.Inmobiliaria.demo.enums.EstadoUsuario;
 import com.Inmobiliaria.demo.repository.RolUsuarioRepository;
 import com.Inmobiliaria.demo.repository.UsuarioRepository;
+import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.service.UsuarioService;
 
 
@@ -92,7 +93,7 @@ public class UsuarioServiceImpl implements UserDetailsService, UsuarioService {
 
         // Buscar y asignar el rol
         RolUsuario rol = rolUsuarioRepository.findById(dto.getIdRol())
-            .orElseThrow(() -> new RuntimeException("Error: Rol no encontrado."));
+            .orElseThrow(() -> new NegocioException("Error: Rol no encontrado."));
         nuevoUsuario.setRol(rol);
 
         return usuarioRepository.save(nuevoUsuario);
@@ -121,7 +122,7 @@ public class UsuarioServiceImpl implements UserDetailsService, UsuarioService {
 	@Override
     public Usuario editarUsuario(Integer id, UsuarioRegistroDTO dto) {
         Usuario usuarioDB = usuarioRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+            .orElseThrow(() -> new NegocioException("Usuario no encontrado"));
 
         usuarioDB.setNombres(dto.getNombres());
         usuarioDB.setApellidos(dto.getApellidos());
@@ -136,7 +137,7 @@ public class UsuarioServiceImpl implements UserDetailsService, UsuarioService {
 
         // Actualizar rol
         RolUsuario rol = rolUsuarioRepository.findById(dto.getIdRol())
-            .orElseThrow(() -> new RuntimeException("Rol no encontrado."));
+            .orElseThrow(() -> new NegocioException("Rol no encontrado."));
         usuarioDB.setRol(rol);
 
         return usuarioRepository.save(usuarioDB);
@@ -145,7 +146,7 @@ public class UsuarioServiceImpl implements UserDetailsService, UsuarioService {
     @Override
     public Usuario cambiarEstadoUsuario(Integer id) {
         Usuario usuarioDB = usuarioRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+            .orElseThrow(() -> new NegocioException("Usuario no encontrado"));
             
         // Intercambiar estado
         if (usuarioDB.getEstado() == EstadoUsuario.activo) {

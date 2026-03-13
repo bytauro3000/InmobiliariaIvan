@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import com.Inmobiliaria.demo.enums.TipoContrato;
+import com.Inmobiliaria.demo.enums.EstadoContrato;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -37,6 +38,10 @@ public class Contrato {
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_contrato", nullable = false)
     private TipoContrato tipoContrato = TipoContrato.CONTADO;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_contrato", nullable = false)
+    private EstadoContrato estadoContrato = EstadoContrato.ACTIVO;
 
     @Temporal(TemporalType.DATE)
     @DateTimeFormat(pattern = "yyyy-MM-dd")

@@ -19,14 +19,18 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.Inmobiliaria.demo.client.InscripcionClient;
 import com.Inmobiliaria.demo.dto.*;
+import com.Inmobiliaria.demo.dto.TransferenciaResponseDTO;
 import com.Inmobiliaria.demo.entity.*;
+import com.Inmobiliaria.demo.enums.EstadoLetra;
 import com.Inmobiliaria.demo.enums.EstadoLote;
+import com.Inmobiliaria.demo.enums.EstadoContrato;
 import com.Inmobiliaria.demo.enums.EstadoSeparacion;
 import com.Inmobiliaria.demo.enums.TipoContrato;
 import com.Inmobiliaria.demo.enums.TipoPropietario;
 import com.Inmobiliaria.demo.repository.ContratoRepository;
 import com.Inmobiliaria.demo.repository.LetraCambioRepository;
 import com.Inmobiliaria.demo.service.*;
+import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.util.PdfGenerator; // 👈 Importamos tu utilidad
 
 @Service
@@ -62,7 +66,7 @@ public class ContratoServiceImpl implements ContratoService {
         if (requestDTO.getIdSeparacion() != null) {
             Separacion separacion = separacionService.buscarPorId(requestDTO.getIdSeparacion());
             if (separacion == null) {
-                throw new RuntimeException("La separación con ID " + requestDTO.getIdSeparacion() + " no existe.");
+                throw new NegocioException("La separacion con ID " + requestDTO.getIdSeparacion() + " no existe.");
             }
             idsLotesAValidar = separacion.getLotes().stream()
                     .map(sl -> sl.getLote().getIdLote()).collect(Collectors.toList());
@@ -75,16 +79,24 @@ public class ContratoServiceImpl implements ContratoService {
             for (Integer idLote : idsLotesAValidar) {
                 Lote loteDB = loteService.obtenerLotePorId(idLote);
                 if (loteDB != null) {
+                    // Estados terminales: el lote puede reasignarse a un nuevo contrato
+                    java.util.List<EstadoContrato> estadosTerminales = java.util.Arrays.asList(
+                        EstadoContrato.TRANSFERIDO,
+                        EstadoContrato.RENUNCIA,
+                        EstadoContrato.RESUELTO,
+                        EstadoContrato.CANCELADO
+                    );
                     boolean duplicado = contratoRepository.existeContratoDuplicado(
-                        loteDB.getPrograma().getIdPrograma(), 
-                        loteDB.getManzana(), 
-                        loteDB.getNumeroLote()
+                        loteDB.getPrograma().getIdPrograma(),
+                        loteDB.getManzana(),
+                        loteDB.getNumeroLote(),
+                        estadosTerminales
                     );
                     if (duplicado) {
-                        throw new RuntimeException("El lote " + loteDB.getNumeroLote() + 
-                            " de la Manzana " + loteDB.getManzana() + 
-                            " en el programa " + loteDB.getPrograma().getNombrePrograma() + 
-                            " ya tiene un contrato registrado.");
+                        throw new NegocioException("El lote " + loteDB.getNumeroLote() +
+                            " de la Manzana " + loteDB.getManzana() +
+                            " en el programa " + loteDB.getPrograma().getNombrePrograma() +
+                            " ya tiene un contrato activo registrado.");
                     }
                 }
             }
@@ -112,7 +124,7 @@ public class ContratoServiceImpl implements ContratoService {
             }
         } else if (requestDTO.getIdVendedor() != null) {
             vendedor = vendedorService.obtenerVendedorPorId(requestDTO.getIdVendedor())
-                    .orElseThrow(() -> new RuntimeException("Vendedor no encontrado"));
+                    .orElseThrow(() -> new NegocioException("Vendedor no encontrado"));
         }
         contrato.setVendedor(vendedor);
 
@@ -171,7 +183,7 @@ public class ContratoServiceImpl implements ContratoService {
     public ContratoResponseDTO actualizarContrato(Integer id, ContratoRequestDTO requestDTO) {
         // 1. Buscar el contrato existente
         Contrato contrato = contratoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Contrato no encontrado con ID: " + id));
+                .orElseThrow(() -> new NegocioException("Contrato no encontrado con ID: " + id));
 
         // 2. 🔹 VALIDACIÓN DE DUPLICADOS (Excluyendo el contrato actual)
         if (requestDTO.getIdLotes() != null) {
@@ -179,17 +191,24 @@ public class ContratoServiceImpl implements ContratoService {
                 Lote loteDB = loteService.obtenerLotePorId(idLote);
                 if (loteDB != null) {
                     // Pasamos el 'id' (el contrato que estamos editando) para que lo ignore en la búsqueda
+                    java.util.List<EstadoContrato> estadosTerminales = java.util.Arrays.asList(
+                        EstadoContrato.TRANSFERIDO,
+                        EstadoContrato.RENUNCIA,
+                        EstadoContrato.RESUELTO,
+                        EstadoContrato.CANCELADO
+                    );
                     boolean duplicado = contratoRepository.existeContratoDuplicadoParaOtroContrato(
-                        loteDB.getPrograma().getIdPrograma(), 
-                        loteDB.getManzana(), 
+                        loteDB.getPrograma().getIdPrograma(),
+                        loteDB.getManzana(),
                         loteDB.getNumeroLote(),
-                        id 
+                        id,
+                        estadosTerminales
                     );
 
                     if (duplicado) {
-                        throw new RuntimeException("El lote " + loteDB.getNumeroLote() + 
-                            " de la Manzana " + loteDB.getManzana() + 
-                            " ya está registrado en OTRO contrato.");
+                        throw new NegocioException("El lote " + loteDB.getNumeroLote() +
+                            " de la Manzana " + loteDB.getManzana() +
+                            " ya está registrado en OTRO contrato activo.");
                     }
                 }
             }
@@ -209,7 +228,7 @@ public class ContratoServiceImpl implements ContratoService {
         try {
             contrato.setFechaContrato(dateFormat.parse(requestDTO.getFechaContrato()));
         } catch (ParseException e) {
-            throw new RuntimeException("Formato de fecha inválido.");
+            throw new NegocioException("Formato de fecha invalido. Use el formato yyyy-MM-dd");
         }
         contrato.setMontoTotal(BigDecimal.valueOf(requestDTO.getMontoTotal()));
         contrato.setInicial(BigDecimal.valueOf(requestDTO.getInicial()));
@@ -322,7 +341,7 @@ public class ContratoServiceImpl implements ContratoService {
     @Transactional(readOnly = true)
     public ContratoResponseDTO buscarPorProgramaManzanaLote(Integer idPrograma, String manzana, String numeroLote) {
         Contrato contrato = contratoRepository.findByProgramaManzanaLote(idPrograma, manzana, numeroLote)
-                .orElseThrow(() -> new RuntimeException(
+                .orElseThrow(() -> new NegocioException(
                     "No se encontró un contrato para el lote: Programa " + idPrograma +
                     ", Manzana " + manzana + ", Lote " + numeroLote
                 ));
@@ -331,6 +350,36 @@ public class ContratoServiceImpl implements ContratoService {
         return mapToContratoResponseDTO(contrato);
     }
     
+    @Override
+    @Transactional(readOnly = true)
+    public List<ContratoResponseDTO> buscarPorNombreCliente(String termino) {
+        // 1. Buscar contratos cuyos clientes coincidan con el término
+        List<Contrato> contratos = contratoRepository.findByClienteNombreContaining(termino);
+
+        // 2. Obtener IDs del microservicio (igual que listarContratos)
+        List<Integer> idsConLuz = List.of();
+        List<Integer> idsConAgua = List.of();
+
+        try {
+            idsConLuz  = inscripcionClient.obtenerContratosPorServicio("LUZ");
+            idsConAgua = inscripcionClient.obtenerContratosPorServicio("AGUA");
+        } catch (Exception e) {
+            System.err.println("Error al consultar Microservicio: " + e.getMessage());
+        }
+
+        // 3. Mapear igual que listarContratos
+        final List<Integer> finalIdsConLuz  = idsConLuz;
+        final List<Integer> finalIdsConAgua = idsConAgua;
+
+        return contratos.stream()
+                .map(contrato -> {
+                    ContratoResponseDTO dto = this.mapToContratoResponseDTO(contrato);
+                    dto.setTieneLuz(finalIdsConLuz.contains(contrato.getIdContrato()));
+                    dto.setTieneAgua(finalIdsConAgua.contains(contrato.getIdContrato()));
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
 
     @Override
     @Transactional
@@ -338,7 +387,7 @@ public class ContratoServiceImpl implements ContratoService {
     public void eliminarContrato(Integer idContrato) {
         // 1. Buscamos el contrato con sus lotes asociados antes de eliminarlo
         Contrato contrato = contratoRepository.findById(idContrato)
-                .orElseThrow(() -> new RuntimeException("No se encontró el contrato con ID: " + idContrato));
+                .orElseThrow(() -> new NegocioException("No se encontro el contrato con ID: " + idContrato));
 
         // 2. Si el contrato tiene lotes, debemos regresarlos a estado "Disponible"
         if (contrato.getLotes() != null && !contrato.getLotes().isEmpty()) {
@@ -369,7 +418,7 @@ public class ContratoServiceImpl implements ContratoService {
     	// Se consulta directamente al repositorio ignorando el caché para garantizar 
         // que el PDF incluya las letras de cambio recién generadas o actualizadas.
         Contrato contrato = contratoRepository.findById(idContrato)
-                .orElseThrow(() -> new RuntimeException("No se encontró el contrato con ID: " + idContrato));
+                .orElseThrow(() -> new NegocioException("No se encontro el contrato con ID: " + idContrato));
     
         // Mapeo manual a DTO para procesar la entidad fresca de la base de datos.
         ContratoResponseDTO dto = this.mapToContratoResponseDTO(contrato);
@@ -397,6 +446,7 @@ public class ContratoServiceImpl implements ContratoService {
         // 2. Asignamos los booleanos que vienen calculados desde el Microservicio
         dto.setTieneLuz(luz);
         dto.setTieneAgua(agua);
+        dto.setVendedor(contrato.getVendedor());
 
         // 3. 🚨 MAPEADO DE CLIENTES: Navegamos manualmente por la tabla intermedia ContratoCliente
         if (contrato.getClientes() != null) {
@@ -423,6 +473,7 @@ public class ContratoServiceImpl implements ContratoService {
                 .map(cl -> {
                     Lote l = cl.getLote(); // Extraemos la entidad Lote
                     return new LoteResponseDTO(
+                        l.getIdLote(),
                         l.getManzana(), 
                         l.getNumeroLote(), 
                         l.getArea(),
@@ -434,7 +485,7 @@ public class ContratoServiceImpl implements ContratoService {
                         l.getColindanteSur(),
                         l.getColindanteEste(), 
                         l.getColindanteOeste(),
-                        l.getPrograma().getNombrePrograma() // Obtenemos el nombre del programa
+                        l.getPrograma().getNombrePrograma()
                     );
                 }).collect(Collectors.toList()));
         }
@@ -454,5 +505,180 @@ public class ContratoServiceImpl implements ContratoService {
                 )).collect(Collectors.toList()));
         }
         return dto;
+    }
+
+    /**
+     * Cambia el estado de un contrato manualmente (secretaria).
+     * Solo permite transiciones válidas según el flujo legal del contrato.
+     * Al pasar a RESUELTO libera automáticamente los lotes asociados.
+     */
+    @Override
+    @Transactional
+    @CacheEvict(allEntries = true)
+    public ContratoResponseDTO cambiarEstado(Integer idContrato, String nuevoEstadoStr) {
+
+        Contrato contrato = contratoRepository.findById(idContrato)
+            .orElseThrow(() -> new NegocioException("Contrato no encontrado con ID: " + idContrato));
+
+        EstadoContrato estadoActual = contrato.getEstadoContrato();
+        if (estadoActual == null) estadoActual = EstadoContrato.ACTIVO;
+
+        EstadoContrato nuevoEstado;
+        try {
+            nuevoEstado = EstadoContrato.valueOf(nuevoEstadoStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new NegocioException("Estado inválido: " + nuevoEstadoStr);
+        }
+
+        // Validar transiciones permitidas
+        validarTransicion(estadoActual, nuevoEstado);
+
+        contrato.setEstadoContrato(nuevoEstado);
+
+        // Al resolver: liberar lotes → vuelven a DISPONIBLE (cláusula 7/8)
+        if (nuevoEstado == EstadoContrato.RESUELTO) {
+            contrato.getLotes().forEach(cl -> {
+                Lote lote = cl.getLote();
+                lote.setEstado(EstadoLote.Disponible);
+            });
+        }
+
+        Contrato guardado = contratoRepository.save(contrato);
+        return mapToContratoResponseDTO(guardado);
+    }
+
+    /**
+     * Valida las transiciones MANUALES permitidas (secretaria).
+     * - ACTIVO ↔ MORA: scheduler automático
+     * - ANY → CANCELADO: automático al pagar última letra (PagoLetraServiceImpl)
+     * - ANY → RENUNCIA/TRANSFERIDO: métodos dedicados (registrarRenuncia/registrarTransferencia)
+     * - Transiciones manuales vía cambiarEstado():
+     *     MORA → CARTA_NOTARIAL
+     *     CARTA_NOTARIAL → EN_RESOLUCION | ACTIVO (reactivar)
+     *     EN_RESOLUCION → RESUELTO
+     */
+    private void validarTransicion(EstadoContrato actual, EstadoContrato nuevo) {
+        boolean valida = switch (actual) {
+            case MORA           -> nuevo == EstadoContrato.CARTA_NOTARIAL;
+            case CARTA_NOTARIAL -> nuevo == EstadoContrato.EN_RESOLUCION || nuevo == EstadoContrato.ACTIVO;
+            case EN_RESOLUCION  -> nuevo == EstadoContrato.RESUELTO;
+            case ACTIVO, RESUELTO, CANCELADO, RENUNCIA, TRANSFERIDO -> false;
+        };
+
+        if (!valida) {
+            throw new NegocioException(
+                "Transición no permitida: " + actual + " → " + nuevo
+            );
+        }
+    }
+
+    // ─── RENUNCIA ─────────────────────────────────────────────────────────────
+
+    @Override
+    @Transactional
+    @CacheEvict(allEntries = true)
+    public ContratoResponseDTO registrarRenuncia(Integer idContrato) {
+        Contrato contrato = contratoRepository.findById(idContrato)
+            .orElseThrow(() -> new NegocioException("Contrato no encontrado: " + idContrato));
+
+        EstadoContrato estado = contrato.getEstadoContrato();
+        if (estado != EstadoContrato.ACTIVO && estado != EstadoContrato.MORA) {
+            throw new NegocioException(
+                "Solo se puede registrar renuncia desde estado ACTIVO o MORA. Estado actual: " + estado
+            );
+        }
+
+        // 1. Cambiar estado del contrato
+        contrato.setEstadoContrato(EstadoContrato.RENUNCIA);
+
+        // 2. Liberar lotes → Disponible
+        contrato.getLotes().forEach(cl -> cl.getLote().setEstado(EstadoLote.Disponible));
+
+        // 3. Cancelar letras pendientes/vencidas (las pagadas se conservan)
+        contrato.getLetrasCambio().stream()
+            .filter(l -> l.getEstadoLetra() == EstadoLetra.PENDIENTE
+                      || l.getEstadoLetra() == EstadoLetra.VENCIDO)
+            .forEach(l -> l.setEstadoLetra(EstadoLetra.PAGADO)); // marcamos como cerradas
+
+        Contrato guardado = contratoRepository.save(contrato);
+        return mapToContratoResponseDTO(guardado);
+    }
+
+    // ─── TRANSFERENCIA ────────────────────────────────────────────────────────
+
+    @Override
+    @Transactional
+    @CacheEvict(allEntries = true)
+    public TransferenciaResponseDTO registrarTransferencia(Integer idContrato) {
+        Contrato contrato = contratoRepository.findById(idContrato)
+            .orElseThrow(() -> new NegocioException("Contrato no encontrado: " + idContrato));
+
+        EstadoContrato estado = contrato.getEstadoContrato();
+        if (estado != EstadoContrato.ACTIVO && estado != EstadoContrato.MORA) {
+            throw new NegocioException(
+                "Solo se puede transferir desde estado ACTIVO o MORA. Estado actual: " + estado
+            );
+        }
+
+        // 1. Calcular montos
+        java.math.BigDecimal montoPagado = contrato.getLetrasCambio().stream()
+            .filter(l -> l.getEstadoLetra() == EstadoLetra.PAGADO)
+            .map(LetraCambio::getImporte)
+            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+        long letrasRestantes = contrato.getLetrasCambio().stream()
+            .filter(l -> l.getEstadoLetra() == EstadoLetra.PENDIENTE
+                      || l.getEstadoLetra() == EstadoLetra.VENCIDO)
+            .count();
+
+        java.math.BigDecimal saldoPendiente = contrato.getMontoTotal().subtract(montoPagado);
+
+        // 2. Marcar contrato como TRANSFERIDO (el lote no cambia — sigue Vendido)
+        contrato.setEstadoContrato(EstadoContrato.TRANSFERIDO);
+        contratoRepository.save(contrato);
+
+        // 3. Armar lista de IDs de lotes para el nuevo contrato
+        List<Integer> idLotes = contrato.getLotes().stream()
+            .map(cl -> cl.getLote().getIdLote())
+            .collect(Collectors.toList());
+
+        // 4. Armar lotes DTO para mostrar info
+        List<LoteResponseDTO> lotesDto = contrato.getLotes().stream()
+            .map(cl -> {
+                Lote l = cl.getLote();
+                return new LoteResponseDTO(
+                    l.getIdLote(), l.getManzana(), l.getNumeroLote(), l.getArea(),
+                    l.getLargo1(), l.getLargo2(), l.getAncho1(), l.getAncho2(),
+                    l.getColindanteNorte(), l.getColindanteSur(),
+                    l.getColindanteEste(), l.getColindanteOeste(),
+                    l.getPrograma().getNombrePrograma()
+                );
+            }).collect(Collectors.toList());
+
+        // 5. Info vendedor
+        Integer idVendedor = contrato.getVendedor() != null ? contrato.getVendedor().getIdVendedor() : null;
+        String nombreVendedor = contrato.getVendedor() != null
+            ? contrato.getVendedor().getNombre() + " " + contrato.getVendedor().getApellidos()
+            : "";
+
+        String resumen = String.format(
+            "Contrato #%d transferido. Pagado: S/ %.2f → sugerido como inicial. " +
+            "Saldo: S/ %.2f a dividir en %d letras restantes.",
+            idContrato, montoPagado, saldoPendiente, letrasRestantes
+        );
+
+        return new TransferenciaResponseDTO(
+            idContrato,
+            lotesDto,
+            idLotes,
+            idVendedor,
+            nombreVendedor,
+            contrato.getMontoTotal(),
+            montoPagado,
+            saldoPendiente,
+            (int) letrasRestantes,
+            contrato.getCantidadLetras(),
+            resumen
+        );
     }
 }

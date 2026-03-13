@@ -4,6 +4,9 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -15,45 +18,53 @@ import java.util.List;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-	@Override
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+
+    // ✅ Se inyecta desde variable de entorno GATEWAY_SECRET — nunca hardcodeado
+    @Value("${gateway.secret-key}")
+    private String gatewaySecretKey;
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        
+
         String path = request.getRequestURI();
-        
-        //EXCEPCIONES: Rutas que NO necesitan validar headers del Gateway
-        //Si es login o el ping público, pasamos directamente al siguiente filtro (al Controller)
+
+        // Rutas públicas: pasan directo sin validar nada
         if (path.contains("/api/auth/login") || path.contains("/api/public/ping") || path.equals("/")) {
             filterChain.doFilter(request, response);
-            return; // Salimos del método para no ejecutar los logs de abajo
+            return;
         }
 
-        // 2. 🟢 LOGS DE DEPURACIÓN PARA RUTAS PROTEGIDAS
+        // ✅ VALIDACIÓN: Solo el Gateway puede hablar con el monolito
+        // Si la petición no trae el header secreto correcto → 403 inmediato
+        String gatewayHeader = request.getHeader("X-Gateway-Secret");
+        if (gatewayHeader == null || !gatewayHeader.equals(gatewaySecretKey)) {
+            log.warn("Acceso directo bloqueado al monolito en ruta: {} | Header recibido: {}",
+                    path, gatewayHeader != null ? "[PRESENTE PERO INCORRECTO]" : "[AUSENTE]");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Acceso denegado: origen no autorizado");
+            return;
+        }
+
+        // ✅ Si llegó aquí, la petición viene del Gateway → procesar normalmente
         String userEmail = request.getHeader("X-Auth-User");
-        String userRole = request.getHeader("X-Auth-Roles");
-        
-        System.out.println("\n====== INICIO DEBUG MONOLITO ======");
-        System.out.println("1. Ruta solicitada: " + path);
-        System.out.println("2. X-Auth-User recibido: " + userEmail);
-        System.out.println("3. X-Auth-Roles recibido: " + userRole);
-        
+        String userRole  = request.getHeader("X-Auth-Roles");
+
+        log.debug("Ruta solicitada desde Gateway: {}", path);
+
         if (userEmail != null && !userEmail.isEmpty()) {
             String rolLimpio = (userRole != null) ? userRole.trim() : "ROLE_USER";
-            
+
             UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                 userEmail, null, List.of(new SimpleGrantedAuthority(rolLimpio))
             );
             SecurityContextHolder.getContext().setAuthentication(auth);
-            
-            System.out.println("4. ✅ Autenticación exitosa en Spring Security.");
-            System.out.println("   -> Principal: " + userEmail);
-            System.out.println("   -> Autoridad asignada: [" + rolLimpio + "]");
+
+            log.debug("Autenticacion exitosa - Principal: {}, Rol: [{}]", userEmail, rolLimpio);
         } else {
-            // Este log ahora solo saldrá si intentas entrar a una ruta protegida (ej: /api/clientes) sin estar logueado
-            System.out.println("4. ❌ ACCESO DENEGADO: Falta header X-Auth-User en ruta protegida.");
+            log.debug("Header X-Auth-User ausente en ruta protegida: {}", path);
         }
-        System.out.println("===================================\n");
-        
+
         filterChain.doFilter(request, response);
     }
 }

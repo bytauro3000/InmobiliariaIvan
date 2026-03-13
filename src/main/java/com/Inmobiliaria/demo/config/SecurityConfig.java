@@ -46,7 +46,6 @@ public class SecurityConfig {
                     "/api/dashboard/**", 
                     "/api/gateway/inscripciones/**",
                     "/api/gateway/recibos/**",
-                    "/api/usuarios/**",
                     "/api/mensajes/**",
                     "/chat/**",
                     "/api/archivos/**", 
@@ -56,9 +55,8 @@ public class SecurityConfig {
                 ).hasAuthority("ROLE_SECRETARIA")
                 
              // 3. RUTAS DE ADMINISTRADOR: Solo gestión de usuarios
-                .requestMatchers(
-                	"/api/usuarios/**"       		
-                ).hasAuthority("ROLE_ADMINISTRADOR")
+                .requestMatchers("/api/usuarios/**")
+                .hasAnyAuthority("ROLE_SECRETARIA", "ROLE_ADMINISTRADOR")
 
                 // 4. CUALQUIER OTRA PETICIÓN: Debe estar al menos autenticada
                 .anyRequest().authenticated()

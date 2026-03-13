@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import com.Inmobiliaria.demo.entity.Contrato;
+import com.Inmobiliaria.demo.enums.EstadoContrato;
 
 @Repository
 public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
@@ -19,33 +20,51 @@ public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
 	    List<Object[]> contarContratosPorProgramaYTipo();
 	    
 	List<Contrato> findAllByOrderByIdContratoDesc();
+
+	// Carga contratos FINANCIADOS con sus letras en una sola query — evita LazyInitializationException
+	@Query("SELECT DISTINCT c FROM Contrato c " +
+	       "LEFT JOIN FETCH c.letrasCambio " +
+	       "WHERE c.tipoContrato = com.Inmobiliaria.demo.enums.TipoContrato.FINANCIADO " +
+	       "AND c.estadoContrato IN (" +
+	       "  com.Inmobiliaria.demo.enums.EstadoContrato.ACTIVO, " +
+	       "  com.Inmobiliaria.demo.enums.EstadoContrato.MORA) " +
+	       "ORDER BY c.idContrato DESC")
+	List<Contrato> findFinanciadosActivosConLetras();
 	
 	//USAR ESTE PARA GUARDAR (Nuevos registros)
+    // Excluye contratos en estados terminales para permitir reasignar lotes
+    // de contratos TRANSFERIDOS, RENUNCIADOS, RESUELTOS o CANCELADOS
     @Query("SELECT COUNT(cl) > 0 FROM ContratoLote cl " +
+           "JOIN cl.contrato c " +
            "JOIN cl.lote l " +
            "JOIN l.programa p " +
            "WHERE p.idPrograma = :idPrograma " +
            "AND l.manzana = :manzana " +
-           "AND l.numeroLote = :numeroLote")
+           "AND l.numeroLote = :numeroLote " +
+           "AND c.estadoContrato NOT IN :estadosExcluidos")
     boolean existeContratoDuplicado(
-        @Param("idPrograma") Integer idPrograma, 
-        @Param("manzana") String manzana, 
-        @Param("numeroLote") String numeroLote
+        @Param("idPrograma") Integer idPrograma,
+        @Param("manzana") String manzana,
+        @Param("numeroLote") String numeroLote,
+        @Param("estadosExcluidos") java.util.List<EstadoContrato> estadosExcluidos
     );
 	
 	//USO ESTE PARA CUANDO VOY ACTUALIZAR Y NO ME SALTE ERROR QUE EL CONTRATO YA EXISTE 
 	@Query("SELECT COUNT(cl) > 0 FROM ContratoLote cl " +
+	           "JOIN cl.contrato c " +
 	           "JOIN cl.lote l " +
 	           "JOIN l.programa p " +
 	           "WHERE p.idPrograma = :idPrograma " +
 	           "AND l.manzana = :manzana " +
 	           "AND l.numeroLote = :numeroLote " +
-	           "AND cl.contrato.idContrato <> :idContratoActual")
+	           "AND cl.contrato.idContrato <> :idContratoActual " +
+	           "AND c.estadoContrato NOT IN :estadosExcluidos")
 	    boolean existeContratoDuplicadoParaOtroContrato(
-	        @Param("idPrograma") Integer idPrograma, 
-	        @Param("manzana") String manzana, 
+	        @Param("idPrograma") Integer idPrograma,
+	        @Param("manzana") String manzana,
 	        @Param("numeroLote") String numeroLote,
-	        @Param("idContratoActual") Integer idContratoActual
+	        @Param("idContratoActual") Integer idContratoActual,
+	        @Param("estadosExcluidos") java.util.List<EstadoContrato> estadosExcluidos
 	    );
 
 	List<Contrato> findByLotesLoteProgramaIdPrograma(Integer idPrograma);
@@ -58,4 +77,12 @@ public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
 		Optional<Contrato> findByProgramaManzanaLote(@Param("idPrograma") Integer idPrograma,
 		                                              @Param("manzana") String manzana,
 		                                              @Param("numeroLote") String numeroLote);
+	
+	//Consulta de nombre + apellidos
+	@Query("SELECT DISTINCT c FROM Contrato c " +
+		       "JOIN c.clientes cc " +
+		       "JOIN cc.cliente cl " +
+		       "WHERE LOWER(CONCAT(cl.nombre, ' ', cl.apellidos)) LIKE LOWER(CONCAT('%', :termino, '%')) " +
+		       "ORDER BY c.idContrato DESC")
+		List<Contrato> findByClienteNombreContaining(@Param("termino") String termino);
 }

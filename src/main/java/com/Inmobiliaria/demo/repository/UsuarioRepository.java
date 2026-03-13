@@ -11,6 +11,5 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
 
     // Buscar usuario por nombre de usuario (único)
 	Optional<Usuario> findByCorreo(String correo);
-	//Buscar por id de usuario (necesario para mensajeria)
-	Optional<Usuario> findById(Long id);
+
 }
