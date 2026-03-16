@@ -28,20 +28,12 @@ public class SecurityConfig {
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-
-                // 1. RUTAS PÚBLICAS
-                // ─ /api/auth/**              → login / logout
-                // ─ /api/public/**            → endpoints públicos generales
-                // ─ /api/pagos-letras/*/comprobante-pdf → el cliente escanea el QR
-                //   sin necesidad de iniciar sesión y puede descargar su comprobante
                 .requestMatchers(
                     "/api/auth/**",
                     "/api/public/**",
-                    "/error",
-                    "/api/pagos-letras/*/comprobante-pdf"
+                    "/api/pagos/*/comprobante-pdf",
+                    "/error"
                 ).permitAll()
-
-                // 2. RUTAS DE SECRETARIA
                 .requestMatchers(
                     "/api/distritos/**",
                     "/api/separaciones/**",
@@ -57,17 +49,12 @@ public class SecurityConfig {
                     "/api/gateway/recibos/**",
                     "/api/mensajes/**",
                     "/chat/**",
-                    "/api/archivos/**",
                     "/ws/**",
-                    "/api/pagos/**",
-                    "/api/pagos-letras/**"
+                    "/api/archivos/**",
+                    "/api/pagos/**"
                 ).hasAuthority("ROLE_SECRETARIA")
-
-                // 3. RUTAS DE ADMINISTRADOR
                 .requestMatchers("/api/usuarios/**")
                 .hasAnyAuthority("ROLE_SECRETARIA", "ROLE_ADMINISTRADOR")
-
-                // 4. CUALQUIER OTRA PETICIÓN: autenticada
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
