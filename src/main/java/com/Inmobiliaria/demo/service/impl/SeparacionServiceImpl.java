@@ -4,8 +4,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.Inmobiliaria.demo.dto.SeparacionDTO;
@@ -17,20 +15,17 @@ import com.Inmobiliaria.demo.repository.*;
 import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.service.SeparacionService;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor 
 public class SeparacionServiceImpl implements SeparacionService {
 
-    @Autowired
-    private LoteRepository loteRepository; 
-    
-    @Autowired
-    private SeparacionRepository separacionRepository;
-    
-    @Autowired
-    private SeparacionClienteRepository separacionClienteRepository;
-    
-    @Autowired
-    private SeparacionLoteRepository separacionLoteRepository;
+  
+    private final LoteRepository loteRepository; 
+    private final SeparacionRepository separacionRepository;
+    private final SeparacionClienteRepository separacionClienteRepository;
+    private final SeparacionLoteRepository separacionLoteRepository;
 
     @Override
     @Transactional(readOnly = true)

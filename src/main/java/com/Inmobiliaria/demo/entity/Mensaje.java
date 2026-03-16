@@ -1,4 +1,4 @@
-package com.Inmobiliaria.demo.mensajeria;
+package com.Inmobiliaria.demo.entity;
 
 import java.time.LocalDateTime;
 

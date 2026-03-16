@@ -1,21 +1,20 @@
-package com.Inmobiliaria.demo.mensajeria;
+package com.Inmobiliaria.demo.service;
 
 
 import java.io.IOException;
 import java.util.Map;
-
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+import lombok.RequiredArgsConstructor;
 
 @Service
+@RequiredArgsConstructor
 public class ArchivoService {
 
-	@Autowired
-	private Cloudinary cloudinary;
+	
+	private final Cloudinary cloudinary;
 
 	@SuppressWarnings("unchecked")
 	public Map <String, Object> subirArchivo(MultipartFile archivo, String nombreFinal) throws IOException{

@@ -1,4 +1,4 @@
-package com.Inmobiliaria.demo.mensajeria;
+package com.Inmobiliaria.demo.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;

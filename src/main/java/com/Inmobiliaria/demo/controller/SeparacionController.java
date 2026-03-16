@@ -2,7 +2,6 @@ package com.Inmobiliaria.demo.controller;
 
 import java.util.List;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -12,12 +11,15 @@ import com.Inmobiliaria.demo.dto.SeparacionResumenDTO;
 import com.Inmobiliaria.demo.entity.Separacion;
 import com.Inmobiliaria.demo.service.SeparacionService;
 
+import lombok.RequiredArgsConstructor;
+
 @RestController
 @RequestMapping("/api/separaciones")
+@RequiredArgsConstructor
 public class SeparacionController {
 
-    @Autowired
-    private SeparacionService separacionService;
+    
+    private final SeparacionService separacionService;
 
     // Búsqueda para autocompletado: el Repositorio ahora usa DISTINCT para evitar duplicados
     @GetMapping(value = "/buscar", produces = MediaType.APPLICATION_JSON_VALUE) 

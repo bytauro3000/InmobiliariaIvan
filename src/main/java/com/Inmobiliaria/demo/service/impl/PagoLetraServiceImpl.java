@@ -38,7 +38,6 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-
 public class PagoLetraServiceImpl implements PagoLetraService {
 
     private final PagoLetraRepository pagoLetraRepository;

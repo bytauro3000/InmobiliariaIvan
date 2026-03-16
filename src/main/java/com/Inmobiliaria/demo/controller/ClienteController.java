@@ -5,6 +5,8 @@ import com.Inmobiliaria.demo.entity.Cliente;
 import com.Inmobiliaria.demo.service.ClienteService;
 import com.Inmobiliaria.demo.service.ConsultaDniService;
 
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,15 +16,13 @@ import java.util.List;
 //COMPLETO
 @RestController
 @RequestMapping("/api/clientes")
+@RequiredArgsConstructor 
 public class ClienteController {
 
     private final ClienteService clienteService;
     private final ConsultaDniService consultaDniService;
 
-    public ClienteController(ClienteService clienteService, ConsultaDniService consultaDniService) {
-        this.clienteService = clienteService;
-        this.consultaDniService = consultaDniService;
-    }
+  
 
     @GetMapping("/listar")
     public List<Cliente> listarClientes() {

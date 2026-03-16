@@ -2,7 +2,6 @@ package com.Inmobiliaria.demo.controller;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,12 +12,15 @@ import com.Inmobiliaria.demo.dto.ReporteCronogramaPagosClientesDTO;
 import com.Inmobiliaria.demo.dto.ReporteLetraCambioDTO;
 import com.Inmobiliaria.demo.service.LetraCambioService;
 
+import lombok.RequiredArgsConstructor;
+
 @RestController
 @RequestMapping("/api/letras")
+@RequiredArgsConstructor
 public class LetrasCambioController {
 
-    @Autowired
-    private LetraCambioService letraCambioService;
+  
+    private final LetraCambioService letraCambioService;
 
  // Listar letras por contrato
     @GetMapping("/listar/{idContrato}")

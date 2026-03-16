@@ -2,22 +2,20 @@ package com.Inmobiliaria.demo.service.impl;
 
 import java.util.List;
 import java.util.Optional;
-
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import com.Inmobiliaria.demo.entity.Vendedor;
 import com.Inmobiliaria.demo.repository.VendedorRepository;
 import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.service.VendedorService;
 
-
+import lombok.RequiredArgsConstructor;
 
 
 @Service
+@RequiredArgsConstructor 
 public class VendedorServiceImpl implements VendedorService{
-	@Autowired
-	VendedorRepository vendedorRepository;
+	
+	private final VendedorRepository vendedorRepository;
 
 	@Override
 	public List<Vendedor> listarVendedores() {

@@ -3,8 +3,6 @@ package com.Inmobiliaria.demo.service.impl;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -23,18 +21,16 @@ import com.Inmobiliaria.demo.repository.UsuarioRepository;
 import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.service.UsuarioService;
 
+import lombok.RequiredArgsConstructor;
+
 
 @Service
+@RequiredArgsConstructor 
 public class UsuarioServiceImpl implements UserDetailsService, UsuarioService {
 
-	@Autowired
-	private PasswordEncoder passwordEncoder;
-    
-    @Autowired
-    private UsuarioRepository usuarioRepository;
-    
-    @Autowired
-    private RolUsuarioRepository rolUsuarioRepository;
+	private final PasswordEncoder passwordEncoder;
+    private final UsuarioRepository usuarioRepository;
+    private final RolUsuarioRepository rolUsuarioRepository;
     
     // No necesitas inyectar PasswordEncoder aquí, ya que Spring Security lo gestiona
     // Puedes inyectarlo en tu servicio de registro de usuarios, pero no en este método de carga.

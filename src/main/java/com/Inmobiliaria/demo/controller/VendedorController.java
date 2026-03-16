@@ -10,19 +10,21 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.Inmobiliaria.demo.entity.Vendedor;
 import com.Inmobiliaria.demo.service.VendedorService;
 
+import lombok.RequiredArgsConstructor;
+
 @RestController
 @RequestMapping("/api/vendedores")
+@RequiredArgsConstructor
 public class VendedorController {
 
-    @Autowired
-    private VendedorService vendedorService;
+   
+    private final VendedorService vendedorService;
 
     // LISTAR TODOS
     @GetMapping

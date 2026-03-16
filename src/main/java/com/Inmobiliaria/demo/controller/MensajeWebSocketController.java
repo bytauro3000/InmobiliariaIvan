@@ -1,25 +1,24 @@
-package com.Inmobiliaria.demo.mensajeria;
+package com.Inmobiliaria.demo.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
-
 import com.Inmobiliaria.demo.dto.MensajeDTO;
+import com.Inmobiliaria.demo.entity.Mensaje;
 import com.Inmobiliaria.demo.entity.Usuario;
 import com.Inmobiliaria.demo.repository.UsuarioRepository;
+import com.Inmobiliaria.demo.service.MensajeService;
+
+import lombok.RequiredArgsConstructor;
 
 @Controller
+@RequiredArgsConstructor
 public class MensajeWebSocketController {
 
-	@Autowired
-	private MensajeService mensajeService;
 	
-	@Autowired
-	private SimpMessagingTemplate messagingTemplate;
-	
-    @Autowired
-    private UsuarioRepository usuarioRepository;
+	private final MensajeService mensajeService;
+	private final SimpMessagingTemplate messagingTemplate;
+    private final UsuarioRepository usuarioRepository;
 	
 	
 	@MessageMapping("/enviar")

@@ -1,7 +1,6 @@
 package com.Inmobiliaria.demo.controller;
 
 import java.util.List;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,12 +16,15 @@ import com.Inmobiliaria.demo.dto.LoteProgramaResponseDTO;
 import com.Inmobiliaria.demo.entity.Lote;
 import com.Inmobiliaria.demo.service.LoteService;
 
+import lombok.RequiredArgsConstructor;
+
 @RestController
 @RequestMapping("/api/lotes")
+@RequiredArgsConstructor
 public class LoteController {
 
-	@Autowired	
-    LoteService loteService;
+	
+    private final LoteService loteService;
 
 
     //Listar todos los lotes (entidad completa)

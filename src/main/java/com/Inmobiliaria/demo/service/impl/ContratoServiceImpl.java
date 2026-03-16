@@ -10,7 +10,6 @@ import java.text.SimpleDateFormat;
 import java.text.ParseException;
 
 import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheConfig;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -33,21 +32,24 @@ import com.Inmobiliaria.demo.service.*;
 import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.util.PdfGenerator; // 👈 Importamos tu utilidad
 
+import lombok.RequiredArgsConstructor;
+
 @Service
 @CacheConfig(cacheNames = "contratos")
+@RequiredArgsConstructor 
 public class ContratoServiceImpl implements ContratoService {
 
-    @Autowired private ContratoRepository contratoRepository;
-    @Autowired private ContratoClienteService contratoClienteService;
-    @Autowired private ContratoLoteService contratoLoteService;
-    @Autowired private ClienteService clienteService;
-    @Autowired private LoteService loteService;
-    @Autowired private UsuarioService usuarioService;
-    @Autowired private SeparacionService separacionService; 
-    @Autowired private VendedorService vendedorService;
-    @Autowired private LetraCambioRepository letraCambioRepository;
-    @Autowired private InscripcionClient inscripcionClient;
-    @Autowired private ModelMapper modelMapper;
+    private final ContratoRepository contratoRepository;
+    private final ContratoClienteService contratoClienteService;
+    private final ContratoLoteService contratoLoteService;
+    private final ClienteService clienteService;
+    private final LoteService loteService;
+    private final UsuarioService usuarioService;
+    private final SeparacionService separacionService; 
+    private final VendedorService vendedorService;
+    private final LetraCambioRepository letraCambioRepository;
+    private final InscripcionClient inscripcionClient;
+    private final ModelMapper modelMapper;
 
     private void setearValoresPorDefecto(Contrato contrato) {
         if (contrato.getTipoContrato() == TipoContrato.CONTADO) {
@@ -446,7 +448,17 @@ public class ContratoServiceImpl implements ContratoService {
         // 2. Asignamos los booleanos que vienen calculados desde el Microservicio
         dto.setTieneLuz(luz);
         dto.setTieneAgua(agua);
-        dto.setVendedor(contrato.getVendedor());
+        
+        if (contrato.getVendedor() != null) {
+            Vendedor v = contrato.getVendedor();
+            dto.setVendedor(new VendedorResponseDTO(
+                v.getIdVendedor(),
+                v.getNombre(),
+                v.getApellidos(),
+                v.getDni(),
+                v.getCelular()
+            ));
+        }
 
         // 3. 🚨 MAPEADO DE CLIENTES: Navegamos manualmente por la tabla intermedia ContratoCliente
         if (contrato.getClientes() != null) {

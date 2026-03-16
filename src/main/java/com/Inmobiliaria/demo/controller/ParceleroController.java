@@ -5,19 +5,21 @@ import java.util.List;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.Inmobiliaria.demo.entity.Parcelero;
 import com.Inmobiliaria.demo.service.ParceleroService;
 
+import lombok.RequiredArgsConstructor;
+
 @RestController
 @RequestMapping("/api/parceleros")
+@RequiredArgsConstructor
 public class ParceleroController {
 
-    @Autowired
-    private ParceleroService parceleroService;
+   
+    private final ParceleroService parceleroService;
 
     // LISTAR TODOS
     @GetMapping

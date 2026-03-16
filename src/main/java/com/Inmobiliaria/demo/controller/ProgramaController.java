@@ -10,19 +10,21 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.Inmobiliaria.demo.entity.Programa;
 import com.Inmobiliaria.demo.service.ProgramaService;
 
+import lombok.RequiredArgsConstructor;
+
 @RestController
 @RequestMapping("/api/programas")
+@RequiredArgsConstructor
 public class ProgramaController {
 
-    @Autowired
-    ProgramaService programaService;
+    
+    private final ProgramaService programaService;
 
     // Listar todos
     @GetMapping

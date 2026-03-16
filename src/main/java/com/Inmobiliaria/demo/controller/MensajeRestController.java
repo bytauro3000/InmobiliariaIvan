@@ -1,19 +1,21 @@
-package com.Inmobiliaria.demo.mensajeria;
+package com.Inmobiliaria.demo.controller;
 
 import java.util.List;
-
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import com.Inmobiliaria.demo.dto.MensajeDTO;
+import com.Inmobiliaria.demo.entity.Mensaje;
+import com.Inmobiliaria.demo.service.MensajeService;
+
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/mensajes")
+@RequiredArgsConstructor
 public class MensajeRestController {
 
-    @Autowired
-    private MensajeService mensajeService;
+   
+    private final MensajeService mensajeService;
 
     // ✅ Endpoint para obtener el historial de chat entre dos personas
     @GetMapping("/historial/{id1}/{id2}")

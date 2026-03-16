@@ -12,9 +12,9 @@ import com.Inmobiliaria.demo.repository.ContratoRepository;
 import com.Inmobiliaria.demo.util.ReciboServiciosPdfGenerator;
 
 import feign.FeignException;
+import lombok.RequiredArgsConstructor;
 
 import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,19 +33,20 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/gateway/recibos")
+@RequiredArgsConstructor
 public class ReciboGatewayController {
 
-    @Autowired
-    private ReciboClient reciboClient;
-
-    @Autowired
-    private InscripcionClient inscripcionClient;
-
-    @Autowired
-    private ContratoRepository contratoRepository;
     
-    @Autowired
-    private ModelMapper modelMapper;
+    private final ReciboClient reciboClient;
+
+    
+    private final InscripcionClient inscripcionClient;
+
+    
+    private final ContratoRepository contratoRepository;
+    
+   
+    private final ModelMapper modelMapper;
 
     @GetMapping("/preparar-planilla-unificada")
     @PreAuthorize("hasAuthority('ROLE_SECRETARIA')")

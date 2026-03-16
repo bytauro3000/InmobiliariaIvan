@@ -2,8 +2,6 @@ package com.Inmobiliaria.demo.service.impl;
 
 import java.util.List;
 import java.util.Optional;
-
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.Inmobiliaria.demo.entity.Parcelero;
@@ -11,11 +9,14 @@ import com.Inmobiliaria.demo.repository.ParceleroRepository;
 import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.service.ParceleroService;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor 
 public class ParceleroServiceImpl implements ParceleroService {
 
-    @Autowired
-    private ParceleroRepository parceleroRepository;
+    
+    private final ParceleroRepository parceleroRepository;
 
     @Override
     public List<Parcelero> listarParceleros() {

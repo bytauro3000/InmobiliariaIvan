@@ -3,8 +3,9 @@ package com.Inmobiliaria.demo.controller;
 import com.Inmobiliaria.demo.client.InscripcionClient;
 import com.Inmobiliaria.demo.dto.InscripcionServicioDTO;
 import feign.FeignException;
+import lombok.RequiredArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.CacheManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -14,16 +15,13 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/gateway/inscripciones")
+@RequiredArgsConstructor
 public class InscripcionGatewayController {
 	
-	@Autowired
-	private org.springframework.cache.CacheManager cacheManager;
+	
+	private final CacheManager cacheManager;
 
     private final InscripcionClient inscripcionClient;
-
-    public InscripcionGatewayController(InscripcionClient inscripcionClient) {
-        this.inscripcionClient = inscripcionClient;
-    }
 
     @PostMapping("/registrar")
     @PreAuthorize("hasAuthority('ROLE_SECRETARIA')")

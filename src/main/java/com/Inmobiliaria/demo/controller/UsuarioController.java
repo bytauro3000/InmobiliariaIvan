@@ -4,9 +4,8 @@ import org.springframework.http.HttpStatus;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,12 +20,15 @@ import com.Inmobiliaria.demo.dto.UsuarioRegistroDTO;
 import com.Inmobiliaria.demo.entity.Usuario;
 import com.Inmobiliaria.demo.service.UsuarioService;
 
+import lombok.RequiredArgsConstructor;
+
 @RestController
 @RequestMapping("/api/usuarios")
+@RequiredArgsConstructor
 public class UsuarioController {
 
-    @Autowired
-    private UsuarioService usuarioService;
+   
+    private final UsuarioService usuarioService;
 
     // Endpoint para crear el usuario
     @PostMapping("/registrar")

@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
-import com.Inmobiliaria.demo.entity.Vendedor;
 import com.Inmobiliaria.demo.enums.TipoContrato;
 import com.Inmobiliaria.demo.enums.EstadoContrato;
 import lombok.AllArgsConstructor;
@@ -24,13 +23,12 @@ public class ContratoResponseDTO {
     private BigDecimal saldo;
     private Integer cantidadLetras;
     private String observaciones;
-    private List<ClienteResponseDTO> clientes; // <-- Lista de DTOs de clientes
- // Dentro de tu ContratoResponseDTO.java actual agregas:
+    private List<ClienteResponseDTO> clientes;
     private List<LoteResponseDTO> lotes;
     private List<LetraResponseDTO> letras;
-    private Vendedor vendedor;
-    
- // campos para validar si los contratos cuentan con algun servicio
+
+    private VendedorResponseDTO vendedor;
+
     private boolean tieneLuz;
     private boolean tieneAgua;
 }

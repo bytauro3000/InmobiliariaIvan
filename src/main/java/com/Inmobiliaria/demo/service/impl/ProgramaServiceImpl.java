@@ -2,20 +2,20 @@ package com.Inmobiliaria.demo.service.impl;
 
 import java.util.List;
 import java.util.Optional;
-
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import com.Inmobiliaria.demo.entity.Programa;
 import com.Inmobiliaria.demo.repository.ProgramaRepository;
 import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.service.ProgramaService;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor 
 public class ProgramaServiceImpl implements ProgramaService {
 
-    @Autowired
-    ProgramaRepository programaRepository;
+    
+    private final ProgramaRepository programaRepository;
 
     @Override
     public List<Programa> listProgramas() {

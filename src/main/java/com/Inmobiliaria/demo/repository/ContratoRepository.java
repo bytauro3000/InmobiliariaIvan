@@ -73,10 +73,18 @@ public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
 	@Query("SELECT cl.contrato FROM ContratoLote cl " +
 		       "WHERE cl.lote.programa.idPrograma = :idPrograma " +
 		       "AND cl.lote.manzana = :manzana " +
-		       "AND cl.lote.numeroLote = :numeroLote")
-		Optional<Contrato> findByProgramaManzanaLote(@Param("idPrograma") Integer idPrograma,
-		                                              @Param("manzana") String manzana,
-		                                              @Param("numeroLote") String numeroLote);
+		       "AND cl.lote.numeroLote = :numeroLote " +
+		       "AND cl.contrato.estadoContrato NOT IN (" +
+		       "  com.Inmobiliaria.demo.enums.EstadoContrato.TRANSFERIDO, " +
+		       "  com.Inmobiliaria.demo.enums.EstadoContrato.RENUNCIA, " +
+		       "  com.Inmobiliaria.demo.enums.EstadoContrato.RESUELTO, " +
+		       "  com.Inmobiliaria.demo.enums.EstadoContrato.CANCELADO" +
+		       ")")
+		Optional<Contrato> findByProgramaManzanaLote(
+		    @Param("idPrograma") Integer idPrograma,
+		    @Param("manzana") String manzana,
+		    @Param("numeroLote") String numeroLote
+		);
 	
 	//Consulta de nombre + apellidos
 	@Query("SELECT DISTINCT c FROM Contrato c " +

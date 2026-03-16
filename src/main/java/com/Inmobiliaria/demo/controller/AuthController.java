@@ -5,7 +5,7 @@ import com.Inmobiliaria.demo.dto.LoginResponse;
 import com.Inmobiliaria.demo.entity.Usuario;
 import com.Inmobiliaria.demo.security.JwtUtil;
 import com.Inmobiliaria.demo.service.UsuarioService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -14,16 +14,13 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
-    @Autowired
-    private AuthenticationManager authenticationManager;
-
-    @Autowired
-    private JwtUtil jwtUtil;
-    
-    @Autowired
-    private UsuarioService usuarioService; 
+   
+    private final AuthenticationManager authenticationManager;
+    private final JwtUtil jwtUtil;
+    private final UsuarioService usuarioService; 
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> authenticateUser(@RequestBody LoginRequest loginRequest) {

@@ -12,7 +12,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @Component
@@ -21,73 +24,94 @@ public class ContratoEstadoScheduler {
 
     private final ContratoRepository contratoRepository;
 
+    // Semáforo en memoria: garantiza que solo una ejecución corra a la vez.
+    // Protege ante dos escenarios:
+    //   1. Reinicio del servicio en Render justo cuando el scheduler está corriendo.
+    //   2. Ejecución manual (POST /scheduler/ejecutar) mientras el cron ya está activo.
+    private final AtomicBoolean ejecutando = new AtomicBoolean(false);
+
     /**
-     * Corre todos los días a las 6:00 AM.
-     * También puede ejecutarse manualmente vía POST /api/contratos/scheduler/ejecutar
+     * Corre todos los días a las 6:00 AM (hora UTC — Render usa UTC).
+     * También puede ejecutarse manualmente vía POST /api/contratos/scheduler/ejecutar.
      */
     @Scheduled(cron = "0 0 6 * * *")
     @Transactional
     public void actualizarEstadosContratos() {
-        log.info(">>> Scheduler EstadoContrato: iniciando revisión diaria...");
 
-        // JOIN FETCH carga letrasCambio en la misma query — sin lazy loading, sin LazyInitializationException
-        List<Contrato> contratos = contratoRepository.findFinanciadosActivosConLetras();
-        LocalDate hoy = LocalDate.now();
-        int actualizados = 0;
-
-        for (Contrato contrato : contratos) {
-
-            List<LetraCambio> letras = contrato.getLetrasCambio();
-            if (letras == null || letras.isEmpty()) continue;
-
-            EstadoContrato estadoActual = contrato.getEstadoContrato();
-
-            // ─── Punto de corte: última letra PAGADA ─────────────────────────
-            // Si hay letras pagadas → solo revisar las posteriores a la última pagada
-            // Si no hay pagadas → revisar todas las letras del contrato
-            java.util.Optional<LocalDate> fechaUltimaPagada = letras.stream()
-                .filter(l -> l.getEstadoLetra() == EstadoLetra.PAGADO)
-                .map(LetraCambio::getFechaVencimiento)
-                .filter(f -> f != null)
-                .max(java.util.Comparator.naturalOrder());
-
-            // Marcar PENDIENTES vencidas como VENCIDO según punto de corte
-            boolean letrasCambiadas = false;
-            for (LetraCambio letra : letras) {
-                if (letra.getEstadoLetra() != EstadoLetra.PENDIENTE) continue;
-                if (letra.getFechaVencimiento() == null) continue;
-                if (!letra.getFechaVencimiento().isBefore(hoy)) continue;
-
-                // Con pagadas: ignorar letras anteriores o iguales a la última pagada
-                if (fechaUltimaPagada.isPresent() &&
-                    !letra.getFechaVencimiento().isAfter(fechaUltimaPagada.get())) {
-                    continue;
-                }
-
-                letra.setEstadoLetra(EstadoLetra.VENCIDO);
-                letrasCambiadas = true;
-            }
-
-            long letrasVencidas = letras.stream()
-                .filter(l -> l.getEstadoLetra() == EstadoLetra.VENCIDO)
-                .count();
-
-            EstadoContrato nuevoEstado = (letrasVencidas == 0)
-                ? EstadoContrato.ACTIVO
-                : EstadoContrato.MORA;
-
-            if (nuevoEstado != estadoActual || letrasCambiadas) {
-                contrato.setEstadoContrato(nuevoEstado);
-                contratoRepository.saveAndFlush(contrato);
-                if (nuevoEstado != estadoActual) {
-                    actualizados++;
-                    log.info("Contrato #{} {} → {} ({} letras vencidas)",
-                        contrato.getIdContrato(), estadoActual, nuevoEstado, letrasVencidas);
-                }
-            }
+        // compareAndSet(false, true): solo entra si estaba en false, y lo pone en true.
+        // Si ya hay una ejecución en curso → false → se descarta esta llamada.
+        if (!ejecutando.compareAndSet(false, true)) {
+            log.warn(">>> Scheduler EstadoContrato: ya hay una ejecución en curso, se omite esta llamada.");
+            return;
         }
 
-        log.info(">>> Scheduler EstadoContrato: {} contrato(s) actualizado(s).", actualizados);
+        try {
+            log.info(">>> Scheduler EstadoContrato: iniciando revisión diaria...");
+
+            // JOIN FETCH carga letrasCambio en la misma query
+            // — sin lazy loading, sin LazyInitializationException
+            List<Contrato> contratos = contratoRepository.findFinanciadosActivosConLetras();
+            LocalDate hoy = LocalDate.now();
+            int actualizados = 0;
+
+            for (Contrato contrato : contratos) {
+
+                List<LetraCambio> letras = contrato.getLetrasCambio();
+                if (letras == null || letras.isEmpty()) continue;
+
+                EstadoContrato estadoActual = contrato.getEstadoContrato();
+
+                // Punto de corte: última letra PAGADA.
+                // Solo se revisan las letras posteriores a la última pagada.
+                // Si no hay pagadas → se revisan todas.
+                Optional<LocalDate> fechaUltimaPagada = letras.stream()
+                        .filter(l -> l.getEstadoLetra() == EstadoLetra.PAGADO)
+                        .map(LetraCambio::getFechaVencimiento)
+                        .filter(f -> f != null)
+                        .max(Comparator.naturalOrder());
+
+                // Marcar como VENCIDO las letras PENDIENTES que ya pasaron su fecha
+                boolean letrasCambiadas = false;
+                for (LetraCambio letra : letras) {
+                    if (letra.getEstadoLetra() != EstadoLetra.PENDIENTE) continue;
+                    if (letra.getFechaVencimiento() == null) continue;
+                    if (!letra.getFechaVencimiento().isBefore(hoy)) continue;
+
+                    if (fechaUltimaPagada.isPresent() &&
+                            !letra.getFechaVencimiento().isAfter(fechaUltimaPagada.get())) {
+                        continue;
+                    }
+
+                    letra.setEstadoLetra(EstadoLetra.VENCIDO);
+                    letrasCambiadas = true;
+                }
+
+                long letrasVencidas = letras.stream()
+                        .filter(l -> l.getEstadoLetra() == EstadoLetra.VENCIDO)
+                        .count();
+
+                EstadoContrato nuevoEstado = (letrasVencidas == 0)
+                        ? EstadoContrato.ACTIVO
+                        : EstadoContrato.MORA;
+
+                if (nuevoEstado != estadoActual || letrasCambiadas) {
+                    contrato.setEstadoContrato(nuevoEstado);
+                    contratoRepository.saveAndFlush(contrato);
+                    if (nuevoEstado != estadoActual) {
+                        actualizados++;
+                        log.info("Contrato #{} {} → {} ({} letras vencidas)",
+                                contrato.getIdContrato(), estadoActual, nuevoEstado, letrasVencidas);
+                    }
+                }
+            }
+
+            log.info(">>> Scheduler EstadoContrato: {} contrato(s) actualizado(s).", actualizados);
+
+        } finally {
+            // El bloque finally garantiza que el semáforo se libera
+            // incluso si ocurre una excepción inesperada durante la ejecución.
+            ejecutando.set(false);
+        }
     }
 
     /** Llamado desde ContratoController: POST /api/contratos/scheduler/ejecutar */

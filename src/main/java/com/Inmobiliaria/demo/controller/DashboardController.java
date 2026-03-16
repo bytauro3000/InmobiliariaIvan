@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -13,30 +12,34 @@ import com.Inmobiliaria.demo.service.LoteService;
 import com.Inmobiliaria.demo.service.ParceleroService;
 import com.Inmobiliaria.demo.service.ProgramaService;
 import com.Inmobiliaria.demo.service.VendedorService;
+
+import lombok.RequiredArgsConstructor;
+
 import com.Inmobiliaria.demo.service.ClienteService;
 import com.Inmobiliaria.demo.repository.ContratoRepository; 
 
 @RestController
 @RequestMapping("/api/dashboard")
+@RequiredArgsConstructor
 public class DashboardController {
 
-    @Autowired
-    private VendedorService vendedorService;
+  
+    private final VendedorService vendedorService;
 
-    @Autowired
-    private ParceleroService parceleroService;
-
-    @Autowired
-    private ProgramaService programaService;
-
-    @Autowired
-    private LoteService loteService;
     
-    @Autowired
-    private ClienteService clienteService;
+    private final ParceleroService parceleroService;
 
-    @Autowired
-    private ContratoRepository contratoRepository; // Inyección para el nuevo gráfico
+    
+    private final ProgramaService programaService;
+
+    
+    private final LoteService loteService;
+    
+   
+    private final ClienteService clienteService;
+
+    
+    private final ContratoRepository contratoRepository; 
 
     @GetMapping("/totales")
     public Map<String, Object> obtenerTotales() {

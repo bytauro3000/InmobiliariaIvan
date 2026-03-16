@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 
@@ -27,21 +26,16 @@ import com.Inmobiliaria.demo.dto.ReporteCronogramaPagosClientesDTO;
 import com.Inmobiliaria.demo.dto.ReporteLetraCambioDTO;
 
 import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 
 @Service
+@RequiredArgsConstructor 
 public class LetraCambioServiceImpl implements LetraCambioService {
-
-    @Autowired
-    private LetraCambioRepository letraCambioRepository;
-
-    @Autowired
-    private ContratoRepository contratoRepository;
-
-    @Autowired
-    private DistritoRepository distritoRepository;
-    
-    @Autowired
-    private ModelMapper modelMapper;
+	
+    private final LetraCambioRepository letraCambioRepository;
+    private final ContratoRepository contratoRepository;
+    private final DistritoRepository distritoRepository;
+    private final ModelMapper modelMapper;
 
     @Override
     @Transactional

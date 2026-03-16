@@ -1,18 +1,20 @@
 package com.Inmobiliaria.demo.service.impl;
 
 import java.util.List;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import com.Inmobiliaria.demo.entity.Cliente;
 import com.Inmobiliaria.demo.repository.ClienteRepository;
 import com.Inmobiliaria.demo.service.ClienteService;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor 
 public class ClienteServiceImpl implements ClienteService {
 
-    @Autowired
-    private ClienteRepository clienteRepository;
+    
+    private final ClienteRepository clienteRepository;
 
     @Override
     public Cliente guardarCliente(Cliente cliente) { 

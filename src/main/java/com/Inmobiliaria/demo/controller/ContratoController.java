@@ -2,7 +2,6 @@ package com.Inmobiliaria.demo.controller;
 
 import java.security.Principal;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -10,17 +9,20 @@ import com.Inmobiliaria.demo.dto.ContratoRequestDTO;
 import com.Inmobiliaria.demo.dto.ContratoResponseDTO;
 import com.Inmobiliaria.demo.dto.TransferenciaResponseDTO;
 import com.Inmobiliaria.demo.service.ContratoService;
+
+import lombok.RequiredArgsConstructor;
+
 import com.Inmobiliaria.demo.scheduler.ContratoEstadoScheduler;
 
 @RestController
 @RequestMapping("/api/contratos")
+@RequiredArgsConstructor
 public class ContratoController {
 
-    @Autowired
-    private ContratoService contratoService;
+   
+    private final ContratoService contratoService;
 
-    @Autowired
-    private ContratoEstadoScheduler contratoEstadoScheduler;
+    private final ContratoEstadoScheduler contratoEstadoScheduler;
    
     @PostMapping("/agregar")
     public ResponseEntity<ContratoResponseDTO> guardarContrato(
