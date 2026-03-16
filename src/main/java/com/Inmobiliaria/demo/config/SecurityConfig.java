@@ -27,50 +27,53 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-            	.requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-                // 1. RUTAS PÚBLICAS: Libre acceso (Login y endpoints marcados como public y qr)
-            	.requestMatchers(
-                        "/api/auth/**",
-                        "/api/public/**",
-                        "/error",
-                        "/api/pagos-letras/*/comprobante-pdf"
-                    ).permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
 
-                // 2. RUTAS DE SECRETARIA: Solo usuarios con ROLE_SECRETARIA pueden acceder
+                // 1. RUTAS PÚBLICAS
+                // ─ /api/auth/**              → login / logout
+                // ─ /api/public/**            → endpoints públicos generales
+                // ─ /api/pagos-letras/*/comprobante-pdf → el cliente escanea el QR
+                //   sin necesidad de iniciar sesión y puede descargar su comprobante
                 .requestMatchers(
-                    "/api/distritos/**", 
-                    "/api/separaciones/**", 
-                    "/api/clientes/**", 
-                    "/api/contratos/**", 
-                    "/api/vendedores/**", 
-                    "/api/lotes/**", 
+                    "/api/auth/**",
+                    "/api/public/**",
+                    "/error",
+                    "/api/pagos-letras/*/comprobante-pdf"
+                ).permitAll()
+
+                // 2. RUTAS DE SECRETARIA
+                .requestMatchers(
+                    "/api/distritos/**",
+                    "/api/separaciones/**",
+                    "/api/clientes/**",
+                    "/api/contratos/**",
+                    "/api/vendedores/**",
+                    "/api/lotes/**",
                     "/api/programas/**",
-                    "/api/parceleros/**", 
-                    "/api/letras/**", 
-                    "/api/dashboard/**", 
+                    "/api/parceleros/**",
+                    "/api/letras/**",
+                    "/api/dashboard/**",
                     "/api/gateway/inscripciones/**",
                     "/api/gateway/recibos/**",
                     "/api/mensajes/**",
                     "/chat/**",
-                    "/api/archivos/**", 
+                    "/api/archivos/**",
                     "/ws/**",
-                    "/api/pagos/**"
-                   
+                    "/api/pagos/**",
+                    "/api/pagos-letras/**"
                 ).hasAuthority("ROLE_SECRETARIA")
-                
-             // 3. RUTAS DE ADMINISTRADOR: Solo gestión de usuarios
+
+                // 3. RUTAS DE ADMINISTRADOR
                 .requestMatchers("/api/usuarios/**")
                 .hasAnyAuthority("ROLE_SECRETARIA", "ROLE_ADMINISTRADOR")
 
-                // 4. CUALQUIER OTRA PETICIÓN: Debe estar al menos autenticada
+                // 4. CUALQUIER OTRA PETICIÓN: autenticada
                 .anyRequest().authenticated()
-
             )
-            // Agregamos el filtro que lee las cabeceras X-Auth-User y X-Auth-Roles del Gateway
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
             .build();
     }
-    
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
