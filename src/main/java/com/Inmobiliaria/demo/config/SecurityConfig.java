@@ -28,7 +28,7 @@ public class SecurityConfig {
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
             	.requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-                // 1. RUTAS PÚBLICAS: Libre acceso (Login y endpoints marcados como public)
+                // 1. RUTAS PÚBLICAS: Libre acceso (Login y endpoints marcados como public y qr)
             	.requestMatchers(
                         "/api/auth/**",
                         "/api/public/**",
