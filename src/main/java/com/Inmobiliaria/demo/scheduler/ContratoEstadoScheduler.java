@@ -7,7 +7,10 @@ import com.Inmobiliaria.demo.enums.EstadoLetra;
 import com.Inmobiliaria.demo.repository.ContratoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.annotation.Schedules;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,10 +34,27 @@ public class ContratoEstadoScheduler {
     private final AtomicBoolean ejecutando = new AtomicBoolean(false);
 
     /**
-     * Corre todos los días a las 6:00 AM (hora UTC — Render usa UTC).
+     * SE EJECUTA AUTOMÁTICAMENTE AL ARRANCAR EL SERVIDOR.
+     * Esto soluciona el problema con Render plan gratuito:
+     * el backend duerme hasta las ~10 AM (Lima), por lo que el cron
+     * de las 6 AM UTC nunca se ejecutaba. Ahora cada vez que Render
+     * despierta el servidor, se actualizan los estados inmediatamente.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void ejecutarAlArrancar() {
+        log.info(">>> Scheduler EstadoContrato: ejecución inicial al arrancar el servidor...");
+        actualizarEstadosContratos();
+    }
+
+    /**
+     * Corre todos los días a las 3:00 PM UTC = 10:00 AM Lima (UTC-5).
+     * Corre también a las 6:09 PM UTC = 1:09 PM Lima (UTC-5).
+     * Se ajustaron los horarios para coincidir con las horas en que
+     * el backend de Render (plan gratuito) está activo.
      * También puede ejecutarse manualmente vía POST /api/contratos/scheduler/ejecutar.
      */
-    @Scheduled(cron = "0 0 6 * * *")
+    @Scheduled(cron = "0 0 15 * * *")   // 10:00 AM Lima
+    @Scheduled(cron = "0 15 18 * * *")   //  1:09 PM Lima
     @Transactional
     public void actualizarEstadosContratos() {
 
