@@ -48,6 +48,11 @@
 			<artifactId>forms</artifactId>
 			<version>7.2.5</version>
 		</dependency>
+		<dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>barcodes</artifactId>
+			<version>7.2.5</version>
+		</dependency>
 
 		<!-- Spring Core -->
 		<dependency>

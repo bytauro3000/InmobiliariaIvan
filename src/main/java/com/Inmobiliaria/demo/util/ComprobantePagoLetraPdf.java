@@ -4,91 +4,85 @@ import com.Inmobiliaria.demo.entity.Contrato;
 import com.Inmobiliaria.demo.entity.ContratoLote;
 import com.Inmobiliaria.demo.entity.LetraCambio;
 import com.Inmobiliaria.demo.entity.PagoLetras;
+import com.Inmobiliaria.demo.enums.TipoComprobante;
+import com.itextpdf.barcodes.BarcodeQRCode;
 import com.itextpdf.io.font.PdfEncodings;
 import com.itextpdf.io.util.StreamUtil;
 import com.itextpdf.kernel.colors.ColorConstants;
-import com.itextpdf.kernel.colors.DeviceRgb;
+import com.itextpdf.kernel.colors.DeviceGray;
 import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.font.PdfFontFactory;
+import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.borders.SolidBorder;
 import com.itextpdf.layout.element.Cell;
+import com.itextpdf.layout.element.Image;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.element.Text;
+import com.itextpdf.layout.properties.HorizontalAlignment;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
+import com.itextpdf.layout.properties.VerticalAlignment;
 
 import java.io.ByteArrayOutputStream;
 import java.text.DecimalFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.stream.Collectors;
 
+/**
+ * Genera el comprobante de pago de letra en formato A5 HORIZONTAL (landscape).
+ * - 1 sola copia por hoja
+ * - Titulo dinamico: "BOLETA DE VENTA" o "RECIBO DE INGRESO" segun tipoComprobante
+ * - QR Code que enlaza al PDF del comprobante online
+ * - Disenio en blanco y negro, tipografia Courier
+ */
 public class ComprobantePagoLetraPdf {
 
-    private static final DeviceRgb AZUL_HEADER = new DeviceRgb(21, 67, 120);
-    private static final DeviceRgb AZUL_CLARO  = new DeviceRgb(235, 242, 252);
-    private static final DateTimeFormatter FMT  = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    private static final DecimalFormat     DF   = new DecimalFormat("#,##0.00");
+    private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DecimalFormat     DF  = new DecimalFormat("#,##0.00");
+
+    private static final DeviceGray GRIS_OSCURO = new DeviceGray(0.15f);
+    private static final DeviceGray GRIS_MEDIO  = new DeviceGray(0.45f);
+
+    private static final String EMPRESA   = "INMOBILIARIA CONSTRUCTORA \"IVAN\" E.I.R.L.";
+    private static final String DIRECCION = "Av. Alfredo Mendiola N 3623  3er. Piso Of. 301 - Urb. Panamericana Norte - Los Olivos - Lima";
+    private static final String TELEFONO  = "Telf.: (01) 413-8679";
+    private static final String RUC       = "R.U.C.: 20537853108";
+
+    // URL base del backend en produccion (Render)
+    // El QR apunta a este endpoint para que el cliente descargue su comprobante
+    private static final String BASE_URL  = "https://inmobiliariaivan.onrender.com/api/pagos-letras";
 
     public static byte[] generar(PagoLetras pago) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         try {
-            PdfFont normal = cargarFuente("fonts/ARIAL.TTF");
-            PdfFont bold   = cargarFuente("fonts/ARIALBD.TTF");
+            PdfFont courier     = cargarFuente("fonts/COUR.TTF");
+            PdfFont courierBold = cargarFuente("fonts/COURBD.TTF");
+            PdfFont arial       = cargarFuente("fonts/ARIAL.TTF");
 
+            // A5 HORIZONTAL: 210 x 148 mm
             PdfDocument pdf = new PdfDocument(new PdfWriter(out));
-            Document    doc = new Document(pdf);
-            doc.setMargins(40, 50, 40, 50);
+            Document doc = new Document(pdf, PageSize.A5.rotate());
+            doc.setMargins(15, 18, 15, 18);
 
             LetraCambio letra    = pago.getLetra();
             Contrato    contrato = letra.getContrato();
 
-            // ── ENCABEZADO ────────────────────────────────────────────────
-            Table header = new Table(UnitValue.createPercentArray(new float[]{1}))
-                    .setWidth(UnitValue.createPercentValue(100));
+            // ── Titulo dinamico segun tipo de comprobante ─────────────
+            String tituloPrincipal = (pago.getTipoComprobante() == TipoComprobante.BOLETA)
+                    ? "BOLETA DE VENTA"
+                    : "RECIBO DE INGRESO";
 
-            header.addCell(new Cell()
-                    .setBackgroundColor(AZUL_HEADER)
-                    .setBorder(Border.NO_BORDER)
-                    .setPadding(14)
-                    .setTextAlignment(TextAlignment.CENTER)
-                    .add(new Paragraph("COMPROBANTE DE PAGO DE LETRA")
-                            .setFont(bold).setFontSize(16)
-                            .setFontColor(ColorConstants.WHITE)
-                            .setMarginBottom(2))
-                    .add(new Paragraph("Inmobiliaria Florida")
-                            .setFont(normal).setFontSize(10)
-                            .setFontColor(ColorConstants.WHITE)));
-            doc.add(header);
-            doc.add(new Paragraph(" ").setFontSize(4));
-
-            // ── DATOS DEL COMPROBANTE ─────────────────────────────────────
             String numComp = (pago.getTipoComprobante() != null && pago.getNumeroComprobante() != null)
-                    ? pago.getTipoComprobante().name() + " N° " + pago.getNumeroComprobante()
-                    : "Sin comprobante";
+                    ? pago.getNumeroComprobante()
+                    : "----------";
 
-            Table infoTop = new Table(UnitValue.createPercentArray(new float[]{1, 1}))
-                    .setWidth(UnitValue.createPercentValue(100))
-                    .setMarginBottom(10);
-
-            infoTop.addCell(celdaDato("N° Comprobante:", numComp, normal, bold));
-            infoTop.addCell(celdaDato("Fecha de pago:",
-                    pago.getFechaPago() != null ? pago.getFechaPago().format(FMT) : "-",
-                    normal, bold));
-            infoTop.addCell(celdaDato("N° Contrato:",
-                    String.valueOf(contrato.getIdContrato()), normal, bold));
-            infoTop.addCell(celdaDato("N° Letra:",
-                    letra.getNumeroLetra(), normal, bold));
-            doc.add(infoTop);
-
-            // ── DATOS DEL CLIENTE ─────────────────────────────────────────
-            doc.add(titulSeccion("DATOS DEL CLIENTE", bold));
-
+            // ── Datos del cliente ─────────────────────────────────────
             String clientes = "-";
             if (contrato.getClientes() != null && !contrato.getClientes().isEmpty()) {
                 clientes = contrato.getClientes().stream()
@@ -97,82 +91,184 @@ public class ComprobantePagoLetraPdf {
                         .collect(Collectors.joining(" / "));
             }
 
+            String nombreFirmante = "-";
+            String docFirmante    = "-";
+            if (contrato.getClientes() != null && !contrato.getClientes().isEmpty()) {
+                var primerCliente = contrato.getClientes().get(0).getCliente();
+                nombreFirmante = primerCliente.getNombre() + " " + primerCliente.getApellidos();
+                // Campo correcto segun la entidad Cliente: getNumDoc()
+                docFirmante = primerCliente.getNumDoc() != null ? primerCliente.getNumDoc() : "-";
+            }
+
+            // ── Datos del lote y contrato ─────────────────────────────
             String loteInfo = "-";
             if (contrato.getLotes() != null && !contrato.getLotes().isEmpty()) {
                 ContratoLote cl = contrato.getLotes().get(0);
-                loteInfo = cl.getLote().getPrograma().getNombrePrograma()
-                        + "  —  Mz. " + cl.getLote().getManzana()
-                        + "  Lt. " + cl.getLote().getNumeroLote();
+                loteInfo = "Mz. " + cl.getLote().getManzana()
+                        + " Lt. " + cl.getLote().getNumeroLote()
+                        + " - " + cl.getLote().getPrograma().getNombrePrograma();
             }
 
-            Table tablaCliente = new Table(UnitValue.createPercentArray(new float[]{1, 1}))
-                    .setWidth(UnitValue.createPercentValue(100))
-                    .setMarginBottom(10);
-            tablaCliente.addCell(celdaDato("Cliente(s):", clientes, normal, bold));
-            tablaCliente.addCell(celdaDato("Lote:", loteInfo, normal, bold));
-            doc.add(tablaCliente);
+            String importeTexto = letra.getImporteLetras() != null ? letra.getImporteLetras() : "-";
+            String fechaPagoStr = pago.getFechaPago() != null ? pago.getFechaPago().format(FMT) : "-";
+            String fechaVencStr = letra.getFechaVencimiento() != null
+                    ? letra.getFechaVencimiento().format(FMT) : "-";
+            String medioPago    = pago.getMedioPago() != null ? pago.getMedioPago().name() : "-";
+            String numOp        = (pago.getNumeroOperacion() != null && !pago.getNumeroOperacion().isBlank())
+                                  ? "   N Op: " + pago.getNumeroOperacion() : "";
 
-            // ── DETALLE DEL PAGO ──────────────────────────────────────────
-            doc.add(titulSeccion("DETALLE DEL PAGO", bold));
+            // Concepto: unico campo descriptivo (se elimino Observaciones para no duplicar)
+            String concepto = "Pago de la Letra N " + letra.getNumeroLetra()
+                    + "  -  Contrato N " + contrato.getIdContrato()
+                    + "  -  " + loteInfo;
 
-            Table detalle = new Table(UnitValue.createPercentArray(new float[]{1, 1}))
-                    .setWidth(UnitValue.createPercentValue(100))
-                    .setMarginBottom(10);
+            // ── QR: URL de descarga del comprobante ───────────────────
+            String urlQr = BASE_URL + "/" + pago.getIdPago() + "/comprobante-pdf";
+            BarcodeQRCode qrCode = new BarcodeQRCode(urlQr);
+            Image qrImage = new Image(qrCode.createFormXObject(pdf))
+                    .setWidth(62).setHeight(62)
+                    .setHorizontalAlignment(HorizontalAlignment.CENTER);
 
-            detalle.addCell(celdaDato("Importe pagado:",
-                    "$ " + DF.format(pago.getImportePagado()), normal, bold));
-            detalle.addCell(celdaDato("Medio de pago:",
-                    pago.getMedioPago() != null ? pago.getMedioPago().name() : "-",
-                    normal, bold));
-            detalle.addCell(celdaDato("N° Operación:",
-                    pago.getNumeroOperacion() != null ? pago.getNumeroOperacion() : "-",
-                    normal, bold));
-            detalle.addCell(celdaDato("Fecha de operación:",
-                    pago.getFechaOperacion() != null ? pago.getFechaOperacion().format(FMT) : "-",
-                    normal, bold));
-            detalle.addCell(celdaDato("Importe en letras:",
-                    letra.getImporteLetras() != null ? letra.getImporteLetras() : "-",
-                    normal, bold));
-            detalle.addCell(celdaDato("Fecha vencimiento letra:",
-                    letra.getFechaVencimiento() != null ? letra.getFechaVencimiento().format(FMT) : "-",
-                    normal, bold));
+            // ══════════════════════════════════════════════════════════
+            //  LAYOUT PRINCIPAL: contenido izquierdo + QR derecho
+            // ══════════════════════════════════════════════════════════
+            Table layoutPrincipal = new Table(UnitValue.createPercentArray(new float[]{1, 0.22f}))
+                    .setWidth(UnitValue.createPercentValue(100));
 
-            // Observaciones en fila completa si existe
-            if (pago.getObservaciones() != null && !pago.getObservaciones().isBlank()) {
-                detalle.addCell(new Cell(1, 2)
-                        .setBackgroundColor(AZUL_CLARO)
-                        .setBorder(new SolidBorder(ColorConstants.LIGHT_GRAY, 0.5f))
-                        .setPadding(6)
-                        .add(new Paragraph()
-                                .add(new Text("Observaciones:  ").setFont(bold).setFontSize(9))
-                                .add(new Text(pago.getObservaciones()).setFont(normal).setFontSize(9))));
-            }
-            doc.add(detalle);
+            // ─── COLUMNA IZQUIERDA: todo el comprobante ───────────────
+            Cell colIzq = new Cell().setBorder(Border.NO_BORDER).setPadding(0);
 
-            // ── TOTAL DESTACADO ───────────────────────────────────────────
-            doc.add(new Table(UnitValue.createPercentArray(new float[]{1}))
-                    .setWidth(UnitValue.createPercentValue(100))
-                    .setMarginBottom(16)
-                    .addCell(new Cell()
-                            .setBackgroundColor(AZUL_HEADER)
-                            .setBorder(Border.NO_BORDER)
-                            .setPadding(10)
-                            .setTextAlignment(TextAlignment.RIGHT)
-                            .add(new Paragraph()
-                                    .add(new Text("TOTAL PAGADO:   ")
-                                            .setFont(normal).setFontSize(12)
-                                            .setFontColor(ColorConstants.WHITE))
-                                    .add(new Text("$ " + DF.format(pago.getImportePagado()))
-                                            .setFont(bold).setFontSize(14)
-                                            .setFontColor(ColorConstants.WHITE)))));
+            // 1. ENCABEZADO
+            Table encabezado = new Table(UnitValue.createPercentArray(new float[]{1}))
+                    .setWidth(UnitValue.createPercentValue(100));
+            Cell celdaEnc = new Cell()
+                    .setBorder(new SolidBorder(ColorConstants.BLACK, 1f))
+                    .setPadding(5).setTextAlignment(TextAlignment.CENTER);
+            celdaEnc.add(new Paragraph(EMPRESA)
+                    .setFont(courierBold).setFontSize(9.5f)
+                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(1));
+            celdaEnc.add(new Paragraph(DIRECCION)
+                    .setFont(courier).setFontSize(6f)
+                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(1));
+            celdaEnc.add(new Paragraph(TELEFONO + "          " + RUC)
+                    .setFont(courier).setFontSize(6.5f)
+                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(3));
+            celdaEnc.add(new Paragraph(tituloPrincipal)
+                    .setFont(courierBold).setFontSize(13)
+                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(2));
+            celdaEnc.add(new Paragraph("N  " + numComp)
+                    .setFont(courierBold).setFontSize(9)
+                    .setFontColor(GRIS_OSCURO)
+                    .setTextAlignment(TextAlignment.RIGHT).setMarginBottom(0));
+            encabezado.addCell(celdaEnc);
+            colIzq.add(encabezado);
 
-            // ── PIE DE PÁGINA ─────────────────────────────────────────────
-            doc.add(new Paragraph(
-                    "Este documento es un comprobante interno de pago de letra de cambio.")
-                    .setFont(normal).setFontSize(8)
-                    .setFontColor(ColorConstants.GRAY)
+            // 2. FILA: Recibi de + Caja monto
+            Table filaRecibo = new Table(UnitValue.createPercentArray(new float[]{1, 0.3f}))
+                    .setWidth(UnitValue.createPercentValue(100)).setMarginTop(3);
+            filaRecibo.addCell(new Cell()
+                    .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                    .setPadding(5)
+                    .add(lineaDato("Recibi de:  ", clientes, courier, courierBold, 8f)));
+            filaRecibo.addCell(new Cell()
+                    .setBorder(new SolidBorder(ColorConstants.BLACK, 1.5f))
+                    .setPadding(4)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setVerticalAlignment(VerticalAlignment.MIDDLE)
+                    .add(new Paragraph("$ " + DF.format(pago.getImportePagado()))
+                            .setFont(courierBold).setFontSize(12)
+                            .setTextAlignment(TextAlignment.CENTER)));
+            colIzq.add(filaRecibo);
+
+            // 3. CUERPO
+            Table cuerpo = new Table(UnitValue.createPercentArray(new float[]{1}))
+                    .setWidth(UnitValue.createPercentValue(100));
+            Cell celdaCuerpo = new Cell()
+                    .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                    .setPaddingLeft(8).setPaddingRight(8)
+                    .setPaddingTop(4).setPaddingBottom(4);
+
+            celdaCuerpo.add(lineaDato("La cantidad de:     ", importeTexto, courier, courierBold, 8f));
+            celdaCuerpo.add(separadorPunteado(courier));
+
+            celdaCuerpo.add(lineaDato("Por concepto de:    ", concepto, courier, courierBold, 8f));
+            celdaCuerpo.add(separadorPunteado(courier));
+
+            celdaCuerpo.add(lineaDato("Medio de pago:      ", medioPago + numOp, courier, courierBold, 8f));
+            celdaCuerpo.add(separadorPunteado(courier));
+
+            // Fecha de vencimiento de la letra (reemplaza a Observaciones)
+            celdaCuerpo.add(lineaDato("Fecha venc. letra:  ", fechaVencStr, courier, courierBold, 8f));
+            celdaCuerpo.add(separadorPunteado(courier));
+
+            cuerpo.addCell(celdaCuerpo);
+            colIzq.add(cuerpo);
+
+            // 4. PIE: Nombre/DNI + Fecha + Firma
+            Table pie = new Table(UnitValue.createPercentArray(new float[]{1.3f, 0.65f, 0.75f}))
+                    .setWidth(UnitValue.createPercentValue(100));
+
+            Cell celdaNombre = new Cell()
+                    .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f)).setPadding(4);
+            celdaNombre.add(new Paragraph("Nombre:")
+                    .setFont(courierBold).setFontSize(7).setMarginBottom(2));
+            celdaNombre.add(new Paragraph(nombreFirmante)
+                    .setFont(courier).setFontSize(7.5f).setMarginBottom(3));
+            celdaNombre.add(new Paragraph("D.N.I.:   " + docFirmante)
+                    .setFont(courier).setFontSize(7.5f));
+            pie.addCell(celdaNombre);
+
+            String[] pf = fechaPagoStr.split("/");
+            String dia  = pf.length > 0 ? pf[0] : "--";
+            String mes  = pf.length > 1 ? pf[1] : "--";
+            String anio = pf.length > 2 ? pf[2] : "----";
+
+            Cell celdaFecha = new Cell()
+                    .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f)).setPadding(4)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setVerticalAlignment(VerticalAlignment.MIDDLE);
+            celdaFecha.add(new Paragraph("DIA    MES    ANNO")
+                    .setFont(courierBold).setFontSize(6.5f)
+                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(3));
+            Table tablaFecha = new Table(UnitValue.createPercentArray(new float[]{1, 1, 1}))
+                    .setWidth(UnitValue.createPercentValue(100));
+            tablaFecha.addCell(celdaFechaBox(dia, courierBold));
+            tablaFecha.addCell(celdaFechaBox(mes, courierBold));
+            tablaFecha.addCell(celdaFechaBox(anio, courierBold));
+            celdaFecha.add(tablaFecha);
+            pie.addCell(celdaFecha);
+
+            Cell celdaFirma = new Cell()
+                    .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f)).setPadding(4)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setVerticalAlignment(VerticalAlignment.BOTTOM);
+            celdaFirma.add(new Paragraph(" ").setFont(courier).setFontSize(14));
+            celdaFirma.add(new Paragraph("_____________________")
+                    .setFont(courier).setFontSize(7)
                     .setTextAlignment(TextAlignment.CENTER));
+            celdaFirma.add(new Paragraph("RECIBE CONFORME")
+                    .setFont(courierBold).setFontSize(7)
+                    .setTextAlignment(TextAlignment.CENTER));
+            pie.addCell(celdaFirma);
+            colIzq.add(pie);
 
+            layoutPrincipal.addCell(colIzq);
+
+            // ─── COLUMNA DERECHA: QR ──────────────────────────────────
+            Cell colQr = new Cell()
+                    .setBorder(Border.NO_BORDER)
+                    .setPaddingLeft(8)
+                    .setVerticalAlignment(VerticalAlignment.MIDDLE)
+                    .setTextAlignment(TextAlignment.CENTER);
+            colQr.add(qrImage);
+            colQr.add(new Paragraph("Escanea para\nver tu recibo")
+                    .setFont(arial).setFontSize(6f)
+                    .setFontColor(GRIS_MEDIO)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginTop(3));
+            layoutPrincipal.addCell(colQr);
+
+            doc.add(layoutPrincipal);
             doc.close();
 
         } catch (Exception e) {
@@ -182,29 +278,35 @@ public class ComprobantePagoLetraPdf {
         return out.toByteArray();
     }
 
-    // ── HELPERS ───────────────────────────────────────────────────────────────
+    // ── HELPERS ──────────────────────────────────────────────────────────────
+
+    private static Paragraph lineaDato(String label, String valor,
+                                        PdfFont normal, PdfFont bold, float size) {
+        return new Paragraph()
+                .add(new Text(label).setFont(bold).setFontSize(size))
+                .add(new Text(valor).setFont(normal).setFontSize(size))
+                .setMarginBottom(1);
+    }
+
+    private static Paragraph separadorPunteado(PdfFont courier) {
+        return new Paragraph("............................................................................"
+                + "............................................................................")
+                .setFont(courier).setFontSize(5)
+                .setFontColor(GRIS_MEDIO)
+                .setMarginTop(0).setMarginBottom(2);
+    }
+
+    private static Cell celdaFechaBox(String valor, PdfFont bold) {
+        return new Cell()
+                .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                .setPadding(3).setTextAlignment(TextAlignment.CENTER)
+                .add(new Paragraph(valor).setFont(bold).setFontSize(8)
+                        .setTextAlignment(TextAlignment.CENTER));
+    }
 
     private static PdfFont cargarFuente(String path) throws Exception {
         byte[] bytes = StreamUtil.inputStreamToArray(
                 ComprobantePagoLetraPdf.class.getClassLoader().getResourceAsStream(path));
         return PdfFontFactory.createFont(bytes, PdfEncodings.WINANSI);
-    }
-
-    private static Cell celdaDato(String label, String valor, PdfFont normal, PdfFont bold) {
-        return new Cell()
-                .setBackgroundColor(AZUL_CLARO)
-                .setBorder(new SolidBorder(ColorConstants.LIGHT_GRAY, 0.5f))
-                .setPadding(6)
-                .add(new Paragraph()
-                        .add(new Text(label + "  ").setFont(bold).setFontSize(9))
-                        .add(new Text(valor).setFont(normal).setFontSize(9)));
-    }
-
-    private static Paragraph titulSeccion(String texto, PdfFont bold) {
-        return new Paragraph(texto)
-                .setFont(bold).setFontSize(10)
-                .setFontColor(AZUL_HEADER)
-                .setMarginTop(6).setMarginBottom(4)
-                .setBorderBottom(new SolidBorder(AZUL_HEADER, 0.8f));
     }
 }

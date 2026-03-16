@@ -29,7 +29,12 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
             	.requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                 // 1. RUTAS PÚBLICAS: Libre acceso (Login y endpoints marcados como public)
-                .requestMatchers("/api/auth/**", "/api/public/**","/error").permitAll()
+            	.requestMatchers(
+                        "/api/auth/**",
+                        "/api/public/**",
+                        "/error",
+                        "/api/pagos-letras/*/comprobante-pdf"
+                    ).permitAll()
 
                 // 2. RUTAS DE SECRETARIA: Solo usuarios con ROLE_SECRETARIA pueden acceder
                 .requestMatchers(
