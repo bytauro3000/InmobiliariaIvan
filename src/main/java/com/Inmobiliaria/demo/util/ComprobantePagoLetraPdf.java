@@ -55,7 +55,7 @@ public class ComprobantePagoLetraPdf {
 
     // URL base del backend en produccion (Render)
     // El QR apunta a este endpoint para que el cliente descargue su comprobante
-    private static final String BASE_URL  = "https://inmobiliariaivan.onrender.com/api/pagos-letras";
+    private static final String BASE_URL  = "https://inmobiliariaivan.onrender.com/api/pagos";
 
     public static byte[] generar(PagoLetras pago) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
