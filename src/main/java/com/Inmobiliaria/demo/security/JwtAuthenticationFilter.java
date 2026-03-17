@@ -20,7 +20,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
-    // ✅ Se inyecta desde variable de entorno GATEWAY_SECRET — nunca hardcodeado
     @Value("${gateway.secret-key}")
     private String gatewaySecretKey;
 
@@ -30,14 +29,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
-        // Rutas públicas: pasan directo sin validar nada
-        if (path.contains("/api/auth/login") || path.contains("/api/public/ping") || path.equals("/")) {
+        // Rutas que pasan directo sin validar X-Gateway-Secret
+        if (path.contains("/api/auth/login")
+                || path.contains("/api/public/ping")
+                || path.matches(".*/api/pagos/\\d+/comprobante-pdf")
+                || path.equals("/")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // ✅ VALIDACIÓN: Solo el Gateway puede hablar con el monolito
-        // Si la petición no trae el header secreto correcto → 403 inmediato
         String gatewayHeader = request.getHeader("X-Gateway-Secret");
         if (gatewayHeader == null || !gatewayHeader.equals(gatewaySecretKey)) {
             log.warn("Acceso directo bloqueado al monolito en ruta: {} | Header recibido: {}",
@@ -46,7 +46,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // ✅ Si llegó aquí, la petición viene del Gateway → procesar normalmente
         String userEmail = request.getHeader("X-Auth-User");
         String userRole  = request.getHeader("X-Auth-Roles");
 
@@ -54,12 +53,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (userEmail != null && !userEmail.isEmpty()) {
             String rolLimpio = (userRole != null) ? userRole.trim() : "ROLE_USER";
-
             UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                 userEmail, null, List.of(new SimpleGrantedAuthority(rolLimpio))
             );
             SecurityContextHolder.getContext().setAuthentication(auth);
-
             log.debug("Autenticacion exitosa - Principal: {}, Rol: [{}]", userEmail, rolLimpio);
         } else {
             log.debug("Header X-Auth-User ausente en ruta protegida: {}", path);
