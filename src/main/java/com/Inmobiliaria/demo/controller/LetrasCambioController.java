@@ -70,4 +70,9 @@ public class LetrasCambioController {
         return new ResponseEntity<>(reporte, HttpStatus.OK);
     }
     
+    @GetMapping("/existe/{idContrato}")
+    public ResponseEntity<Boolean> existenLetras(@PathVariable Integer idContrato) {
+        return ResponseEntity.ok(letraCambioService.existenLetrasPorContrato(idContrato));
+    }
+    
 }

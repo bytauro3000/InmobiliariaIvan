@@ -19,9 +19,31 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
     @Transactional
     void deleteByContratoIdContrato(Integer idContrato);
 
-    //metodo para buscar la primera letra y restarla al saldo para la clausula tercer
     Optional<LetraCambio> findFirstByContratoIdContratoOrderByNumeroLetraAsc(Integer idContrato);
-    
+
+    // ✅ Query 1: trae letras + contrato + clientes (solo UNA colección en JOIN FETCH)
+    // Hibernate lanza MultipleBagFetchException si se hace JOIN FETCH de dos List a la vez.
+    // Por eso separamos: esta query carga letras con sus clientes del contrato.
+    @Query("SELECT DISTINCT l FROM LetraCambio l " +
+           "LEFT JOIN FETCH l.contrato c " +
+           "LEFT JOIN FETCH c.clientes cc " +
+           "LEFT JOIN FETCH cc.cliente " +
+           "WHERE c.idContrato = :idContrato " +
+           "ORDER BY l.idLetra ASC")
+    List<LetraCambio> findByContratoIdContratoConClientes(@Param("idContrato") Integer idContrato);
+
+    // ✅ Query 2: trae letras + pagos (la segunda colección en query separada)
+    // El service combina los resultados de ambas queries en memoria.
+    @Query("SELECT DISTINCT l FROM LetraCambio l " +
+           "LEFT JOIN FETCH l.pagos " +
+           "WHERE l.contrato.idContrato = :idContrato " +
+           "ORDER BY l.idLetra ASC")
+    List<LetraCambio> findByContratoIdContratoConPagos(@Param("idContrato") Integer idContrato);
+
+    // ✅ Solo comprueba si existe al menos 1 fila, no trae datos
+    @Query("SELECT COUNT(l) > 0 FROM LetraCambio l WHERE l.contrato.idContrato = :idContrato")
+    boolean existsByContratoId(@Param("idContrato") Integer idContrato);
+
     @Query(value = "SELECT " +
             "lc.numero_letra, " +
             "lc.fecha_giro, " +
@@ -35,10 +57,9 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
             "MAX(CASE WHEN clientes.client_rank = 2 THEN clientes.nombre END) AS cliente2_nombre, " +
             "MAX(CASE WHEN clientes.client_rank = 2 THEN clientes.apellidos END) AS cliente2_apellidos, " +
             "MAX(CASE WHEN clientes.client_rank = 2 THEN clientes.numDocumento END) AS cliente2_numDocumento, " +
-            "MAX(CASE WHEN clientes.client_rank = 1 THEN clientes.direccion END) AS cliente1_direccion, " +    
+            "MAX(CASE WHEN clientes.client_rank = 1 THEN clientes.direccion END) AS cliente1_direccion, " +
             "MAX(CASE WHEN clientes.client_rank = 1 THEN clienteDistrito.nombre END) AS cliente1_distrito " +
-            // LetraCambio -> letra_cambio
-            "FROM letra_cambio lc " + 
+            "FROM letra_cambio lc " +
             "JOIN distrito d ON lc.id_distrito = d.id_distrito " +
             "JOIN contrato c ON lc.id_contrato = c.id_contrato " +
             "JOIN (" +
@@ -50,24 +71,20 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
             "        cl.direccion, " +
             "        cl.id_distrito AS cliente_distrito_id, " +
             "        ROW_NUMBER() OVER (PARTITION BY cc.id_contrato ORDER BY cl.id_cliente) AS client_rank " +
-            // ContratoCliente -> contrato_cliente
-            "    FROM contrato_cliente cc " + 
+            "    FROM contrato_cliente cc " +
             "    JOIN cliente cl ON cc.id_cliente = cl.id_cliente " +
             ") AS clientes ON lc.id_contrato = clientes.id_contrato " +
             "JOIN distrito clienteDistrito ON clienteDistrito.id_distrito = clientes.cliente_distrito_id " +
             "WHERE c.id_contrato = :idContrato " +
             "GROUP BY " +
-            // Corregido: Se debe agrupar por los campos seleccionados que no son agregados.
             "lc.numero_letra, " +
             "lc.fecha_giro, " +
             "lc.fecha_vencimiento, " +
             "lc.importe, " +
             "lc.importe_letras, " +
-            "distritoNombre", nativeQuery = true) // <-- Usar el alias de columna
+            "distritoNombre", nativeQuery = true)
     List<Object[]> obtenerReportePorContrato(@Param("idContrato") Integer idContrato);
 
-    
-    // Nueva consulta para el Cronograma de Pagos con múltiples clientes y lotes
     @Query(value = "SELECT " +
         "lc.id_letra, " +
         "c.cantidad_letras, " +
@@ -96,8 +113,7 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
         "MAX(CASE WHEN lotes.lote_rank = 2 THEN lotes.numero_lote END) AS lote2_numero_lote, " +
         "MAX(CASE WHEN lotes.lote_rank = 2 THEN lotes.area END) AS lote2_area, " +
         "p.nombre_programa AS programa_nombre " +
-        // LetraCambio -> letra_cambio
-        "FROM letra_cambio lc " + 
+        "FROM letra_cambio lc " +
         "JOIN contrato c ON lc.id_contrato = c.id_contrato " +
         "JOIN vendedor v ON c.id_vendedor = v.id_vendedor " +
         "JOIN (" +
@@ -112,15 +128,13 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
         "        cl.direccion, " +
         "        cl.id_distrito, " +
         "        ROW_NUMBER() OVER (PARTITION BY cc.id_contrato ORDER BY cl.id_cliente) AS client_rank " +
-        // ContratoCliente -> contrato_cliente
-        "    FROM contrato_cliente cc " + 
+        "    FROM contrato_cliente cc " +
         "    JOIN cliente cl ON cc.id_cliente = cl.id_cliente " +
         ") AS clientes ON c.id_contrato = clientes.id_contrato " +
         "JOIN distrito d_cliente ON clientes.id_distrito = d_cliente.id_distrito " +
         "JOIN (" +
         "    SELECT " +
-        // ContratoLote -> contrato_lote
-        "        cl.id_contrato, " + 
+        "        cl.id_contrato, " +
         "        l.id_lote, " +
         "        l.manzana, " +
         "        l.numero_lote, " +
@@ -143,8 +157,8 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
         "lc.numero_letra, " +
         "lc.fecha_vencimiento, " +
         "lc.importe, " +
-        "p.nombre_programa " + 
-        "ORDER BY lc.id_letra ASC", 
+        "p.nombre_programa " +
+        "ORDER BY lc.id_letra ASC",
         nativeQuery = true)
     List<Object[]> obtenerCronogramaPagosPorContrato(@Param("idContrato") Integer idContrato);
 }

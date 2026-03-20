@@ -20,4 +20,6 @@ public interface LetraCambioService {
     LetraCambioDTO actualizarLetra(Integer id, LetraCambioDTO letraCambioDTO);
     
     void eliminarPorContrato(Integer idContrato);
+    
+    boolean existenLetrasPorContrato(Integer idContrato);
 }

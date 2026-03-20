@@ -28,5 +28,15 @@
     "name": "gateway.secret-key",
     "type": "java.lang.String",
     "description": "A description for 'gateway.secret-key'"
+  },
+  {
+    "name": "exchangerate.api-key",
+    "type": "java.lang.String",
+    "description": "A description for 'exchangerate.api-key'"
+  },
+  {
+    "name": "microservice.servicios-basicos.url",
+    "type": "java.lang.String",
+    "description": "A description for 'microservice.servicios-basicos.url'"
   }
 ]}

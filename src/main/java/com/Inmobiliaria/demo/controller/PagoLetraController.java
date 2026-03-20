@@ -11,16 +11,15 @@ import com.Inmobiliaria.demo.repository.PagoLetraRepository;
 import com.Inmobiliaria.demo.service.PagoLetraService;
 import com.Inmobiliaria.demo.util.ComprobantePagoLetraPdf;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/pagos")
@@ -104,6 +103,28 @@ public class PagoLetraController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "inline; filename=comprobante-pago-" + idPago + ".pdf")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
+    @GetMapping("/comprobante-multiple/{numeroComprobante}")
+    @Transactional(readOnly = true)
+    public ResponseEntity<byte[]> descargarComprobanteMultiple(
+            @PathVariable String numeroComprobante) {
+
+        List<com.Inmobiliaria.demo.entity.PagoLetras> pagos =
+                pagoLetraRepository.findByNumeroComprobante(numeroComprobante);
+
+        if (pagos == null || pagos.isEmpty()) {
+            throw new com.Inmobiliaria.demo.exception.NegocioException(
+                    "No se encontraron pagos con el comprobante: " + numeroComprobante);
+        }
+
+        byte[] pdf = ComprobantePagoLetraPdf.generarMultiple(pagos);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "inline; filename=comprobante-multiple-" + numeroComprobante + ".pdf")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
     }

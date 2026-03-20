@@ -4,6 +4,7 @@ import com.Inmobiliaria.demo.dto.LetraResponseDTO;
 import com.Inmobiliaria.demo.dto.LoteResponseDTO;
 import com.Inmobiliaria.demo.entity.LetraCambio;
 import com.Inmobiliaria.demo.enums.Genero;
+import com.Inmobiliaria.demo.enums.Moneda;
 import com.Inmobiliaria.demo.dto.ClienteResponseDTO;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
@@ -20,6 +21,8 @@ import com.itextpdf.layout.properties.UnitValue;
 
 import java.io.ByteArrayOutputStream;
 import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.util.Locale;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
@@ -27,7 +30,6 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.time.LocalDate;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.format.DateTimeFormatter;
 import com.itextpdf.layout.element.ListItem;
 import com.itextpdf.io.font.PdfEncodings;
@@ -289,7 +291,7 @@ public class PdfGenerator {
 		    // --- TEXTO PARA LA SEGUNDA ETAPA (Basado en el PDF de 15 Has - 74.54%) ---
 		    primeraCuerpo.add(" es propietaria de un lote de terreno rústico con un área superficial de 150,000.00 m2 Equivalente a 15 Has., que corresponde al 74.543780% de las acciones y derechos del Predio denominado Sector Pampa San Antonio, Margen derecha del Kilómetro 23 de la Avenida Túpac Amaru el cual forma parte de un área superficial de 201,224.03m2 equivalente a 20has. 1,224.04m2, ubicado en el Distrito de Carabayllo, Provincia y Departamento De Lima, formando parte de un predio de mayor extensión ubicado en las Provincia de Huarochirí, Lima y Canta, inscrito a fojas 515 del tomo 10-H, actualmente ");
 		    primeraCuerpo.add(new Text("Partida Electrónica 11049870 del Registro de Predios de Lima. ").setFont(arialBoldItalic));
-		    primeraCuerpo.add("\nFue adquirido mediante contrato Privado de Compra- Venta de Acciones y Derechos a plazos de un Predio Rustico de fecha ");
+		    primeraCuerpo.add("\n\nFue adquirido mediante contrato Privado de Compra- Venta de Acciones y Derechos a plazos de un Predio Rustico de fecha ");
 		    primeraCuerpo.add(new Text("06/11/2019").setFont(arialBoldItalic));
 		    primeraCuerpo.add(". Que le otorgo su anterior Propietaria ");
 		    primeraCuerpo.add(new Text("INVERSIONES INMOBILIARIAS LAS PRADERAS S.A.C").setFont(arialBoldItalic));
@@ -314,7 +316,7 @@ public class PdfGenerator {
 		    // --- TEXTO PARA EL PROGRAMA NORMAL (Basado en el PDF de 20 Has - 100%) ---
 		    primeraCuerpo.add(" es propietaria de un lote de terreno rústico con un área superficial de 201,224.03 m2 Equivalente a 20 Has. 1,224.03 m2, que corresponde al 100% de las acciones y derechos del Predio denominado Sector Pampa San Antonio, Margen derecha del Kilómetro 23 de La Avenida Túpac Amaru, Distrito de Carabayllo, Provincia y Departamento De Lima, el cual forma parte de un predio de mayor extensión ubicado en las Provincia de Huarochirí, Lima y Canta, inscrito a fojas 515 del tomo 10-H, actualmente ");
 		    primeraCuerpo.add(new Text("Partida Electrónica 11049870 del Registro de Predios de Lima. ").setFont(arialBoldItalic));
-		    primeraCuerpo.add("\nFue adquirido mediante la minuta de Compra- Venta de Acciones y Derechos de Predio Rustico de la fecha ");
+		    primeraCuerpo.add("\n\nFue adquirido mediante la minuta de Compra- Venta de Acciones y Derechos de Predio Rustico de la fecha ");
 		    primeraCuerpo.add(new Text("06/11/2019").setFont(arialBoldItalic));
 		    primeraCuerpo.add(" (15 Has.) y con fecha ");
 		    primeraCuerpo.add(new Text("29/03/2021").setFont(arialBoldItalic));
@@ -454,11 +456,16 @@ public class PdfGenerator {
 		 * ========================================================= */
 
 		// 1. Definir el formato de moneda con comas
-		DecimalFormat df = new DecimalFormat("#,##0.00");
+		DecimalFormat df = new DecimalFormat("#,##0.00", new DecimalFormatSymbols(Locale.US));
 
-		// 2. Convertir montos a letras usando tu clase NumeroALetras
-		String montoTotalLetras = NumeroALetras.convertir(contrato.getMontoTotal());
-		String montoSaldoLetras = NumeroALetras.convertir(contrato.getSaldo());
+		// 2. Detectar moneda del contrato para prefijo y texto correcto
+		Moneda monedaContrato = contrato.getMoneda() != null ? contrato.getMoneda() : Moneda.USD;
+		String prefMoneda = (monedaContrato == Moneda.PEN) ? "S/." : "US$.";
+		String prefMonedaSinPunto = (monedaContrato == Moneda.PEN) ? "S/" : "US$";
+
+		// 3. Convertir montos a letras usando la moneda correcta
+		String montoTotalLetras = NumeroALetras.convertir(contrato.getMontoTotal(), monedaContrato);
+		String montoSaldoLetras = NumeroALetras.convertir(contrato.getSaldo(), monedaContrato);
 
 		// 1. Título de la Cláusula
 		document.add(new Paragraph()
@@ -486,7 +493,7 @@ public class PdfGenerator {
 		    LetraResponseDTO primeraLetra = listaLetras.get(0);
 		    LetraResponseDTO ultimaLetra = listaLetras.get(totalLetras - 1); 
 
-		    terceraCuerpo.add(new Text("US$." + df.format(contrato.getMontoTotal())).setFont(arialBoldItalic));
+		    terceraCuerpo.add(new Text(prefMoneda + df.format(contrato.getMontoTotal())).setFont(arialBoldItalic));
 		    terceraCuerpo.add(new Text(" (" + montoTotalLetras + ")").setFont(arialBoldItalic));
 		    terceraCuerpo.add(", que ");
 		    terceraCuerpo.add(new Text("“" + etiquetaComprador + "”").setFont(arialBoldItalic));
@@ -494,7 +501,7 @@ public class PdfGenerator {
 		    document.add(terceraCuerpo);
 
 		    // --- 3.1 CUOTA INICIAL ---
-		    String textoInicial = (contrato.getInicial().doubleValue() > 0) ? "US$." + df.format(contrato.getInicial()) : "Sin Cuota inicial.";
+		    String textoInicial = (contrato.getInicial().doubleValue() > 0) ? prefMoneda + df.format(contrato.getInicial()) : "Sin Cuota inicial.";
 		    document.add(new Paragraph("3.1 " + textoInicial).setFont(arialItalic).setFontSize(11).setMarginLeft(40).setMarginTop(10));
 
 		 // --- 3.2 SALDO Y AGRUPACIÓN DINÁMICA CORREGIDO ---
@@ -504,7 +511,7 @@ public class PdfGenerator {
 
 		    subclausula32.add("3.2 El saldo del precio de ");
 		    // Solo el monto numérico en negrita
-		    subclausula32.add(new Text("US$." + df.format(contrato.getSaldo())).setFont(arialBoldItalic));
+		    subclausula32.add(new Text(prefMoneda + df.format(contrato.getSaldo())).setFont(arialBoldItalic));
 		    // El monto en letras en negrita
 		    subclausula32.add(new Text(" (" + montoSaldoLetras + ")").setFont(arialBoldItalic));
 		    subclausula32.add(", que será cancelado en ");
@@ -524,7 +531,7 @@ public class PdfGenerator {
 		        // CASO 1: Todas iguales - Solo resaltamos el monto
 		        BigDecimal montoUnico = gruposMonto.keySet().iterator().next();
 		        subclausula32.add("de ");
-		        subclausula32.add(new Text("US$" + df.format(montoUnico)).setFont(arialBoldItalic));
+		        subclausula32.add(new Text(prefMonedaSinPunto + df.format(montoUnico)).setFont(arialBoldItalic));
 		    } else {
 		        // CASO 2: Variantes - Resaltamos cantidad y monto de cada grupo
 		        subclausula32.add("(");
@@ -540,7 +547,7 @@ public class PdfGenerator {
 		            // Texto descriptivo normal
 		            subclausula32.add(cantidad == 1 ? " letra de " : " letras de cambio de ");
 		            // Monto en negrita
-		            subclausula32.add(new Text("US$" + df.format(monto)).setFont(arialBoldItalic));
+		            subclausula32.add(new Text(prefMonedaSinPunto + df.format(monto)).setFont(arialBoldItalic));
 		            
 		            // Manejo de comas y "y" entre grupos
 		            if (indexGrupo < gruposMonto.size() - 2) {
@@ -570,14 +577,14 @@ public class PdfGenerator {
 		    subclausula33.add("3.3 Letra ");
 		    subclausula33.add(new Text("No.01").setFont(arialBoldItalic));
 		    subclausula33.add(" por ");
-		    subclausula33.add(new Text("US$" + df.format(primeraLetra.getImporte())).setFont(arialBoldItalic));
+		    subclausula33.add(new Text(prefMonedaSinPunto + df.format(primeraLetra.getImporte())).setFont(arialBoldItalic));
 		    subclausula33.add(" con vencimiento el día ");
 		    subclausula33.add(new Text(primeraLetra.getFechaVencimiento().format(formatoLindo)).setFont(arialBoldItalic));
 
 		    subclausula33.add(" y la última ");
 		    subclausula33.add(new Text("Letra No." + totalLetras).setFont(arialBoldItalic));
 		    subclausula33.add(" por ");
-		    subclausula33.add(new Text("US$" + df.format(ultimaLetra.getImporte())).setFont(arialBoldItalic)); 
+		    subclausula33.add(new Text(prefMonedaSinPunto + df.format(ultimaLetra.getImporte())).setFont(arialBoldItalic)); 
 		    subclausula33.add(" con vencimiento el día ");
 		    subclausula33.add(new Text(ultimaLetra.getFechaVencimiento().format(formatoLindo)).setFont(arialBoldItalic));
 		    subclausula33.add(".");
@@ -1293,9 +1300,12 @@ public class PdfGenerator {
 		}
 
 		//Convertimos el nuevo saldo y cantidad a letras para el documento
-		String saldoTextoClausula = NumeroALetras.convertir(saldoParaClausula);
+		// Detectar moneda para esta sección (puede ser un contexto diferente del contrato)
+		Moneda monedaCtrato = contrato.getMoneda() != null ? contrato.getMoneda() : Moneda.USD;
+		String prefMonedaCtrato = (monedaCtrato == Moneda.PEN) ? "S/." : "US$.";
+		String saldoTextoClausula = NumeroALetras.convertir(saldoParaClausula, monedaCtrato);
 		BigDecimal cantLetrasBD = BigDecimal.valueOf(cantidadLetrasParaClausula);
-		String letrasEnTextoClausula = NumeroALetras.convertir(cantLetrasBD).split(" CON ")[0];
+		String letrasEnTextoClausula = NumeroALetras.convertir(cantLetrasBD, Moneda.USD).split(" CON ")[0];
 
 		//--- CONSTRUCCIÓN DEL PÁRRAFO ---
 		Paragraph terceroCuerpo = new Paragraph()
@@ -1316,7 +1326,7 @@ public class PdfGenerator {
 		terceroCuerpo.add(" a la fecha de la entrega y toma de posesión del terreno, la cantidad de ");
 
 		//Monto calculado (Saldo Real Adeudado)
-		terceroCuerpo.add(new Text("US$." + df.format(saldoParaClausula)).setFont(arialBold));
+		terceroCuerpo.add(new Text(prefMonedaCtrato + df.format(saldoParaClausula)).setFont(arialBold));
 		terceroCuerpo.add(new Text(" (" + saldoTextoClausula + ")").setFont(arialBold));
 
 		terceroCuerpo.add(" representado por ");
@@ -1331,7 +1341,7 @@ public class PdfGenerator {
 		terceroCuerpo.add(", hasta por la suma de ");
 
 		//Repetición del monto calculado para la Hipoteca
-		terceroCuerpo.add(new Text("US$." + df.format(saldoParaClausula)).setFont(arialBold));
+		terceroCuerpo.add(new Text(prefMonedaCtrato + df.format(saldoParaClausula)).setFont(arialBold));
 		terceroCuerpo.add(new Text(" (" + saldoTextoClausula + ")").setFont(arialBold));
 
 		terceroCuerpo.add(" conforme a los Artículos 1118 y 1119 Código Civil Vigente, la presente hipoteca se hace extensiva a todas sus partes integrantes, accesorias y anexos, y a todo cuanto en el futuro se edifique, instale o implante sobre el inmueble materia de la presente, conforme lo faculta el artículo 1101 del Código Civil Vigente.");

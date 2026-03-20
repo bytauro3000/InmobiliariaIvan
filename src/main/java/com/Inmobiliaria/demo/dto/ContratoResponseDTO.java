@@ -6,6 +6,7 @@ import java.util.List;
 
 import com.Inmobiliaria.demo.enums.TipoContrato;
 import com.Inmobiliaria.demo.enums.EstadoContrato;
+import com.Inmobiliaria.demo.enums.Moneda;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -23,12 +24,11 @@ public class ContratoResponseDTO {
     private BigDecimal saldo;
     private Integer cantidadLetras;
     private String observaciones;
+    private Moneda moneda;
     private List<ClienteResponseDTO> clientes;
     private List<LoteResponseDTO> lotes;
     private List<LetraResponseDTO> letras;
-
     private VendedorResponseDTO vendedor;
-
     private boolean tieneLuz;
     private boolean tieneAgua;
 }

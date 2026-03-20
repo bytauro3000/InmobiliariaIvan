@@ -49,6 +49,10 @@ public class PagoLetras {
 
     @Column(name = "observaciones", length = 255)
     private String observaciones;
+
+    // Marca si el comprobante ya fue enviado por email — evita reenvíos
+    @Column(name = "email_enviado", nullable = false)
+    private boolean emailEnviado = false;
     
     @OneToMany(mappedBy = "pago", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Voucher> vouchers = new ArrayList<>();

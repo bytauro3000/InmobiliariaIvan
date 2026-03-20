@@ -7,6 +7,7 @@ import java.util.List;
 import org.springframework.format.annotation.DateTimeFormat;
 import com.Inmobiliaria.demo.enums.TipoContrato;
 import com.Inmobiliaria.demo.enums.EstadoContrato;
+import com.Inmobiliaria.demo.enums.Moneda;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -62,20 +63,19 @@ public class Contrato {
 
     @Column(name = "observaciones", columnDefinition = "TEXT", nullable = true)
     private String observaciones;
-    
-    
 
-    // 🟢 CORRECCIÓN: Cascada para Letras de Cambio
+    // Moneda del contrato: USD (dólares) o PEN (soles)
+    // Default USD para mantener compatibilidad con contratos existentes
+    @Enumerated(EnumType.STRING)
+    @Column(name = "moneda", nullable = false, length = 3)
+    private Moneda moneda = Moneda.USD;
+
     @OneToMany(mappedBy = "contrato", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<LetraCambio> letrasCambio;
 
-    // 🟢 CORRECCIÓN: Cascada para la tabla intermedia contrato_cliente
     @OneToMany(mappedBy = "contrato", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ContratoCliente> clientes;
 
-    // 🟢 CORRECCIÓN: Cascada para la tabla intermedia contrato_lote
     @OneToMany(mappedBy = "contrato", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ContratoLote> lotes;
-    
-    
 }

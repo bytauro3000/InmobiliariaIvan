@@ -1,18 +1,22 @@
 package com.Inmobiliaria.demo.util;
 
 import java.math.BigDecimal;
+import com.Inmobiliaria.demo.enums.Moneda;
 
 public class NumeroALetras {
+
     private static final String[] UNIDADES = {
         "", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"
     };
 
     private static final String[] DIEZ_A_DIECINUEVE = {
-    	    "diez", "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete", "dieciocho", "diecinueve"
-    	};
+        "diez", "once", "doce", "trece", "catorce", "quince",
+        "dieciséis", "diecisiete", "dieciocho", "diecinueve"
+    };
 
     private static final String[] DECENAS = {
-        "", "", "veinte", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"
+        "", "", "veinte", "treinta", "cuarenta", "cincuenta",
+        "sesenta", "setenta", "ochenta", "noventa"
     };
 
     private static final String[] CENTENAS = {
@@ -20,14 +24,23 @@ public class NumeroALetras {
         "quinientos", "seiscientos", "setecientos", "ochocientos", "novecientos"
     };
 
+    // Mantiene compatibilidad con código existente — asume USD si no se especifica moneda
     public static String convertir(BigDecimal importe) {
-        int parteEntera = importe.intValue();
-        int parteDecimal = importe.remainder(BigDecimal.ONE).movePointRight(2).intValue();
+        return convertir(importe, Moneda.USD);
+    }
 
-        String letras = convertirNumero(parteEntera).toUpperCase();
+    public static String convertir(BigDecimal importe, Moneda moneda) {
+        int parteEntera   = importe.intValue();
+        int parteDecimal  = importe.remainder(BigDecimal.ONE).movePointRight(2).abs().intValue();
+
+        String letras   = convertirNumero(parteEntera).toUpperCase();
         String centavos = String.format("%02d", parteDecimal);
 
-        return letras + " CON " + centavos + "/100 DÓLARES AMERICANOS";
+        String sufijo = (moneda == Moneda.PEN)
+                ? "SOLES"
+                : "DÓLARES AMERICANOS";
+
+        return letras + " CON " + centavos + "/100 " + sufijo;
     }
 
     private static String convertirNumero(int numero) {
@@ -45,11 +58,7 @@ public class NumeroALetras {
 
         if (numero >= 1000) {
             int miles = numero / 1000;
-            if (miles == 1) {
-                resultado.append("mil");
-            } else {
-                resultado.append(convertirNumero(miles)).append(" mil");
-            }
+            resultado.append(miles == 1 ? "mil" : convertirNumero(miles) + " mil");
             numero %= 1000;
             if (numero > 0) resultado.append(" ");
         }
@@ -61,7 +70,7 @@ public class NumeroALetras {
             if (numero > 0) resultado.append(" ");
         }
 
-        if (numero >= 10 && numero <= 19) { 
+        if (numero >= 10 && numero <= 19) {
             resultado.append(DIEZ_A_DIECINUEVE[numero - 10]);
         } else if (numero < 10) {
             resultado.append(UNIDADES[numero]);

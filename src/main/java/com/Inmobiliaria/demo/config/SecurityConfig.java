@@ -32,6 +32,7 @@ public class SecurityConfig {
                     "/api/auth/**",
                     "/api/public/**",
                     "/api/pagos/*/comprobante-pdf",
+                    "/api/pagos/comprobante-multiple/*",
                     "/error"
                 ).permitAll()
                 .requestMatchers(
@@ -51,7 +52,8 @@ public class SecurityConfig {
                     "/chat/**",
                     "/ws/**",
                     "/api/archivos/**",
-                    "/api/pagos/**"
+                    "/api/pagos/**",
+                    "/api/tipo-cambio/**"
                 ).hasAuthority("ROLE_SECRETARIA")
                 .requestMatchers("/api/usuarios/**")
                 .hasAnyAuthority("ROLE_SECRETARIA", "ROLE_ADMINISTRADOR")

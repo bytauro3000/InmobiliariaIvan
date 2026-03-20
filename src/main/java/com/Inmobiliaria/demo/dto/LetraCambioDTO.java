@@ -1,6 +1,7 @@
 package com.Inmobiliaria.demo.dto;
 
 import java.math.BigDecimal;
+import com.Inmobiliaria.demo.enums.Moneda;
 import java.time.LocalDate;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -29,4 +30,10 @@ public class LetraCambioDTO {
     private String tipoComprobante;
     private String numeroComprobante;
     private String observaciones;
+
+    // Moneda del contrato para mostrar símbolo correcto en el frontend
+    private Moneda monedaContrato;
+
+    // Indica si este pago fue parte de un pago múltiple (mismo número de comprobante)
+    private boolean esMultiple;
 }
