@@ -22,15 +22,19 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/lotes")
 @RequiredArgsConstructor
 public class LoteController {
-
 	
     private final LoteService loteService;
-
 
     //Listar todos los lotes (entidad completa)
     @GetMapping
     public ResponseEntity<List<Lote>> listarLotes() {
         return ResponseEntity.ok(loteService.listarLotes());
+    }
+
+    // Reporte de lotes agrupados por programa — para impresion/PDF
+    @GetMapping("/reporte")
+    public ResponseEntity<List<Lote>> listarLotesParaReporte() {
+        return ResponseEntity.ok(loteService.listarLotesParaReporte());
     }
     
     //USO esta lista para VISTA CONTRATO

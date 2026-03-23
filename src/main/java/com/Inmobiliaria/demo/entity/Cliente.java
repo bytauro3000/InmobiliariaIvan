@@ -44,46 +44,47 @@ public class Cliente {
 
     @Column(name = "apellidos", length = 100)
     private String apellidos;
-    
+
     @Enumerated(EnumType.STRING)
-    @Column(name = "estadoCivil",nullable = false)
+    @Column(name = "estadoCivil", nullable = false)
     private EstadoCivil estadoCivil = EstadoCivil.Soltero;
-    
+
     @Enumerated(EnumType.STRING)
     @Column(name = "tipoCliente", nullable = false)
     private TipoCliente tipoCliente;
-    
-    @Column(name = "numDocumento", unique = true)  
+
+    @Column(name = "numDocumento", unique = true)
     private String numDoc;
 
-    @Column(name = "celular", nullable = false, length = 20) 
+    @Column(name = "celular", nullable = false, length = 20)
     private String celular;
-    
+
     @Column(name = "telefono", length = 20)
     private String telefono;
- 
-    @Column(name = "direccion", nullable = false, length = 150)  
+
+    @Column(name = "direccion", nullable = false, length = 150)
     private String direccion;
 
     @Column(name = "email", length = 100)
     private String email;
-    
+
     @Column(name = "fechaRegistro", nullable = false)
     @CreationTimestamp
     private Date fechaRegistro;
-    
- // 🟢 Cambiado de String a Enum para consistencia con Vendedores
+
     @Enumerated(EnumType.STRING)
     @Column(name = "genero", length = 20, nullable = false)
     private Genero genero;
-    
+
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", nullable = false)
-    private EstadoCliente estado = EstadoCliente.ACTIVO;  
-    
+    private EstadoCliente estado = EstadoCliente.ACTIVO;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "id_distrito")
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Distrito distrito;
-
+    
+    @Column(name = "nacionalidad", length = 50)
+    private String nacionalidad;
 }

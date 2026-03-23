@@ -8,6 +8,8 @@ import com.Inmobiliaria.demo.entity.Lote;
 public interface LoteService {
 
 	List<Lote> listarLotes();
+
+	List<Lote> listarLotesParaReporte();
 	
 	List<Object[]> obtenerConteoPorEstadoYPrograma();
 	

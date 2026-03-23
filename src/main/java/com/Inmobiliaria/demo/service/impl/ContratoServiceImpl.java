@@ -469,7 +469,7 @@ public class ContratoServiceImpl implements ContratoService {
                 Cliente c = cc.getCliente();
                 return new ClienteResponseDTO(c.getIdCliente(), c.getNombre(), c.getApellidos(),
                     c.getEstadoCivil(), c.getNumDoc(), c.getDireccion(), c.getCelular(),
-                    c.getDistrito(), c.getGenero());
+                    c.getDistrito(), c.getGenero(), c.getTipoCliente(), c.getNacionalidad());
             }).collect(Collectors.toList()));
         }
 

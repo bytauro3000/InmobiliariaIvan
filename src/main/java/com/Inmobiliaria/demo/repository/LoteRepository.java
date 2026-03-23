@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import com.Inmobiliaria.demo.entity.Lote;
 import com.Inmobiliaria.demo.enums.EstadoLote;
-//Repo
+
 @Repository
 public interface LoteRepository extends JpaRepository<Lote, Integer>{
 	
@@ -36,6 +36,12 @@ public interface LoteRepository extends JpaRepository<Lote, Integer>{
     // Método para validar duplicados exactos
     boolean existsByProgramaIdProgramaAndManzanaAndNumeroLote(Integer idPrograma, String manzana, String numeroLote);
 
-    //metodo para validar al editar (excluyendo el ID actual)
+    // Metodo para validar al editar (excluyendo el ID actual)
     boolean existsByProgramaIdProgramaAndManzanaAndNumeroLoteAndIdLoteNot(Integer idPrograma, String manzana, String numeroLote, Integer idLote);
+
+    // Reporte: todos los lotes ordenados por programa, manzana y numero de lote
+    @Query("SELECT l FROM Lote l " +
+           "JOIN FETCH l.programa p " +
+           "ORDER BY p.nombrePrograma ASC, l.manzana ASC, l.numeroLote ASC")
+    List<Lote> findAllParaReporteOrdenado();
 }

@@ -3,8 +3,10 @@ package com.Inmobiliaria.demo.service.impl;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.modelmapper.ModelMapper;
@@ -20,8 +22,10 @@ import com.Inmobiliaria.demo.entity.ContratoCliente;
 import com.Inmobiliaria.demo.entity.Distrito;
 import com.Inmobiliaria.demo.entity.LetraCambio;
 import com.Inmobiliaria.demo.entity.PagoLetras;
+import com.Inmobiliaria.demo.enums.EstadoContrato;
 import com.Inmobiliaria.demo.enums.EstadoLetra;
 import com.Inmobiliaria.demo.enums.Moneda;
+import com.Inmobiliaria.demo.enums.TipoContrato;
 import com.Inmobiliaria.demo.repository.ContratoRepository;
 import com.Inmobiliaria.demo.repository.DistritoRepository;
 import com.Inmobiliaria.demo.repository.LetraCambioRepository;
@@ -39,46 +43,89 @@ public class LetraCambioServiceImpl implements LetraCambioService {
     private final LetraCambioRepository letraCambioRepository;
     private final ContratoRepository contratoRepository;
     private final DistritoRepository distritoRepository;
-    private final PagoLetraRepository pagoLetraRepository;
     private final ModelMapper modelMapper;
+
+    // Sincroniza estado ACTIVO/MORA del contrato segun letras vencidas.
+    // Llamar siempre que se creen, editen o eliminen letras.
+    private void recalcularEstadoContrato(Contrato contrato) {
+        if (contrato.getTipoContrato() != TipoContrato.FINANCIADO) return;
+
+        EstadoContrato estadoActual = contrato.getEstadoContrato();
+        // Ignorar contratos en estados terminales
+        if (estadoActual == EstadoContrato.CANCELADO    ||
+            estadoActual == EstadoContrato.RESUELTO      ||
+            estadoActual == EstadoContrato.EN_RESOLUCION ||
+            estadoActual == EstadoContrato.RENUNCIA      ||
+            estadoActual == EstadoContrato.TRANSFERIDO   ||
+            estadoActual == EstadoContrato.CARTA_NOTARIAL) return;
+
+        // Recargar letras frescas desde BD
+        List<LetraCambio> letras = letraCambioRepository
+                .findByContratoIdContrato(contrato.getIdContrato());
+
+        LocalDate hoy = LocalDate.now();
+
+        // Punto de corte: ultima letra pagada
+        Optional<LocalDate> fechaUltimaPagada = letras.stream()
+                .filter(l -> l.getEstadoLetra() == EstadoLetra.PAGADO)
+                .map(LetraCambio::getFechaVencimiento)
+                .filter(f -> f != null)
+                .max(Comparator.naturalOrder());
+
+        // Marcar VENCIDO las pendientes que ya pasaron su fecha
+        for (LetraCambio letra : letras) {
+            if (letra.getEstadoLetra() != EstadoLetra.PENDIENTE) continue;
+            if (letra.getFechaVencimiento() == null) continue;
+            if (!letra.getFechaVencimiento().isBefore(hoy)) continue;
+            if (fechaUltimaPagada.isPresent() &&
+                    !letra.getFechaVencimiento().isAfter(fechaUltimaPagada.get())) continue;
+
+            letra.setEstadoLetra(EstadoLetra.VENCIDO);
+            letraCambioRepository.save(letra);
+        }
+
+        long letrasVencidas = letras.stream()
+                .filter(l -> l.getEstadoLetra() == EstadoLetra.VENCIDO)
+                .count();
+
+        EstadoContrato nuevoEstado = letrasVencidas == 0
+                ? EstadoContrato.ACTIVO
+                : EstadoContrato.MORA;
+
+        // Solo persistir si el estado cambio
+        if (nuevoEstado != estadoActual) {
+            contrato.setEstadoContrato(nuevoEstado);
+            contratoRepository.save(contrato);
+        }
+    }
 
     @Override
     @Transactional
     public List<LetraCambioDTO> listarPorContrato(Integer idContrato) {
 
-        // ✅ QUERY 1: letras + contrato + clientes (una sola colección en JOIN FETCH)
+        // Dos queries separadas para evitar MultipleBagFetchException
         List<LetraCambio> letrasConClientes = letraCambioRepository
                 .findByContratoIdContratoConClientes(idContrato);
 
-        // ✅ QUERY 2: letras + pagos (la otra colección en query separada)
-        // Hibernate no permite JOIN FETCH de dos List en la misma query (MultipleBagFetchException).
-        // La solución es hacer dos queries y combinar los resultados en memoria con un Map.
         List<LetraCambio> letrasConPagos = letraCambioRepository
                 .findByContratoIdContratoConPagos(idContrato);
 
-        // ✅ Construimos un Map idLetra -> List<PagoLetras> para combinar en O(1)
         Map<Integer, List<PagoLetras>> pagosPorLetra = letrasConPagos.stream()
                 .collect(Collectors.toMap(
                         LetraCambio::getIdLetra,
                         l -> l.getPagos() != null ? l.getPagos() : new ArrayList<>()
                 ));
 
-        // ✅ Pre-calculamos el conteo de comprobantes en memoria para evitar
-        // llamar a countByNumeroComprobante() dentro del loop por cada letra
+        // Conteo de comprobantes para detectar pago multiple
         Map<String, Long> conteoPorComprobante = letrasConPagos.stream()
                 .flatMap(l -> l.getPagos() != null ? l.getPagos().stream() : java.util.stream.Stream.empty())
                 .filter(p -> p.getNumeroComprobante() != null && !p.getNumeroComprobante().isBlank())
-                .collect(Collectors.groupingBy(
-                        PagoLetras::getNumeroComprobante,
-                        Collectors.counting()
-                ));
+                .collect(Collectors.groupingBy(PagoLetras::getNumeroComprobante, Collectors.counting()));
 
         LocalDate hoy = LocalDate.now();
 
         return letrasConClientes.stream()
                 .map(letra -> {
-
-                    // Actualizar estado a VENCIDO si corresponde
                     if (letra.getEstadoLetra() == EstadoLetra.PENDIENTE &&
                             letra.getFechaVencimiento().isBefore(hoy)) {
                         letra.setEstadoLetra(EstadoLetra.VENCIDO);
@@ -87,7 +134,6 @@ public class LetraCambioServiceImpl implements LetraCambioService {
                     LetraCambioDTO dto = modelMapper.map(letra, LetraCambioDTO.class);
                     Contrato contrato = letra.getContrato();
 
-                    // Nombre del cliente — ya cargado por la Query 1, sin lazy
                     if (contrato != null && contrato.getClientes() != null && !contrato.getClientes().isEmpty()) {
                         ContratoCliente contratoCliente = contrato.getClientes().get(0);
                         if (contratoCliente.getCliente() != null) {
@@ -97,19 +143,16 @@ public class LetraCambioServiceImpl implements LetraCambioService {
                         }
                     }
 
-                    // Moneda del contrato — ya cargada por la Query 1, sin lazy
                     if (contrato != null) {
                         dto.setMonedaContrato(contrato.getMoneda() != null ? contrato.getMoneda() : Moneda.USD);
                     }
 
-                    // Pagos — obtenidos del Map construido con la Query 2, sin lazy
                     List<PagoLetras> pagos = pagosPorLetra.getOrDefault(letra.getIdLetra(), new ArrayList<>());
                     if (!pagos.isEmpty()) {
                         String numComp = pagos.get(0).getNumeroComprobante();
                         dto.setNumeroComprobante(numComp);
                         if (numComp != null && !numComp.isBlank()) {
-                            long cantPagos = conteoPorComprobante.getOrDefault(numComp, 0L);
-                            dto.setEsMultiple(cantPagos > 1);
+                            dto.setEsMultiple(conteoPorComprobante.getOrDefault(numComp, 0L) > 1);
                         }
                     }
 
@@ -127,18 +170,14 @@ public class LetraCambioServiceImpl implements LetraCambioService {
     @Transactional
     public List<ReporteLetraCambioDTO> obtenerReportePorContrato(Integer idContrato) {
         List<Object[]> results = letraCambioRepository.obtenerReportePorContrato(idContrato);
-
         List<ReporteLetraCambioDTO> reportes = new ArrayList<>();
         for (Object[] row : results) {
             ReporteLetraCambioDTO dto = new ReporteLetraCambioDTO();
             dto.setNumeroLetra((String) row[0]);
-
             java.sql.Date sqlFechaGiro = (java.sql.Date) row[1];
             dto.setFechaGiro(sqlFechaGiro != null ? sqlFechaGiro.toLocalDate() : null);
-
             java.sql.Date sqlFechaVencimiento = (java.sql.Date) row[2];
             dto.setFechaVencimiento(sqlFechaVencimiento != null ? sqlFechaVencimiento.toLocalDate() : null);
-
             dto.setImporte((BigDecimal) row[3]);
             dto.setImporteLetras((String) row[4]);
             dto.setDistritoNombre((String) row[5]);
@@ -160,11 +199,9 @@ public class LetraCambioServiceImpl implements LetraCambioService {
     public List<ReporteCronogramaPagosClientesDTO> obtenerReporteCronogramaPagosPorContrato(Integer idContrato) {
         List<Object[]> results = letraCambioRepository.obtenerCronogramaPagosPorContrato(idContrato);
         List<ReporteCronogramaPagosClientesDTO> reportes = new ArrayList<>();
-
         for (Object[] row : results) {
             ReporteCronogramaPagosClientesDTO dto = new ReporteCronogramaPagosClientesDTO();
             int i = 0;
-
             dto.setIdLetra((Integer) row[i++]);
             dto.setCantidadLetras((Integer) row[i++]);
             dto.setMontoTotal((BigDecimal) row[i++]);
@@ -173,10 +210,8 @@ public class LetraCambioServiceImpl implements LetraCambioService {
             dto.setVendedorNombre((String) row[i++]);
             dto.setVendedorApellidos((String) row[i++]);
             dto.setNumeroLetra((String) row[i++]);
-
             java.sql.Date sqlFechaVencimiento = (java.sql.Date) row[i++];
             dto.setFechaVencimiento(sqlFechaVencimiento != null ? sqlFechaVencimiento.toLocalDate() : null);
-
             dto.setImporte((BigDecimal) row[i++]);
             dto.setCliente1Nombre((String) row[i++]);
             dto.setCliente1Apellidos((String) row[i++]);
@@ -195,7 +230,6 @@ public class LetraCambioServiceImpl implements LetraCambioService {
             dto.setLote2NumeroLote((String) row[i++]);
             dto.setLote2Area((BigDecimal) row[i++]);
             dto.setProgramaNombre((String) row[i++]);
-
             reportes.add(dto);
         }
         return reportes;
@@ -212,29 +246,25 @@ public class LetraCambioServiceImpl implements LetraCambioService {
                 .orElseThrow(() -> new IllegalArgumentException("Distrito no encontrado con el ID: " + generarLetrasRequest.getIdDistrito()));
 
         int cantidad = contrato.getCantidadLetras();
-        if (cantidad <= 0) {
-            throw new IllegalArgumentException("La cantidad de letras debe ser mayor a cero");
-        }
+        if (cantidad <= 0) throw new IllegalArgumentException("La cantidad de letras debe ser mayor a cero");
 
         BigDecimal importePorLetra;
         BigDecimal importeUltimaLetra = null;
 
         if (generarLetrasRequest.isModoAutomatico()) {
             BigDecimal saldo = contrato.getSaldo();
-            if (saldo == null || saldo.compareTo(BigDecimal.ZERO) <= 0) {
-                throw new IllegalArgumentException("El saldo del contrato es inválido o cero");
-            }
+            if (saldo == null || saldo.compareTo(BigDecimal.ZERO) <= 0)
+                throw new IllegalArgumentException("El saldo del contrato es invalido o cero");
             BigDecimal saldoEntero = saldo.setScale(0, BigDecimal.ROUND_HALF_UP);
             importePorLetra = saldoEntero.divide(new BigDecimal(cantidad), 0, BigDecimal.ROUND_DOWN);
             BigDecimal sumaParcial = importePorLetra.multiply(new BigDecimal(cantidad - 1));
             importeUltimaLetra = saldoEntero.subtract(sumaParcial).setScale(0, BigDecimal.ROUND_HALF_UP);
         } else {
             try {
-                String importeStr = generarLetrasRequest.getImporte()
-                        .replace("$", "").replace(",", "").trim();
+                String importeStr = generarLetrasRequest.getImporte().replace("$", "").replace(",", "").trim();
                 importePorLetra = new BigDecimal(importeStr).setScale(2, BigDecimal.ROUND_HALF_UP);
             } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Importe inválido: " + generarLetrasRequest.getImporte());
+                throw new IllegalArgumentException("Importe invalido: " + generarLetrasRequest.getImporte());
             }
         }
 
@@ -244,13 +274,11 @@ public class LetraCambioServiceImpl implements LetraCambioService {
         for (int i = 1; i <= cantidad; i++) {
             LocalDate fechaCalculada = fechaVencimientoInicial.plusMonths(i - 1);
             LocalDate fechaFinal;
-
             if (esUltimoDia) {
                 fechaFinal = fechaCalculada.withDayOfMonth(fechaCalculada.lengthOfMonth());
             } else {
                 int diaOriginal = fechaVencimientoInicial.getDayOfMonth();
-                int ultimoDiaDelMes = fechaCalculada.lengthOfMonth();
-                fechaFinal = fechaCalculada.withDayOfMonth(Math.min(diaOriginal, ultimoDiaDelMes));
+                fechaFinal = fechaCalculada.withDayOfMonth(Math.min(diaOriginal, fechaCalculada.lengthOfMonth()));
             }
 
             LetraCambio letra = new LetraCambio();
@@ -261,18 +289,20 @@ public class LetraCambioServiceImpl implements LetraCambioService {
             letra.setImporte(generarLetrasRequest.isModoAutomatico()
                     ? (i < cantidad ? importePorLetra : importeUltimaLetra)
                     : importePorLetra);
-
             Moneda monedaContrato = contrato.getMoneda() != null ? contrato.getMoneda() : Moneda.USD;
             letra.setImporteLetras(NumeroALetras.convertir(letra.getImporte(), monedaContrato));
             letra.setEstadoLetra(EstadoLetra.PENDIENTE);
             letra.setNumeroLetra(i + "/" + cantidad);
             letraCambioRepository.save(letra);
         }
+
+        // Recalcular estado tras generar letras
+        recalcularEstadoContrato(contrato);
     }
 
     @Override
     @Transactional
-    @CacheEvict(value = "contratos", key = "#letraCambioDTO.idContrato")
+    @CacheEvict(value = "contratos", allEntries = true)
     public LetraCambioDTO actualizarLetra(Integer id, LetraCambioDTO letraCambioDTO) {
         LetraCambio letraExistente = letraCambioRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Letra de cambio no encontrada con el ID: " + id));
@@ -284,6 +314,10 @@ public class LetraCambioServiceImpl implements LetraCambioService {
         letraExistente.setEstadoLetra(EstadoLetra.valueOf(letraCambioDTO.getEstadoLetra()));
 
         LetraCambio letraActualizada = letraCambioRepository.save(letraExistente);
+
+        // Recalcular estado tras editar fecha/estado de una letra
+        recalcularEstadoContrato(letraActualizada.getContrato());
+
         return modelMapper.map(letraActualizada, LetraCambioDTO.class);
     }
 
@@ -291,8 +325,12 @@ public class LetraCambioServiceImpl implements LetraCambioService {
     @Transactional
     @CacheEvict(value = "contratos", allEntries = true)
     public void eliminarPorContrato(Integer idContrato) {
-        contratoRepository.findById(idContrato)
+        Contrato contrato = contratoRepository.findById(idContrato)
                 .orElseThrow(() -> new IllegalArgumentException("Contrato no encontrado con el ID: " + idContrato));
+
         letraCambioRepository.deleteByContratoIdContrato(idContrato);
+
+        // Sin letras → sin vencidas → contrato pasa a ACTIVO
+        recalcularEstadoContrato(contrato);
     }
 }

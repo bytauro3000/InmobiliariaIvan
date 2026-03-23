@@ -29,6 +29,13 @@ public class LoteServiceImpl implements LoteService {
 	}
 
 	@Override
+	@Cacheable(key = "'reporte'")
+	public List<Lote> listarLotesParaReporte() {
+		// Ordenados por programa, manzana y numero de lote para el reporte
+		return loteRepository.findAllParaReporteOrdenado();
+	}
+
+	@Override
 	@Cacheable(key = "'conteo'")
 	public List<Object[]> obtenerConteoPorEstadoYPrograma() {
 		return loteRepository.contarLotesPorProgramaYEstado();

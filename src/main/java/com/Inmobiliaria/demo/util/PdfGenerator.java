@@ -4,6 +4,7 @@ import com.Inmobiliaria.demo.dto.LetraResponseDTO;
 import com.Inmobiliaria.demo.dto.LoteResponseDTO;
 import com.Inmobiliaria.demo.entity.LetraCambio;
 import com.Inmobiliaria.demo.enums.Genero;
+import com.Inmobiliaria.demo.enums.TipoCliente;
 import com.Inmobiliaria.demo.enums.Moneda;
 import com.Inmobiliaria.demo.dto.ClienteResponseDTO;
 import com.itextpdf.kernel.pdf.PdfDocument;
@@ -136,7 +137,7 @@ public class PdfGenerator {
 			boolean esFemenino = (c.getGenero() != null && c.getGenero().equals(Genero.Femenino));
 
 			String prefijo = esFemenino ? "la Sra. " : "el Sr. ";
-			String nacionalidad = extraerNacionalidad(c.getCelular(), esFemenino);
+			String nacionalidad = resolverNacionalidad(c);
 			String identif = esFemenino ? "identificada" : "identificado";
 
 			// 🔹 LÓGICA DINÁMICA DE ESTADO CIVIL SEGÚN EL DTO
@@ -158,7 +159,7 @@ public class PdfGenerator {
 
 			// Mostramos: ", peruano, soltero, identificado con..."
 			bloqueCompradores.add(", " + nacionalidad + ", " + estCivil + ", " + identif + " con ");
-			bloqueCompradores.add(new Text("DNI N°" + c.getNumDoc()).setBold());
+			bloqueCompradores.add(new Text(etiquetaDocumento(c) + c.getNumDoc()).setBold());
 
 			// Si hay más de un cliente, añadimos el separador "y" antes del último
 			if (numClientes > 1 && i < numClientes - 1) {
@@ -1091,7 +1092,7 @@ public class PdfGenerator {
 
 			String pref = esFem ? "la Sra. " : "el Sr. ";
 			String ident = esFem ? "identificada" : "identificado";
-			String nacion = extraerNacionalidad(c.getCelular(), esFem);
+			String nacion = resolverNacionalidad(c);
 
 			// 🔹 LÓGICA DINÁMICA DE ESTADO CIVIL (Corregido)
 			String estCivTexto = "";
@@ -1114,8 +1115,8 @@ public class PdfGenerator {
 			// Resultado: ", peruana, soltera, identificada con DNI..."
 			introPosesion.add(", " + nacion + ", " + estCivTexto + ", " + ident + " con ");
 
-			// DNI en Negrita
-			introPosesion.add(new Text("DNI N°" + c.getNumDoc()).setFont(arialBold));
+			// Documento en Negrita
+			introPosesion.add(new Text(etiquetaDocumento(c) + c.getNumDoc()).setFont(arialBold));
 
 			// Separador inteligente entre compradores
 			if (numClientes > 1 && i < numClientes - 1) {
@@ -1463,13 +1464,19 @@ public class PdfGenerator {
 	            .setPadding(0f)); // 🔹 Padding 0 fundamental para reducir espacio entre filas
 	}
 
-	private static String extraerNacionalidad(String celular, boolean esFemenino) {
-		if (celular == null) return esFemenino ? "peruana" : "peruano";
-		if (celular.startsWith("+51")) return esFemenino ? "peruana" : "peruano";
-		if (celular.startsWith("+52")) return esFemenino ? "mexicana" : "mexicano";
-		if (celular.startsWith("+57")) return esFemenino ? "colombiana" : "colombiano";
-		if (celular.startsWith("+1")) return esFemenino ? "estadounidense" : "estadounidense";
+	// Lee la nacionalidad guardada en el cliente.
+	// Si es null (peruanos registrados antes del cambio), asume peruano/peruana.
+	private static String resolverNacionalidad(ClienteResponseDTO c) {
+		boolean esFemenino = c.getGenero() != null && c.getGenero().equals(Genero.Femenino);
+		String nac = c.getNacionalidad();
+		if (nac != null && !nac.isBlank()) return nac.toLowerCase().trim();
 		return esFemenino ? "peruana" : "peruano";
+	}
+
+	// Devuelve la etiqueta del documento segun tipoCliente: DNI N° o C.E. N°
+	private static String etiquetaDocumento(ClienteResponseDTO c) {
+		if (c.getTipoCliente() == TipoCliente.CE) return "C.E. N°";
+		return "DNI N°";
 	}
 
 
@@ -1497,7 +1504,7 @@ public class PdfGenerator {
 	    
 	    celdaC1.add(pLineaC1);
 	    celdaC1.add(new Paragraph(c1.getNombre().toUpperCase() + " " + c1.getApellidos().toUpperCase()).setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
-	    celdaC1.add(new Paragraph("DNI N°" + c1.getNumDoc()).setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
+	    celdaC1.add(new Paragraph(etiquetaDocumento(c1) + c1.getNumDoc()).setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
 	    
 	    if (clientes.size() == 1) {
 	        celdaC1.add(new Paragraph("“EL COMPRADOR”").setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f));
@@ -1535,7 +1542,7 @@ public class PdfGenerator {
 	            
 	            celdaExtra.add(pLineaExtra);
 	            celdaExtra.add(new Paragraph(ci.getNombre().toUpperCase() + " " + ci.getApellidos().toUpperCase()).setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
-	            celdaExtra.add(new Paragraph("DNI N°" + ci.getNumDoc()).setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
+	            celdaExtra.add(new Paragraph(etiquetaDocumento(ci) + ci.getNumDoc()).setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
 
 	            if (i == clientes.size() - 1) {
 	                celdaExtra.add(new Paragraph("“LOS COMPRADORES”").setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f));
