@@ -467,9 +467,13 @@ public class ContratoServiceImpl implements ContratoService {
         if (contrato.getClientes() != null) {
             dto.setClientes(contrato.getClientes().stream().map(cc -> {
                 Cliente c = cc.getCliente();
-                return new ClienteResponseDTO(c.getIdCliente(), c.getNombre(), c.getApellidos(),
-                    c.getEstadoCivil(), c.getNumDoc(), c.getDireccion(), c.getCelular(),
-                    c.getDistrito(), c.getGenero(), c.getTipoCliente(), c.getNacionalidad());
+                return new ClienteResponseDTO(
+                	    c.getIdCliente(), c.getNombre(), c.getApellidos(),
+                	    c.getEstadoCivil(), c.getNumDoc(), c.getDireccion(), c.getCelular(),
+                	    c.getDistrito(), c.getGenero(),
+                	    c.getTipoCliente(),
+                	    c.getNacionalidad()
+                	);
             }).collect(Collectors.toList()));
         }
 

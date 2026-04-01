@@ -27,12 +27,8 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
 
     boolean existsByTipoComprobanteAndNumeroComprobanteAndIdPagoNot(TipoComprobante tipoComprobante, String numeroComprobante, Integer idPago);
 
-    // Solo cargamos letra y contrato — clientes y lotes se cargan lazy cuando se necesiten
-    // Evita MultipleBagFetchException de Hibernate al hacer JOIN FETCH de dos List<> simultáneas
-    // Buscar todos los pagos con el mismo número de comprobante (para comprobante múltiple)
     List<PagoLetras> findByNumeroComprobante(String numeroComprobante);
 
-    // Contar pagos con el mismo número de comprobante (para detectar pago múltiple)
     long countByNumeroComprobante(String numeroComprobante);
 
     @Query("SELECT DISTINCT p FROM PagoLetras p " +
@@ -41,10 +37,17 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
            "WHERE p.fechaPago = :fecha")
     List<PagoLetras> findByFechaPago(@Param("fecha") LocalDate fecha);
 
-    // Para el scheduler: pagos del día anterior que aún no tuvieron email enviado
     @Query("SELECT DISTINCT p FROM PagoLetras p " +
            "JOIN FETCH p.letra l " +
            "JOIN FETCH l.contrato c " +
            "WHERE p.fechaPago = :fecha AND p.emailEnviado = false")
     List<PagoLetras> findByFechaPagoAndEmailEnviadoFalse(@Param("fecha") LocalDate fecha);
+
+    @Query(value =
+        "SELECT MAX(CAST(SUBSTRING_INDEX(lc.numero_letra, '/', 1) AS UNSIGNED)) " +
+        "FROM pago_letra pl " +
+        "JOIN letra_cambio lc ON pl.id_letra = lc.id_letra " +
+        "WHERE lc.id_contrato = :idContrato",
+        nativeQuery = true)
+    Optional<Integer> findMaxNumeroLetraPagadoByContrato(@Param("idContrato") Integer idContrato);
 }

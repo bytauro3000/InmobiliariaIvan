@@ -29,7 +29,6 @@ import com.Inmobiliaria.demo.enums.TipoContrato;
 import com.Inmobiliaria.demo.repository.ContratoRepository;
 import com.Inmobiliaria.demo.repository.DistritoRepository;
 import com.Inmobiliaria.demo.repository.LetraCambioRepository;
-import com.Inmobiliaria.demo.repository.PagoLetraRepository;
 import com.Inmobiliaria.demo.service.LetraCambioService;
 import com.Inmobiliaria.demo.util.NumeroALetras;
 
@@ -251,33 +250,62 @@ public class LetraCambioServiceImpl implements LetraCambioService {
         BigDecimal importePorLetra;
         BigDecimal importeUltimaLetra = null;
 
+        BigDecimal saldo = contrato.getSaldo();
+        if (saldo == null || saldo.compareTo(BigDecimal.ZERO) <= 0)
+            throw new IllegalArgumentException("El saldo del contrato es invalido o cero");
+
         if (generarLetrasRequest.isModoAutomatico()) {
-            BigDecimal saldo = contrato.getSaldo();
-            if (saldo == null || saldo.compareTo(BigDecimal.ZERO) <= 0)
-                throw new IllegalArgumentException("El saldo del contrato es invalido o cero");
             BigDecimal saldoEntero = saldo.setScale(0, BigDecimal.ROUND_HALF_UP);
             importePorLetra = saldoEntero.divide(new BigDecimal(cantidad), 0, BigDecimal.ROUND_DOWN);
             BigDecimal sumaParcial = importePorLetra.multiply(new BigDecimal(cantidad - 1));
             importeUltimaLetra = saldoEntero.subtract(sumaParcial).setScale(0, BigDecimal.ROUND_HALF_UP);
         } else {
             try {
-                String importeStr = generarLetrasRequest.getImporte().replace("$", "").replace(",", "").trim();
+                String importeStr = generarLetrasRequest.getImporte().replace("$", "").replace("S/", "").replace(",", "").trim();
                 importePorLetra = new BigDecimal(importeStr).setScale(2, BigDecimal.ROUND_HALF_UP);
             } catch (NumberFormatException e) {
                 throw new IllegalArgumentException("Importe invalido: " + generarLetrasRequest.getImporte());
             }
+
+            // Validar que el importe manual sea viable:
+            // Las primeras (cantidad-1) letras suman importePorLetra * (cantidad-1).
+            // La ultima letra = saldo - suma_parcial, y debe ser > 0.
+            // Si importePorLetra * (cantidad-1) >= saldo → no queda nada para la ultima letra.
+            BigDecimal saldoRedondeado = saldo.setScale(2, BigDecimal.ROUND_HALF_UP);
+            BigDecimal sumaParcialManual = importePorLetra.multiply(new BigDecimal(cantidad - 1));
+            BigDecimal ultimaLetraManual = saldoRedondeado.subtract(sumaParcialManual);
+
+            if (ultimaLetraManual.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException(
+                    "El importe de $ " + importePorLetra.toPlainString() +
+                    " es demasiado alto: " + (cantidad - 1) + " letras ya superan el saldo de $ " +
+                    saldoRedondeado.toPlainString() +
+                    ". Reduzca el importe para que la ultima letra tenga un valor positivo."
+                );
+            }
+
+            // La ultima letra absorbe el faltante del saldo
+            importeUltimaLetra = ultimaLetraManual;
         }
 
         LocalDate fechaVencimientoInicial = generarLetrasRequest.getFechaVencimientoInicial();
-        boolean esUltimoDia = fechaVencimientoInicial.getDayOfMonth() == fechaVencimientoInicial.lengthOfMonth();
+        int diaOriginal = fechaVencimientoInicial.getDayOfMonth();
+        boolean esUltimoDiaDeSuMes = diaOriginal == fechaVencimientoInicial.lengthOfMonth();
+
+        // Si la fecha inicial coincide con el último día de su mes, el checkbox decide:
+        //   usarUltimoDiaMes=true  → últimos días de cada mes siguiente
+        //   usarUltimoDiaMes=false → día fijo (el número exacto seleccionado)
+        // Si la fecha inicial NO es el último día, siempre se usa el día fijo.
+        boolean forzarUltimoDia = esUltimoDiaDeSuMes && generarLetrasRequest.isUsarUltimoDiaMes();
 
         for (int i = 1; i <= cantidad; i++) {
             LocalDate fechaCalculada = fechaVencimientoInicial.plusMonths(i - 1);
             LocalDate fechaFinal;
-            if (esUltimoDia) {
+            if (forzarUltimoDia) {
+                // Siempre el último día del mes calculado
                 fechaFinal = fechaCalculada.withDayOfMonth(fechaCalculada.lengthOfMonth());
             } else {
-                int diaOriginal = fechaVencimientoInicial.getDayOfMonth();
+                // Día fijo: si no existe en el mes destino, se usa el último día disponible
                 fechaFinal = fechaCalculada.withDayOfMonth(Math.min(diaOriginal, fechaCalculada.lengthOfMonth()));
             }
 
@@ -286,9 +314,8 @@ public class LetraCambioServiceImpl implements LetraCambioService {
             letra.setDistrito(distrito);
             letra.setFechaGiro(generarLetrasRequest.getFechaGiro());
             letra.setFechaVencimiento(fechaFinal);
-            letra.setImporte(generarLetrasRequest.isModoAutomatico()
-                    ? (i < cantidad ? importePorLetra : importeUltimaLetra)
-                    : importePorLetra);
+            // En ambos modos la ultima letra lleva el faltante del saldo
+            letra.setImporte(i < cantidad ? importePorLetra : importeUltimaLetra);
             Moneda monedaContrato = contrato.getMoneda() != null ? contrato.getMoneda() : Moneda.USD;
             letra.setImporteLetras(NumeroALetras.convertir(letra.getImporte(), monedaContrato));
             letra.setEstadoLetra(EstadoLetra.PENDIENTE);

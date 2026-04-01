@@ -25,7 +25,7 @@ public class EmailServiceImpl implements EmailService {
     @Override
     public void enviarComprobante(PagoLetras pago, String destinatario) {
         try {
-            byte[] pdf = ComprobantePagoLetraPdf.generar(pago);
+            byte[] pdf = ComprobantePagoLetraPdf.generar(pago, "SECRETARIA");
 
             MimeMessage mensaje = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mensaje, true, "UTF-8");
@@ -55,8 +55,8 @@ public class EmailServiceImpl implements EmailService {
         try {
             // Generar PDF: si es un solo pago usar generar(), si son múltiples usar generarMultiple()
             byte[] pdf = pagos.size() == 1
-                    ? ComprobantePagoLetraPdf.generar(pagos.get(0))
-                    : ComprobantePagoLetraPdf.generarMultiple(pagos);
+                    ? ComprobantePagoLetraPdf.generar(pagos.get(0), "SECRETARIA")
+                    : ComprobantePagoLetraPdf.generarMultiple(pagos, "SECRETARIA");
 
             PagoLetras primero = pagos.get(0);
             String cuerpo = construirCuerpoMultiple(pagos);

@@ -8,8 +8,12 @@ import com.Inmobiliaria.demo.entity.PagoLetras;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
 import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.repository.PagoLetraRepository;
+import com.Inmobiliaria.demo.repository.UsuarioRepository;
 import com.Inmobiliaria.demo.service.PagoLetraService;
 import com.Inmobiliaria.demo.util.ComprobantePagoLetraPdf;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import com.Inmobiliaria.demo.entity.Usuario;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -28,7 +32,8 @@ public class PagoLetraController {
 
     private final PagoLetraService    pagoLetraService;
     private final PagoLetraRepository pagoLetraRepository;
-
+    private final UsuarioRepository usuarioRepository;
+    
     @GetMapping("/contrato/{idContrato}")
     public ResponseEntity<List<PagoLetraResponseDTO>> listarPorContrato(
             @PathVariable Integer idContrato) {
@@ -93,20 +98,28 @@ public class PagoLetraController {
     @GetMapping("/{idPago}/comprobante-pdf")
     @Transactional(readOnly = true)
     public ResponseEntity<byte[]> descargarComprobante(@PathVariable Integer idPago) {
-
         PagoLetras pago = pagoLetraRepository.findById(idPago)
-                .orElseThrow(() -> new NegocioException(
-                        "Pago no encontrado con ID: " + idPago));
+                .orElseThrow(() -> new NegocioException("Pago no encontrado con ID: " + idPago));
 
-        byte[] pdf = ComprobantePagoLetraPdf.generar(pago);
+        // Obtener rol del usuario autenticado
+        String rolUsuario = "SECRETARIA";
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getName() != null) {
+            var usuarioOpt = usuarioRepository.findByCorreo(auth.getName());
+            if (usuarioOpt.isPresent()) {
+                rolUsuario = usuarioOpt.get().getRol().getRolUsuario();
+            }
+        }
 
+        byte[] pdf = ComprobantePagoLetraPdf.generar(pago, rolUsuario);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "inline; filename=comprobante-pago-" + idPago + ".pdf")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
     }
-
+    
+    
     @GetMapping("/comprobante-multiple/{numeroComprobante}")
     @Transactional(readOnly = true)
     public ResponseEntity<byte[]> descargarComprobanteMultiple(
@@ -120,7 +133,17 @@ public class PagoLetraController {
                     "No se encontraron pagos con el comprobante: " + numeroComprobante);
         }
 
-        byte[] pdf = ComprobantePagoLetraPdf.generarMultiple(pagos);
+        // Obtener rol del usuario autenticado para el comprobante múltiple
+        String rolUsuarioMultiple = "SECRETARIA";
+        Authentication authMultiple = SecurityContextHolder.getContext().getAuthentication();
+        if (authMultiple != null && authMultiple.getName() != null) {
+            var usuarioOpt = usuarioRepository.findByCorreo(authMultiple.getName());
+            if (usuarioOpt.isPresent()) {
+                rolUsuarioMultiple = usuarioOpt.get().getRol().getRolUsuario();
+            }
+        }
+
+        byte[] pdf = ComprobantePagoLetraPdf.generarMultiple(pagos, rolUsuarioMultiple);
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
