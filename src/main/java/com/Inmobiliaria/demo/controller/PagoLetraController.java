@@ -13,7 +13,6 @@ import com.Inmobiliaria.demo.service.PagoLetraService;
 import com.Inmobiliaria.demo.util.ComprobantePagoLetraPdf;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import com.Inmobiliaria.demo.entity.Usuario;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;

@@ -32,6 +32,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // Rutas que pasan directo sin validar X-Gateway-Secret
         if (path.contains("/api/auth/login")
                 || path.contains("/api/public/ping")
+                || path.equals("/favicon.ico")
+                || path.equals("/favicon.png")
                 || path.matches(".*/api/pagos/\\d+/comprobante-pdf")
                 || path.equals("/")) {
             filterChain.doFilter(request, response);

@@ -17,27 +17,28 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AuthController {
 
-   
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
-    private final UsuarioService usuarioService; 
+    private final UsuarioService usuarioService;
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> authenticateUser(@RequestBody LoginRequest loginRequest) {
-        // Valida credenciales contra la base de datos (UsuarioServiceImpl)
+        // 1. Valida credenciales contra la BD (llama a loadUserByUsername internamente → 1ra query)
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getCorreo(), loginRequest.getContrasena())
         );
 
+        // 2. Obtiene el Usuario para armar el JWT
+        //    → 1er login: hace query a BD y guarda en caché
+        //    → Logins siguientes: va directo a memoria, sin query adicional
         Usuario usuario = usuarioService.buscarByUsuario(loginRequest.getCorreo());
 
-        // Genera el token que el Gateway usará después para validar
-        String token = jwtUtil.generateToken(authentication, usuario); 
-        
+        // 3. Genera el token con nombre, apellidos, rol e id incluidos
+        String token = jwtUtil.generateToken(authentication, usuario);
+
         return ResponseEntity.ok(new LoginResponse(token));
     }
 
-    // Mantenemos este endpoint solo para que el sistema no rompa, pero ya no usa Blacklist
     @GetMapping("/validate-token")
     public ResponseEntity<Boolean> validateToken(@RequestParam(value = "token", required = false) String token) {
         if (token == null || token.isEmpty()) {
