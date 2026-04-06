@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -16,8 +17,10 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
 
     List<LetraCambio> findByContratoIdContrato(Integer idContrato);
 
+    @Modifying
     @Transactional
-    void deleteByContratoIdContrato(Integer idContrato);
+    @Query("DELETE FROM LetraCambio l WHERE l.contrato.idContrato = :idContrato")
+    void deleteByContratoIdContrato(@Param("idContrato") Integer idContrato);
 
     Optional<LetraCambio> findFirstByContratoIdContratoOrderByNumeroLetraAsc(Integer idContrato);
 
