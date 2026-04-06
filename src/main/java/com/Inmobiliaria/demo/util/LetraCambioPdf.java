@@ -104,7 +104,7 @@ public class LetraCambioPdf {
                 // frontend → doc.text(reporte.numeroLetra, 50, 22)
                 escribir(canvas, fontBold, FONT_SIZE,
                         reporte.getNumeroLetra(),
-                        48, 22);
+                        46, 22);
 
                 // Fecha de Giro
                 // frontend → doc.text(formatearFechaVista(reporte.fechaGiro), 99, 24)
@@ -136,7 +136,7 @@ public class LetraCambioPdf {
                 // frontend → doc.text(reporte.importeLetras, 43, 38)
                 escribir(canvas, fontBold, FONT_SIZE,
                         reporte.getImporteLetras(),
-                        43, 38);
+                        43, 39);
 
                 // ── FILA 3 ────────────────────────────────────────────────────
 
@@ -152,7 +152,7 @@ public class LetraCambioPdf {
                             && !reporte.getCliente1Apellidos().isBlank()) {
                         cliente1 += " " + reporte.getCliente1Apellidos();
                     }
-                    escribir(canvas, fontBold, FONT_SIZE, cliente1, 54, 51);
+                    escribir(canvas, fontBold, FONT_SIZE, cliente1, 54, 50);
                 }
 
                 // ── FILA 4 ────────────────────────────────────────────────────
@@ -167,7 +167,7 @@ public class LetraCambioPdf {
                         cliente2 += " " + reporte.getCliente2Apellidos();
                     }
                     cliente2 += " DNI/RUC: " + reporte.getCliente2NumDocumento();
-                    escribir(canvas, fontBold, FONT_SIZE, cliente2, 44, 55);
+                    escribir(canvas, fontBold, FONT_SIZE, cliente2, 44, 54);
                 }
 
                 // ── FILA 5 ────────────────────────────────────────────────────
@@ -177,7 +177,7 @@ public class LetraCambioPdf {
                 if (reporte.getCliente1Direccion() != null) {
                     escribir(canvas, fontBold, FONT_SIZE,
                             reporte.getCliente1Direccion(),
-                            52, 60);
+                            52,59);
                 }
 
                 // ── FILA 6 ────────────────────────────────────────────────────
@@ -186,13 +186,13 @@ public class LetraCambioPdf {
                 // frontend → doc.text(reporte.cliente1NumDocumento, 50, 64)
                 escribir(canvas, fontBold, FONT_SIZE,
                         reporte.getCliente1NumDocumento(),
-                        50, 66);
+                        50, 65);
 
                 // Distrito cliente 1
                 // frontend → doc.text(`distrito: ${reporte.cliente1Distrito}`, 88, 62)
                 escribir(canvas, fontBold, FONT_SIZE,
-                        "distrito: " + reporte.getCliente1Distrito(),
-                        88, 62);
+                        "distrito:" + reporte.getCliente1Distrito(),
+                        88, 63);
 
                 canvas.release();
             }
