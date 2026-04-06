@@ -92,7 +92,7 @@ public class LetraCambioPdf {
             //    → "S/ " + " " + importe = "S/  1,234.56"  (2 espacios)
             //    → "$ "  + " " + importe = "$  1,234.56"   (2 espacios)
             // Se replica aquí para igualar la posición visual del importe.
-            String simboloMoneda = "PEN".equals(moneda) ? "S/ " : "$ ";
+            String simboloMoneda = "PEN".equals(moneda) ? "S/. " : "$ ";
 
             for (ReporteLetraCambioDTO reporte : reportes) {
                 PdfPage   page   = pdf.addNewPage(pageSize);
@@ -102,39 +102,39 @@ public class LetraCambioPdf {
 
                 // Número de letra
                 // frontend → doc.text(reporte.numeroLetra, 50, 22)
-                escribir(canvas, fontNormal, FONT_SIZE,
+                escribir(canvas, fontBold, FONT_SIZE,
                         reporte.getNumeroLetra(),
-                        50, 22);
+                        48, 22);
 
                 // Fecha de Giro
                 // frontend → doc.text(formatearFechaVista(reporte.fechaGiro), 99, 24)
-                escribir(canvas, fontNormal, FONT_SIZE,
+                escribir(canvas, fontBold, FONT_SIZE,
                         formatearFecha(reporte.getFechaGiro()),
                         99, 24);
 
                 // Distrito
                 // frontend → doc.text(reporte.distritoNombre, 129, 22)
-                escribir(canvas, fontNormal, FONT_SIZE,
+                escribir(canvas, fontBold, FONT_SIZE,
                         reporte.getDistritoNombre(),
-                        129, 22);
+                        127, 22);
 
                 // Fecha de Vencimiento
                 // frontend → doc.text(formatearFechaVista(reporte.fechaVencimiento), 155, 24)
-                escribir(canvas, fontNormal, FONT_SIZE,
+                escribir(canvas, fontBold, FONT_SIZE,
                         formatearFecha(reporte.getFechaVencimiento()),
-                        155, 24);
+                        153, 24);
 
                 // Importe
                 // frontend → doc.text(`${símbolo} ${importeFormateado}`, 182, 22)
-                escribir(canvas, fontNormal, FONT_SIZE,
+                escribir(canvas, fontBold, FONT_SIZE,
                         simboloMoneda + formatearImporte(reporte.getImporte()),
-                        182, 22);
+                        180, 22);
 
                 // ── FILA 2 ────────────────────────────────────────────────────
 
                 // Importe en letras
                 // frontend → doc.text(reporte.importeLetras, 43, 38)
-                escribir(canvas, fontNormal, FONT_SIZE,
+                escribir(canvas, fontBold, FONT_SIZE,
                         reporte.getImporteLetras(),
                         43, 38);
 
@@ -152,7 +152,7 @@ public class LetraCambioPdf {
                             && !reporte.getCliente1Apellidos().isBlank()) {
                         cliente1 += " " + reporte.getCliente1Apellidos();
                     }
-                    escribir(canvas, fontNormal, FONT_SIZE, cliente1, 54, 49);
+                    escribir(canvas, fontBold, FONT_SIZE, cliente1, 54, 49);
                 }
 
                 // ── FILA 4 ────────────────────────────────────────────────────
@@ -167,7 +167,7 @@ public class LetraCambioPdf {
                         cliente2 += " " + reporte.getCliente2Apellidos();
                     }
                     cliente2 += " DNI/RUC: " + reporte.getCliente2NumDocumento();
-                    escribir(canvas, fontNormal, FONT_SIZE, cliente2, 44, 53);
+                    escribir(canvas, fontBold, FONT_SIZE, cliente2, 44, 53);
                 }
 
                 // ── FILA 5 ────────────────────────────────────────────────────
@@ -175,7 +175,7 @@ public class LetraCambioPdf {
                 // Dirección cliente 1
                 // frontend → doc.text(reporte.cliente1Direccion, 52, 58)
                 if (reporte.getCliente1Direccion() != null) {
-                    escribir(canvas, fontNormal, FONT_SIZE,
+                    escribir(canvas, fontBold, FONT_SIZE,
                             reporte.getCliente1Direccion(),
                             52, 58);
                 }
@@ -184,13 +184,13 @@ public class LetraCambioPdf {
 
                 // DNI cliente 1
                 // frontend → doc.text(reporte.cliente1NumDocumento, 50, 64)
-                escribir(canvas, fontNormal, FONT_SIZE,
+                escribir(canvas, fontBold, FONT_SIZE,
                         reporte.getCliente1NumDocumento(),
                         50, 64);
 
                 // Distrito cliente 1
                 // frontend → doc.text(`distrito: ${reporte.cliente1Distrito}`, 88, 62)
-                escribir(canvas, fontNormal, FONT_SIZE,
+                escribir(canvas, fontBold, FONT_SIZE,
                         "distrito: " + reporte.getCliente1Distrito(),
                         88, 62);
 
