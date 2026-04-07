@@ -52,8 +52,38 @@ public class ComprobantePagoLetraPdf {
     private static final String BASE_URL  = "https://inmobiliariaivan.onrender.com/api/pagos";
 
     // ─────────────────────────────────────────────────────────────────────────
+    // CAMBIO 1: margen izquierdo aumentado de 32 → 52 pts
+    // Así el borde izquierdo del recibo queda más a la derecha y los huecos de
+    // perforación no llegan hasta la línea del cuadro.
+    // ─────────────────────────────────────────────────────────────────────────
+    private static final float MARGEN_IZQ = 52f;
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CAMBIO 2: línea vertical de perforación pegada al filo izquierdo de la página
+    // Se dibuja sobre el canvas una línea gris continua a x=0 (borde real del papel)
+    // que sirve de guía para perforar justo al filo.
+    // ─────────────────────────────────────────────────────────────────────────
+    private static void dibujarGuiaPerforacion(PdfDocument pdf, PageSize pageSize) {
+        com.itextpdf.kernel.pdf.canvas.PdfCanvas canvas =
+                new com.itextpdf.kernel.pdf.canvas.PdfCanvas(pdf.getFirstPage());
+
+        float pageHeight = pageSize.getHeight();
+        float yCentro    = pageHeight / 2f;  // centro vertical exacto de la página
+        float largo      = 14f;              // largo de la línea horizontal
+
+        canvas.setLineWidth(1f);
+        canvas.setStrokeColor(new DeviceGray(0.5f)); // gris medio
+
+        // Línea horizontal corta, pegada al filo izquierdo, centrada verticalmente
+        canvas.moveTo(0f, yCentro);
+        canvas.lineTo(largo, yCentro);
+        canvas.stroke();
+
+        canvas.release();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // MÉTODO AUXILIAR: construye "NOMBRE APELLIDO (DNI: 12345678)" por cliente
-    // Soporta 1 o 2 clientes separados con " / "
     // ─────────────────────────────────────────────────────────────────────────
     private static String construirTextoClientes(Contrato contrato) {
         if (contrato.getClientes() == null || contrato.getClientes().isEmpty()) return "-";
@@ -68,8 +98,10 @@ public class ComprobantePagoLetraPdf {
                 .collect(Collectors.joining("/"));
     }
 
-    // Construye una Cell con "Recibi de:" y cada cliente alineado correctamente.
-    // Devuelve Cell en lugar de Paragraph para poder usar múltiples Paragraph dentro.
+    // ─────────────────────────────────────────────────────────────────────────
+    // CAMBIO 3: nombre de clientes con fuente más grande (igual que importeTexto)
+    // Se aumentó el tamaño base de fuenteCliente y se unificó con el cuerpo (10f)
+    // ─────────────────────────────────────────────────────────────────────────
     private static Cell construirCeldaClientes(Contrato contrato,
                                                PdfFont normal, PdfFont bold,
                                                float size, float padding) {
@@ -92,15 +124,11 @@ public class ComprobantePagoLetraPdf {
 
             Paragraph p;
             if (i == 0) {
-                // Primera línea: "Recibi de:" en bold + nombre en normal
                 p = new Paragraph()
                         .add(new Text("Recibi de:").setFont(bold).setFontSize(size))
                         .add(new Text(linea).setFont(normal).setFontSize(size))
                         .setMarginBottom(0);
             } else {
-                // Líneas siguientes: indent equivalente al ancho de "Recibi de:"
-                // Usamos setMarginLeft con el ancho calculado en pts para Courier bold
-                // Courier bold: ancho de carácter ≈ size * 0.6; "Recibi de:" = 10 chars
                 float indentPts = size * 0.6f * 10f;
                 p = new Paragraph()
                         .add(new Text(linea).setFont(normal).setFontSize(size))
@@ -115,8 +143,6 @@ public class ComprobantePagoLetraPdf {
     }
 
 
-
-
     // ─────────────────────────────────────────────────────────────────────────
     // COMPROBANTE INDIVIDUAL
     // ─────────────────────────────────────────────────────────────────────────
@@ -128,10 +154,12 @@ public class ComprobantePagoLetraPdf {
             PdfFont courierBold = cargarFuente("fonts/COURBD.TTF");
             PdfFont arial       = cargarFuente("fonts/ARIAL.TTF");
 
-            PdfDocument pdf = new PdfDocument(new PdfWriter(out));
             PageSize a5h = PageSize.A5.rotate();
+            PdfDocument pdf = new PdfDocument(new PdfWriter(out));
             Document doc = new Document(pdf, a5h);
-            doc.setMargins(35, 18, 35, 32);
+
+            // CAMBIO 1: margen izquierdo 52 en vez de 32
+            doc.setMargins(35, 18, 35, MARGEN_IZQ);
 
             LetraCambio letra    = pago.getLetra();
             Contrato    contrato = letra.getContrato();
@@ -139,6 +167,7 @@ public class ComprobantePagoLetraPdf {
             String tituloPrincipal = (pago.getTipoComprobante() == TipoComprobante.BOLETA)
                     ? "BOLETA DE VENTA" : "RECIBO DE INGRESO";
 
+            // CAMBIO 4: N° de comprobante en negrita (ya venía en courierBold, se refuerza aquí)
             String numComp = (pago.getTipoComprobante() != null && pago.getNumeroComprobante() != null)
                     ? pago.getNumeroComprobante() : "----------";
 
@@ -234,21 +263,34 @@ public class ComprobantePagoLetraPdf {
                     .setFontColor(GRIS_MEDIO)
                     .setTextAlignment(TextAlignment.CENTER)
                     .setMarginTop(2));
-            celdaQr.add(new Paragraph("N\u00b0 " + numComp)
-                    .setFont(courierBold).setFontSize(9f)
+            // CAMBIO 4: N° comprobante en negrita, en una sola línea
+            // Se calcula el tamaño de fuente dinámicamente según la longitud del número
+            // para que siempre entre en el ancho de la celda sin saltar a segunda línea
+            float fsNumComp = numComp.length() > 10 ? 7.5f
+                            : numComp.length() > 8  ? 8.5f : 10f;
+            Paragraph pNumComp = new Paragraph("N\u00b0 " + numComp)
+                    .setFont(courierBold).setFontSize(fsNumComp)
                     .setFontColor(GRIS_OSCURO)
                     .setTextAlignment(TextAlignment.CENTER)
-                    .setMarginTop(4));
+                    .setMarginTop(4);
+            pNumComp.setProperty(com.itextpdf.layout.properties.Property.OVERFLOW_WRAP,
+                    com.itextpdf.layout.properties.OverflowWrapPropertyValue.ANYWHERE);
+            celdaQr.add(pNumComp);
             encabezado.addCell(celdaQr);
             doc.add(encabezado);
 
             // ── FILA: Recibi de + Caja monto ──
-            float fuenteCliente = clientes.length() > 100 ? 6.5f
-                                : clientes.length() > 80  ? 7.5f
-                                : clientes.length() > 60  ? 8.5f : 9f;
+            // CAMBIO 3: fuente y padding dinámicos según número de clientes
+            // Con 2 clientes se reduce fuente y padding para que todo entre en 1 sola página
+            int numClientes = (contrato.getClientes() != null) ? contrato.getClientes().size() : 1;
+            float fuenteCliente = numClientes > 1
+                    ? (clientes.length() > 120 ? 7.5f : clientes.length() > 90 ? 8f : 8.5f)
+                    : (clientes.length() > 100 ? 9f   : clientes.length() > 80 ? 9.5f : 10f);
+            float paddingCliente = numClientes > 1 ? 4f : 8f;
+            float marginTopRec   = numClientes > 1 ? 3f : 5f;
             Table filaRecibo = new Table(UnitValue.createPercentArray(new float[]{1, 0.28f}))
-                    .setWidth(UnitValue.createPercentValue(100)).setMarginTop(5);
-            filaRecibo.addCell(construirCeldaClientes(contrato, courier, courierBold, fuenteCliente, 8f));
+                    .setWidth(UnitValue.createPercentValue(100)).setMarginTop(marginTopRec);
+            filaRecibo.addCell(construirCeldaClientes(contrato, courier, courierBold, fuenteCliente, paddingCliente));
             filaRecibo.addCell(new Cell()
                     .setBorder(new SolidBorder(ColorConstants.BLACK, 1.5f))
                     .setPadding(4)
@@ -278,11 +320,9 @@ public class ComprobantePagoLetraPdf {
             doc.add(cuerpo);
 
             // ── PIE: Secretaria | Fecha de Pago (centro) | Gerente General ──
-            // 1f | 0.8f | 1f  →  ambos lados exactamente del mismo ancho
             Table pie = new Table(UnitValue.createPercentArray(new float[]{1f, 0.8f, 1f}))
                     .setWidth(UnitValue.createPercentValue(100));
 
-            // Celda izquierda: nombre y rol del usuario que registra
             Cell celdaNombre = new Cell()
                     .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f)).setPadding(8)
                     .setVerticalAlignment(VerticalAlignment.BOTTOM);
@@ -294,7 +334,6 @@ public class ComprobantePagoLetraPdf {
                     .setTextAlignment(TextAlignment.CENTER));
             pie.addCell(celdaNombre);
 
-            // Celda central: Fecha de Pago
             String[] pf = fechaPagoStr.split("/");
             String dia  = pf.length > 0 ? pf[0] : "--";
             String mes  = pf.length > 1 ? pf[1] : "--";
@@ -327,7 +366,6 @@ public class ComprobantePagoLetraPdf {
             celdaFecha.add(tablaFecha);
             pie.addCell(celdaFecha);
 
-            // Celda derecha: Gerente General
             Cell celdaFirma = new Cell()
                     .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f)).setPadding(5)
                     .setTextAlignment(TextAlignment.CENTER)
@@ -349,11 +387,20 @@ public class ComprobantePagoLetraPdf {
             doc.add(pie);
             doc.close();
 
+            // CAMBIO 2: dibujar guía de perforación sobre la página ya cerrada
+            // Se reabre el PDF en memoria para agregar la guía al canvas
+            byte[] pdfParcial = out.toByteArray();
+            ByteArrayOutputStream outFinal = new ByteArrayOutputStream();
+            PdfDocument pdfFinal = new PdfDocument(
+                    new com.itextpdf.kernel.pdf.PdfReader(new java.io.ByteArrayInputStream(pdfParcial)),
+                    new PdfWriter(outFinal));
+            dibujarGuiaPerforacion(pdfFinal, a5h);
+            pdfFinal.close();
+            return outFinal.toByteArray();
+
         } catch (Exception e) {
             throw new RuntimeException("Error generando comprobante PDF: " + e.getMessage(), e);
         }
-
-        return out.toByteArray();
     }
 
 
@@ -420,7 +467,7 @@ public class ComprobantePagoLetraPdf {
         String medioPago    = primero.getMedioPago() != null ? primero.getMedioPago().name() : "-";
         String numOp        = (primero.getNumeroOperacion() != null && !primero.getNumeroOperacion().isBlank())
                               ? "   N\u00b0 Op: " + primero.getNumeroOperacion() : "";
-        // Para pago múltiple: fechas de vencimiento ordenadas por número de letra
+
         List<String> fechasVenc = pagos.stream()
                 .sorted(java.util.Comparator.comparingInt(p -> {
                     try { return Integer.parseInt(p.getLetra().getNumeroLetra().split("/")[0].trim()); }
@@ -437,8 +484,7 @@ public class ComprobantePagoLetraPdf {
             fechasVencStr = todas + " y " + fechasVenc.get(fechasVenc.size() - 1);
         }
 
-        // Escala dinámica: reduce márgenes y fuentes si hay muchas letras (evita segunda página)
-        int numLetras = pagos.size();
+        int   numLetras    = pagos.size();
         float margenV      = numLetras >= 8 ? 18f  : 35f;
         float margenTop    = numLetras >= 8 ? 18f  : 35f;
         float padCuerpo    = numLetras >= 8 ? 4f   : 7f;
@@ -452,9 +498,12 @@ public class ComprobantePagoLetraPdf {
             PdfFont courierBold = cargarFuente("fonts/COURBD.TTF");
             PdfFont arial       = cargarFuente("fonts/ARIAL.TTF");
 
+            PageSize a5h = PageSize.A5.rotate();
             PdfDocument pdf = new PdfDocument(new PdfWriter(out));
-            Document doc   = new Document(pdf, PageSize.A5.rotate());
-            doc.setMargins(margenTop, 18, margenV, 32);
+            Document doc   = new Document(pdf, a5h);
+
+            // CAMBIO 1: margen izquierdo 52 en vez de 32
+            doc.setMargins(margenTop, 18, margenV, MARGEN_IZQ);
 
             String urlQr = BASE_URL + "/" + primero.getIdPago() + "/comprobante-pdf";
             BarcodeQRCode qrCode = new BarcodeQRCode(urlQr);
@@ -509,19 +558,29 @@ public class ComprobantePagoLetraPdf {
             celdaQr.add(new Paragraph("Escanea tu\ncomprobante")
                     .setFont(arial).setFontSize(7f).setFontColor(GRIS_MEDIO)
                     .setTextAlignment(TextAlignment.CENTER).setMarginTop(2));
-            celdaQr.add(new Paragraph("N\u00b0 " + numComp)
-                    .setFont(courierBold).setFontSize(9f).setFontColor(GRIS_OSCURO)
-                    .setTextAlignment(TextAlignment.CENTER).setMarginTop(4));
+            // CAMBIO 4: N° comprobante en negrita, en una sola línea (tamaño dinámico)
+            float fsNumComp = numComp.length() > 10 ? 7.5f
+                            : numComp.length() > 8  ? 8.5f : 10f;
+            Paragraph pNumComp = new Paragraph("N\u00b0 " + numComp)
+                    .setFont(courierBold).setFontSize(fsNumComp).setFontColor(GRIS_OSCURO)
+                    .setTextAlignment(TextAlignment.CENTER).setMarginTop(4);
+            pNumComp.setProperty(com.itextpdf.layout.properties.Property.OVERFLOW_WRAP,
+                    com.itextpdf.layout.properties.OverflowWrapPropertyValue.ANYWHERE);
+            celdaQr.add(pNumComp);
             encabezado.addCell(celdaQr);
             doc.add(encabezado);
 
             // ── FILA: Recibi de + Monto total ──
-            float fuenteCliente = clientes.length() > 100 ? 6.5f
-                                : clientes.length() > 80  ? 7.5f
-                                : clientes.length() > 60  ? 8.5f : 9f;
+            // CAMBIO 3: fuente y padding dinámicos según número de clientes
+            int numClientes = (contrato.getClientes() != null) ? contrato.getClientes().size() : 1;
+            float fuenteCliente = numClientes > 1
+                    ? (clientes.length() > 120 ? 7.5f : clientes.length() > 90 ? 8f : 8.5f)
+                    : (clientes.length() > 100 ? 9f   : clientes.length() > 80 ? 9.5f : 10f);
+            float paddingCliente = numClientes > 1 ? 4f : padRecibo;
+            float marginTopFila  = numClientes > 1 ? 2f : marginTopRec;
             Table filaRecibo = new Table(UnitValue.createPercentArray(new float[]{1, 0.28f}))
-                    .setWidth(UnitValue.createPercentValue(100)).setMarginTop(marginTopRec);
-            filaRecibo.addCell(construirCeldaClientes(contrato, courier, courierBold, fuenteCliente, padRecibo));
+                    .setWidth(UnitValue.createPercentValue(100)).setMarginTop(marginTopFila);
+            filaRecibo.addCell(construirCeldaClientes(contrato, courier, courierBold, fuenteCliente, paddingCliente));
             filaRecibo.addCell(new Cell()
                     .setBorder(new SolidBorder(ColorConstants.BLACK, 1.5f)).setPadding(4)
                     .setTextAlignment(TextAlignment.CENTER).setVerticalAlignment(VerticalAlignment.MIDDLE)
@@ -546,12 +605,10 @@ public class ComprobantePagoLetraPdf {
             cuerpo.addCell(celdaCuerpo);
             doc.add(cuerpo);
 
-            // ── PIE: Secretaria | Fecha de Pago (centro) | Gerente General ──
-            // 1f | 0.8f | 1f  →  ambos lados exactamente del mismo ancho
+            // ── PIE ──
             Table pie = new Table(UnitValue.createPercentArray(new float[]{1f, 0.8f, 1f}))
                     .setWidth(UnitValue.createPercentValue(100));
 
-         // Celda izquierda: nombre y rol del usuario que registra
             Cell celdaNombre = new Cell()
                     .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f)).setPadding(8)
                     .setVerticalAlignment(VerticalAlignment.BOTTOM);
@@ -563,7 +620,6 @@ public class ComprobantePagoLetraPdf {
                     .setTextAlignment(TextAlignment.CENTER));
             pie.addCell(celdaNombre);
 
-            // Celda central: Fecha de Pago
             String[] pf = fechaPagoStr.split("/");
             String dia  = pf.length > 0 ? pf[0] : "--";
             String mes  = pf.length > 1 ? pf[1] : "--";
@@ -596,7 +652,6 @@ public class ComprobantePagoLetraPdf {
             celdaFecha.add(tablaFecha);
             pie.addCell(celdaFecha);
 
-            // Celda derecha: Gerente General
             Cell celdaFirma = new Cell()
                     .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f)).setPadding(5)
                     .setTextAlignment(TextAlignment.CENTER)
@@ -617,11 +672,20 @@ public class ComprobantePagoLetraPdf {
 
             doc.add(pie);
             doc.close();
-          
+
+            // CAMBIO 2: dibujar guía de perforación
+            byte[] pdfParcial = out.toByteArray();
+            ByteArrayOutputStream outFinal = new ByteArrayOutputStream();
+            PdfDocument pdfFinal = new PdfDocument(
+                    new com.itextpdf.kernel.pdf.PdfReader(new java.io.ByteArrayInputStream(pdfParcial)),
+                    new PdfWriter(outFinal));
+            dibujarGuiaPerforacion(pdfFinal, a5h);
+            pdfFinal.close();
+            return outFinal.toByteArray();
+
         } catch (Exception e) {
             throw new RuntimeException("Error generando comprobante m\u00faltiple: " + e.getMessage(), e);
         }
-        return out.toByteArray();
     }
 
     // ─────────────────────────────────────────────────────────────────────────

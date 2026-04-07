@@ -166,7 +166,7 @@ public class LetraCambioPdf {
                             && !reporte.getCliente2Apellidos().isBlank()) {
                         cliente2 += " " + reporte.getCliente2Apellidos();
                     }
-                    cliente2 += " DNI/RUC: " + reporte.getCliente2NumDocumento();
+                    cliente2 += " DNI/RUC:" + reporte.getCliente2NumDocumento();
                     escribir(canvas, fontBold, FONT_SIZE, cliente2, 44, 54);
                 }
 
