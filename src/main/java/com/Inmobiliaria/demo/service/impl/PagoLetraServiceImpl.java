@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.Comparator;
 
 @Service
 @RequiredArgsConstructor
@@ -112,6 +113,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         return numLetraActual < maxPagado ? fechaOperacion : LocalDate.now();
     }
 
+ // ✅ DESPUÉS
     @CacheEvict(cacheNames = "contratos", allEntries = true)
     public void verificarYActualizarEstadoContrato(Contrato contrato) {
         if (contrato.getTipoContrato() != TipoContrato.FINANCIADO) return;
@@ -123,12 +125,21 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             estadoActual == EstadoContrato.TRANSFERIDO) return;
 
         List<LetraCambio> letras = contrato.getLetrasCambio();
-        boolean todasPagadas = letras.stream().allMatch(l -> l.getEstadoLetra() == EstadoLetra.PAGADO);
-        if (todasPagadas) {
+        if (letras == null || letras.isEmpty()) return;
+
+        // ✅ NUEVA REGLA: si la última letra (la de número más alto) está PAGADA → CANCELADO
+        // No es necesario que todas las letras estén pagadas, solo la última.
+        boolean ultimaLetraPagada = letras.stream()
+            .max(Comparator.comparingInt(l -> extraerNumeroLetra(l.getNumeroLetra())))
+            .map(l -> l.getEstadoLetra() == EstadoLetra.PAGADO)
+            .orElse(false);
+
+        if (ultimaLetraPagada) {
             contrato.setEstadoContrato(EstadoContrato.CANCELADO);
             contratoRepository.save(contrato);
             return;
         }
+
         if (estadoActual == EstadoContrato.MORA) {
             boolean sinVencidas = letras.stream().noneMatch(l -> l.getEstadoLetra() == EstadoLetra.VENCIDO);
             if (sinVencidas) {

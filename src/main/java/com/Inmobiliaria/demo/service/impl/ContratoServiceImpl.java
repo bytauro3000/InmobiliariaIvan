@@ -63,9 +63,10 @@ public class ContratoServiceImpl implements ContratoService {
             contrato.setCantidadLetras(0);
             contrato.setInicial(BigDecimal.ZERO);
             contrato.setSaldo(BigDecimal.ZERO);
+            contrato.setEstadoContrato(EstadoContrato.CANCELADO);
         }
     }
-
+    
     @Override
     @Transactional
     @CacheEvict(allEntries = true)
