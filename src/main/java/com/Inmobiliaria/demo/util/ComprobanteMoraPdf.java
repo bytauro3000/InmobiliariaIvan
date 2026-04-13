@@ -53,7 +53,7 @@ public class ComprobanteMoraPdf {
 
     private static final String EMPRESA   = "INMOBILIARIA CONSTRUCTORA \"IVAN\" E.I.R.L.";
     private static final String DIRECCION = "Av. Alfredo Mendiola N 3623  3er. Piso Of. 301 - Urb. Panamericana Norte - Los Olivos - Lima";
-    private static final String TELEFONO  = "Telf.: (01) 413-8679";
+    private static final String TELEFONO  = "Cel.: +51 987-891-788";
     private static final String RUC       = "R.U.C.: 20537853108";
     private static final String BASE_URL  = "https://inmobiliariaivan.onrender.com/api/moras";
 

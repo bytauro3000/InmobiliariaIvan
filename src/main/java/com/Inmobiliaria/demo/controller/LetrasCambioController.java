@@ -1,6 +1,7 @@
 package com.Inmobiliaria.demo.controller;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -74,11 +75,12 @@ public class LetrasCambioController {
     }
 
     // ── Verificar si existen letras para un contrato ──────────────────────────
-    @GetMapping("/existe/{idContrato}")
-    public ResponseEntity<Boolean> existenLetras(@PathVariable Integer idContrato) {
-        return ResponseEntity.ok(letraCambioService.existenLetrasPorContrato(idContrato));
+ // En LetrasCambioController.java
+    @PostMapping("/existe/batch")
+    public ResponseEntity<Map<Integer, Boolean>> existenLetrasBatch(
+            @RequestBody List<Integer> idsContrato) {
+        return ResponseEntity.ok(letraCambioService.existenLetrasPorContratos(idsContrato));
     }
-
 
     @GetMapping("/pdf/{idContrato}")
     public ResponseEntity<byte[]> generarPdfLetras(@PathVariable Integer idContrato) {

@@ -34,6 +34,11 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
            "WHERE c.idContrato = :idContrato " +
            "ORDER BY l.idLetra ASC")
     List<LetraCambio> findByContratoIdContratoConClientes(@Param("idContrato") Integer idContrato);
+    
+    @Query("SELECT l.contrato.idContrato FROM LetraCambio l " +
+    	       "WHERE l.contrato.idContrato IN :ids " +
+    	       "GROUP BY l.contrato.idContrato")
+    	List<Integer> findContratosConLetras(@Param("ids") List<Integer> ids);
 
     // ✅ Query 2: trae letras + pagos (la segunda colección en query separada)
     // El service combina los resultados de ambas queries en memoria.
@@ -43,9 +48,7 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
            "ORDER BY l.idLetra ASC")
     List<LetraCambio> findByContratoIdContratoConPagos(@Param("idContrato") Integer idContrato);
 
-    // ✅ Solo comprueba si existe al menos 1 fila, no trae datos
-    @Query("SELECT COUNT(l) > 0 FROM LetraCambio l WHERE l.contrato.idContrato = :idContrato")
-    boolean existsByContratoId(@Param("idContrato") Integer idContrato);
+    
 
     @Query(value = "SELECT " +
             "lc.numero_letra, " +

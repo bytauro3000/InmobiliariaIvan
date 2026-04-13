@@ -4,9 +4,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.modelmapper.ModelMapper;
@@ -44,20 +46,6 @@ public class LetraCambioServiceImpl implements LetraCambioService {
     private final ContratoRepository contratoRepository;
     private final DistritoRepository distritoRepository;
     private final ModelMapper modelMapper;
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // OPTIMIZACIONES PARA BD REMOTA (Aiven India ~400ms latencia por round-trip)
-    //
-    // [1] application.properties → hibernate.jdbc.batch_size=50
-    //     saveAll(160 letras) = 4 round-trips en vez de 160 → de ~64s a <2s
-    //
-    // [2] LetraCambioRepository.deleteByContratoIdContrato con @Modifying @Query
-    //     1 solo DELETE SQL en vez de 1 SELECT + 160 DELETEs individuales
-    //
-    // [3] recalcularEstadoContrato usa saveAll() en lugar de save() en el loop
-    //
-    // [4] eliminarPorContrato ya NO llama recalcularEstadoContrato (ver método)
-    // ══════════════════════════════════════════════════════════════════════════
 
     private void recalcularEstadoContrato(Contrato contrato) {
         if (contrato.getTipoContrato() != TipoContrato.FINANCIADO) return;
@@ -166,10 +154,12 @@ public class LetraCambioServiceImpl implements LetraCambioService {
     }
 
     @Override
-    public boolean existenLetrasPorContrato(Integer idContrato) {
-        return letraCambioRepository.existsByContratoId(idContrato);
+    public Map<Integer, Boolean> existenLetrasPorContratos(List<Integer> ids) {
+        List<Integer> conLetras = letraCambioRepository.findContratosConLetras(ids);
+        Set<Integer> set = new HashSet<>(conLetras);
+        return ids.stream().collect(Collectors.toMap(id -> id, set::contains));
     }
-
+    
     @Override
     @Transactional
     public List<ReporteLetraCambioDTO> obtenerReportePorContrato(Integer idContrato) {

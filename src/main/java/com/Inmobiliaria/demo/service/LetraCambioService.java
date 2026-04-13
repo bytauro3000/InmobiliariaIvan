@@ -1,6 +1,7 @@
 package com.Inmobiliaria.demo.service;
 
 import java.util.List;
+import java.util.Map;
 
 import com.Inmobiliaria.demo.dto.GenerarLetrasRequest;
 import com.Inmobiliaria.demo.dto.LetraCambioDTO;
@@ -22,7 +23,7 @@ public interface LetraCambioService {
 
     void eliminarPorContrato(Integer idContrato);
 
-    boolean existenLetrasPorContrato(Integer idContrato);
+    Map<Integer, Boolean> existenLetrasPorContratos(List<Integer> ids);
   
     byte[] generarPdfLetras(Integer idContrato);
 }

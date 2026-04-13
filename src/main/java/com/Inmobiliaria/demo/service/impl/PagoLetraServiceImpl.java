@@ -49,11 +49,9 @@ public class PagoLetraServiceImpl implements PagoLetraService {
     private final ContratoRepository     contratoRepository;
     private final Cloudinary             cloudinary;
     private final MoraRepository         moraRepository;
+    private final MoraServiceImpl        moraService;
 
-    // ── NUEVO: inyección del servicio de mora ─────────────────────────────────
-    private final MoraServiceImpl moraService;
-
-    // ── UTILIDAD: extrae la parte numérica de "N/Total" o "N" ─────────────────
+    // Extrae el número entero de un numeroLetra con formato "N/Total" o "N"
     private int extraerNumeroLetra(String numeroLetra) {
         if (numeroLetra == null || numeroLetra.isBlank()) return 0;
         String parte = numeroLetra.contains("/")
@@ -68,14 +66,9 @@ public class PagoLetraServiceImpl implements PagoLetraService {
 
     private void validarOrdenDePago(Integer idContrato, String numeroLetraStr) {
         int numLetraAPagar = extraerNumeroLetra(numeroLetraStr);
-
-        Optional<Integer> maxPagadoOpt =
-            pagoLetraRepository.findMaxNumeroLetraPagadoByContrato(idContrato);
-
+        Optional<Integer> maxPagadoOpt = pagoLetraRepository.findMaxNumeroLetraPagadoByContrato(idContrato);
         if (maxPagadoOpt.isEmpty() || maxPagadoOpt.get() == null) return;
-
         int maxPagado = maxPagadoOpt.get();
-
         if (numLetraAPagar > maxPagado + 1) {
             throw new NegocioException(
                 "No puede pagar la letra N° " + numLetraAPagar +
@@ -87,19 +80,10 @@ public class PagoLetraServiceImpl implements PagoLetraService {
 
     private void validarOrdenDePagoMultiple(Integer idContrato, List<String> numerosLetra) {
         if (numerosLetra == null || numerosLetra.isEmpty()) return;
-
         List<Integer> nums = numerosLetra.stream()
-            .map(this::extraerNumeroLetra)
-            .sorted()
-            .collect(Collectors.toList());
-
-        Optional<Integer> maxPagadoOpt =
-            pagoLetraRepository.findMaxNumeroLetraPagadoByContrato(idContrato);
-
-        int maxPagado = (maxPagadoOpt.isPresent() && maxPagadoOpt.get() != null)
-            ? maxPagadoOpt.get()
-            : 0;
-
+            .map(this::extraerNumeroLetra).sorted().collect(Collectors.toList());
+        Optional<Integer> maxPagadoOpt = pagoLetraRepository.findMaxNumeroLetraPagadoByContrato(idContrato);
+        int maxPagado = (maxPagadoOpt.isPresent() && maxPagadoOpt.get() != null) ? maxPagadoOpt.get() : 0;
         int primerNum = nums.get(0);
         if (primerNum > maxPagado + 1) {
             throw new NegocioException(
@@ -108,7 +92,6 @@ public class PagoLetraServiceImpl implements PagoLetraService {
                 ". Ajuste su selección."
             );
         }
-
         for (int i = 1; i < nums.size(); i++) {
             if (nums.get(i) != nums.get(i - 1) + 1) {
                 throw new NegocioException(
@@ -120,17 +103,18 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
+    // Fecha para calcular mora:
+    // - Letra retroactiva (numLetra < maxPagado) → usa fechaOperacion del comprobante físico.
+    // - Letra siguiente en orden → usa fecha actual.
+    // Se llama después de guardar el pago, por eso la comparación es < y no <=.
+    private LocalDate resolverFechaReferenciaMora(int numLetraActual, Integer idContrato, LocalDate fechaOperacion) {
+        int maxPagado = pagoLetraRepository.findMaxNumeroLetraPagadoByContrato(idContrato).orElse(0);
+        return numLetraActual < maxPagado ? fechaOperacion : LocalDate.now();
+    }
 
-    /**
-     * Después de registrar un pago:
-     * 1. Si todas las letras están PAGADAS → CANCELADO
-     * 2. Si estaba en MORA y ya no tiene letras VENCIDAS → ACTIVO
-     */
     @CacheEvict(cacheNames = "contratos", allEntries = true)
     public void verificarYActualizarEstadoContrato(Contrato contrato) {
         if (contrato.getTipoContrato() != TipoContrato.FINANCIADO) return;
-
         EstadoContrato estadoActual = contrato.getEstadoContrato();
         if (estadoActual == EstadoContrato.CANCELADO    ||
             estadoActual == EstadoContrato.RESUELTO      ||
@@ -139,18 +123,14 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             estadoActual == EstadoContrato.TRANSFERIDO) return;
 
         List<LetraCambio> letras = contrato.getLetrasCambio();
-
-        boolean todasPagadas = letras.stream()
-            .allMatch(l -> l.getEstadoLetra() == EstadoLetra.PAGADO);
+        boolean todasPagadas = letras.stream().allMatch(l -> l.getEstadoLetra() == EstadoLetra.PAGADO);
         if (todasPagadas) {
             contrato.setEstadoContrato(EstadoContrato.CANCELADO);
             contratoRepository.save(contrato);
             return;
         }
-
         if (estadoActual == EstadoContrato.MORA) {
-            boolean sinVencidas = letras.stream()
-                .noneMatch(l -> l.getEstadoLetra() == EstadoLetra.VENCIDO);
+            boolean sinVencidas = letras.stream().noneMatch(l -> l.getEstadoLetra() == EstadoLetra.VENCIDO);
             if (sinVencidas) {
                 contrato.setEstadoContrato(EstadoContrato.ACTIVO);
                 contratoRepository.save(contrato);
@@ -175,9 +155,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         dto.setTipoComprobante(pago.getTipoComprobante());
         dto.setNumeroComprobante(pago.getNumeroComprobante());
         dto.setObservaciones(pago.getObservaciones());
-        List<String> urls = pago.getVouchers().stream()
-                .map(Voucher::getUrl)
-                .collect(Collectors.toList());
+        List<String> urls = pago.getVouchers().stream().map(Voucher::getUrl).collect(Collectors.toList());
         dto.setUrlsVoucher(urls);
         return dto;
     }
@@ -185,11 +163,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
     private String subirImagen(MultipartFile file, Integer idContrato, Integer idLetra) throws IOException {
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
         String publicId = "letra-" + idLetra + "-" + timestamp;
-
-        Map params = ObjectUtils.asMap(
-            "folder", "vouchers/contrato-" + idContrato,
-            "public_id", publicId
-        );
+        Map params = ObjectUtils.asMap("folder", "vouchers/contrato-" + idContrato, "public_id", publicId);
         Map uploadResult = cloudinary.uploader().upload(file.getBytes(), params);
         return uploadResult.get("url").toString();
     }
@@ -238,7 +212,6 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         if (letra.getEstadoLetra() == EstadoLetra.PAGADO) {
             throw new NegocioException("La letra ya se encuentra pagada");
         }
-
         if (request.getImportePagado().compareTo(letra.getImporte()) != 0) {
             throw new NegocioException("El importe pagado debe ser igual al importe de la letra");
         }
@@ -249,9 +222,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         if (request.getTipoComprobante() != null && request.getNumeroComprobante() != null) {
             boolean existe = pagoLetraRepository.existsByTipoComprobanteAndNumeroComprobante(
                     request.getTipoComprobante(), request.getNumeroComprobante());
-            if (existe) {
-                throw new NegocioException("Ya existe un pago con el mismo tipo y numero de comprobante.");
-            }
+            if (existe) throw new NegocioException("Ya existe un pago con el mismo tipo y numero de comprobante.");
         }
 
         PagoLetras pago = new PagoLetras();
@@ -266,31 +237,16 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         pago.setObservaciones(request.getObservaciones());
 
         PagoLetras pagoGuardado = pagoLetraRepository.save(pago);
+        guardarVouchers(vouchers, pagoGuardado, idContrato, letra.getIdLetra());
 
-        Integer idLetra = letra.getIdLetra();
-        guardarVouchers(vouchers, pagoGuardado, idContrato, idLetra);
-
-        // ── INTEGRACIÓN DE MORA ───────────────────────────────────────────────
-        // Si la letra estaba VENCIDA, generamos la mora automáticamente.
-        // La mora queda en estado PENDIENTE hasta que el cliente la pague
-        // (puede ser en este mismo momento o en cualquier pago futuro).
         if (letra.getEstadoLetra() == EstadoLetra.VENCIDO) {
-            MoraLetra mora = moraService.generarMoraParaPago(letra, pagoGuardado);
-            if (mora != null) {
-                // Opcional: logear para trazabilidad
-                System.out.println(
-                    "[MORA] Generada mora ID=" + mora.getIdMora() +
-                    " para letra N°" + letra.getNumeroLetra() +
-                    " | Monto: $" + mora.getMontoMoraTotal() +
-                    " | Días: " + mora.getDiasMora()
-                );
-            }
+            int numLetra = extraerNumeroLetra(letra.getNumeroLetra());
+            LocalDate fechaRef = resolverFechaReferenciaMora(numLetra, idContrato, request.getFechaOperacion());
+            moraService.generarMoraParaPago(letra, pagoGuardado, fechaRef);
         }
-        // ─────────────────────────────────────────────────────────────────────
 
         letra.setEstadoLetra(EstadoLetra.PAGADO);
         letraCambioRepository.save(letra);
-
         verificarYCancelarContrato(letra.getContrato());
 
         return mapToDTO(pagoGuardado);
@@ -309,9 +265,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         if (primerPago.getTipoComprobante() != null && primerPago.getNumeroComprobante() != null) {
             boolean existe = pagoLetraRepository.existsByTipoComprobanteAndNumeroComprobante(
                     primerPago.getTipoComprobante(), primerPago.getNumeroComprobante());
-            if (existe) {
-                throw new NegocioException("Ya existe un pago con el mismo tipo y numero de comprobante.");
-            }
+            if (existe) throw new NegocioException("Ya existe un pago con el mismo tipo y numero de comprobante.");
         }
 
         Integer idPrimeraLetra = request.getPagos().get(0).getIdLetra();
@@ -330,8 +284,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         List<String> urlsVoucher = new ArrayList<>();
         if (vouchers != null && !vouchers.isEmpty()) {
             for (MultipartFile voucher : vouchers) {
-                String url = subirImagen(voucher, idContrato, null);
-                urlsVoucher.add(url);
+                urlsVoucher.add(subirImagen(voucher, idContrato, null));
             }
         }
 
@@ -342,7 +295,6 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             if (letra.getEstadoLetra() == EstadoLetra.PAGADO) {
                 throw new NegocioException("La letra " + letra.getNumeroLetra() + " ya esta pagada");
             }
-
             if (pagoReq.getImportePagado().compareTo(letra.getImporte()) != 0) {
                 throw new NegocioException("El importe pagado no coincide con el importe de la letra " + letra.getNumeroLetra());
             }
@@ -369,12 +321,11 @@ public class PagoLetraServiceImpl implements PagoLetraService {
 
             responses.add(mapToDTO(guardado));
 
-            // ── INTEGRACIÓN DE MORA en pago múltiple ─────────────────────────
-            // Por cada letra vencida dentro del pago múltiple se genera su mora.
             if (letra.getEstadoLetra() == EstadoLetra.VENCIDO) {
-                moraService.generarMoraParaPago(letra, guardado);
+                int numLetra = extraerNumeroLetra(letra.getNumeroLetra());
+                LocalDate fechaRef = resolverFechaReferenciaMora(numLetra, idContrato, pagoReq.getFechaOperacion());
+                moraService.generarMoraParaPago(letra, guardado, fechaRef);
             }
-            // ─────────────────────────────────────────────────────────────────
 
             letra.setEstadoLetra(EstadoLetra.PAGADO);
             letraCambioRepository.save(letra);
@@ -395,9 +346,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         if (request.getTipoComprobante() != null && request.getNumeroComprobante() != null) {
             boolean existe = pagoLetraRepository.existsByTipoComprobanteAndNumeroComprobanteAndIdPagoNot(
                     request.getTipoComprobante(), request.getNumeroComprobante(), idPago);
-            if (existe) {
-                throw new NegocioException("Ya existe otro pago con el mismo tipo y numero de comprobante.");
-            }
+            if (existe) throw new NegocioException("Ya existe otro pago con el mismo tipo y numero de comprobante.");
         }
 
         pago.setImportePagado(request.getImportePagado());
@@ -413,15 +362,12 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             for (Voucher v : pago.getVouchers()) {
                 try {
                     String publicId = extractPublicIdFromUrl(v.getUrl());
-                    if (publicId != null) {
-                        cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
-                    }
+                    if (publicId != null) cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
                 } catch (Exception e) {
                     System.err.println("Error al eliminar imagen antigua: " + e.getMessage());
                 }
             }
             pago.getVouchers().clear();
-
             Integer idContrato = pago.getLetra().getContrato().getIdContrato();
             Integer idLetra = pago.getLetra().getIdLetra();
             for (MultipartFile file : vouchers) {
@@ -433,8 +379,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             }
         }
 
-        PagoLetras pagoActualizado = pagoLetraRepository.save(pago);
-        return mapToDTO(pagoActualizado);
+        return mapToDTO(pagoLetraRepository.save(pago));
     }
 
     @Override
@@ -443,63 +388,44 @@ public class PagoLetraServiceImpl implements PagoLetraService {
     public void eliminarPago(Integer idPago) throws IOException {
         PagoLetras pago = pagoLetraRepository.findById(idPago)
                 .orElseThrow(() -> new NegocioException("Pago no encontrado con id: " + idPago));
- 
+
         LetraCambio letra = pago.getLetra();
- 
-        // ── PASO 1: Eliminar imágenes de Cloudinary ───────────────────────────
+
         for (Voucher v : pago.getVouchers()) {
             try {
                 String publicId = extractPublicIdFromUrl(v.getUrl());
-                if (publicId != null) {
-                    cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
-                }
+                if (publicId != null) cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
             } catch (Exception e) {
                 System.err.println("Error al eliminar imagen de Cloudinary: " + e.getMessage());
             }
         }
- 
-        // ── PASO 2: Manejar moras que referencian este pago ──────────────────
-        // La tabla mora_letra tiene una FK (id_pago_letra → pago_letra.id_pago).
-        // Si hay moras que apuntan a este pago, debemos desvincularlas antes de borrar.
+
+        // Moras PENDIENTE se eliminan; PAGADA/ANULADA se desvinculan (conservar historial)
         List<MoraLetra> morasAsociadas = moraRepository.findByPagoLetraIdPago(idPago);
- 
         for (MoraLetra mora : morasAsociadas) {
             if (mora.getEstadoMora() == EstadoMora.PENDIENTE) {
-                // La mora no fue pagada → al revertir el pago de la letra,
-                // también revocamos la mora (ya no tiene sentido sin el pago).
                 moraRepository.delete(mora);
             } else {
-                // La mora fue PAGADA o ANULADA → conservamos el historial
-                // pero desvinculamos la referencia al pago que vamos a borrar.
                 mora.setPagoLetra(null);
                 moraRepository.save(mora);
             }
         }
- 
-        // ── PASO 3: Eliminar el pago ──────────────────────────────────────────
+
         pagoLetraRepository.delete(pago);
- 
-        // ── PASO 4: Recalcular estado de la letra ─────────────────────────────
+
         long count = pagoLetraRepository.countByLetraIdLetra(letra.getIdLetra());
         if (count == 0) {
-            LocalDate hoy = LocalDate.now();
-            if (letra.getFechaVencimiento().isBefore(hoy)) {
-                letra.setEstadoLetra(EstadoLetra.VENCIDO);
-            } else {
-                letra.setEstadoLetra(EstadoLetra.PENDIENTE);
-            }
+            letra.setEstadoLetra(letra.getFechaVencimiento().isBefore(LocalDate.now())
+                ? EstadoLetra.VENCIDO : EstadoLetra.PENDIENTE);
             letraCambioRepository.save(letra);
         }
- 
+
         recalcularEstadoContrato(letra.getContrato());
     }
- 
-    
 
     @CacheEvict(cacheNames = "contratos", allEntries = true)
     public void recalcularEstadoContrato(Contrato contrato) {
         if (contrato.getTipoContrato() != TipoContrato.FINANCIADO) return;
-
         EstadoContrato estadoActual = contrato.getEstadoContrato();
         if (estadoActual == EstadoContrato.CANCELADO    ||
             estadoActual == EstadoContrato.RESUELTO      ||
@@ -507,18 +433,13 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             estadoActual == EstadoContrato.RENUNCIA      ||
             estadoActual == EstadoContrato.TRANSFERIDO) return;
 
-        Contrato contratoFresco = contratoRepository.findById(contrato.getIdContrato())
-            .orElse(null);
+        Contrato contratoFresco = contratoRepository.findById(contrato.getIdContrato()).orElse(null);
         if (contratoFresco == null) return;
 
         long letrasVencidas = contratoFresco.getLetrasCambio().stream()
-            .filter(l -> l.getEstadoLetra() == EstadoLetra.VENCIDO)
-            .count();
+            .filter(l -> l.getEstadoLetra() == EstadoLetra.VENCIDO).count();
 
-        EstadoContrato nuevoEstado = letrasVencidas > 0
-            ? EstadoContrato.MORA
-            : EstadoContrato.ACTIVO;
-
+        EstadoContrato nuevoEstado = letrasVencidas > 0 ? EstadoContrato.MORA : EstadoContrato.ACTIVO;
         if (nuevoEstado != estadoActual) {
             contratoFresco.setEstadoContrato(nuevoEstado);
             contratoRepository.save(contratoFresco);
@@ -529,16 +450,12 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         try {
             int uploadIndex = url.indexOf("/upload/");
             if (uploadIndex == -1) return null;
-
             String afterUpload = url.substring(uploadIndex + 8);
             String[] parts = afterUpload.split("/", 2);
             if (parts.length == 2) {
-                String pathWithExtension = parts[1];
-                int dotIndex = pathWithExtension.lastIndexOf('.');
-                if (dotIndex != -1) {
-                    return pathWithExtension.substring(0, dotIndex);
-                }
-                return pathWithExtension;
+                String path = parts[1];
+                int dotIndex = path.lastIndexOf('.');
+                return dotIndex != -1 ? path.substring(0, dotIndex) : path;
             }
             return null;
         } catch (Exception e) {
@@ -549,27 +466,25 @@ public class PagoLetraServiceImpl implements PagoLetraService {
 
     @Override
     public SugerenciaNumeroComprobanteDTO sugerirNumeroComprobante(TipoComprobante tipoComprobante) {
-        Optional<PagoLetras> ultimo = pagoLetraRepository.findFirstByTipoComprobanteOrderByFechaOperacionDesc(tipoComprobante);
+        Optional<PagoLetras> ultimo = pagoLetraRepository
+                .findFirstByTipoComprobanteAndNumeroComprobanteNotNullOrderByNumeroComprobanteDesc(tipoComprobante);
         if (ultimo.isPresent()) {
-            String ultimoNumero = ultimo.get().getNumeroComprobante();
-            String siguiente = generarSiguienteNumero(ultimoNumero, tipoComprobante);
-            return new SugerenciaNumeroComprobanteDTO(siguiente);
-        } else {
-            String inicial = switch (tipoComprobante) {
-                case RECIBO  -> "1";
-                case BOLETA  -> "EB01-0001";
-                case FACTURA -> "F001-0001";
-                default      -> "1";
-            };
-            return new SugerenciaNumeroComprobanteDTO(inicial);
+            return new SugerenciaNumeroComprobanteDTO(
+                    generarSiguienteNumero(ultimo.get().getNumeroComprobante(), tipoComprobante));
         }
+        String inicial = switch (tipoComprobante) {
+            case RECIBO  -> "1";
+            case BOLETA  -> "EB01-0001";
+            case FACTURA -> "F001-0001";
+            default      -> "1";
+        };
+        return new SugerenciaNumeroComprobanteDTO(inicial);
     }
 
     private String generarSiguienteNumero(String ultimoNumero, TipoComprobante tipo) {
         if (tipo == TipoComprobante.RECIBO) {
             try {
-                int num = Integer.parseInt(ultimoNumero);
-                return String.valueOf(num + 1);
+                return String.valueOf(Integer.parseInt(ultimoNumero) + 1);
             } catch (NumberFormatException e) {
                 return "1";
             }
@@ -577,9 +492,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             String[] parts = ultimoNumero.split("-");
             if (parts.length == 2) {
                 try {
-                    int num = Integer.parseInt(parts[1]);
-                    String prefix = parts[0];
-                    return String.format("%s-%04d", prefix, num + 1);
+                    return String.format("%s-%04d", parts[0], Integer.parseInt(parts[1]) + 1);
                 } catch (NumberFormatException e) {
                     return tipo == TipoComprobante.BOLETA ? "EB01-0001" : "F001-0001";
                 }

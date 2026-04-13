@@ -20,8 +20,8 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
     List<PagoLetras> findByLetraContratoIdContrato(Integer idContrato);
 
     long countByLetraIdLetra(Integer idLetra);
-
-    Optional<PagoLetras> findFirstByTipoComprobanteOrderByFechaOperacionDesc(TipoComprobante tipoComprobante);
+    
+    Optional<PagoLetras> findFirstByTipoComprobanteAndNumeroComprobanteNotNullOrderByNumeroComprobanteDesc(TipoComprobante tipoComprobante);
 
     boolean existsByTipoComprobanteAndNumeroComprobante(TipoComprobante tipoComprobante, String numeroComprobante);
 
