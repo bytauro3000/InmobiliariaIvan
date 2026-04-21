@@ -16,6 +16,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 
 import com.Inmobiliaria.demo.dto.GenerarLetrasRequest;
+import com.Inmobiliaria.demo.dto.GrupoLetrasRequest;
 import com.Inmobiliaria.demo.dto.LetraCambioDTO;
 import com.Inmobiliaria.demo.dto.ReporteCronogramaPagosClientesDTO;
 import com.Inmobiliaria.demo.dto.ReporteLetraCambioDTO;
@@ -242,19 +243,127 @@ public class LetraCambioServiceImpl implements LetraCambioService {
         int cantidad = contrato.getCantidadLetras();
         if (cantidad <= 0) throw new IllegalArgumentException("La cantidad de letras debe ser mayor a cero");
 
-        BigDecimal importePorLetra;
-        BigDecimal importeUltimaLetra;
-
         BigDecimal saldo = contrato.getSaldo();
         if (saldo == null || saldo.compareTo(BigDecimal.ZERO) <= 0)
             throw new IllegalArgumentException("El saldo del contrato es invalido o cero");
 
-        if (generarLetrasRequest.isModoAutomatico()) {
+        LocalDate fechaVencimientoInicial = generarLetrasRequest.getFechaVencimientoInicial();
+        int diaOriginal = fechaVencimientoInicial.getDayOfMonth();
+        boolean esUltimoDiaDeSuMes = diaOriginal == fechaVencimientoInicial.lengthOfMonth();
+        boolean forzarUltimoDia = esUltimoDiaDeSuMes && generarLetrasRequest.isUsarUltimoDiaMes();
+
+        Moneda monedaContrato = contrato.getMoneda() != null ? contrato.getMoneda() : Moneda.USD;
+        List<LetraCambio> letrasAGuardar = new ArrayList<>(cantidad);
+
+        // ── MODO GRUPOS: distintos montos por tramos ──────────────────────────
+        if (generarLetrasRequest.isModoGrupos()) {
+            List<GrupoLetrasRequest> grupos = generarLetrasRequest.getGrupos();
+
+            if (grupos == null || grupos.isEmpty())
+                throw new IllegalArgumentException("Debe definir al menos un grupo de letras.");
+
+            // Validar que la suma de cantidades coincida con las del contrato
+            int totalCantidad = grupos.stream()
+                    .mapToInt(g -> g.getCantidad() != null ? g.getCantidad() : 0)
+                    .sum();
+            if (totalCantidad != cantidad)
+                throw new IllegalArgumentException(
+                    "La suma de letras en los grupos (" + totalCantidad +
+                    ") no coincide con la cantidad del contrato (" + cantidad + ").");
+
+            // Parsear y validar importes de cada grupo
+            List<BigDecimal> importesGrupo = new ArrayList<>();
+            for (int g = 0; g < grupos.size(); g++) {
+                GrupoLetrasRequest grupo = grupos.get(g);
+                if (grupo.getCantidad() == null || grupo.getCantidad() <= 0)
+                    throw new IllegalArgumentException("El grupo " + (g + 1) + " tiene una cantidad invalida.");
+                if (grupo.getImporte() == null || grupo.getImporte().isBlank())
+                    throw new IllegalArgumentException("El grupo " + (g + 1) + " no tiene importe definido.");
+                try {
+                    String importeStr = grupo.getImporte()
+                            .replace("$", "").replace("S/", "").replace(",", "").trim();
+                    BigDecimal imp = new BigDecimal(importeStr).setScale(2, BigDecimal.ROUND_HALF_UP);
+                    if (imp.compareTo(BigDecimal.ZERO) <= 0)
+                        throw new IllegalArgumentException("El importe del grupo " + (g + 1) + " debe ser mayor a cero.");
+                    importesGrupo.add(imp);
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("Importe invalido en el grupo " + (g + 1) + ": " + grupo.getImporte());
+                }
+            }
+
+            // Validar que la suma total de los grupos == saldo del contrato
+            BigDecimal saldoRedondeado = saldo.setScale(2, BigDecimal.ROUND_HALF_UP);
+            BigDecimal sumaGrupos = BigDecimal.ZERO;
+            for (int g = 0; g < grupos.size(); g++) {
+                sumaGrupos = sumaGrupos.add(
+                    importesGrupo.get(g).multiply(new BigDecimal(grupos.get(g).getCantidad()))
+                );
+            }
+            if (sumaGrupos.compareTo(saldoRedondeado) != 0)
+                throw new IllegalArgumentException(
+                    "La suma total de los grupos (" + sumaGrupos.toPlainString() +
+                    ") no coincide con el saldo del contrato (" + saldoRedondeado.toPlainString() + ")." +
+                    " Diferencia: " + sumaGrupos.subtract(saldoRedondeado).toPlainString());
+
+            // Generar letras grupo a grupo con numeración global correlativa
+            int numeroLetraGlobal = 1;
+            for (int g = 0; g < grupos.size(); g++) {
+                GrupoLetrasRequest grupo = grupos.get(g);
+                BigDecimal importeGrupo = importesGrupo.get(g);
+
+                for (int i = 0; i < grupo.getCantidad(); i++) {
+                    LocalDate fechaCalculada = fechaVencimientoInicial.plusMonths(numeroLetraGlobal - 1);
+                    LocalDate fechaFinal = forzarUltimoDia
+                            ? fechaCalculada.withDayOfMonth(fechaCalculada.lengthOfMonth())
+                            : fechaCalculada.withDayOfMonth(Math.min(diaOriginal, fechaCalculada.lengthOfMonth()));
+
+                    LetraCambio letra = new LetraCambio();
+                    letra.setContrato(contrato);
+                    letra.setDistrito(distrito);
+                    letra.setFechaGiro(generarLetrasRequest.getFechaGiro());
+                    letra.setFechaVencimiento(fechaFinal);
+                    letra.setImporte(importeGrupo);
+                    letra.setImporteLetras(NumeroALetras.convertir(importeGrupo, monedaContrato));
+                    letra.setEstadoLetra(EstadoLetra.PENDIENTE);
+                    letra.setNumeroLetra(numeroLetraGlobal + "/" + cantidad);
+                    letrasAGuardar.add(letra);
+                    numeroLetraGlobal++;
+                }
+            }
+
+        // ── MODO AUTOMÁTICO: el backend calcula el importe dividiendo saldo / cantidad ──
+        } else if (generarLetrasRequest.isModoAutomatico()) {
+            BigDecimal importePorLetra;
+            BigDecimal importeUltimaLetra;
+
             BigDecimal saldoEntero = saldo.setScale(0, BigDecimal.ROUND_HALF_UP);
             importePorLetra = saldoEntero.divide(new BigDecimal(cantidad), 0, BigDecimal.ROUND_DOWN);
             BigDecimal sumaParcial = importePorLetra.multiply(new BigDecimal(cantidad - 1));
             importeUltimaLetra = saldoEntero.subtract(sumaParcial).setScale(0, BigDecimal.ROUND_HALF_UP);
+
+            for (int i = 1; i <= cantidad; i++) {
+                LocalDate fechaCalculada = fechaVencimientoInicial.plusMonths(i - 1);
+                LocalDate fechaFinal = forzarUltimoDia
+                        ? fechaCalculada.withDayOfMonth(fechaCalculada.lengthOfMonth())
+                        : fechaCalculada.withDayOfMonth(Math.min(diaOriginal, fechaCalculada.lengthOfMonth()));
+
+                LetraCambio letra = new LetraCambio();
+                letra.setContrato(contrato);
+                letra.setDistrito(distrito);
+                letra.setFechaGiro(generarLetrasRequest.getFechaGiro());
+                letra.setFechaVencimiento(fechaFinal);
+                letra.setImporte(i < cantidad ? importePorLetra : importeUltimaLetra);
+                letra.setImporteLetras(NumeroALetras.convertir(letra.getImporte(), monedaContrato));
+                letra.setEstadoLetra(EstadoLetra.PENDIENTE);
+                letra.setNumeroLetra(i + "/" + cantidad);
+                letrasAGuardar.add(letra);
+            }
+
+        // ── MODO MANUAL: el usuario define un importe fijo, la última absorbe el residuo ──
         } else {
+            BigDecimal importePorLetra;
+            BigDecimal importeUltimaLetra;
+
             try {
                 String importeStr = generarLetrasRequest.getImporte()
                         .replace("$", "").replace("S/", "").replace(",", "").trim();
@@ -274,41 +383,32 @@ public class LetraCambioServiceImpl implements LetraCambioService {
                 );
             }
             importeUltimaLetra = ultimaLetraManual;
+
+            for (int i = 1; i <= cantidad; i++) {
+                LocalDate fechaCalculada = fechaVencimientoInicial.plusMonths(i - 1);
+                LocalDate fechaFinal = forzarUltimoDia
+                        ? fechaCalculada.withDayOfMonth(fechaCalculada.lengthOfMonth())
+                        : fechaCalculada.withDayOfMonth(Math.min(diaOriginal, fechaCalculada.lengthOfMonth()));
+
+                LetraCambio letra = new LetraCambio();
+                letra.setContrato(contrato);
+                letra.setDistrito(distrito);
+                letra.setFechaGiro(generarLetrasRequest.getFechaGiro());
+                letra.setFechaVencimiento(fechaFinal);
+                letra.setImporte(i < cantidad ? importePorLetra : importeUltimaLetra);
+                letra.setImporteLetras(NumeroALetras.convertir(letra.getImporte(), monedaContrato));
+                letra.setEstadoLetra(EstadoLetra.PENDIENTE);
+                letra.setNumeroLetra(i + "/" + cantidad);
+                letrasAGuardar.add(letra);
+            }
         }
 
-        LocalDate fechaVencimientoInicial = generarLetrasRequest.getFechaVencimientoInicial();
-        int diaOriginal = fechaVencimientoInicial.getDayOfMonth();
-        boolean esUltimoDiaDeSuMes = diaOriginal == fechaVencimientoInicial.lengthOfMonth();
-        boolean forzarUltimoDia = esUltimoDiaDeSuMes && generarLetrasRequest.isUsarUltimoDiaMes();
-
-        Moneda monedaContrato = contrato.getMoneda() != null ? contrato.getMoneda() : Moneda.USD;
-        List<LetraCambio> letrasAGuardar = new ArrayList<>(cantidad);
-
-        for (int i = 1; i <= cantidad; i++) {
-            LocalDate fechaCalculada = fechaVencimientoInicial.plusMonths(i - 1);
-            LocalDate fechaFinal = forzarUltimoDia
-                    ? fechaCalculada.withDayOfMonth(fechaCalculada.lengthOfMonth())
-                    : fechaCalculada.withDayOfMonth(Math.min(diaOriginal, fechaCalculada.lengthOfMonth()));
-
-            LetraCambio letra = new LetraCambio();
-            letra.setContrato(contrato);
-            letra.setDistrito(distrito);
-            letra.setFechaGiro(generarLetrasRequest.getFechaGiro());
-            letra.setFechaVencimiento(fechaFinal);
-            letra.setImporte(i < cantidad ? importePorLetra : importeUltimaLetra);
-            letra.setImporteLetras(NumeroALetras.convertir(letra.getImporte(), monedaContrato));
-            letra.setEstadoLetra(EstadoLetra.PENDIENTE);
-            letra.setNumeroLetra(i + "/" + cantidad);
-            letrasAGuardar.add(letra);
-        }
-
-        // [1] Con batch_size=50 en application.properties → 4 round-trips en vez de 160
+        // ── Persistir todas las letras (compartido por los 3 modos) ──────────
         letraCambioRepository.saveAll(letrasAGuardar);
-
-        // Necesario al insertar: calcula si alguna letra quedó VENCIDA por fecha pasada
         recalcularEstadoContrato(contrato);
     }
-
+    
+    
     @Override
     @Transactional
     @CacheEvict(value = "contratos", allEntries = true)
