@@ -3,24 +3,26 @@ package com.Inmobiliaria.demo.dto;
 import com.Inmobiliaria.demo.enums.MedioPago;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
-
 @Data
-public class PagoMoraResponseDTO {
+@NoArgsConstructor
+@AllArgsConstructor
+public class PagoInicialResponseDTO {
 
-    private Integer         idPagoMora;
-    private Integer         idMora;
-    private BigDecimal      montoPagado;
+    private Integer         idPagoInicial;
+    private BigDecimal      importePagado;
     private LocalDate       fechaPago;
     private MedioPago       medioPago;
     private String          numeroOperacion;
-    private TipoComprobante tipoComprobante;
-    private String          numeroComprobante;
-    private Long            idComprobante;
     private String          observaciones;
     private List<String>    urlsVoucher;
+    private Long            idComprobante;
+    private TipoComprobante tipoComprobante;
+    private String          numeroComprobante;
 }

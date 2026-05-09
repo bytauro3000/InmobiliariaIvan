@@ -64,11 +64,17 @@ public class Contrato {
     @Column(name = "observaciones", columnDefinition = "TEXT", nullable = true)
     private String observaciones;
 
-    // Moneda del contrato: USD (dólares) o PEN (soles)
-    // Default USD para mantener compatibilidad con contratos existentes
     @Enumerated(EnumType.STRING)
     @Column(name = "moneda", nullable = false, length = 3)
     private Moneda moneda = Moneda.USD;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_comprobante_inicial")
+    private Comprobante comprobanteInicial;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_pago_inicial")
+    private PagoInicial pagoInicial;
 
     @OneToMany(mappedBy = "contrato", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<LetraCambio> letrasCambio;

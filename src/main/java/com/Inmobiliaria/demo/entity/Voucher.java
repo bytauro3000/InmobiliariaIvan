@@ -12,9 +12,11 @@ public class Voucher {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer idVoucher;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_pago", nullable = false)
-    private PagoLetras pago;
+    @Column(name = "tipo_origen", nullable = false, length = 20)
+    private String tipoOrigen; // "PAGO_LETRA" | "PAGO_INICIAL" | "PAGO_MORA"
+
+    @Column(name = "referencia_id", nullable = false)
+    private Integer referenciaId;
 
     @Column(name = "url", length = 500, nullable = false)
     private String url;

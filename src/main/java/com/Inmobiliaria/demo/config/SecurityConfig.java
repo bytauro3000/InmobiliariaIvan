@@ -54,7 +54,9 @@ public class SecurityConfig {
                     "/api/archivos/**",
                     "/api/pagos/**",
                     "/api/tipo-cambio/**",
-                    "/api/moras/**"
+                    "/api/moras/**",
+                    "/api/comprobantes/**"
+                    
                 ).hasAuthority("ROLE_SECRETARIA")
                 .requestMatchers("/api/usuarios/**")
                 .hasAnyAuthority("ROLE_SECRETARIA", "ROLE_ADMINISTRADOR")

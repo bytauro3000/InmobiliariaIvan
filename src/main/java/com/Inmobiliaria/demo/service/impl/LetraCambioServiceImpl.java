@@ -117,8 +117,12 @@ public class LetraCambioServiceImpl implements LetraCambioService {
 
         Map<String, Long> conteoPorComprobante = letrasConPagos.stream()
                 .flatMap(l -> l.getPagos() != null ? l.getPagos().stream() : java.util.stream.Stream.empty())
-                .filter(p -> p.getNumeroComprobante() != null && !p.getNumeroComprobante().isBlank())
-                .collect(Collectors.groupingBy(PagoLetras::getNumeroComprobante, Collectors.counting()));
+                .filter(p -> p.getComprobante() != null
+                          && p.getComprobante().getNumeroCompleto() != null
+                          && !p.getComprobante().getNumeroCompleto().isBlank())
+                .collect(Collectors.groupingBy(
+                        p -> p.getComprobante().getNumeroCompleto(),
+                        Collectors.counting()));
 
         LocalDate hoy = LocalDate.now();
 
@@ -143,7 +147,10 @@ public class LetraCambioServiceImpl implements LetraCambioService {
                     }
                     List<PagoLetras> pagos = pagosPorLetra.getOrDefault(letra.getIdLetra(), new ArrayList<>());
                     if (!pagos.isEmpty()) {
-                        String numComp = pagos.get(0).getNumeroComprobante();
+                     
+                        String numComp = (pagos.get(0).getComprobante() != null)
+                                ? pagos.get(0).getComprobante().getNumeroCompleto()
+                                : null;
                         dto.setNumeroComprobante(numComp);
                         if (numComp != null && !numComp.isBlank()) {
                             dto.setEsMultiple(conteoPorComprobante.getOrDefault(numComp, 0L) > 1);

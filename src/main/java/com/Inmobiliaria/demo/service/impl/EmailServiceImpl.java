@@ -53,16 +53,21 @@ public class EmailServiceImpl implements EmailService {
         if (pagos == null || pagos.isEmpty() || destinatarios == null || destinatarios.isEmpty()) return;
 
         try {
-            // Generar PDF: si es un solo pago usar generar(), si son múltiples usar generarMultiple()
             byte[] pdf = pagos.size() == 1
                     ? ComprobantePagoLetraPdf.generar(pagos.get(0), "SECRETARIA")
                     : ComprobantePagoLetraPdf.generarMultiple(pagos, "SECRETARIA");
 
             PagoLetras primero = pagos.get(0);
             String cuerpo = construirCuerpoMultiple(pagos);
+
+            // ── CORRECCIÓN: leer número desde la relación Comprobante ─────────
+            String numeroComprobante = (primero.getComprobante() != null)
+                    ? primero.getComprobante().getNumeroCompleto()
+                    : String.valueOf(primero.getIdPago());
+
             String nombreArchivo = pagos.size() == 1
                     ? "comprobante-pago-" + primero.getIdPago() + ".pdf"
-                    : "comprobante-" + primero.getNumeroComprobante() + ".pdf";
+                    : "comprobante-" + numeroComprobante + ".pdf";
 
             for (String destinatario : destinatarios) {
                 try {
@@ -90,7 +95,6 @@ public class EmailServiceImpl implements EmailService {
         Moneda moneda = contrato.getMoneda() != null ? contrato.getMoneda() : Moneda.USD;
         String simbolo = moneda == Moneda.PEN ? "S/" : "$";
 
-        // Nombre del/los clientes
         String clientes = "-";
         if (contrato.getClientes() != null && !contrato.getClientes().isEmpty()) {
             clientes = contrato.getClientes().stream()
@@ -98,7 +102,6 @@ public class EmailServiceImpl implements EmailService {
                     .collect(Collectors.joining(", "));
         }
 
-        // Números de letra
         String letras;
         if (pagos.size() == 1) {
             String num = primero.getLetra().getNumeroLetra() != null
@@ -115,7 +118,6 @@ public class EmailServiceImpl implements EmailService {
             letras = "las letras <strong>N° " + anteriores + " y " + ultima + "</strong>";
         }
 
-        // Total pagado
         BigDecimal total = pagos.stream()
                 .map(PagoLetras::getImportePagado)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);

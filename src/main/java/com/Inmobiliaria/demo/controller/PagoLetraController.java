@@ -31,8 +31,8 @@ public class PagoLetraController {
 
     private final PagoLetraService    pagoLetraService;
     private final PagoLetraRepository pagoLetraRepository;
-    private final UsuarioRepository usuarioRepository;
-    
+    private final UsuarioRepository   usuarioRepository;
+
     @GetMapping("/contrato/{idContrato}")
     public ResponseEntity<List<PagoLetraResponseDTO>> listarPorContrato(
             @PathVariable Integer idContrato) {
@@ -85,22 +85,24 @@ public class PagoLetraController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * Devuelve el siguiente número de comprobante disponible.
+     * CORRECCIÓN: ahora llama a sugerirNumeroComprobante() que existe en la interfaz.
+     */
     @GetMapping("/sugerir-numero")
     public ResponseEntity<SugerenciaNumeroComprobanteDTO> sugerirNumeroComprobante(
             @RequestParam TipoComprobante tipoComprobante) {
         SugerenciaNumeroComprobanteDTO sugerencia =
-                pagoLetraService.sugerirNumeroComprobante(tipoComprobante);
+                pagoLetraService.sugerirNumeroComprobante(tipoComprobante); // ← CORREGIDO
         return ResponseEntity.ok(sugerencia);
     }
 
-  
     @GetMapping("/{idPago}/comprobante-pdf")
     @Transactional(readOnly = true)
     public ResponseEntity<byte[]> descargarComprobante(@PathVariable Integer idPago) {
         PagoLetras pago = pagoLetraRepository.findById(idPago)
                 .orElseThrow(() -> new NegocioException("Pago no encontrado con ID: " + idPago));
 
-        // Obtener rol del usuario autenticado
         String rolUsuario = "SECRETARIA";
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getName() != null) {
@@ -117,22 +119,26 @@ public class PagoLetraController {
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
     }
-    
-    
+
+    /**
+     * Descarga el comprobante PDF de un pago múltiple por número de comprobante.
+     * CORRECCIÓN: usa findByComprobanteNumeroCompleto() en lugar del antiguo
+     * findByNumeroComprobante() que referenciaba un campo ya eliminado.
+     */
     @GetMapping("/comprobante-multiple/{numeroComprobante}")
     @Transactional(readOnly = true)
     public ResponseEntity<byte[]> descargarComprobanteMultiple(
             @PathVariable String numeroComprobante) {
 
-        List<com.Inmobiliaria.demo.entity.PagoLetras> pagos =
-                pagoLetraRepository.findByNumeroComprobante(numeroComprobante);
+        // ── CORRECCIÓN: buscar por la relación Comprobante.numeroCompleto ──────
+        List<PagoLetras> pagos =
+                pagoLetraRepository.findByComprobanteNumeroCompleto(numeroComprobante);
 
         if (pagos == null || pagos.isEmpty()) {
-            throw new com.Inmobiliaria.demo.exception.NegocioException(
+            throw new NegocioException(
                     "No se encontraron pagos con el comprobante: " + numeroComprobante);
         }
 
-        // Obtener rol del usuario autenticado para el comprobante múltiple
         String rolUsuarioMultiple = "SECRETARIA";
         Authentication authMultiple = SecurityContextHolder.getContext().getAuthentication();
         if (authMultiple != null && authMultiple.getName() != null) {

@@ -7,17 +7,16 @@ import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+
 @Data
 public class PagoMoraRequestDTO {
 
-    // ID de la mora que se va a pagar
-    private Integer idMora;
-
-    private BigDecimal montoPagado;
-    private LocalDate  fechaPago;
-    private MedioPago  medioPago;
-    private String     numeroOperacion;
+    private Integer         idMora;
+    private BigDecimal      montoPagado;
+    private LocalDate       fechaPago;
+    private MedioPago       medioPago;
+    private String          numeroOperacion;
     private TipoComprobante tipoComprobante;
-    private String     numeroComprobante;
-    private String     observaciones;
+    private String          numeroComprobantePersonalizado;
+    private String          observaciones;
 }

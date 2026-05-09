@@ -29,16 +29,22 @@ import com.Inmobiliaria.demo.enums.EstadoLote;
 import com.Inmobiliaria.demo.enums.EstadoContrato;
 import com.Inmobiliaria.demo.enums.EstadoSeparacion;
 import com.Inmobiliaria.demo.enums.TipoContrato;
+import com.Inmobiliaria.demo.enums.TipoOrigenComprobante;
 import com.Inmobiliaria.demo.enums.Moneda;
 import com.Inmobiliaria.demo.enums.TipoPropietario;
 import com.Inmobiliaria.demo.repository.ContratoRepository;
 import com.Inmobiliaria.demo.repository.LetraCambioRepository;
+import com.Inmobiliaria.demo.repository.PagoInicialRepository;
 import com.Inmobiliaria.demo.repository.PagoLetraRepository;
+import com.Inmobiliaria.demo.entity.Voucher;
 import com.Inmobiliaria.demo.service.*;
 import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.util.PdfGenerator;
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @CacheConfig(cacheNames = "contratos")
@@ -54,9 +60,13 @@ public class ContratoServiceImpl implements ContratoService {
     private final SeparacionService separacionService;
     private final VendedorService vendedorService;
     private final LetraCambioRepository letraCambioRepository;
-    private final PagoLetraRepository pagoLetraRepository;  // ✅ NUEVO
+    private final PagoLetraRepository pagoLetraRepository;
+    private final PagoInicialRepository pagoInicialRepository;
     private final InscripcionClient inscripcionClient;
     private final ModelMapper modelMapper;
+    private final ComprobanteService comprobanteService;
+    private final Cloudinary cloudinary;
+    private final com.Inmobiliaria.demo.repository.VoucherRepository voucherRepository;
 
     private void setearValoresPorDefecto(Contrato contrato) {
         if (contrato.getTipoContrato() == TipoContrato.CONTADO) {
@@ -66,7 +76,7 @@ public class ContratoServiceImpl implements ContratoService {
             contrato.setEstadoContrato(EstadoContrato.CANCELADO);
         }
     }
-    
+
     @Override
     @Transactional
     @CacheEvict(allEntries = true)
@@ -126,36 +136,88 @@ public class ContratoServiceImpl implements ContratoService {
         contrato.setVendedor(vendedor);
         contrato.setUsuario(usuarioService.buscarByUsuario(principal.getName()));
         setearValoresPorDefecto(contrato);
-        Contrato contratoGuardado = contratoRepository.save(contrato);
+        Contrato contratoGuardado;
+        contrato.setPagoInicial(null); // Evitar que ModelMapper mapee PagoInicialRequestDTO → PagoInicial transient
+        contratoGuardado = contratoRepository.save(contrato);
 
+        // ── Registrar pago de la inicial ───────────────────────────────────────
+        // Solo aplica a contratos FINANCIADOS con inicial > 0 y pagoInicial informado.
+        if (contratoGuardado.getTipoContrato() == TipoContrato.FINANCIADO
+                && requestDTO.getPagoInicial() != null
+                && contratoGuardado.getInicial() != null
+                && contratoGuardado.getInicial().compareTo(BigDecimal.ZERO) > 0) {
+
+        	PagoInicialRequestDTO piReq = requestDTO.getPagoInicial();
+
+        	PagoInicial pago = new PagoInicial();
+        	pago.setContrato(contratoGuardado);
+        	pago.setImportePagado(piReq.getImportePagado());
+        	pago.setFechaPago(piReq.getFechaPago());
+        	pago.setMedioPago(piReq.getMedioPago());
+        	pago.setNumeroOperacion(piReq.getNumeroOperacion());
+        	pago.setObservaciones(piReq.getObservaciones());
+
+            // ── PASO 1: guardar PagoInicial SIN comprobante todavía ──────────
+            // Obligatorio persistirlo primero para que Hibernate le asigne ID.
+            // Si se llama a comprobanteService antes del save, Hibernate hace
+            // auto-flush al ejecutar el SELECT interno y lanza
+            // TransientObjectException porque pago aún no tiene ID.
+            PagoInicial pagoGuardado = pagoInicialRepository.save(pago);
+
+            // ── PASO 2: ahora que pagoGuardado tiene ID, generar comprobante ──
+            if (piReq.getTipoComprobante() != null) {
+                Comprobante compInicial = comprobanteService.generarComprobanteConNumero(
+                    piReq.getTipoComprobante(),
+                    TipoOrigenComprobante.PAGO_INICIAL,
+                    contratoGuardado.getIdContrato(),
+                    pagoGuardado.getImportePagado(),
+                    pagoGuardado.getFechaPago(),
+                    piReq.getNumeroComprobantePersonalizado()
+                );
+                pagoGuardado.setComprobante(compInicial);
+                // Mantener compatibilidad con campo existente en Contrato
+                contratoGuardado.setComprobanteInicial(compInicial);
+                // Actualizar PagoInicial con el comprobante ya asignado
+                pagoGuardado = pagoInicialRepository.save(pagoGuardado);
+            }
+
+            // ── PASO 3: enlazar el pago (con comprobante) al contrato ────────
+            contratoGuardado.setPagoInicial(pagoGuardado);
+            contratoGuardado = contratoRepository.save(contratoGuardado);
+        }
+        // ── Fin registro pago inicial ──────────────────────────────────────────
+
+        final Contrato contratoFinal = contratoGuardado;
+        
         List<Integer> idsClientesAAsociar;
         if (requestDTO.getIdSeparacion() != null) {
-            Separacion separacion = contratoGuardado.getSeparacion();
+            Separacion separacion = contratoFinal.getSeparacion();
             separacion.setEstado(EstadoSeparacion.CONCRETADO);
             separacionService.actualizarSeparacion(separacion);
             idsClientesAAsociar = separacion.getClientes().stream()
                     .map(sc -> sc.getCliente().getIdCliente()).collect(Collectors.toList());
             separacion.getLotes().stream().map(sl -> sl.getLote().getIdLote())
-                    .forEach(idLote -> registrarLoteEnContrato(contratoGuardado, idLote));
+                    .forEach(idLote -> registrarLoteEnContrato(contratoFinal, idLote)); // ← usa contratoFinal
         } else {
             idsClientesAAsociar = requestDTO.getIdClientes();
             if (requestDTO.getIdLotes() != null)
-                requestDTO.getIdLotes().forEach(idLote -> registrarLoteEnContrato(contratoGuardado, idLote));
+                requestDTO.getIdLotes().forEach(idLote -> registrarLoteEnContrato(contratoFinal, idLote)); // ← usa contratoFinal
         }
-
+ 
         if (idsClientesAAsociar != null) {
             for (Integer idCliente : idsClientesAAsociar) {
                 Cliente cliente = clienteService.buscarClientePorId(idCliente);
                 if (cliente != null) {
                     ContratoCliente cc = new ContratoCliente();
-                    cc.setId(new ContratoClienteId(contratoGuardado.getIdContrato(), idCliente));
-                    cc.setContrato(contratoGuardado); cc.setCliente(cliente);
+                    cc.setId(new ContratoClienteId(contratoFinal.getIdContrato(), idCliente));
+                    cc.setContrato(contratoFinal); // ← usa contratoFinal (está dentro de un for, no lambda, pero es buena práctica)
+                    cc.setCliente(cliente);
                     cc.setTipoPropietario(TipoPropietario.TITULAR);
                     contratoClienteService.guardar(cc);
                 }
             }
         }
-        return mapToContratoResponseDTO(contratoGuardado);
+        return mapToContratoResponseDTO(contratoFinal);
     }
 
     @Override
@@ -193,13 +255,6 @@ public class ContratoServiceImpl implements ContratoService {
         }
         contrato.getLotes().clear();
 
-        // ─── DETECCIÓN INTELIGENTE: ¿los cambios afectan los importes de las letras? ──
-        // Los campos que determinan el importe por letra son:
-        //   saldo (= montoTotal - inicial), cantidadLetras y moneda.
-        // Si cualquiera cambia → las letras existentes quedan inconsistentes
-        // → se eliminan junto con sus pagos para no dejar registros huérfanos.
-        // Si NINGUNO cambia (solo se edita fecha, observaciones, vendedor, lotes, clientes)
-        // → las letras y pagos se conservan intactos.
         Moneda monedaNueva    = requestDTO.getMoneda() != null ? requestDTO.getMoneda() : Moneda.USD;
         Moneda monedaActual   = contrato.getMoneda()   != null ? contrato.getMoneda()   : Moneda.USD;
 
@@ -219,12 +274,8 @@ public class ContratoServiceImpl implements ContratoService {
                            && !contrato.getLetrasCambio().isEmpty();
 
         if (afectaLetras && tieneLetras) {
-            // Cascade ALL en LetraCambio → PagoLetras → Vouchers
-            // elimina toda la cadena automáticamente al hacer clear().
-            // El frontend ya mostró la advertencia y el usuario confirmó la acción.
             contrato.getLetrasCambio().clear();
         }
-        // Si !afectaLetras → letras y pagos quedan intactos.
 
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         try {
@@ -270,7 +321,6 @@ public class ContratoServiceImpl implements ContratoService {
         }
     }
 
-    // ✅ NUEVO: consulta previa para que el frontend muestre la advertencia
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> consultarImpactoEdicion(Integer idContrato) {
@@ -296,7 +346,6 @@ public class ContratoServiceImpl implements ContratoService {
     @Cacheable
     public List<ContratoResponseDTO> listarContratos() {
 
-        // Dos queries separadas — solución al MultipleBagFetchException
         List<Contrato> contratosConClientes = contratoRepository.findAllConClientes();
         List<Contrato> contratosConLotes    = contratoRepository.findAllConLotes();
 
@@ -307,7 +356,6 @@ public class ContratoServiceImpl implements ContratoService {
             c.setLotes(lotesMap.getOrDefault(c.getIdContrato(), List.of()))
         );
 
-        // Capturar RequestAttributes antes de los futuros para propagar JWT al hilo nuevo
         final RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
 
         List<Integer> idsConLuz  = List.of();
@@ -448,56 +496,6 @@ public class ContratoServiceImpl implements ContratoService {
         return PdfGenerator.generarContratoFlorida(dto, primeraLetra);
     }
 
-    private ContratoResponseDTO mapToContratoResponseDTO(Contrato contrato) {
-        return mapToContratoResponseDTO(contrato, false, false);
-    }
-
-    private ContratoResponseDTO mapToContratoResponseDTO(Contrato contrato, boolean luz, boolean agua) {
-        if (contrato == null) return null;
-
-        ContratoResponseDTO dto = modelMapper.map(contrato, ContratoResponseDTO.class);
-        dto.setTieneLuz(luz);
-        dto.setTieneAgua(agua);
-
-        if (contrato.getVendedor() != null) {
-            Vendedor v = contrato.getVendedor();
-            dto.setVendedor(new VendedorResponseDTO(
-                v.getIdVendedor(), v.getNombre(), v.getApellidos(), v.getDni(), v.getCelular()));
-        }
-
-        if (contrato.getClientes() != null) {
-            dto.setClientes(contrato.getClientes().stream().map(cc -> {
-                Cliente c = cc.getCliente();
-                return new ClienteResponseDTO(
-                	    c.getIdCliente(), c.getNombre(), c.getApellidos(),
-                	    c.getEstadoCivil(), c.getNumDoc(), c.getDireccion(), c.getCelular(),
-                	    c.getDistrito(), c.getGenero(),
-                	    c.getTipoCliente(),
-                	    c.getNacionalidad()
-                	);
-            }).collect(Collectors.toList()));
-        }
-
-        if (contrato.getLotes() != null) {
-            dto.setLotes(contrato.getLotes().stream().map(cl -> {
-                Lote l = cl.getLote();
-                return new LoteResponseDTO(l.getIdLote(), l.getManzana(), l.getNumeroLote(),
-                    l.getArea(), l.getLargo1(), l.getLargo2(), l.getAncho1(), l.getAncho2(),
-                    l.getColindanteNorte(), l.getColindanteSur(), l.getColindanteEste(),
-                    l.getColindanteOeste(), l.getPrograma().getNombrePrograma());
-            }).collect(Collectors.toList()));
-        }
-
-        if (contrato.getLetrasCambio() != null) {
-            dto.setLetras(contrato.getLetrasCambio().stream()
-                .sorted(Comparator.comparing(l -> Integer.parseInt(l.getNumeroLetra().split("/")[0])))
-                .map(letra -> new LetraResponseDTO(letra.getNumeroLetra(), letra.getFechaVencimiento(),
-                    letra.getImporte(), letra.getImporteLetras()))
-                .collect(Collectors.toList()));
-        }
-        return dto;
-    }
-
     @Override
     @Transactional
     @CacheEvict(allEntries = true)
@@ -600,5 +598,120 @@ public class ContratoServiceImpl implements ContratoService {
         return new TransferenciaResponseDTO(idContrato, lotesDto, idLotes, idVendedor, nombreVendedor,
             contrato.getMontoTotal(), montoPagado, saldoPendiente, (int) letrasRestantes,
             contrato.getCantidadLetras(), resumen);
+    }
+
+    // ── Upload voucher de la inicial ───────────────────────────────────────────
+
+    @Override
+    @Transactional
+    @CacheEvict(allEntries = true)
+    public ContratoResponseDTO subirVoucherInicial(Integer idContrato, MultipartFile voucher) {
+        Contrato contrato = contratoRepository.findById(idContrato)
+                .orElseThrow(() -> new NegocioException("Contrato no encontrado: " + idContrato));
+
+        PagoInicial pago = contrato.getPagoInicial();
+        if (pago == null)
+            throw new NegocioException("El contrato #" + idContrato + " no tiene un pago de inicial registrado.");
+
+        try {
+            String publicId = "inicial-" + idContrato + "-" + System.currentTimeMillis();
+            Map<String, Object> params = ObjectUtils.asMap(
+                "folder",    "vouchers/contrato-" + idContrato,
+                "public_id", publicId
+            );
+            Map<?, ?> result = cloudinary.uploader().upload(voucher.getBytes(), params);
+            String url = result.get("secure_url").toString();
+            Voucher v = new Voucher();
+            v.setTipoOrigen("PAGO_INICIAL");
+            v.setReferenciaId(pago.getIdPagoInicial());
+            v.setUrl(url);
+            voucherRepository.save(v);
+        } catch (Exception e) {
+            throw new NegocioException("Error al subir voucher de la inicial: " + e.getMessage());
+        }
+        return mapToContratoResponseDTO(contratoRepository.save(contrato));
+    }
+
+    // ── Mapeo a DTO ────────────────────────────────────────────────────────────
+
+    private ContratoResponseDTO mapToContratoResponseDTO(Contrato contrato) {
+        return mapToContratoResponseDTO(contrato, false, false);
+    }
+
+    private ContratoResponseDTO mapToContratoResponseDTO(Contrato contrato, boolean luz, boolean agua) {
+        if (contrato == null) return null;
+
+        ContratoResponseDTO dto = modelMapper.map(contrato, ContratoResponseDTO.class);
+        dto.setTieneLuz(luz);
+        dto.setTieneAgua(agua);
+
+        if (contrato.getVendedor() != null) {
+            Vendedor v = contrato.getVendedor();
+            dto.setVendedor(new VendedorResponseDTO(
+                v.getIdVendedor(), v.getNombre(), v.getApellidos(), v.getDni(), v.getCelular()));
+        }
+
+        if (contrato.getClientes() != null) {
+            dto.setClientes(contrato.getClientes().stream().map(cc -> {
+                Cliente c = cc.getCliente();
+                return new ClienteResponseDTO(
+                        c.getIdCliente(), c.getNombre(), c.getApellidos(),
+                        c.getEstadoCivil(), c.getNumDoc(), c.getDireccion(), c.getCelular(),
+                        c.getDistrito(), c.getGenero(),
+                        c.getTipoCliente(),
+                        c.getNacionalidad()
+                    );
+            }).collect(Collectors.toList()));
+        }
+
+        if (contrato.getLotes() != null) {
+            dto.setLotes(contrato.getLotes().stream().map(cl -> {
+                Lote l = cl.getLote();
+                return new LoteResponseDTO(l.getIdLote(), l.getManzana(), l.getNumeroLote(),
+                    l.getArea(), l.getLargo1(), l.getLargo2(), l.getAncho1(), l.getAncho2(),
+                    l.getColindanteNorte(), l.getColindanteSur(), l.getColindanteEste(),
+                    l.getColindanteOeste(), l.getPrograma().getNombrePrograma());
+            }).collect(Collectors.toList()));
+        }
+
+        if (contrato.getLetrasCambio() != null) {
+            dto.setLetras(contrato.getLetrasCambio().stream()
+                .sorted(Comparator.comparing(l -> Integer.parseInt(l.getNumeroLetra().split("/")[0])))
+                .map(letra -> new LetraResponseDTO(letra.getNumeroLetra(), letra.getFechaVencimiento(),
+                    letra.getImporte(), letra.getImporteLetras()))
+                .collect(Collectors.toList()));
+        }
+
+        // ── Comprobante de la inicial (compatibilidad) ─────────────────────────
+        if (contrato.getComprobanteInicial() != null) {
+            Comprobante ci = contrato.getComprobanteInicial();
+            dto.setIdComprobanteInicial(ci.getIdComprobante());
+            dto.setTipoComprobanteInicial(ci.getTipoComprobante());
+            dto.setNumeroComprobanteInicial(ci.getNumeroCompleto());
+        }
+
+        // ── Datos completos del pago de la inicial ─────────────────────────────
+        if (contrato.getPagoInicial() != null) {
+            PagoInicial pi = contrato.getPagoInicial();
+            PagoInicialResponseDTO piDto = new PagoInicialResponseDTO();
+            piDto.setIdPagoInicial(pi.getIdPagoInicial());
+            piDto.setImportePagado(pi.getImportePagado());
+            piDto.setFechaPago(pi.getFechaPago());
+            piDto.setMedioPago(pi.getMedioPago());
+            piDto.setNumeroOperacion(pi.getNumeroOperacion());
+            piDto.setObservaciones(pi.getObservaciones());
+            List<String> urlsVoucher = voucherRepository
+                .findByTipoOrigenAndReferenciaId("PAGO_INICIAL", pi.getIdPagoInicial())
+                .stream().map(Voucher::getUrl).collect(java.util.stream.Collectors.toList());
+            piDto.setUrlsVoucher(urlsVoucher);
+            if (pi.getComprobante() != null) {
+                piDto.setIdComprobante(pi.getComprobante().getIdComprobante());
+                piDto.setTipoComprobante(pi.getComprobante().getTipoComprobante());
+                piDto.setNumeroComprobante(pi.getComprobante().getNumeroCompleto());
+            }
+            dto.setPagoInicial(piDto);
+        }
+
+        return dto;
     }
 }

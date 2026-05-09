@@ -4,19 +4,19 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "pago_letra")
+@Table(name = "pago_inicial")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class PagoLetras extends PagoBase {
+public class PagoInicial extends PagoBase {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_pago")
-    private Integer idPago;
+    @Column(name = "id_pago_inicial")
+    private Integer idPagoInicial;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_letra", nullable = false)
-    private LetraCambio letra;
+    @JoinColumn(name = "id_contrato", nullable = false)
+    private Contrato contrato;
 }

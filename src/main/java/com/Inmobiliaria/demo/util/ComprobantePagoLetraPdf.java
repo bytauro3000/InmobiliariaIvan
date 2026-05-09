@@ -136,11 +136,16 @@ public class ComprobantePagoLetraPdf {
             LetraCambio letra    = pago.getLetra();
             Contrato    contrato = letra.getContrato();
 
-            String tituloPrincipal = (pago.getTipoComprobante() == TipoComprobante.BOLETA)
+            TipoComprobante tipoCompPago = (pago.getComprobante() != null)
+                    ? pago.getComprobante().getTipoComprobante()
+                    : null;
+ 
+            String tituloPrincipal = (tipoCompPago == TipoComprobante.BOLETA)
                     ? "BOLETA DE VENTA" : "RECIBO DE INGRESO";
-
-            String numComp = (pago.getTipoComprobante() != null && pago.getNumeroComprobante() != null)
-                    ? pago.getNumeroComprobante() : "----------";
+ 
+            String numComp = (pago.getComprobante() != null
+                    && pago.getComprobante().getNumeroCompleto() != null)
+                    ? pago.getComprobante().getNumeroCompleto() : "----------";
 
             String clientes = construirTextoClientes(contrato);
 
@@ -412,10 +417,17 @@ public class ComprobantePagoLetraPdf {
                     + " " + contrato.getUsuario().getApellidos();
         }
 
-        String tituloPrincipal = (primero.getTipoComprobante() == TipoComprobante.BOLETA)
+        TipoComprobante tipoCompMultiple = (primero.getComprobante() != null)
+                ? primero.getComprobante().getTipoComprobante()
+                : null;
+ 
+        String tituloPrincipal = (tipoCompMultiple == TipoComprobante.BOLETA)
                 ? "BOLETA DE VENTA" : "RECIBO DE INGRESO";
-        String numComp = (primero.getTipoComprobante() != null && primero.getNumeroComprobante() != null)
-                ? primero.getNumeroComprobante() : "----------";
+        String numComp = (primero.getComprobante() != null
+                && primero.getComprobante().getNumeroCompleto() != null)
+                ? primero.getComprobante().getNumeroCompleto() : "----------";
+        
+        
         String fechaPagoStr = primero.getFechaPago() != null ? primero.getFechaPago().format(FMT) : "-";
         String medioPago    = primero.getMedioPago() != null ? primero.getMedioPago().name() : "-";
         String numOp        = (primero.getNumeroOperacion() != null && !primero.getNumeroOperacion().isBlank())

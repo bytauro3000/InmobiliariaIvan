@@ -17,6 +17,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -25,76 +26,57 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MoraController {
 
-    private final MoraService moraService;
-    private final PagoMoraRepository pagoMoraRepository;
-    private final PagoLetraService pagoLetraService;
+    private final MoraService          moraService;
+    private final PagoMoraRepository   pagoMoraRepository;
+    private final PagoLetraService     pagoLetraService;
 
     // ── CONSULTAS ─────────────────────────────────────────────────────────────
 
-    /**
-     * Calcula la mora para una letra vencida SIN guardarla.
-     * GET /api/moras/calcular/{idLetra}
-     */
     @GetMapping("/calcular/{idLetra}")
     public ResponseEntity<CalculoMoraDTO> calcularMora(@PathVariable Integer idLetra) {
         return ResponseEntity.ok(moraService.calcularMora(idLetra));
     }
 
-    /**
-     * Lista todas las moras (cualquier estado) de un contrato.
-     * GET /api/moras/contrato/{idContrato}
-     */
     @GetMapping("/contrato/{idContrato}")
     public ResponseEntity<List<MoraResponseDTO>> listarPorContrato(
             @PathVariable Integer idContrato) {
         return ResponseEntity.ok(moraService.listarPorContrato(idContrato));
     }
 
-    /**
-     * Lista solo las moras PENDIENTES de un contrato.
-     * GET /api/moras/contrato/{idContrato}/pendientes
-     */
     @GetMapping("/contrato/{idContrato}/pendientes")
     public ResponseEntity<List<MoraResponseDTO>> listarPendientesPorContrato(
             @PathVariable Integer idContrato) {
         return ResponseEntity.ok(moraService.listarPendientesPorContrato(idContrato));
     }
 
-    /**
-     * Lista todas las moras de una letra específica.
-     * GET /api/moras/letra/{idLetra}
-     */
     @GetMapping("/letra/{idLetra}")
     public ResponseEntity<List<MoraResponseDTO>> listarPorLetra(
             @PathVariable Integer idLetra) {
         return ResponseEntity.ok(moraService.listarPorLetra(idLetra));
     }
 
-    /**
-     * Obtiene una mora por su ID.
-     * GET /api/moras/{idMora}
-     */
     @GetMapping("/{idMora}")
     public ResponseEntity<MoraResponseDTO> obtenerPorId(@PathVariable Integer idMora) {
         return ResponseEntity.ok(moraService.obtenerPorId(idMora));
     }
-    
+
+    /**
+     * Sugiere el siguiente número de comprobante disponible.
+     * CORRECCIÓN: ahora llama a sugerirNumeroComprobante() que existe en la interfaz
+     * y devuelve directamente SugerenciaNumeroComprobanteDTO.
+     */
     @GetMapping("/sugerir-numero")
     public ResponseEntity<SugerenciaNumeroComprobanteDTO> sugerirNumeroComprobante(
             @RequestParam TipoComprobante tipoComprobante) {
-        return ResponseEntity.ok(pagoLetraService.sugerirNumeroComprobante(tipoComprobante));
+        return ResponseEntity.ok(pagoLetraService.sugerirNumeroComprobante(tipoComprobante)); // ← CORREGIDO
     }
-    
+
     @PostMapping("/crear-pendiente/{idLetra}")
     public ResponseEntity<MoraResponseDTO> crearMoraPendiente(
             @PathVariable Integer idLetra) {
         return new ResponseEntity<>(moraService.crearMoraPendiente(idLetra), HttpStatus.CREATED);
     }
 
-    /**
-     * Resumen de mora pendiente de un contrato (cantidad + total acumulado).
-     * GET /api/moras/contrato/{idContrato}/resumen
-     */
     @GetMapping("/contrato/{idContrato}/resumen")
     public ResponseEntity<MoraResumenContratoDTO> obtenerResumenPorContrato(
             @PathVariable Integer idContrato) {
@@ -103,20 +85,14 @@ public class MoraController {
 
     // ── ACCIONES ──────────────────────────────────────────────────────────────
 
-    /**
-     * Registra el pago de una mora.
-     * POST /api/moras/pagar
-     */
-    @PostMapping("/pagar")
+    @PostMapping(value = "/pagar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PagoMoraResponseDTO> pagarMora(
-            @RequestBody PagoMoraRequestDTO request) {
-        return new ResponseEntity<>(moraService.pagarMora(request), HttpStatus.CREATED);
+            @RequestPart("pago") PagoMoraRequestDTO request,
+            @RequestPart(value = "vouchers", required = false) List<MultipartFile> vouchers)
+            throws java.io.IOException {
+        return new ResponseEntity<>(moraService.pagarMora(request, vouchers), HttpStatus.CREATED);
     }
 
-    /**
-     * Anula una mora (solo para correcciones administrativas).
-     * PATCH /api/moras/{idMora}/anular
-     */
     @PatchMapping("/{idMora}/anular")
     public ResponseEntity<MoraResponseDTO> anularMora(
             @PathVariable Integer idMora,
@@ -124,23 +100,21 @@ public class MoraController {
         return ResponseEntity.ok(moraService.anularMora(idMora, motivo));
     }
 
-   
     @GetMapping("/pago/{idPagoMora}/comprobante-pdf")
     @Transactional(readOnly = true)
     public ResponseEntity<byte[]> descargarComprobanteMora(
             @PathVariable Integer idPagoMora,
-            Authentication authentication) {   // Spring inyecta esto automáticamente
+            Authentication authentication) {
         try {
             PagoMora pagoMora = pagoMoraRepository.findById(idPagoMora)
                     .orElseThrow(() -> new NegocioException(
                             "Pago de mora no encontrado: " + idPagoMora));
 
-          
             String rolUsuario = "SECRETARIA";
             if (authentication != null && authentication.getAuthorities() != null) {
                 rolUsuario = authentication.getAuthorities().stream()
-                        .map(GrantedAuthority::getAuthority)   // "ROLE_SECRETARIA"
-                        .map(r -> r.replace("ROLE_", ""))      // "SECRETARIA"
+                        .map(GrantedAuthority::getAuthority)
+                        .map(r -> r.replace("ROLE_", ""))
                         .findFirst()
                         .orElse("SECRETARIA");
             }

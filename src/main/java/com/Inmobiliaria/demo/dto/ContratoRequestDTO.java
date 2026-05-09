@@ -23,4 +23,6 @@ public class ContratoRequestDTO {
     private List<Integer> idClientes;
     private List<Integer> idLotes;
     private Moneda moneda;
+
+    private PagoInicialRequestDTO pagoInicial;
 }

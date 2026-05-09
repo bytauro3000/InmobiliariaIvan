@@ -1,7 +1,6 @@
 package com.Inmobiliaria.demo.repository;
 
 import com.Inmobiliaria.demo.entity.PagoLetras;
-import com.Inmobiliaria.demo.enums.TipoComprobante;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -20,16 +19,21 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
     List<PagoLetras> findByLetraContratoIdContrato(Integer idContrato);
 
     long countByLetraIdLetra(Integer idLetra);
-    
-    Optional<PagoLetras> findFirstByTipoComprobanteAndNumeroComprobanteNotNullOrderByNumeroComprobanteDesc(TipoComprobante tipoComprobante);
 
-    boolean existsByTipoComprobanteAndNumeroComprobante(TipoComprobante tipoComprobante, String numeroComprobante);
+    @Query("SELECT p FROM PagoLetras p " +
+           "JOIN FETCH p.comprobante c " +
+           "WHERE c.numeroCompleto = :numeroCompleto")
+    List<PagoLetras> findByComprobanteNumeroCompleto(@Param("numeroCompleto") String numeroCompleto);
 
-    boolean existsByTipoComprobanteAndNumeroComprobanteAndIdPagoNot(TipoComprobante tipoComprobante, String numeroComprobante, Integer idPago);
+    /**
+     * Cuenta los pagos asociados a un mismo comprobante.
+     */
+    @Query("SELECT COUNT(p) FROM PagoLetras p " +
+           "JOIN p.comprobante c " +
+           "WHERE c.numeroCompleto = :numeroCompleto")
+    long countByComprobanteNumeroCompleto(@Param("numeroCompleto") String numeroCompleto);
 
-    List<PagoLetras> findByNumeroComprobante(String numeroComprobante);
-
-    long countByNumeroComprobante(String numeroComprobante);
+    // ── Consultas para scheduler y email ──────────────────────────────────────
 
     @Query("SELECT DISTINCT p FROM PagoLetras p " +
            "JOIN FETCH p.letra l " +
@@ -37,11 +41,19 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
            "WHERE p.fechaPago = :fecha")
     List<PagoLetras> findByFechaPago(@Param("fecha") LocalDate fecha);
 
+    /**
+     * Busca pagos de una fecha cuyo comprobante aún no fue enviado por email.
+     * Usa comprobante.emailEnviado como fuente de verdad (campo unificado).
+     * También incluye pagos sin comprobante para no dejarlos fuera del proceso.
+     */
     @Query("SELECT DISTINCT p FROM PagoLetras p " +
            "JOIN FETCH p.letra l " +
            "JOIN FETCH l.contrato c " +
-           "WHERE p.fechaPago = :fecha AND p.emailEnviado = false")
+           "WHERE p.fechaPago = :fecha " +
+           "AND (p.comprobante IS NULL OR p.comprobante.emailEnviado = false)")
     List<PagoLetras> findByFechaPagoAndEmailEnviadoFalse(@Param("fecha") LocalDate fecha);
+
+    // ── Utilidad para validar orden de pago ───────────────────────────────────
 
     @Query(value =
         "SELECT MAX(CAST(SUBSTRING_INDEX(lc.numero_letra, '/', 1) AS UNSIGNED)) " +

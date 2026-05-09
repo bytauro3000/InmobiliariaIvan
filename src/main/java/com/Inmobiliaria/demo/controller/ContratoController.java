@@ -113,6 +113,14 @@ public class ContratoController {
                 .body(pdfBytes);
     }
 
+    @PostMapping(value = "/{id}/voucher-inicial", consumes = "multipart/form-data")
+    public ResponseEntity<ContratoResponseDTO> subirVoucherInicial(
+            @PathVariable Integer id,
+            @RequestParam("voucher") org.springframework.web.multipart.MultipartFile voucher) {
+        ContratoResponseDTO dto = contratoService.subirVoucherInicial(id, voucher);
+        return ResponseEntity.ok(dto);
+    }
+
     @PostMapping("/scheduler/ejecutar")
     public ResponseEntity<String> ejecutarScheduler() {
         contratoEstadoScheduler.ejecutarManualmente();

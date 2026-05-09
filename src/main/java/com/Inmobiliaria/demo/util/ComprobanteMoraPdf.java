@@ -82,13 +82,17 @@ public class ComprobanteMoraPdf {
                             : com.Inmobiliaria.demo.enums.Moneda.USD;
             String simbolo = (monedaContrato == com.Inmobiliaria.demo.enums.Moneda.PEN) ? "S/" : "$";
 
-            String tituloPrincipal = (pagoMora.getTipoComprobante() == TipoComprobante.BOLETA)
+            TipoComprobante tipoComp =
+                    (pagoMora.getComprobante() != null)
+                    ? pagoMora.getComprobante().getTipoComprobante()
+                    : null;
+ 
+            String tituloPrincipal = (tipoComp == TipoComprobante.BOLETA)
                     ? "BOLETA DE VENTA" : "RECIBO DE INGRESO";
-
-            String numComp = (pagoMora.getTipoComprobante() != null
-                    && pagoMora.getNumeroComprobante() != null)
-                    ? pagoMora.getNumeroComprobante() : "----------";
-
+ 
+            String numComp = (pagoMora.getComprobante() != null
+                    && pagoMora.getComprobante().getNumeroCompleto() != null)
+                    ? pagoMora.getComprobante().getNumeroCompleto() : "----------";
             String clientes = construirTextoClientes(contrato);
 
             String usuarioRegistro = "-";
@@ -214,7 +218,7 @@ public class ComprobanteMoraPdf {
                     .setPadding(4)
                     .setTextAlignment(TextAlignment.CENTER)
                     .setVerticalAlignment(VerticalAlignment.MIDDLE)
-                    .add(new Paragraph(simbolo + " " + DF.format(pagoMora.getMontoPagado()))
+                    .add(new Paragraph(simbolo + " " + DF.format(pagoMora.getImportePagado()))
                             .setFont(courierBold).setFontSize(15)
                             .setTextAlignment(TextAlignment.CENTER)));
             doc.add(filaRecibo);

@@ -26,6 +26,8 @@ public interface PagoLetraService {
     void eliminarPago(Integer idPago) throws IOException;
 
     List<PagoLetraResponseDTO> registrarPagosMultiples(PagosMultiplesRequestDTO request, List<MultipartFile> vouchers) throws IOException;
-    
+
+    String previewSiguienteNumeroComprobante(TipoComprobante tipoComprobante);
+
     SugerenciaNumeroComprobanteDTO sugerirNumeroComprobante(TipoComprobante tipoComprobante);
 }

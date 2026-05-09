@@ -33,4 +33,6 @@ public interface ContratoService {
     List<ContratoResponseDTO> buscarPorNombreCliente(String termino);
 
     Map<String, Object> consultarImpactoEdicion(Integer idContrato);
+
+    ContratoResponseDTO subirVoucherInicial(Integer idContrato, org.springframework.web.multipart.MultipartFile voucher);
 }

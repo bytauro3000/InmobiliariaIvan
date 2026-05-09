@@ -7,6 +7,7 @@ import java.util.List;
 import com.Inmobiliaria.demo.enums.TipoContrato;
 import com.Inmobiliaria.demo.enums.EstadoContrato;
 import com.Inmobiliaria.demo.enums.Moneda;
+import com.Inmobiliaria.demo.enums.TipoComprobante;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -31,4 +32,9 @@ public class ContratoResponseDTO {
     private VendedorResponseDTO vendedor;
     private boolean tieneLuz;
     private boolean tieneAgua;
+    private Long idComprobanteInicial;
+    private TipoComprobante tipoComprobanteInicial;
+    private String numeroComprobanteInicial;
+
+    private PagoInicialResponseDTO pagoInicial;
 }

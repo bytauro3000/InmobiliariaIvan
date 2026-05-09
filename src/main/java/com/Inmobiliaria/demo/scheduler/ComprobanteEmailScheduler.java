@@ -1,7 +1,9 @@
 package com.Inmobiliaria.demo.scheduler;
 
+import com.Inmobiliaria.demo.entity.Comprobante;
 import com.Inmobiliaria.demo.entity.ContratoCliente;
 import com.Inmobiliaria.demo.entity.PagoLetras;
+import com.Inmobiliaria.demo.repository.ComprobanteRepository;
 import com.Inmobiliaria.demo.repository.PagoLetraRepository;
 import com.Inmobiliaria.demo.service.EmailService;
 import lombok.RequiredArgsConstructor;
@@ -60,8 +62,9 @@ public class ComprobanteEmailScheduler {
     @RequiredArgsConstructor
     public static class ComprobanteEmailHelper {
 
-        private final PagoLetraRepository pagoLetraRepository;
-        private final EmailService emailService;
+        private final PagoLetraRepository    pagoLetraRepository;
+        private final ComprobanteRepository  comprobanteRepository;
+        private final EmailService           emailService;
 
         @Transactional
         public void enviarComprobantesDelDiaAnterior(AtomicBoolean ejecutando) {
@@ -78,12 +81,14 @@ public class ComprobanteEmailScheduler {
 
                 log.info(">>> ComprobanteEmailScheduler: {} pago(s) del {} pendientes de envío.", pagos.size(), ayer);
 
-                // Agrupar por número de comprobante para enviar UN solo correo por comprobante
-                // Los pagos sin número de comprobante se tratan individualmente
+                // ── Agrupar por número de comprobante usando la relación centralizada ──
+                // Se lee desde pago.getComprobante().getNumeroCompleto() en lugar del
+                // campo propio que ya fue eliminado de PagoLetras.
                 Map<String, List<PagoLetras>> grupos = new LinkedHashMap<>();
                 for (PagoLetras pago : pagos) {
-                    String clave = (pago.getNumeroComprobante() != null && !pago.getNumeroComprobante().isBlank())
-                            ? pago.getNumeroComprobante()
+                    Comprobante comp = pago.getComprobante();
+                    String clave = (comp != null && comp.getNumeroCompleto() != null && !comp.getNumeroCompleto().isBlank())
+                            ? comp.getNumeroCompleto()
                             : "SIN_COMP_" + pago.getIdPago();
                     grupos.computeIfAbsent(clave, k -> new ArrayList<>()).add(pago);
                 }
@@ -113,9 +118,14 @@ public class ComprobanteEmailScheduler {
                             log.warn("Contrato #{} sin emails — comprobante {} omitido.",
                                     contrato.getIdContrato(), entry.getKey());
                             grupos_sin_email++;
-                            // Marcar como enviado igual para no reintentar indefinidamente
-                            grupo.forEach(p -> p.setEmailEnviado(true));
-                            pagoLetraRepository.saveAll(grupo);
+                            // Marcar el comprobante como enviado para no reintentar indefinidamente
+                            grupo.stream()
+                                 .map(PagoLetras::getComprobante)
+                                 .filter(Objects::nonNull)
+                                 .forEach(comp -> {
+                                     comp.setEmailEnviado(true);
+                                     comprobanteRepository.save(comp);
+                                 });
                             continue;
                         }
 
@@ -132,9 +142,14 @@ public class ComprobanteEmailScheduler {
 
                         emailService.enviarComprobanteATodos(grupo, emailsDestino);
 
-                        // Marcar TODOS los pagos del grupo como enviados
-                        grupo.forEach(p -> p.setEmailEnviado(true));
-                        pagoLetraRepository.saveAll(grupo);
+                        // Marcar el comprobante como enviado (fuente de verdad unificada)
+                        grupo.stream()
+                             .map(PagoLetras::getComprobante)
+                             .filter(Objects::nonNull)
+                             .forEach(comp -> {
+                                 comp.setEmailEnviado(true);
+                                 comprobanteRepository.save(comp);
+                             });
                         grupos_enviados++;
 
                     } catch (Exception e) {
