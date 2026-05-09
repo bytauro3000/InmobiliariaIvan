@@ -242,8 +242,9 @@ public class ComprobanteServiceImpl implements ComprobanteService {
                 .orElse(0);
 
         // Número más alto real en la tabla comprobante (incluye números manuales)
-        int desdeTabla = comprobanteRepository
+        Integer desdeTablaRaw = comprobanteRepository
                 .findMaxNumeroByTipoAndSerie(tipoComprobante, serie);
+        int desdeTabla = (desdeTablaRaw != null) ? desdeTablaRaw : 0;
 
         // El siguiente será el mayor de los dos + 1
         int siguiente = Math.max(desdeContador, desdeTabla) + 1;

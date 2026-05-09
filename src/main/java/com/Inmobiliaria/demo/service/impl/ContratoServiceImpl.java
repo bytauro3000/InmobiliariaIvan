@@ -39,7 +39,7 @@ import com.Inmobiliaria.demo.repository.PagoLetraRepository;
 import com.Inmobiliaria.demo.entity.Voucher;
 import com.Inmobiliaria.demo.service.*;
 import com.Inmobiliaria.demo.exception.NegocioException;
-import com.Inmobiliaria.demo.util.PdfGenerator;
+import com.Inmobiliaria.demo.util.ContratoFloridaPdf;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 
@@ -493,7 +493,7 @@ public class ContratoServiceImpl implements ContratoService {
         ContratoResponseDTO dto = this.mapToContratoResponseDTO(contrato);
         LetraCambio primeraLetra = letraCambioRepository
                 .findFirstByContratoIdContratoOrderByNumeroLetraAsc(idContrato).orElse(null);
-        return PdfGenerator.generarContratoFlorida(dto, primeraLetra);
+        return ContratoFloridaPdf.generarContratoFlorida(dto, primeraLetra);
     }
 
     @Override

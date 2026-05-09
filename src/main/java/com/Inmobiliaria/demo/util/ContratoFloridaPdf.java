@@ -38,7 +38,7 @@ import com.itextpdf.io.util.StreamUtil;
 import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.font.PdfFontFactory;
 
-public class PdfGenerator {
+public class ContratoFloridaPdf {
 
 	public static byte[] generarContratoFlorida(ContratoResponseDTO contrato, LetraCambio primeraLetraEntidad) {
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -56,25 +56,25 @@ public class PdfGenerator {
 		try {
 			// 1. Arial Normal (Para el cuerpo del texto)
 			byte[] nBytes = StreamUtil.inputStreamToArray(
-					PdfGenerator.class.getClassLoader().getResourceAsStream("fonts/ARIAL.TTF")
+					ContratoFloridaPdf.class.getClassLoader().getResourceAsStream("fonts/ARIAL.TTF")
 					);
 			arialNormal = PdfFontFactory.createFont(nBytes, PdfEncodings.WINANSI);
 
 			// 2. Arial Bold (Para nombres y datos en negrita)
 			byte[] bBytes = StreamUtil.inputStreamToArray(
-					PdfGenerator.class.getClassLoader().getResourceAsStream("fonts/ARIALBD.TTF")
+					ContratoFloridaPdf.class.getClassLoader().getResourceAsStream("fonts/ARIALBD.TTF")
 					);
 			arialBold = PdfFontFactory.createFont(bBytes, PdfEncodings.WINANSI);
 
 			// 3. Arial Bold Italic (Para el título del contrato)
 			byte[] biBytes = StreamUtil.inputStreamToArray(
-					PdfGenerator.class.getClassLoader().getResourceAsStream("fonts/ARIALBI.TTF")
+					ContratoFloridaPdf.class.getClassLoader().getResourceAsStream("fonts/ARIALBI.TTF")
 					);
 			arialBoldItalic = PdfFontFactory.createFont(biBytes, PdfEncodings.WINANSI);
 
 			// 4. Carga de Arial Italic (Solo Cursiva)
 			byte[] iBytes = StreamUtil.inputStreamToArray(
-					PdfGenerator.class.getClassLoader().getResourceAsStream("fonts/ARIALI.TTF")
+					ContratoFloridaPdf.class.getClassLoader().getResourceAsStream("fonts/ARIALI.TTF")
 					);
 			arialItalic = PdfFontFactory.createFont(iBytes, PdfEncodings.WINANSI);
 
@@ -283,11 +283,9 @@ public class PdfGenerator {
 
 		primeraCuerpo.add(new Text("“LA VENDEDORA”").setFont(arialBoldItalic));
 
-		// 🟢 LÓGICA DINÁMICA CORREGIDA
 		String nombreProgFiltro = lote.getNombrePrograma().toUpperCase();
 
-		// Primero validamos la frase más larga/específica para evitar falsos positivos
-		if (nombreProgFiltro.contains("2DA ETAPA") || nombreProgFiltro.contains("SEGUNDA ETAPA")) {
+		if (nombreProgFiltro.contains("2DA ETAPA")) {
 		    
 		    // --- TEXTO PARA LA SEGUNDA ETAPA (Basado en el PDF de 15 Has - 74.54%) ---
 		    primeraCuerpo.add(" es propietaria de un lote de terreno rústico con un área superficial de 150,000.00 m2 Equivalente a 15 Has., que corresponde al 74.543780% de las acciones y derechos del Predio denominado Sector Pampa San Antonio, Margen derecha del Kilómetro 23 de la Avenida Túpac Amaru el cual forma parte de un área superficial de 201,224.03m2 equivalente a 20has. 1,224.04m2, ubicado en el Distrito de Carabayllo, Provincia y Departamento De Lima, formando parte de un predio de mayor extensión ubicado en las Provincia de Huarochirí, Lima y Canta, inscrito a fojas 515 del tomo 10-H, actualmente ");
@@ -309,12 +307,12 @@ public class PdfGenerator {
 		    primeraCuerpo.add(". Sobre dicho terreno, ");
 		    primeraCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
 		    primeraCuerpo.add(" ha proyectado el Programa de Vivienda denominado ");
-		    primeraCuerpo.add(new Text("“LA FLORIDA DE TORRE BLANCA (2DA ETAPA)”").setFont(arialBoldItalic));
+		    primeraCuerpo.add(new Text("\u201cLA FLORIDA DE TORRE BLANCA - 2DA ETAPA\u201d").setFont(arialBoldItalic));
 		    primeraCuerpo.add(", el mismo que se distribuye en los lotes y manzanas con sus respectivas áreas conforme al plano de Lotización.");
 
-		} else if (nombreProgFiltro.contains("LA FLORIDA DE TORRE BLANCA")) {
-		    
-		    // --- TEXTO PARA EL PROGRAMA NORMAL (Basado en el PDF de 20 Has - 100%) ---
+		} else if (nombreProgFiltro.contains("3RA ETAPA")) {
+
+		    // --- TEXTO PARA LA TERCERA ETAPA ---
 		    primeraCuerpo.add(" es propietaria de un lote de terreno rústico con un área superficial de 201,224.03 m2 Equivalente a 20 Has. 1,224.03 m2, que corresponde al 100% de las acciones y derechos del Predio denominado Sector Pampa San Antonio, Margen derecha del Kilómetro 23 de La Avenida Túpac Amaru, Distrito de Carabayllo, Provincia y Departamento De Lima, el cual forma parte de un predio de mayor extensión ubicado en las Provincia de Huarochirí, Lima y Canta, inscrito a fojas 515 del tomo 10-H, actualmente ");
 		    primeraCuerpo.add(new Text("Partida Electrónica 11049870 del Registro de Predios de Lima. ").setFont(arialBoldItalic));
 		    primeraCuerpo.add("\n\nFue adquirido mediante la minuta de Compra- Venta de Acciones y Derechos de Predio Rustico de la fecha ");
@@ -332,7 +330,30 @@ public class PdfGenerator {
 		    primeraCuerpo.add(". Sobre dicho terreno, ");
 		    primeraCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
 		    primeraCuerpo.add(" ha proyectado el Programa de Vivienda denominado ");
-		    primeraCuerpo.add(new Text("“LA FLORIDA DE TORRE BLANCA 1ERA.ETAPA”").setFont(arialBoldItalic));
+		    primeraCuerpo.add(new Text("\u201cLA FLORIDA DE TORRE BLANCA - 3RA ETAPA\u201d").setFont(arialBoldItalic));
+		    primeraCuerpo.add(", el mismo que se distribuye en los lotes y manzanas con sus respectivas áreas conforme al plano de Lotización.");
+
+		} else if (nombreProgFiltro.contains("LA FLORIDA DE TORRE BLANCA")) {
+
+		    // --- TEXTO PARA LA PRIMERA ETAPA (Basado en el PDF de 20 Has - 100%) ---
+		    primeraCuerpo.add(" es propietaria de un lote de terreno rústico con un área superficial de 201,224.03 m2 Equivalente a 20 Has. 1,224.03 m2, que corresponde al 100% de las acciones y derechos del Predio denominado Sector Pampa San Antonio, Margen derecha del Kilómetro 23 de La Avenida Túpac Amaru, Distrito de Carabayllo, Provincia y Departamento De Lima, el cual forma parte de un predio de mayor extensión ubicado en las Provincia de Huarochirí, Lima y Canta, inscrito a fojas 515 del tomo 10-H, actualmente ");
+		    primeraCuerpo.add(new Text("Partida Electrónica 11049870 del Registro de Predios de Lima. ").setFont(arialBoldItalic));
+		    primeraCuerpo.add("\n\nFue adquirido mediante la minuta de Compra- Venta de Acciones y Derechos de Predio Rustico de la fecha ");
+		    primeraCuerpo.add(new Text("06/11/2019").setFont(arialBoldItalic));
+		    primeraCuerpo.add(" (15 Has.) y con fecha ");
+		    primeraCuerpo.add(new Text("29/03/2021").setFont(arialBoldItalic));
+		    primeraCuerpo.add(" (51,224.03 m2). Que le otorgo su anterior Propietaria ");
+		    primeraCuerpo.add(new Text("INVERSIONES INMOBILIARIAS LAS PRADERAS S.A.C").setFont(arialBoldItalic));
+		    primeraCuerpo.add(", identificada con ");
+		    primeraCuerpo.add(new Text("RUC. N°20601878616").setFont(arialBoldItalic));
+		    primeraCuerpo.add(", debidamente representada por su Gerente General ");
+		    primeraCuerpo.add(new Text("DON JOSE ANTONIO ESPINOZA TENA").setFont(arialBoldItalic));
+		    primeraCuerpo.add(", identificado con ");
+		    primeraCuerpo.add(new Text("DNI N°09403557").setFont(arialBoldItalic));
+		    primeraCuerpo.add(". Sobre dicho terreno, ");
+		    primeraCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		    primeraCuerpo.add(" ha proyectado el Programa de Vivienda denominado ");
+		    primeraCuerpo.add(new Text("\u201cLA FLORIDA DE TORRE BLANCA - 1RA ETAPA\u201d").setFont(arialBoldItalic));
 		    primeraCuerpo.add(", el mismo que se distribuye en los lotes y manzanas con sus respectivas áreas conforme al plano de Lotización.");
 
 		} else {
@@ -1229,15 +1250,21 @@ public class PdfGenerator {
 		//REUTILIZAMOS LA LÓGICA DE FILTRO (Asegúrate de que nombreProgFiltro esté definido)
 		String nombreProgFiltroPosesion = lote.getNombrePrograma().toUpperCase();
 
-		if (nombreProgFiltroPosesion.contains("2DA ETAPA") || nombreProgFiltroPosesion.contains("SEGUNDA ETAPA")) {
-		    
-		    // --- TEXTO PARA SEGUNDA ETAPA (15 Has - 74.54%) --- 
+		if (nombreProgFiltroPosesion.contains("2DA ETAPA")) {
+
+		    // --- TEXTO PARA SEGUNDA ETAPA (15 Has - 74.54%) ---
 		    parrafoFinalPosesion.add("Dicho lote se encuentra ubicado en el predio denominado lote de terreno rústico con un área superficial de 150,000.00 m2 Equivalente a 15 Has., que corresponde al 74.543780% de las acciones y derechos del Predio denominado Sector Pampa San Antonio, Margen derecha del Kilómetro 23 de La Avenida Túpac Amaru, Distrito de Carabayllo, Provincia y Departamento De Lima, el cual forma parte de un predio de mayor extensión ubicado en las Provincia de Huarochirí, Lima y Canta, inscrito a fojas 515 del tomo 10-H, actualmente ");
 		    parrafoFinalPosesion.add(new Text("Partida Electrónica 11049870 del Registro de Predios de Lima.").setFont(arialItalic));
 
+		} else if (nombreProgFiltroPosesion.contains("3RA ETAPA")) {
+
+		    // --- TEXTO PARA TERCERA ETAPA ---
+		    parrafoFinalPosesion.add("Dicho lote se encuentra ubicado en el predio denominado lote de terreno rústico con un área superficial de 201,224.03 m2 Equivalente a 20 Has. 1,224.03 m2, que corresponde al 100% de las acciones y derechos del Predio denominado Sector Pampa San Antonio, Margen derecha del Kilómetro 23 de La Avenida Túpac Amaru, Distrito de Carabayllo, Provincia y Departamento De Lima, el cual forma parte de un predio de mayor extensión ubicado en las Provincia de Huarochirí, Lima y Canta, inscrito a fojas 515 del tomo 10-H, actualmente ");
+		    parrafoFinalPosesion.add(new Text("Partida Electrónica 11049870 del Registro de Predios de Lima.").setFont(arialItalic));
+
 		} else if (nombreProgFiltroPosesion.contains("LA FLORIDA DE TORRE BLANCA")) {
-		    
-		    // --- TEXTO PARA PRIMERA ETAPA / NORMAL (20 Has - 100%) --- [cite: 9, 10, 306, 307]
+
+		    // --- TEXTO PARA PRIMERA ETAPA (20 Has - 100%) ---
 		    parrafoFinalPosesion.add("Dicho lote se encuentra ubicado en el predio denominado lote de terreno rústico con un área superficial de 201,224.03 m2 Equivalente a 20 Has. 1,224.03 m2, que corresponde al 100% de las acciones y derechos del Predio denominado Sector Pampa San Antonio, Margen derecha del Kilómetro 23 de La Avenida Túpac Amaru, Distrito de Carabayllo, Provincia y Departamento De Lima, el cual forma parte de un predio de mayor extensión ubicado en las Provincia de Huarochirí, Lima y Canta, inscrito a fojas 515 del tomo 10-H, actualmente ");
 		    parrafoFinalPosesion.add(new Text("Partida Electrónica 11049870 del Registro de Predios de Lima.").setFont(arialItalic));
 
