@@ -9,7 +9,6 @@ import java.util.stream.Collectors;
 import java.security.Principal;
 import java.text.SimpleDateFormat;
 import java.text.ParseException;
-import java.util.concurrent.CompletableFuture;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.cache.annotation.CacheConfig;
@@ -17,10 +16,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestAttributes;
-import org.springframework.web.context.request.RequestContextHolder;
 
-import com.Inmobiliaria.demo.client.InscripcionClient;
 import com.Inmobiliaria.demo.dto.*;
 import com.Inmobiliaria.demo.dto.TransferenciaResponseDTO;
 import com.Inmobiliaria.demo.entity.*;
@@ -62,7 +58,6 @@ public class ContratoServiceImpl implements ContratoService {
     private final LetraCambioRepository letraCambioRepository;
     private final PagoLetraRepository pagoLetraRepository;
     private final PagoInicialRepository pagoInicialRepository;
-    private final InscripcionClient inscripcionClient;
     private final ModelMapper modelMapper;
     private final ComprobanteService comprobanteService;
     private final Cloudinary cloudinary;
@@ -158,10 +153,6 @@ public class ContratoServiceImpl implements ContratoService {
         	pago.setObservaciones(piReq.getObservaciones());
 
             // ── PASO 1: guardar PagoInicial SIN comprobante todavía ──────────
-            // Obligatorio persistirlo primero para que Hibernate le asigne ID.
-            // Si se llama a comprobanteService antes del save, Hibernate hace
-            // auto-flush al ejecutar el SELECT interno y lanza
-            // TransientObjectException porque pago aún no tiene ID.
             PagoInicial pagoGuardado = pagoInicialRepository.save(pago);
 
             // ── PASO 2: ahora que pagoGuardado tiene ID, generar comprobante ──
@@ -175,9 +166,7 @@ public class ContratoServiceImpl implements ContratoService {
                     piReq.getNumeroComprobantePersonalizado()
                 );
                 pagoGuardado.setComprobante(compInicial);
-                // Mantener compatibilidad con campo existente en Contrato
                 contratoGuardado.setComprobanteInicial(compInicial);
-                // Actualizar PagoInicial con el comprobante ya asignado
                 pagoGuardado = pagoInicialRepository.save(pagoGuardado);
             }
 
@@ -188,7 +177,7 @@ public class ContratoServiceImpl implements ContratoService {
         // ── Fin registro pago inicial ──────────────────────────────────────────
 
         final Contrato contratoFinal = contratoGuardado;
-        
+
         List<Integer> idsClientesAAsociar;
         if (requestDTO.getIdSeparacion() != null) {
             Separacion separacion = contratoFinal.getSeparacion();
@@ -197,20 +186,20 @@ public class ContratoServiceImpl implements ContratoService {
             idsClientesAAsociar = separacion.getClientes().stream()
                     .map(sc -> sc.getCliente().getIdCliente()).collect(Collectors.toList());
             separacion.getLotes().stream().map(sl -> sl.getLote().getIdLote())
-                    .forEach(idLote -> registrarLoteEnContrato(contratoFinal, idLote)); // ← usa contratoFinal
+                    .forEach(idLote -> registrarLoteEnContrato(contratoFinal, idLote));
         } else {
             idsClientesAAsociar = requestDTO.getIdClientes();
             if (requestDTO.getIdLotes() != null)
-                requestDTO.getIdLotes().forEach(idLote -> registrarLoteEnContrato(contratoFinal, idLote)); // ← usa contratoFinal
+                requestDTO.getIdLotes().forEach(idLote -> registrarLoteEnContrato(contratoFinal, idLote));
         }
- 
+
         if (idsClientesAAsociar != null) {
             for (Integer idCliente : idsClientesAAsociar) {
                 Cliente cliente = clienteService.buscarClientePorId(idCliente);
                 if (cliente != null) {
                     ContratoCliente cc = new ContratoCliente();
                     cc.setId(new ContratoClienteId(contratoFinal.getIdContrato(), idCliente));
-                    cc.setContrato(contratoFinal); // ← usa contratoFinal (está dentro de un for, no lambda, pero es buena práctica)
+                    cc.setContrato(contratoFinal);
                     cc.setCliente(cliente);
                     cc.setTipoPropietario(TipoPropietario.TITULAR);
                     contratoClienteService.guardar(cc);
@@ -345,7 +334,6 @@ public class ContratoServiceImpl implements ContratoService {
     @Transactional(readOnly = true)
     @Cacheable
     public List<ContratoResponseDTO> listarContratos() {
-
         List<Contrato> contratosConClientes = contratoRepository.findAllConClientes();
         List<Contrato> contratosConLotes    = contratoRepository.findAllConLotes();
 
@@ -356,40 +344,8 @@ public class ContratoServiceImpl implements ContratoService {
             c.setLotes(lotesMap.getOrDefault(c.getIdContrato(), List.of()))
         );
 
-        final RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
-
-        List<Integer> idsConLuz  = List.of();
-        List<Integer> idsConAgua = List.of();
-
-        try {
-            CompletableFuture<List<Integer>> futLuz = CompletableFuture.supplyAsync(() -> {
-                RequestContextHolder.setRequestAttributes(requestAttributes);
-                try { return inscripcionClient.obtenerContratosPorServicio("LUZ"); }
-                finally { RequestContextHolder.resetRequestAttributes(); }
-            });
-
-            CompletableFuture<List<Integer>> futAgua = CompletableFuture.supplyAsync(() -> {
-                RequestContextHolder.setRequestAttributes(requestAttributes);
-                try { return inscripcionClient.obtenerContratosPorServicio("AGUA"); }
-                finally { RequestContextHolder.resetRequestAttributes(); }
-            });
-
-            idsConLuz  = futLuz.get();
-            idsConAgua = futAgua.get();
-        } catch (Exception e) {
-            System.err.println("Error al consultar Microservicio de Inscripciones: " + e.getMessage());
-        }
-
-        final List<Integer> finalIdsConLuz  = idsConLuz;
-        final List<Integer> finalIdsConAgua = idsConAgua;
-
         return contratosConClientes.stream()
-                .map(contrato -> {
-                    ContratoResponseDTO dto = this.mapToContratoResponseDTO(contrato);
-                    dto.setTieneLuz(finalIdsConLuz.contains(contrato.getIdContrato()));
-                    dto.setTieneAgua(finalIdsConAgua.contains(contrato.getIdContrato()));
-                    return dto;
-                })
+                .map(this::mapToContratoResponseDTO)
                 .collect(Collectors.toList());
     }
 
@@ -399,17 +355,7 @@ public class ContratoServiceImpl implements ContratoService {
     public ContratoResponseDTO buscarPorId(Integer idContrato) {
         Contrato contrato = contratoRepository.findById(idContrato).orElse(null);
         if (contrato == null) return null;
-
-        ContratoResponseDTO dto = this.mapToContratoResponseDTO(contrato);
-        try {
-            boolean luz  = inscripcionClient.obtenerContratosPorServicio("LUZ").contains(idContrato);
-            boolean agua = inscripcionClient.obtenerContratosPorServicio("AGUA").contains(idContrato);
-            dto.setTieneLuz(luz);
-            dto.setTieneAgua(agua);
-        } catch (Exception e) {
-            System.err.println("Error al consultar servicios para contrato individual: " + idContrato);
-        }
-        return dto;
+        return mapToContratoResponseDTO(contrato);
     }
 
     @Override
@@ -425,42 +371,9 @@ public class ContratoServiceImpl implements ContratoService {
     @Override
     @Transactional(readOnly = true)
     public List<ContratoResponseDTO> buscarPorNombreCliente(String termino) {
-        List<Contrato> contratos = contratoRepository.findByClienteNombreContaining(termino);
-
-        final RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
-
-        List<Integer> idsConLuz  = List.of();
-        List<Integer> idsConAgua = List.of();
-
-        try {
-            CompletableFuture<List<Integer>> futLuz = CompletableFuture.supplyAsync(() -> {
-                RequestContextHolder.setRequestAttributes(requestAttributes);
-                try { return inscripcionClient.obtenerContratosPorServicio("LUZ"); }
-                finally { RequestContextHolder.resetRequestAttributes(); }
-            });
-
-            CompletableFuture<List<Integer>> futAgua = CompletableFuture.supplyAsync(() -> {
-                RequestContextHolder.setRequestAttributes(requestAttributes);
-                try { return inscripcionClient.obtenerContratosPorServicio("AGUA"); }
-                finally { RequestContextHolder.resetRequestAttributes(); }
-            });
-
-            idsConLuz  = futLuz.get();
-            idsConAgua = futAgua.get();
-        } catch (Exception e) {
-            System.err.println("Error al consultar Microservicio: " + e.getMessage());
-        }
-
-        final List<Integer> finalIdsConLuz  = idsConLuz;
-        final List<Integer> finalIdsConAgua = idsConAgua;
-
-        return contratos.stream()
-                .map(contrato -> {
-                    ContratoResponseDTO dto = this.mapToContratoResponseDTO(contrato);
-                    dto.setTieneLuz(finalIdsConLuz.contains(contrato.getIdContrato()));
-                    dto.setTieneAgua(finalIdsConAgua.contains(contrato.getIdContrato()));
-                    return dto;
-                })
+        return contratoRepository.findByClienteNombreContaining(termino)
+                .stream()
+                .map(this::mapToContratoResponseDTO)
                 .collect(Collectors.toList());
     }
 
@@ -635,15 +548,9 @@ public class ContratoServiceImpl implements ContratoService {
     // ── Mapeo a DTO ────────────────────────────────────────────────────────────
 
     private ContratoResponseDTO mapToContratoResponseDTO(Contrato contrato) {
-        return mapToContratoResponseDTO(contrato, false, false);
-    }
-
-    private ContratoResponseDTO mapToContratoResponseDTO(Contrato contrato, boolean luz, boolean agua) {
         if (contrato == null) return null;
 
         ContratoResponseDTO dto = modelMapper.map(contrato, ContratoResponseDTO.class);
-        dto.setTieneLuz(luz);
-        dto.setTieneAgua(agua);
 
         if (contrato.getVendedor() != null) {
             Vendedor v = contrato.getVendedor();

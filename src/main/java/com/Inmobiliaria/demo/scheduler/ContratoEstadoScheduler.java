@@ -5,6 +5,7 @@ import com.Inmobiliaria.demo.entity.LetraCambio;
 import com.Inmobiliaria.demo.enums.EstadoContrato;
 import com.Inmobiliaria.demo.enums.EstadoLetra;
 import com.Inmobiliaria.demo.repository.ContratoRepository;
+import com.Inmobiliaria.demo.repository.PagoLetraRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -14,9 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
@@ -24,20 +23,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @RequiredArgsConstructor
 public class ContratoEstadoScheduler {
 
-    private final ContratoRepository contratoRepository;
+    private final ContratoRepository  contratoRepository;
+    private final PagoLetraRepository pagoLetraRepository;
 
     // Semáforo en memoria: garantiza que solo una ejecución corra a la vez.
-    // Protege ante dos escenarios:
-    //   1. Reinicio del servicio en Render justo cuando el scheduler está corriendo.
-    //   2. Ejecución manual (POST /scheduler/ejecutar) mientras el cron ya está activo.
     private final AtomicBoolean ejecutando = new AtomicBoolean(false);
 
     /**
      * SE EJECUTA AUTOMÁTICAMENTE AL ARRANCAR EL SERVIDOR.
-     * Esto soluciona el problema con Render plan gratuito:
-     * el backend duerme hasta las ~10 AM (Lima), por lo que el cron
-     * de las 6 AM UTC nunca se ejecutaba. Ahora cada vez que Render
-     * despierta el servidor, se actualizan los estados inmediatamente.
      */
     @EventListener(ApplicationReadyEvent.class)
     public void ejecutarAlArrancar() {
@@ -47,18 +40,14 @@ public class ContratoEstadoScheduler {
 
     /**
      * Corre todos los días a las 3:00 PM UTC = 10:00 AM Lima (UTC-5).
-     * Corre también a las 6:09 PM UTC = 1:09 PM Lima (UTC-5).
-     * Se ajustaron los horarios para coincidir con las horas en que
-     * el backend de Render (plan gratuito) está activo.
+     * Corre también a las 6:15 PM UTC = 1:15 PM Lima (UTC-5).
      * También puede ejecutarse manualmente vía POST /api/contratos/scheduler/ejecutar.
      */
     @Scheduled(cron = "0 0 15 * * *")   // 10:00 AM Lima
-    @Scheduled(cron = "0 15 18 * * *")   //  1:09 PM Lima
+    @Scheduled(cron = "0 15 18 * * *")   //  1:15 PM Lima
     @Transactional
     public void actualizarEstadosContratos() {
 
-        // compareAndSet(false, true): solo entra si estaba en false, y lo pone en true.
-        // Si ya hay una ejecución en curso → false → se descarta esta llamada.
         if (!ejecutando.compareAndSet(false, true)) {
             log.warn(">>> Scheduler EstadoContrato: ya hay una ejecución en curso, se omite esta llamada.");
             return;
@@ -67,8 +56,6 @@ public class ContratoEstadoScheduler {
         try {
             log.info(">>> Scheduler EstadoContrato: iniciando revisión diaria...");
 
-            // JOIN FETCH carga letrasCambio en la misma query
-            // — sin lazy loading, sin LazyInitializationException
             List<Contrato> contratos = contratoRepository.findFinanciadosActivosConLetras();
             LocalDate hoy = LocalDate.now();
             int actualizados = 0;
@@ -80,36 +67,40 @@ public class ContratoEstadoScheduler {
 
                 EstadoContrato estadoActual = contrato.getEstadoContrato();
 
-                // Punto de corte: última letra PAGADA.
-                // Solo se revisan las letras posteriores a la última pagada.
-                // Si no hay pagadas → se revisan todas.
-                Optional<LocalDate> fechaUltimaPagada = letras.stream()
+                // ── PASO 1: número de la última letra PAGADA ─────────────────────────
+                // Si no hay ninguna pagada → numUltimaPagada = 0 (se revisan todas desde la 1)
+                // Si hay pagadas → solo se evalúan las letras con número MAYOR a este
+                int numUltimaPagada = letras.stream()
                         .filter(l -> l.getEstadoLetra() == EstadoLetra.PAGADO)
-                        .map(LetraCambio::getFechaVencimiento)
-                        .filter(f -> f != null)
-                        .max(Comparator.naturalOrder());
+                        .mapToInt(l -> extraerNumeroLetra(l.getNumeroLetra()))
+                        .max()
+                        .orElse(0);
 
-                // Marcar como VENCIDO las letras PENDIENTES que ya pasaron su fecha
+                // ── PASO 2: marcar como VENCIDO las letras PENDIENTES vencidas
+                //           que están DESPUÉS de la última pagada ──────────────────────
                 boolean letrasCambiadas = false;
                 for (LetraCambio letra : letras) {
                     if (letra.getEstadoLetra() != EstadoLetra.PENDIENTE) continue;
                     if (letra.getFechaVencimiento() == null) continue;
                     if (!letra.getFechaVencimiento().isBefore(hoy)) continue;
-
-                    if (fechaUltimaPagada.isPresent() &&
-                            !letra.getFechaVencimiento().isAfter(fechaUltimaPagada.get())) {
-                        continue;
-                    }
+                    // Solo letras posteriores a la última pagada
+                    if (extraerNumeroLetra(letra.getNumeroLetra()) <= numUltimaPagada) continue;
 
                     letra.setEstadoLetra(EstadoLetra.VENCIDO);
                     letrasCambiadas = true;
                 }
 
-                long letrasVencidas = letras.stream()
+                // ── PASO 3: contar letras VENCIDO que están DESPUÉS de la última pagada
+                //           esas son las únicas que representan mora real ──────────────
+                long letrasVencidasReales = letras.stream()
                         .filter(l -> l.getEstadoLetra() == EstadoLetra.VENCIDO)
+                        .filter(l -> extraerNumeroLetra(l.getNumeroLetra()) > numUltimaPagada)
                         .count();
 
-                EstadoContrato nuevoEstado = (letrasVencidas == 0)
+                // ── PASO 4: nuevo estado del contrato ────────────────────────────────
+                // Sin letras vencidas reales después de la última pagada → ACTIVO
+                // Con letras vencidas reales después de la última pagada  → MORA
+                EstadoContrato nuevoEstado = (letrasVencidasReales == 0)
                         ? EstadoContrato.ACTIVO
                         : EstadoContrato.MORA;
 
@@ -118,8 +109,9 @@ public class ContratoEstadoScheduler {
                     contratoRepository.saveAndFlush(contrato);
                     if (nuevoEstado != estadoActual) {
                         actualizados++;
-                        log.info("Contrato #{} {} → {} ({} letras vencidas)",
-                                contrato.getIdContrato(), estadoActual, nuevoEstado, letrasVencidas);
+                        log.info("Contrato #{} {} → {} (ultima pagada N°{}, vencidas reales: {})",
+                                contrato.getIdContrato(), estadoActual, nuevoEstado,
+                                numUltimaPagada, letrasVencidasReales);
                     }
                 }
             }
@@ -127,8 +119,6 @@ public class ContratoEstadoScheduler {
             log.info(">>> Scheduler EstadoContrato: {} contrato(s) actualizado(s).", actualizados);
 
         } finally {
-            // El bloque finally garantiza que el semáforo se libera
-            // incluso si ocurre una excepción inesperada durante la ejecución.
             ejecutando.set(false);
         }
     }
@@ -137,5 +127,15 @@ public class ContratoEstadoScheduler {
     public void ejecutarManualmente() {
         log.info(">>> Scheduler ejecutado MANUALMENTE.");
         actualizarEstadosContratos();
+    }
+
+    // ── Extrae el número entero de un numeroLetra con formato "64/120" ────────
+    private int extraerNumeroLetra(String numeroLetra) {
+        if (numeroLetra == null || numeroLetra.isBlank()) return 0;
+        String parte = numeroLetra.contains("/")
+                ? numeroLetra.split("/")[0].trim()
+                : numeroLetra.trim();
+        try { return Integer.parseInt(parte); }
+        catch (NumberFormatException e) { return 0; }
     }
 }

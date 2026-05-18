@@ -103,33 +103,54 @@ public class PagoLetraServiceImpl implements PagoLetraService {
     @CacheEvict(cacheNames = "contratos", allEntries = true)
     public void verificarYActualizarEstadoContrato(Contrato contrato) {
         if (contrato.getTipoContrato() != TipoContrato.FINANCIADO) return;
-        EstadoContrato estadoActual = contrato.getEstadoContrato();
-        if (estadoActual == EstadoContrato.CANCELADO    ||
-            estadoActual == EstadoContrato.RESUELTO      ||
-            estadoActual == EstadoContrato.EN_RESOLUCION ||
-            estadoActual == EstadoContrato.RENUNCIA      ||
-            estadoActual == EstadoContrato.TRANSFERIDO) return;
 
-        List<LetraCambio> letras = contrato.getLetrasCambio();
+        // ── Recargar fresco de BD para evitar datos stale en la sesión JPA ──
+        // Sin esto, la colección letrasCambio puede reflejar el estado anterior
+        // al pago recién registrado y el resultado sería incorrecto.
+        Contrato contratoFresco = contratoRepository.findById(contrato.getIdContrato()).orElse(null);
+        if (contratoFresco == null) return;
+
+        // IMPORTANTE: leer estadoActual del objeto fresco, no del parámetro viejo.
+        // El parámetro puede tener un estado desactualizado de la sesión JPA anterior.
+        EstadoContrato estadoActualFresco = contratoFresco.getEstadoContrato();
+        if (estadoActualFresco == EstadoContrato.CANCELADO    ||
+            estadoActualFresco == EstadoContrato.RESUELTO      ||
+            estadoActualFresco == EstadoContrato.EN_RESOLUCION ||
+            estadoActualFresco == EstadoContrato.RENUNCIA      ||
+            estadoActualFresco == EstadoContrato.TRANSFERIDO) return;
+
+        List<LetraCambio> letras = contratoFresco.getLetrasCambio();
         if (letras == null || letras.isEmpty()) return;
 
+        // ── ¿Ya se pagó la última letra? → CANCELADO ────────────────────────
         boolean ultimaLetraPagada = letras.stream()
             .max(Comparator.comparingInt(l -> extraerNumeroLetra(l.getNumeroLetra())))
             .map(l -> l.getEstadoLetra() == EstadoLetra.PAGADO)
             .orElse(false);
 
         if (ultimaLetraPagada) {
-            contrato.setEstadoContrato(EstadoContrato.CANCELADO);
-            contratoRepository.save(contrato);
+            contratoFresco.setEstadoContrato(EstadoContrato.CANCELADO);
+            contratoRepository.save(contratoFresco);
             return;
         }
 
-        if (estadoActual == EstadoContrato.MORA) {
-            boolean sinVencidas = letras.stream().noneMatch(l -> l.getEstadoLetra() == EstadoLetra.VENCIDO);
-            if (sinVencidas) {
-                contrato.setEstadoContrato(EstadoContrato.ACTIVO);
-                contratoRepository.save(contrato);
-            }
+        // ── Determinar si hay mora real ──────────────────────────────────────
+        // Las letras VENCIDO con número <= maxPagado son atrasos históricos
+        // ya cubiertos con comprobante físico (aún no registrados en el sistema).
+        // Solo las letras VENCIDO con número > maxPagado son mora real.
+        int maxPagado = pagoLetraRepository
+            .findMaxNumeroLetraPagadoByContrato(contratoFresco.getIdContrato())
+            .orElse(0);
+
+        boolean tieneMoraReal = letras.stream()
+            .filter(l -> l.getEstadoLetra() == EstadoLetra.VENCIDO)
+            .anyMatch(l -> extraerNumeroLetra(l.getNumeroLetra()) > maxPagado);
+
+        EstadoContrato nuevoEstado = tieneMoraReal ? EstadoContrato.MORA : EstadoContrato.ACTIVO;
+
+        if (nuevoEstado != estadoActualFresco) {
+            contratoFresco.setEstadoContrato(nuevoEstado);
+            contratoRepository.save(contratoFresco);
         }
     }
 
@@ -301,7 +322,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
 
     @Override
     @Transactional
-    public List<PagoLetraResponseDTO> registrarPagosMultiples(PagosMultiplesRequestDTO request,
+    public Map<String, Object> registrarPagosMultiples(PagosMultiplesRequestDTO request,
                                                                List<MultipartFile> vouchers) throws IOException {
         if (request.getPagos() == null || request.getPagos().isEmpty())
             throw new NegocioException("La lista de pagos no puede estar vacía.");
@@ -326,6 +347,28 @@ public class PagoLetraServiceImpl implements PagoLetraService {
                 urlsVoucher.add(subirImagen(v, idContrato, null));
         }
 
+        // ── Calcular el monto total del lote para el comprobante único ─────────
+        java.math.BigDecimal montoTotal = request.getPagos().stream()
+            .map(PagoLetraRequestDTO::getImportePagado)
+            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+        PagoLetraRequestDTO primerPago = request.getPagos().get(0);
+
+        // ── Crear UN SOLO comprobante para todo el lote ANTES del loop ─────────
+        // Todos los pagos del lote compartirán este mismo objeto Comprobante.
+        // Esto es lo que permite que esMultiple = true al agrupar por numeroCompleto.
+        Comprobante comprobanteCompartido = null;
+        if (primerPago.getTipoComprobante() != null) {
+            comprobanteCompartido = comprobanteService.generarComprobanteConNumero(
+                primerPago.getTipoComprobante(),
+                TipoOrigenComprobante.PAGO_LETRA,
+                null,          // referenciaId: null porque aplica a varios pagos
+                montoTotal,    // monto = suma de todos los importes del lote
+                primerPago.getFechaPago(),
+                primerPago.getNumeroComprobantePersonalizado()
+            );
+        }
+
         List<PagoLetraResponseDTO> responses = new ArrayList<>();
 
         for (PagoLetraRequestDTO pagoReq : request.getPagos()) {
@@ -345,21 +388,10 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             pago.setNumeroOperacion(pagoReq.getNumeroOperacion());
             pago.setObservaciones(pagoReq.getObservaciones());
 
-            PagoLetras guardado = pagoLetraRepository.save(pago);
+            // ── Asignar el comprobante compartido a cada pago del lote ─────────
+            pago.setComprobante(comprobanteCompartido);
 
-            // ── Comprobante por cada letra del lote ───────────────────────────
-            if (pagoReq.getTipoComprobante() != null) {
-                Comprobante comp = comprobanteService.generarComprobanteConNumero(
-                    pagoReq.getTipoComprobante(),
-                    TipoOrigenComprobante.PAGO_LETRA,
-                    guardado.getIdPago(),
-                    pagoReq.getImportePagado(),
-                    pagoReq.getFechaPago(),
-                    pagoReq.getNumeroComprobantePersonalizado()
-                );
-                guardado.setComprobante(comp);
-                guardado = pagoLetraRepository.save(guardado);
-            }
+            PagoLetras guardado = pagoLetraRepository.save(pago);
 
             for (String url : urlsVoucher) {
                 Voucher v = new Voucher();
@@ -384,7 +416,13 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         letraCambioRepository.findById(request.getPagos().get(0).getIdLetra())
             .ifPresent(l -> verificarYActualizarEstadoContrato(l.getContrato()));
 
-        return responses;
+        // ── Devolver los pagos + el numeroCompleto del comprobante compartido ──
+        // El frontend usa numeroComprobanteGenerado para descargar el PDF múltiple.
+        Map<String, Object> resultado = new java.util.LinkedHashMap<>();
+        resultado.put("pagos", responses);
+        resultado.put("numeroComprobanteGenerado",
+            comprobanteCompartido != null ? comprobanteCompartido.getNumeroCompleto() : null);
+        return resultado;
     }
 
     // ─── Actualizar pago ───────────────────────────────────────────────────────

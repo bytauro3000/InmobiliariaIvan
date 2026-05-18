@@ -40,10 +40,12 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
     	       "GROUP BY l.contrato.idContrato")
     	List<Integer> findContratosConLetras(@Param("ids") List<Integer> ids);
 
-    // ✅ Query 2: trae letras + pagos (la segunda colección en query separada)
-    // El service combina los resultados de ambas queries en memoria.
+    // ✅ Query 2: trae letras + pagos + comprobante de cada pago (segunda colección separada)
+    // Se agrega LEFT JOIN FETCH p.comprobante para evitar LazyInitializationException
+    // al acceder a p.getComprobante().getNumeroCompleto() en el service (detección esMultiple).
     @Query("SELECT DISTINCT l FROM LetraCambio l " +
-           "LEFT JOIN FETCH l.pagos " +
+           "LEFT JOIN FETCH l.pagos p " +
+           "LEFT JOIN FETCH p.comprobante " +
            "WHERE l.contrato.idContrato = :idContrato " +
            "ORDER BY l.idLetra ASC")
     List<LetraCambio> findByContratoIdContratoConPagos(@Param("idContrato") Integer idContrato);

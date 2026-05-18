@@ -15,7 +15,9 @@ import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfPage;
 import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.borders.SolidBorder;
@@ -74,7 +76,10 @@ public class ComprobantePagoLetraPdf {
                                                PdfFont normal, PdfFont bold,
                                                float size, float padding) {
         Cell celda = new Cell()
-                .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                .setBorderTop(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                .setBorderLeft(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                .setBorderRight(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                .setBorderBottom(Border.NO_BORDER)
                 .setPadding(padding);
 
         if (contrato.getClientes() == null || contrato.getClientes().isEmpty()) {
@@ -121,6 +126,13 @@ public class ComprobantePagoLetraPdf {
     // COMPROBANTE INDIVIDUAL
     // ─────────────────────────────────────────────────────────────────────────
     public static byte[] generar(PagoLetras pago, String rolUsuario) {
+        // Calculo dinamico de margenes - A5 landscape 595x420 pts
+        // encabezado~115 + marginTopRec5 + filaRecibo~30 + cuerpo(4filas) + pie~72
+        float fs1   = 10f;
+        float cH1   = (4f * fs1 * 1.6f) + (5f * 2f) + (3f * 3f); // cuerpo
+        float tot1  = 115f + 5f + 30f + cH1 + 72f;
+        float marg1 = Math.min(30f, Math.max(8f, (420f - tot1) / 2f));
+
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         try {
@@ -131,7 +143,7 @@ public class ComprobantePagoLetraPdf {
             PdfDocument pdf = new PdfDocument(new PdfWriter(out));
             PageSize a5h = PageSize.A5.rotate();
             Document doc = new Document(pdf, a5h);
-            doc.setMargins(35, 18, 35, 32);
+            doc.setMargins(marg1, 18, marg1, 52);
 
             LetraCambio letra    = pago.getLetra();
             Contrato    contrato = letra.getContrato();
@@ -222,7 +234,13 @@ public class ComprobantePagoLetraPdf {
                     .setTextAlignment(TextAlignment.CENTER).setMarginBottom(6));
             celdaEmpresa.add(new Paragraph(tituloPrincipal)
                     .setFont(courierBold).setFontSize(16)
-                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(3));
+                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(1));
+            // Número de comprobante en la celda central para que tenga espacio suficiente
+            celdaEmpresa.add(new Paragraph("N\u00b0 " + numComp)
+                    .setFont(courierBold).setFontSize(9f)
+                    .setFontColor(GRIS_OSCURO)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginTop(0).setMarginBottom(2));
             encabezado.addCell(celdaEmpresa);
 
             Cell celdaQr = new Cell()
@@ -232,30 +250,28 @@ public class ComprobantePagoLetraPdf {
                     .setBorderLeft(Border.NO_BORDER)
                     .setPadding(6)
                     .setTextAlignment(TextAlignment.CENTER)
-                    .setVerticalAlignment(VerticalAlignment.TOP);
+                    .setVerticalAlignment(VerticalAlignment.MIDDLE);
             celdaQr.add(qrImage);
             celdaQr.add(new Paragraph("Escanea tu\ncomprobante")
                     .setFont(arial).setFontSize(7f)
                     .setFontColor(GRIS_MEDIO)
                     .setTextAlignment(TextAlignment.CENTER)
-                    .setMarginTop(2));
-            celdaQr.add(new Paragraph("N\u00b0 " + numComp)
-                    .setFont(courierBold).setFontSize(9f)
-                    .setFontColor(GRIS_OSCURO)
-                    .setTextAlignment(TextAlignment.CENTER)
-                    .setMarginTop(4));
+                    .setMarginTop(2).setMarginBottom(0));
             encabezado.addCell(celdaQr);
             doc.add(encabezado);
 
             // ── FILA: Recibi de + Caja monto ──
-            float fuenteCliente = clientes.length() > 100 ? 6.5f
-                                : clientes.length() > 80  ? 7.5f
-                                : clientes.length() > 60  ? 8.5f : 9f;
+            float fuenteCliente = clientes.length() > 120 ? 7.5f
+                                : clientes.length() > 100 ? 8.5f
+                                : clientes.length() > 80  ? 9f : 10f;
             Table filaRecibo = new Table(UnitValue.createPercentArray(new float[]{1, 0.28f}))
                     .setWidth(UnitValue.createPercentValue(100)).setMarginTop(5);
             filaRecibo.addCell(construirCeldaClientes(contrato, courier, courierBold, fuenteCliente, 8f));
             filaRecibo.addCell(new Cell()
-                    .setBorder(new SolidBorder(ColorConstants.BLACK, 1.5f))
+                    .setBorderTop(new SolidBorder(ColorConstants.BLACK, 1.5f))
+                    .setBorderLeft(new SolidBorder(ColorConstants.BLACK, 1.5f))
+                    .setBorderRight(new SolidBorder(ColorConstants.BLACK, 1.5f))
+                    .setBorderBottom(Border.NO_BORDER)
                     .setPadding(4)
                     .setTextAlignment(TextAlignment.CENTER)
                     .setVerticalAlignment(VerticalAlignment.MIDDLE)
@@ -268,9 +284,12 @@ public class ComprobantePagoLetraPdf {
             Table cuerpo = new Table(UnitValue.createPercentArray(new float[]{1}))
                     .setWidth(UnitValue.createPercentValue(100));
             Cell celdaCuerpo = new Cell()
-                    .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                    .setBorderTop(new SolidBorder(ColorConstants.BLACK, 1.5f))
+                    .setBorderLeft(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                    .setBorderRight(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                    .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.8f))
                     .setPaddingLeft(8).setPaddingRight(8)
-                    .setPaddingTop(7).setPaddingBottom(7);
+                    .setPaddingTop(5).setPaddingBottom(5);
             celdaCuerpo.add(lineaDato("La cantidad de: ", importeTexto, courier, courierBold, 10f));
             celdaCuerpo.add(separadorLinea());
             celdaCuerpo.add(lineaDato("Por concepto de: ", concepto, courier, courierBold, 10f));
@@ -337,7 +356,8 @@ public class ComprobantePagoLetraPdf {
                     .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f)).setPadding(5)
                     .setTextAlignment(TextAlignment.CENTER)
                     .setVerticalAlignment(VerticalAlignment.BOTTOM);
-            celdaFirma.add(new Paragraph(" ").setFont(courier).setFontSize(18));
+            // Se usa un párrafo vacío de tamaño pequeño para dar espacio a la firma
+            celdaFirma.add(new Paragraph(" ").setFont(courier).setFontSize(10).setMarginBottom(2));
             Table lineaFirma = new Table(UnitValue.createPercentArray(new float[]{1}))
                     .setWidth(UnitValue.createPercentValue(85))
                     .setHorizontalAlignment(HorizontalAlignment.CENTER).setMarginBottom(3);
@@ -352,6 +372,18 @@ public class ComprobantePagoLetraPdf {
             pie.addCell(celdaFirma);
 
             doc.add(pie);
+
+            // ── LÍNEA GRIS: margen izquierdo, altura de la costura Recibi/Cuerpo ──
+            // Y (desde abajo) = 420 - marg1 - encabezado(115) - marginTop(5) - filaRecibo(30)
+            PdfPage page = pdf.getFirstPage();
+            PdfCanvas canvas = new PdfCanvas(page);
+            canvas.setStrokeColor(new DeviceGray(0.55f))
+                  .setLineWidth(1.2f)
+                  .moveTo(0, 210f)
+                  .lineTo(28, 210f)
+                  .stroke();
+            canvas.release();
+
             doc.close();
 
         } catch (Exception e) {
@@ -449,36 +481,36 @@ public class ComprobantePagoLetraPdf {
             fechasVencStr = todas + " y " + fechasVenc.get(fechasVenc.size() - 1);
         }
 
-        // Escala dinámica: reduce márgenes y fuentes si hay muchas letras (evita segunda página)
+        // ── Escala dinamica segun cantidad de letras ────────────────────
         int numLetras = pagos.size();
-        float padCuerpo    = numLetras >= 8 ? 4f   : 7f;
-        float fsCuerpo     = numLetras >= 8 ? 9f   : 10f;
-        float marginTopRec = numLetras >= 8 ? 3f   : 5f;
-        float padRecibo    = numLetras >= 8 ? 5f   : 8f;
+        // Con pocas letras (1-4 fechas) el string de fechas es corto -> mas espacio libre
+        // Con muchas letras (10+) el string ocupa 2 lineas -> menos espacio, reducimos padding
+        float padCuerpo    = numLetras >= 10 ? 3f : numLetras >= 5 ? 4f : 6f;
+        float fsCuerpo     = 9.5f; // fuente fija, suficiente para todos los casos
+        float marginTopRec = numLetras >= 10 ? 2f : numLetras >= 5 ? 3f : 4f;
+        float padRecibo    = numLetras >= 10 ? 4f : numLetras >= 5 ? 5f : 7f;
 
-        // Centrado vertical: calculamos cuantas lineas extra ocupa "Fechas de vencimiento"
-        // para estimar el espacio libre y distribuirlo simetricamente arriba/abajo.
-        // A5 apaisado: 595 x 420 pts. Margenes lat.: izq=32, der=18 -> ancho util ~545 pts.
-        // "Fechas de vencimiento: " = 23 chars -> quedan ~77 chars para fechas en linea 1.
-        // Lineas de continuacion tienen ~84 chars disponibles.
-        int charsDisponiblesL1 = 77;
-        int charsPerLineCont   = 84;
+        // Calcular lineas extra que ocupa el campo "Fechas de vencimiento"
+        // A5 landscape, Courier 9.5pt ~ 6.65pt/char, ancho util 545pt -> ~82 chars/linea
+        // Label "Fechas de vencimiento: " = 24 chars -> quedan ~58 chars en linea 1
+        int charsL1   = 56;
+        int charsCont = 79;
         int charsFechas = fechasVencStr.length();
         int lineasExtra = 0;
-        if (charsFechas > charsDisponiblesL1) {
-            lineasExtra = (int)Math.ceil((float)(charsFechas - charsDisponiblesL1) / charsPerLineCont);
+        if (charsFechas > charsL1) {
+            lineasExtra = (int)Math.ceil((float)(charsFechas - charsL1) / charsCont);
         }
-        // Altura base del contenido sin margenes (pts empiricos):
-        // encabezado=100, marginTopRec, filaRecibo=28, cuerpo base (4 filas), pie=70
-        float lineHeightExtra = fsCuerpo * 1.55f;
-        float cuerpoBase  = numLetras >= 8 ? 118f : 134f;
-        float contenidoH  = 100f + marginTopRec + 28f + cuerpoBase + (lineasExtra * lineHeightExtra) + 70f;
-        float pageH       = 420f; // A5 rotado
-        float libre       = pageH - contenidoH;
-        // Clamp entre 10 y 30 para nunca generar segunda pagina
-        float margenSim   = Math.min(40f, Math.max(10f, libre / 2f));
-        float margenTop   = margenSim;
-        float margenV     = margenSim;
+        // Altura de cada seccion (pts empiricos medidos):
+        //   encabezado = 115, filaRecibo = 28, pie = 72
+        //   cuerpo = 4 filas base + lineasExtra + paddings + separadores
+        float lineH    = fsCuerpo * 1.6f;
+        float cuerpoH  = (4f * lineH) + (padCuerpo * 2f) + (3f * 3f) + (lineasExtra * lineH);
+        float totalH   = 115f + marginTopRec + 28f + cuerpoH + 72f;
+        float libre    = 420f - totalH;
+        // Clamp [8, 30] para nunca generar segunda pagina
+        float margenSim = Math.min(30f, Math.max(8f, libre / 2f));
+        float margenTop = margenSim;
+        float margenV   = margenSim;
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try {
@@ -488,7 +520,7 @@ public class ComprobantePagoLetraPdf {
 
             PdfDocument pdf = new PdfDocument(new PdfWriter(out));
             Document doc   = new Document(pdf, PageSize.A5.rotate());
-            doc.setMargins(margenTop, 18, margenV, 32);
+            doc.setMargins(margenTop, 18, margenV, 52);
 
             String urlQr = BASE_URL + "/" + primero.getIdPago() + "/comprobante-pdf";
             BarcodeQRCode qrCode = new BarcodeQRCode(urlQr);
@@ -529,7 +561,13 @@ public class ComprobantePagoLetraPdf {
                     .setTextAlignment(TextAlignment.CENTER).setMarginBottom(6));
             celdaEmpresa.add(new Paragraph(tituloPrincipal)
                     .setFont(courierBold).setFontSize(16)
-                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(3));
+                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(1));
+            // Número de comprobante en la celda central para que tenga espacio suficiente
+            celdaEmpresa.add(new Paragraph("N\u00b0 " + numComp)
+                    .setFont(courierBold).setFontSize(9f)
+                    .setFontColor(GRIS_OSCURO)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginTop(0).setMarginBottom(2));
             encabezado.addCell(celdaEmpresa);
 
             Cell celdaQr = new Cell()
@@ -538,26 +576,27 @@ public class ComprobantePagoLetraPdf {
                     .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 1f))
                     .setBorderLeft(Border.NO_BORDER).setPadding(6)
                     .setTextAlignment(TextAlignment.CENTER)
-                    .setVerticalAlignment(VerticalAlignment.TOP);
+                    .setVerticalAlignment(VerticalAlignment.MIDDLE);
             celdaQr.add(qrImage);
             celdaQr.add(new Paragraph("Escanea tu\ncomprobante")
                     .setFont(arial).setFontSize(7f).setFontColor(GRIS_MEDIO)
-                    .setTextAlignment(TextAlignment.CENTER).setMarginTop(2));
-            celdaQr.add(new Paragraph("N\u00b0 " + numComp)
-                    .setFont(courierBold).setFontSize(9f).setFontColor(GRIS_OSCURO)
-                    .setTextAlignment(TextAlignment.CENTER).setMarginTop(4));
+                    .setTextAlignment(TextAlignment.CENTER).setMarginTop(2).setMarginBottom(0));
             encabezado.addCell(celdaQr);
             doc.add(encabezado);
 
             // ── FILA: Recibi de + Monto total ──
-            float fuenteCliente = clientes.length() > 100 ? 6.5f
-                                : clientes.length() > 80  ? 7.5f
-                                : clientes.length() > 60  ? 8.5f : 9f;
+            float fuenteCliente = clientes.length() > 120 ? 7.5f
+                                : clientes.length() > 100 ? 8.5f
+                                : clientes.length() > 80  ? 9f : 10f;
             Table filaRecibo = new Table(UnitValue.createPercentArray(new float[]{1, 0.28f}))
                     .setWidth(UnitValue.createPercentValue(100)).setMarginTop(marginTopRec);
             filaRecibo.addCell(construirCeldaClientes(contrato, courier, courierBold, fuenteCliente, padRecibo));
             filaRecibo.addCell(new Cell()
-                    .setBorder(new SolidBorder(ColorConstants.BLACK, 1.5f)).setPadding(4)
+                    .setBorderTop(new SolidBorder(ColorConstants.BLACK, 1.5f))
+                    .setBorderLeft(new SolidBorder(ColorConstants.BLACK, 1.5f))
+                    .setBorderRight(new SolidBorder(ColorConstants.BLACK, 1.5f))
+                    .setBorderBottom(Border.NO_BORDER)
+                    .setPadding(4)
                     .setTextAlignment(TextAlignment.CENTER).setVerticalAlignment(VerticalAlignment.MIDDLE)
                     .add(new Paragraph(simboloMoneda + " " + DF.format(totalImporte))
                             .setFont(courierBold).setFontSize(15).setTextAlignment(TextAlignment.CENTER)));
@@ -567,7 +606,10 @@ public class ComprobantePagoLetraPdf {
             Table cuerpo = new Table(UnitValue.createPercentArray(new float[]{1}))
                     .setWidth(UnitValue.createPercentValue(100));
             Cell celdaCuerpo = new Cell()
-                    .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                    .setBorderTop(new SolidBorder(ColorConstants.BLACK, 1.5f))
+                    .setBorderLeft(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                    .setBorderRight(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                    .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.8f))
                     .setPaddingLeft(8).setPaddingRight(8).setPaddingTop(padCuerpo).setPaddingBottom(padCuerpo);
             celdaCuerpo.add(lineaDato("La cantidad de: ", importeTexto, courier, courierBold, fsCuerpo));
             celdaCuerpo.add(separadorLinea());
@@ -635,7 +677,7 @@ public class ComprobantePagoLetraPdf {
                     .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f)).setPadding(5)
                     .setTextAlignment(TextAlignment.CENTER)
                     .setVerticalAlignment(VerticalAlignment.BOTTOM);
-            celdaFirma.add(new Paragraph(" ").setFont(courier).setFontSize(18));
+            celdaFirma.add(new Paragraph(" ").setFont(courier).setFontSize(10).setMarginBottom(2));
             Table lineaFirma = new Table(UnitValue.createPercentArray(new float[]{1}))
                     .setWidth(UnitValue.createPercentValue(85))
                     .setHorizontalAlignment(HorizontalAlignment.CENTER).setMarginBottom(3);
@@ -650,6 +692,18 @@ public class ComprobantePagoLetraPdf {
             pie.addCell(celdaFirma);
 
             doc.add(pie);
+
+            // ── LÍNEA GRIS: margen izquierdo, altura de la costura Recibi/Cuerpo ──
+            // Y (desde abajo) = 420 - margenTop - encabezado(115) - marginTopRec - filaRecibo(28)
+            PdfPage page = pdf.getFirstPage();
+            PdfCanvas canvas = new PdfCanvas(page);
+            canvas.setStrokeColor(new DeviceGray(0.55f))
+                  .setLineWidth(1.2f)
+                  .moveTo(0, 210f)
+                  .lineTo(28, 210f)
+                  .stroke();
+            canvas.release();
+
             doc.close();
           
         } catch (Exception e) {

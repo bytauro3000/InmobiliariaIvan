@@ -30,8 +30,6 @@ public class ContratoResponseDTO {
     private List<LoteResponseDTO> lotes;
     private List<LetraResponseDTO> letras;
     private VendedorResponseDTO vendedor;
-    private boolean tieneLuz;
-    private boolean tieneAgua;
     private Long idComprobanteInicial;
     private TipoComprobante tipoComprobanteInicial;
     private String numeroComprobanteInicial;

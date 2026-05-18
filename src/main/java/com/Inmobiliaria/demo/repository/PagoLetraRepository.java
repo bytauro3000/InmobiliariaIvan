@@ -16,7 +16,16 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
 
     List<PagoLetras> findByLetraIdLetra(Integer idLetra);
 
-    List<PagoLetras> findByLetraContratoIdContrato(Integer idContrato);
+    /**
+     * Lista los pagos de un contrato ordenados por número de letra (parte numérica) de menor a mayor.
+     */
+    @Query(value =
+        "SELECT p.* FROM pago_letra p " +
+        "JOIN letra_cambio lc ON p.id_letra = lc.id_letra " +
+        "WHERE lc.id_contrato = :idContrato " +
+        "ORDER BY CAST(SUBSTRING_INDEX(lc.numero_letra, '/', 1) AS UNSIGNED) ASC",
+        nativeQuery = true)
+    List<PagoLetras> findByLetraContratoIdContrato(@Param("idContrato") Integer idContrato);
 
     long countByLetraIdLetra(Integer idLetra);
 

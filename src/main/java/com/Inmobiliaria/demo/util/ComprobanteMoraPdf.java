@@ -16,7 +16,9 @@ import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfPage;
 import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.borders.SolidBorder;
@@ -62,6 +64,15 @@ public class ComprobanteMoraPdf {
     // ─────────────────────────────────────────────────────────────────────────
 
     public static byte[] generar(PagoMora pagoMora, String rolUsuario) {
+        // Calculo dinamico de margenes - A5 landscape 595x420 pts
+        // "Por concepto de" puede wrappear a 2 lineas → contamos 6 lineas renderizadas
+        // encabezado=118, marginTop=3, filaRecibo=33, cuerpo(6lin), pie=78
+        float fsMora  = 9.5f;
+        float lineHM  = fsMora * 1.55f;           // ~14.7 pts/linea
+        float cHMora  = (6f * lineHM) + (3f * 2f) + (4f * 3f); // 6lineas+pad3+4seps
+        float totMora = 118f + 3f + 33f + cHMora + 78f;
+        float mMora   = Math.min(25f, Math.max(8f, (420f - totMora) / 2f));
+
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         try {
@@ -71,7 +82,7 @@ public class ComprobanteMoraPdf {
 
             PdfDocument pdf = new PdfDocument(new PdfWriter(out));
             Document doc   = new Document(pdf, PageSize.A5.rotate());
-            doc.setMargins(35, 18, 35, 32);
+            doc.setMargins(mMora, 18, mMora, 52);
 
             MoraLetra   mora     = pagoMora.getMora();
             LetraCambio letra    = mora.getLetra();
@@ -179,7 +190,13 @@ public class ComprobanteMoraPdf {
                     .setTextAlignment(TextAlignment.CENTER).setMarginBottom(6));
             celdaEmpresa.add(new Paragraph(tituloPrincipal)
                     .setFont(courierBold).setFontSize(16)
-                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(3));
+                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(1));
+            // Número de comprobante en la celda central para que tenga espacio suficiente
+            celdaEmpresa.add(new Paragraph("N\u00b0 " + numComp)
+                    .setFont(courierBold).setFontSize(9f)
+                    .setFontColor(GRIS_OSCURO)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginTop(0).setMarginBottom(2));
             encabezado.addCell(celdaEmpresa);
 
             Cell celdaQr = new Cell()
@@ -189,32 +206,30 @@ public class ComprobanteMoraPdf {
                     .setBorderLeft(Border.NO_BORDER)
                     .setPadding(6)
                     .setTextAlignment(TextAlignment.CENTER)
-                    .setVerticalAlignment(VerticalAlignment.TOP);
+                    .setVerticalAlignment(VerticalAlignment.MIDDLE);
             celdaQr.add(qrImage);
             celdaQr.add(new Paragraph("Escanea tu\ncomprobante")
                     .setFont(arial).setFontSize(7f)
                     .setFontColor(GRIS_MEDIO)
                     .setTextAlignment(TextAlignment.CENTER)
-                    .setMarginTop(2));
-            celdaQr.add(new Paragraph("N\u00b0 " + numComp)
-                    .setFont(courierBold).setFontSize(9f)
-                    .setFontColor(GRIS_OSCURO)
-                    .setTextAlignment(TextAlignment.CENTER)
-                    .setMarginTop(4));
+                    .setMarginTop(2).setMarginBottom(0));
             encabezado.addCell(celdaQr);
             doc.add(encabezado);
 
             // ── FILA: Recibi de + Caja monto ─────────────────────────────────
-            float fuenteCliente = clientes.length() > 100 ? 6.5f
-                                : clientes.length() > 80  ? 7.5f
-                                : clientes.length() > 60  ? 8.5f : 9f;
+            float fuenteCliente = clientes.length() > 120 ? 7.5f
+                                : clientes.length() > 100 ? 8.5f
+                                : clientes.length() > 80  ? 9f : 10f;
 
             Table filaRecibo = new Table(UnitValue.createPercentArray(new float[]{1, 0.28f}))
-                    .setWidth(UnitValue.createPercentValue(100)).setMarginTop(5);
+                    .setWidth(UnitValue.createPercentValue(100)).setMarginTop(3);
             filaRecibo.addCell(
-                    construirCeldaClientes(contrato, courier, courierBold, fuenteCliente, 8f));
+                    construirCeldaClientes(contrato, courier, courierBold, fuenteCliente, 6f));
             filaRecibo.addCell(new Cell()
-                    .setBorder(new SolidBorder(ColorConstants.BLACK, 1.5f))
+                    .setBorderTop(new SolidBorder(ColorConstants.BLACK, 1.5f))
+                    .setBorderLeft(new SolidBorder(ColorConstants.BLACK, 1.5f))
+                    .setBorderRight(new SolidBorder(ColorConstants.BLACK, 1.5f))
+                    .setBorderBottom(Border.NO_BORDER)
                     .setPadding(4)
                     .setTextAlignment(TextAlignment.CENTER)
                     .setVerticalAlignment(VerticalAlignment.MIDDLE)
@@ -227,19 +242,22 @@ public class ComprobanteMoraPdf {
             Table cuerpo = new Table(UnitValue.createPercentArray(new float[]{1}))
                     .setWidth(UnitValue.createPercentValue(100));
             Cell celdaCuerpo = new Cell()
-                    .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                    .setBorderTop(new SolidBorder(ColorConstants.BLACK, 1.5f))
+                    .setBorderLeft(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                    .setBorderRight(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                    .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.8f))
                     .setPaddingLeft(8).setPaddingRight(8)
-                    .setPaddingTop(7).setPaddingBottom(7);
+                    .setPaddingTop(3).setPaddingBottom(3);
 
-            celdaCuerpo.add(lineaDato("La cantidad de: ",  moraEnLetras,  courier, courierBold, 10f));
+            celdaCuerpo.add(lineaDato("La cantidad de: ",  moraEnLetras,  courier, courierBold, 9.5f));
             celdaCuerpo.add(separadorLinea());
-            celdaCuerpo.add(lineaDato("Por concepto de: ", concepto,      courier, courierBold, 10f));
+            celdaCuerpo.add(lineaDato("Por concepto de: ", concepto,      courier, courierBold, 9.5f));
             celdaCuerpo.add(separadorLinea());
-            celdaCuerpo.add(lineaDato("Detalle mora: ",    detalleMora,   courier, courierBold, 10f));
+            celdaCuerpo.add(lineaDato("Detalle mora: ",    detalleMora,   courier, courierBold, 9.5f));
             celdaCuerpo.add(separadorLinea());
-            celdaCuerpo.add(lineaDato("Medio de pago: ",   medioPagoStr + numOp, courier, courierBold, 10f));
+            celdaCuerpo.add(lineaDato("Medio de pago: ",   medioPagoStr + numOp, courier, courierBold, 9.5f));
             celdaCuerpo.add(separadorLinea());
-            celdaCuerpo.add(lineaDato("Fecha venc. letra: ", fechaVencStr, courier, courierBold, 10f));
+            celdaCuerpo.add(lineaDato("Fecha venc. letra: ", fechaVencStr, courier, courierBold, 9.5f));
             celdaCuerpo.add(separadorLinea());
             cuerpo.addCell(celdaCuerpo);
             doc.add(cuerpo);
@@ -253,7 +271,7 @@ public class ComprobanteMoraPdf {
                     .setVerticalAlignment(VerticalAlignment.BOTTOM);
             celdaNombre.add(new Paragraph(usuarioRegistro)
                     .setFont(courierBold).setFontSize(9f)
-                    .setTextAlignment(TextAlignment.CENTER).setMarginTop(4).setMarginBottom(1));
+                    .setTextAlignment(TextAlignment.CENTER).setMarginTop(2).setMarginBottom(1));
             celdaNombre.add(new Paragraph(rolUsuario != null ? rolUsuario.toUpperCase() : "SECRETARIA")
                     .setFont(courier).setFontSize(9f)
                     .setTextAlignment(TextAlignment.CENTER));
@@ -266,7 +284,7 @@ public class ComprobanteMoraPdf {
 
             Cell celdaFecha = new Cell()
                     .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f))
-                    .setPaddingTop(8).setPaddingBottom(8).setPaddingLeft(8).setPaddingRight(8)
+                    .setPaddingTop(5).setPaddingBottom(5).setPaddingLeft(8).setPaddingRight(8)
                     .setTextAlignment(TextAlignment.CENTER)
                     .setVerticalAlignment(VerticalAlignment.MIDDLE);
             celdaFecha.add(new Paragraph("Fecha de Pago")
@@ -295,7 +313,7 @@ public class ComprobanteMoraPdf {
                     .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f)).setPadding(5)
                     .setTextAlignment(TextAlignment.CENTER)
                     .setVerticalAlignment(VerticalAlignment.BOTTOM);
-            celdaFirma.add(new Paragraph(" ").setFont(courier).setFontSize(18));
+            celdaFirma.add(new Paragraph(" ").setFont(courier).setFontSize(10).setMarginBottom(2));
             Table lineaFirma = new Table(UnitValue.createPercentArray(new float[]{1}))
                     .setWidth(UnitValue.createPercentValue(85))
                     .setHorizontalAlignment(HorizontalAlignment.CENTER).setMarginBottom(3);
@@ -310,6 +328,18 @@ public class ComprobanteMoraPdf {
             pie.addCell(celdaFirma);
 
             doc.add(pie);
+
+            // ── LÍNEA GRIS: margen izquierdo, altura de la costura Recibi/Cuerpo ──
+            // Y (desde abajo) = 420 - mMora - encabezado(118) - marginTop(3) - filaRecibo(33)
+            PdfPage page = pdf.getFirstPage();
+            PdfCanvas canvas = new PdfCanvas(page);
+            canvas.setStrokeColor(new DeviceGray(0.55f))
+                  .setLineWidth(1.2f)
+                  .moveTo(0, 210f)
+                  .lineTo(28, 210f)
+                  .stroke();
+            canvas.release();
+
             doc.close();
 
         } catch (Exception e) {
@@ -339,7 +369,10 @@ public class ComprobanteMoraPdf {
                                                PdfFont normal, PdfFont bold,
                                                float size, float padding) {
         Cell celda = new Cell()
-                .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                .setBorderTop(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                .setBorderLeft(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                .setBorderRight(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                .setBorderBottom(Border.NO_BORDER)
                 .setPadding(padding);
 
         if (contrato.getClientes() == null || contrato.getClientes().isEmpty()) {

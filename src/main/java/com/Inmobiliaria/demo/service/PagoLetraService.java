@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 public interface PagoLetraService {
 
@@ -25,7 +26,7 @@ public interface PagoLetraService {
 
     void eliminarPago(Integer idPago) throws IOException;
 
-    List<PagoLetraResponseDTO> registrarPagosMultiples(PagosMultiplesRequestDTO request, List<MultipartFile> vouchers) throws IOException;
+    Map<String, Object> registrarPagosMultiples(PagosMultiplesRequestDTO request, List<MultipartFile> vouchers) throws IOException;
 
     String previewSiguienteNumeroComprobante(TipoComprobante tipoComprobante);
 

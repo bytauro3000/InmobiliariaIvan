@@ -16,11 +16,13 @@ public interface MoraRepository extends JpaRepository<MoraLetra, Integer> {
     // Todas las moras de una letra específica
     List<MoraLetra> findByLetraIdLetra(Integer idLetra);
 
-    // Todas las moras de un contrato (para mostrar resumen total pendiente)
-    @Query("SELECT m FROM MoraLetra m " +
-           "JOIN FETCH m.letra l " +
-           "WHERE l.contrato.idContrato = :idContrato " +
-           "ORDER BY m.fechaGeneracion ASC")
+    // Todas las moras de un contrato ordenadas por número de letra de menor a mayor
+    @Query(value =
+        "SELECT m.* FROM mora_letra m " +
+        "JOIN letra_cambio lc ON m.id_letra = lc.id_letra " +
+        "WHERE lc.id_contrato = :idContrato " +
+        "ORDER BY CAST(SUBSTRING_INDEX(lc.numero_letra, '/', 1) AS UNSIGNED) ASC",
+        nativeQuery = true)
     List<MoraLetra> findByContratoIdContrato(@Param("idContrato") Integer idContrato);
 
     // Solo las moras pendientes de un contrato (para calcular deuda acumulada)

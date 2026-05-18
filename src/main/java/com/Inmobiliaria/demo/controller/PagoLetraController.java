@@ -16,6 +16,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.util.Map;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -61,12 +62,12 @@ public class PagoLetraController {
     }
 
     @PostMapping(value = "/registrar-multiple", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<List<PagoLetraResponseDTO>> registrarPagosMultiples(
+    public ResponseEntity<Map<String, Object>> registrarPagosMultiples(
             @RequestPart("pagos") PagosMultiplesRequestDTO request,
             @RequestPart(value = "vouchers", required = false) List<MultipartFile> vouchers)
             throws IOException {
-        List<PagoLetraResponseDTO> responses = pagoLetraService.registrarPagosMultiples(request, vouchers);
-        return new ResponseEntity<>(responses, HttpStatus.CREATED);
+        Map<String, Object> resultado = pagoLetraService.registrarPagosMultiples(request, vouchers);
+        return new ResponseEntity<>(resultado, HttpStatus.CREATED);
     }
 
     @PutMapping(value = "/actualizar/{idPago}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
