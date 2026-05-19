@@ -110,4 +110,20 @@ public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
                "WHERE LOWER(CONCAT(cl.nombre, ' ', cl.apellidos)) LIKE LOWER(CONCAT('%', :termino, '%')) " +
                "ORDER BY c.idContrato DESC")
     List<Contrato> findByClienteNombreContaining(@Param("termino") String termino);
+
+    // ── CORRECCIÓN: Pantalla de inscripciones ────────────────────────────────
+    // Se separa en DOS queries para evitar MultipleBagFetchException y el error
+    // de Hibernate que prohíbe ORDER BY con DISTINCT + múltiples JOIN FETCH de colecciones.
+
+    // QUERY A — Carga clientes (sin ORDER BY en el FETCH de colección)
+    @Query("SELECT DISTINCT c FROM Contrato c " +
+           "LEFT JOIN FETCH c.clientes cc " +
+           "LEFT JOIN FETCH cc.cliente")
+    List<Contrato> findResumenInscripcionesConClientes();
+
+    // QUERY B — Carga lotes sobre los mismos contratos (sin ORDER BY)
+    @Query("SELECT DISTINCT c FROM Contrato c " +
+           "LEFT JOIN FETCH c.lotes cl " +
+           "LEFT JOIN FETCH cl.lote")
+    List<Contrato> findResumenInscripcionesConLotes();
 }
