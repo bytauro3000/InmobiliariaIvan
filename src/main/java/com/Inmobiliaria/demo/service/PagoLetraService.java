@@ -9,6 +9,7 @@ import com.Inmobiliaria.demo.enums.TipoComprobante;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -31,4 +32,10 @@ public interface PagoLetraService {
     String previewSiguienteNumeroComprobante(TipoComprobante tipoComprobante);
 
     SugerenciaNumeroComprobanteDTO sugerirNumeroComprobante(TipoComprobante tipoComprobante);
+
+    /**
+     * Devuelve el saldo pendiente actual de una letra.
+     * Útil para el frontend al mostrar cuánto falta por pagar en una letra parcial.
+     */
+    BigDecimal consultarSaldoPendiente(Integer idLetra);
 }

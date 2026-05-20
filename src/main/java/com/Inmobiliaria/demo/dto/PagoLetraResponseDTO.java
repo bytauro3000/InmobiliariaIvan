@@ -1,5 +1,6 @@
 package com.Inmobiliaria.demo.dto;
 
+import com.Inmobiliaria.demo.enums.EstadoLetra;
 import com.Inmobiliaria.demo.enums.MedioPago;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
 import lombok.Data;
@@ -24,4 +25,14 @@ public class PagoLetraResponseDTO {
     private Long            idComprobante;
     private String          observaciones;
     private List<String>    urlsVoucher;
+
+    // ── Campos de pago parcial ─────────────────────────────────────────────────
+    /** Importe original de la letra (sin descuentos). */
+    private BigDecimal      importeLetra;
+    /** Saldo que queda por pagar después de este pago. 0 = letra completada. */
+    private BigDecimal      saldoPendiente;
+    /** Estado actual de la letra tras este pago. */
+    private EstadoLetra     estadoLetra;
+    /** true si este pago fue registrado como pago a cuenta (parcial). */
+    private Boolean         esPagoAcuenta;
 }

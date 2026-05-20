@@ -156,6 +156,10 @@ public class LetraCambioServiceImpl implements LetraCambioService {
                             dto.setEsMultiple(conteoPorComprobante.getOrDefault(numComp, 0L) > 1);
                         }
                     }
+                    // Mapear saldo pendiente para letras PARCIALES
+                    if (letra.getSaldoPendiente() != null) {
+                        dto.setSaldoPendiente(letra.getSaldoPendiente());
+                    }
                     return dto;
                 })
                 .collect(Collectors.toList());

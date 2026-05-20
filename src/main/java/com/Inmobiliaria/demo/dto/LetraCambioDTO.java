@@ -36,4 +36,7 @@ public class LetraCambioDTO {
 
     // Indica si este pago fue parte de un pago múltiple (mismo número de comprobante)
     private boolean esMultiple;
+
+    // Saldo pendiente cuando la letra está en estado PARCIAL
+    private BigDecimal saldoPendiente;
 }

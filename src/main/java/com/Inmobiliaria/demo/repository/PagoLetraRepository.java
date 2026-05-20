@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -50,19 +51,16 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
            "WHERE p.fechaPago = :fecha")
     List<PagoLetras> findByFechaPago(@Param("fecha") LocalDate fecha);
 
-    /**
-     * Busca pagos de una fecha cuyo comprobante aún no fue enviado por email.
-     * Usa comprobante.emailEnviado como fuente de verdad (campo unificado).
-     * También incluye pagos sin comprobante para no dejarlos fuera del proceso.
-     */
     @Query("SELECT DISTINCT p FROM PagoLetras p " +
            "JOIN FETCH p.letra l " +
            "JOIN FETCH l.contrato c " +
+           "LEFT JOIN FETCH c.clientes cc " +
+           "LEFT JOIN FETCH cc.cliente " +
            "WHERE p.fechaPago = :fecha " +
            "AND (p.comprobante IS NULL OR p.comprobante.emailEnviado = false)")
     List<PagoLetras> findByFechaPagoAndEmailEnviadoFalse(@Param("fecha") LocalDate fecha);
 
-    // ── Utilidad para validar orden de pago ───────────────────────────────────
+    // ── Consultas para lógica de negocio (PagoLetraServiceImpl) ───────────────
 
     @Query(value =
         "SELECT MAX(CAST(SUBSTRING_INDEX(lc.numero_letra, '/', 1) AS UNSIGNED)) " +
@@ -71,4 +69,34 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
         "WHERE lc.id_contrato = :idContrato",
         nativeQuery = true)
     Optional<Integer> findMaxNumeroLetraPagadoByContrato(@Param("idContrato") Integer idContrato);
+
+    // ── NUEVO: suma de importes ya pagados para una letra (para calcular saldo) ──
+
+    /**
+     * Suma todos los importes abonados a una letra (incluye pagos parciales previos).
+     * Se usa para calcular el saldo pendiente antes de registrar un nuevo pago.
+     * Devuelve 0 si no hay pagos previos (COALESCE).
+     */
+    @Query(value =
+        "SELECT COALESCE(SUM(importe_pagado), 0) " +
+        "FROM pago_letra " +
+        "WHERE id_letra = :idLetra",
+        nativeQuery = true)
+    BigDecimal sumImportePagadoByLetra(@Param("idLetra") Integer idLetra);
+
+    // ── Consultas para Dashboard de Ingresos Diarios ──────────────────────────
+
+    @Query(value =
+        "SELECT COALESCE(SUM(importe_pagado), 0) " +
+        "FROM pago_letra " +
+        "WHERE fecha_pago = :fecha",
+        nativeQuery = true)
+    BigDecimal sumImportePagadoByFecha(@Param("fecha") LocalDate fecha);
+
+    @Query(value =
+        "SELECT COUNT(*) " +
+        "FROM pago_letra " +
+        "WHERE fecha_pago = :fecha",
+        nativeQuery = true)
+    long countByFechaPago(@Param("fecha") LocalDate fecha);
 }

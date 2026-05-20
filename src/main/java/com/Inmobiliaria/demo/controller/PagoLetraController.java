@@ -86,10 +86,17 @@ public class PagoLetraController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Devuelve el siguiente número de comprobante disponible.
-     * CORRECCIÓN: ahora llama a sugerirNumeroComprobante() que existe en la interfaz.
-     */
+
+    @GetMapping("/letra/{idLetra}/saldo")
+    public ResponseEntity<Map<String, Object>> consultarSaldoPendiente(
+            @PathVariable Integer idLetra) {
+        java.math.BigDecimal saldo = pagoLetraService.consultarSaldoPendiente(idLetra);
+        return ResponseEntity.ok(Map.of(
+            "idLetra",        idLetra,
+            "saldoPendiente", saldo
+        ));
+    }
+
     @GetMapping("/sugerir-numero")
     public ResponseEntity<SugerenciaNumeroComprobanteDTO> sugerirNumeroComprobante(
             @RequestParam TipoComprobante tipoComprobante) {

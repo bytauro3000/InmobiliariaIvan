@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -48,4 +49,27 @@ public interface PagoMoraRepository extends JpaRepository<PagoMora, Integer> {
     @Query("SELECT pm FROM PagoMora pm " +
            "WHERE pm.fechaPago = :fecha")
     List<PagoMora> findByFechaPago(@Param("fecha") LocalDate fecha);
+
+    // ─── Consultas para Dashboard de Ingresos Diarios ─────────────────────────
+
+    /**
+     * Suma total de importes pagados en pago_mora para una fecha específica.
+     * Devuelve 0 si no hay registros (COALESCE).
+     */
+    @Query(value =
+        "SELECT COALESCE(SUM(importe_pagado), 0) " +
+        "FROM pago_mora " +
+        "WHERE fecha_pago = :fecha",
+        nativeQuery = true)
+    BigDecimal sumImportePagadoByFecha(@Param("fecha") LocalDate fecha);
+
+    /**
+     * Cuenta la cantidad de pagos de moras registrados en una fecha específica.
+     */
+    @Query(value =
+        "SELECT COUNT(*) " +
+        "FROM pago_mora " +
+        "WHERE fecha_pago = :fecha",
+        nativeQuery = true)
+    long countByFechaPago(@Param("fecha") LocalDate fecha);
 }

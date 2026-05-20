@@ -1,10 +1,7 @@
 package com.Inmobiliaria.demo.controller;
 
 import com.Inmobiliaria.demo.client.InscripcionClient;
-import com.Inmobiliaria.demo.dto.InscripcionConPagoRequestDTO;
-import com.Inmobiliaria.demo.dto.InscripcionConPagoResponseDTO;
-import com.Inmobiliaria.demo.dto.InscripcionResumenDTO;
-import com.Inmobiliaria.demo.dto.InscripcionServicioDTO;
+import com.Inmobiliaria.demo.dto.*;
 import com.Inmobiliaria.demo.entity.Comprobante;
 import com.Inmobiliaria.demo.entity.Contrato;
 import com.Inmobiliaria.demo.entity.Lote;
@@ -45,47 +42,34 @@ public class InscripcionGatewayController {
     private final PagoInicialRepository  pagoInicialRepository;
     private final ComprobanteService     comprobanteService;
 
-    /**
-     * Devuelve el resumen de todos los contratos con su estado de servicios (LUZ/AGUA).
-     *
-     * CORRECCIÓN: Se reemplazó findResumenParaInscripciones() (una sola query con
-     * DISTINCT + múltiples JOIN FETCH + ORDER BY que Hibernate rechaza) por dos
-     * queries separadas que se combinan en memoria, igual que el patrón ya usado
-     * en findAllConClientes() + findAllConLotes().
-     */
+    // ── Listar resumen contratos con servicios ───────────────────────────────
+
     @GetMapping("/resumen")
     @PreAuthorize("hasAnyAuthority('ROLE_SECRETARIA', 'ROLE_ADMINISTRADOR')")
     @Transactional(readOnly = true)
     public ResponseEntity<List<InscripcionResumenDTO>> listarResumen() {
         try {
-            // 1. Una sola llamada al microservicio → { idContrato → ["LUZ","AGUA"] }
             Map<Integer, List<String>> serviciosPorContrato =
                     inscripcionClient.obtenerResumenServicios();
 
-            // 2a. Query A: contratos con clientes cargados
             List<Contrato> contratosConClientes =
                     contratoRepository.findResumenInscripcionesConClientes();
 
-            // 2b. Query B: contratos con lotes cargados → mapa para lookup rápido
             Map<Integer, Contrato> contratosConLotes =
                     contratoRepository.findResumenInscripcionesConLotes()
                             .stream()
                             .collect(Collectors.toMap(Contrato::getIdContrato, c -> c));
 
-            // 2c. Ordenar por idContrato descendente (reemplaza el ORDER BY eliminado)
             contratosConClientes.sort(Comparator.comparing(Contrato::getIdContrato).reversed());
 
-            // 3. Armar el DTO de respuesta
             List<InscripcionResumenDTO> resultado = contratosConClientes.stream().map(c -> {
 
-                // Nombre del primer cliente (o "—" si no tiene)
                 String nombre = "—";
                 if (c.getClientes() != null && !c.getClientes().isEmpty()) {
                     var cliente = c.getClientes().get(0).getCliente();
                     nombre = cliente.getNombre() + " " + cliente.getApellidos();
                 }
 
-                // Manzana y lote: se toman del mapa de lotes por idContrato
                 String manzana = "", numeroLote = "";
                 Contrato cLotes = contratosConLotes.get(c.getIdContrato());
                 if (cLotes != null && cLotes.getLotes() != null && !cLotes.getLotes().isEmpty()) {
@@ -94,11 +78,9 @@ public class InscripcionGatewayController {
                     numeroLote = l.getNumeroLote();
                 }
 
-                // Servicios inscritos para este contrato
                 List<String> servicios = serviciosPorContrato
                         .getOrDefault(c.getIdContrato(), List.of());
 
-                // CORRECCIÓN: el campo en el DTO es "nombreCliente" (no "clienteNombre")
                 return new InscripcionResumenDTO(
                         c.getIdContrato(),
                         nombre,
@@ -119,7 +101,7 @@ public class InscripcionGatewayController {
         }
     }
 
-    // ── Endpoint original (sin comprobante) ──────────────────────────────────
+    // ── Registrar inscripción (sin comprobante) ──────────────────────────────
 
     @PostMapping("/registrar")
     @PreAuthorize("hasAuthority('ROLE_SECRETARIA')")
@@ -136,12 +118,8 @@ public class InscripcionGatewayController {
         }
     }
 
-    // ── Registrar inscripción + generar comprobante ──────────────────────────
+    // ── Registrar inscripción + comprobante ──────────────────────────────────
 
-    /**
-     * Registra la inscripción en el microservicio Y guarda un PagoInicial con
-     * comprobante en el monolito. Devuelve el idPagoInicial para descargar el PDF.
-     */
     @PostMapping("/registrar-con-pago")
     @PreAuthorize("hasAuthority('ROLE_SECRETARIA')")
     @Transactional
@@ -149,24 +127,17 @@ public class InscripcionGatewayController {
             @RequestBody InscripcionConPagoRequestDTO request,
             Authentication authentication) {
 
-        // 1. Validaciones básicas
-        if (request.getIdContrato() == null) {
+        if (request.getIdContrato() == null)
             return ResponseEntity.badRequest().body("El idContrato es obligatorio.");
-        }
-        if (request.getTipoServicio() == null || request.getTipoServicio().isBlank()) {
+        if (request.getTipoServicio() == null || request.getTipoServicio().isBlank())
             return ResponseEntity.badRequest().body("El tipo de servicio es obligatorio.");
-        }
-        if (request.getMontoPagado() == null || request.getMontoPagado().signum() <= 0) {
+        if (request.getMontoPagado() == null || request.getMontoPagado().signum() <= 0)
             return ResponseEntity.badRequest().body("El monto pagado debe ser mayor a cero.");
-        }
-        if (request.getMedioPago() == null) {
+        if (request.getMedioPago() == null)
             return ResponseEntity.badRequest().body("El medio de pago es obligatorio.");
-        }
-        if (request.getTipoComprobante() == null) {
+        if (request.getTipoComprobante() == null)
             return ResponseEntity.badRequest().body("El tipo de comprobante es obligatorio.");
-        }
 
-        // 2. Registrar inscripción en el microservicio
         try {
             InscripcionServicioDTO inscripcionDTO = new InscripcionServicioDTO();
             inscripcionDTO.setIdContrato(request.getIdContrato());
@@ -183,12 +154,10 @@ public class InscripcionGatewayController {
                     .body("Error al comunicarse con el servicio de inscripciones: " + e.getMessage());
         }
 
-        // 3. Cargar el Contrato del monolito
         Contrato contrato = contratoRepository.findById(request.getIdContrato())
                 .orElseThrow(() -> new NegocioException(
                         "Contrato no encontrado con ID: " + request.getIdContrato()));
 
-        // 4. Generar el comprobante
         Comprobante comprobante;
         if (request.getNumeroComprobantePersonalizado() != null
                 && !request.getNumeroComprobantePersonalizado().isBlank()) {
@@ -208,7 +177,6 @@ public class InscripcionGatewayController {
                     request.getFechaPago() != null ? request.getFechaPago() : LocalDate.now());
         }
 
-        // 5. Construir y guardar el PagoInicial
         PagoInicial pago = new PagoInicial();
         pago.setContrato(contrato);
         pago.setImportePagado(request.getMontoPagado());
@@ -221,7 +189,6 @@ public class InscripcionGatewayController {
         pago.setComprobante(comprobante);
         PagoInicial pagoGuardado = pagoInicialRepository.save(pago);
 
-        // 6. Respuesta
         InscripcionConPagoResponseDTO response = new InscripcionConPagoResponseDTO(
                 pagoGuardado.getIdPagoInicial(),
                 comprobante.getNumeroCompleto(),
@@ -231,7 +198,7 @@ public class InscripcionGatewayController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    // ── Descargar PDF del comprobante de inscripción ─────────────────────────
+    // ── Descargar PDF del comprobante ────────────────────────────────────────
 
     @GetMapping("/pago/{idPagoInicial}/comprobante-pdf")
     @Transactional(readOnly = true)
@@ -253,7 +220,6 @@ public class InscripcionGatewayController {
                         .orElse("SECRETARIA");
             }
 
-            // Extraer tipoServicio desde las observaciones
             String tipoServicio = "SERVICIO";
             String obs = pago.getObservaciones();
             if (obs != null) {
@@ -263,10 +229,9 @@ public class InscripcionGatewayController {
 
             byte[] pdf = ComprobanteInscripcionPdf.generar(pago, tipoServicio, rolUsuario);
 
-            String nombreArchivo = "comprobante-inscripcion-" + idPagoInicial + ".pdf";
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "inline; filename=\"" + nombreArchivo + "\"")
+                            "inline; filename=\"comprobante-inscripcion-" + idPagoInicial + ".pdf\"")
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
 
@@ -277,7 +242,105 @@ public class InscripcionGatewayController {
         }
     }
 
-    // ── Endpoint existente ───────────────────────────────────────────────────
+    // ── Listar todos los pagos de inscripción ────────────────────────────────
+
+    /**
+     * Devuelve todos los PagoInicial cuyo comprobante tiene origen PAGO_INSCRIPCION.
+     * Es el endpoint que alimenta la pantalla "Pagos de Inscripciones" del frontend.
+     */
+    @GetMapping("/pagos")
+    @PreAuthorize("hasAnyAuthority('ROLE_SECRETARIA', 'ROLE_ADMINISTRADOR')")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<PagoInscripcionDTO>> listarPagos() {
+        try {
+            List<PagoInicial> pagos = pagoInicialRepository
+                    .findAllByComprobanteOrigen(TipoOrigenComprobante.PAGO_INSCRIPCION);
+
+            List<PagoInscripcionDTO> resultado = pagos.stream().map(p -> {
+
+                // Extraer tipo de servicio desde observaciones
+                String tipoServicio = "SERVICIO";
+                String obs = p.getObservaciones();
+                if (obs != null) {
+                    if (obs.toUpperCase().contains("LUZ"))  tipoServicio = "LUZ";
+                    if (obs.toUpperCase().contains("AGUA")) tipoServicio = "AGUA";
+                }
+
+                Comprobante c = p.getComprobante();
+
+                // Extraer manzana, lote y programa del primer lote del contrato
+                String manzana       = null;
+                String numeroLote    = null;
+                Integer idPrograma   = null;
+                String nombrePrograma = null;
+
+                var lotes = p.getContrato().getLotes();
+                if (lotes != null && !lotes.isEmpty()) {
+                    Lote l = lotes.get(0).getLote();
+                    if (l != null) {
+                        manzana    = l.getManzana();
+                        numeroLote = l.getNumeroLote();
+                        if (l.getPrograma() != null) {
+                            idPrograma    = l.getPrograma().getIdPrograma();
+                            nombrePrograma = l.getPrograma().getNombrePrograma();
+                        }
+                    }
+                }
+
+                return new PagoInscripcionDTO(
+                        p.getIdPagoInicial(),
+                        p.getContrato().getIdContrato(),
+                        p.getImportePagado(),
+                        p.getFechaPago(),
+                        p.getMedioPago(),
+                        p.getNumeroOperacion(),
+                        p.getObservaciones(),
+                        c != null ? c.getTipoComprobante() : null,
+                        c != null ? c.getNumeroCompleto()  : null,
+                        c != null ? c.getFechaEmision()    : null,
+                        tipoServicio,
+                        manzana,
+                        numeroLote,
+                        idPrograma,
+                        nombrePrograma
+                );
+            }).collect(Collectors.toList());
+
+            return ResponseEntity.ok(resultado);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    // ── Eliminar inscripción ─────────────────────────────────────────────────
+
+    /**
+     * Elimina una inscripción en el microservicio por su ID de inscripción.
+     * Usado cuando se registró una inscripción por error.
+     * NOTA: No elimina el PagoInicial ni el Comprobante asociado del monolito,
+     * ya que esos registros son parte del historial contable.
+     */
+    @DeleteMapping("/{idInscripcion}")
+    @PreAuthorize("hasAuthority('ROLE_SECRETARIA')")
+    public ResponseEntity<?> eliminarInscripcion(@PathVariable Integer idInscripcion) {
+        try {
+            inscripcionClient.eliminarInscripcion(idInscripcion);
+            limpiarCache();
+            return ResponseEntity.noContent().build();
+        } catch (FeignException e) {
+            if (e.status() == 404 || e.status() == 400) {
+                return ResponseEntity.status(e.status()).body(e.contentUTF8());
+            }
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al eliminar la inscripción.");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al comunicarse con el servicio de inscripciones.");
+        }
+    }
+
+    // ── Contratos activos por servicio ───────────────────────────────────────
 
     @GetMapping("/contratos-activos")
     @PreAuthorize("hasAuthority('ROLE_SECRETARIA')")

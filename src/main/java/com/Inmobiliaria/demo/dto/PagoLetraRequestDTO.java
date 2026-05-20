@@ -19,4 +19,5 @@ public class PagoLetraRequestDTO {
     private TipoComprobante tipoComprobante;
     private String          numeroComprobantePersonalizado;
     private String          observaciones;
+    private Boolean esPagoAcuenta = false;
 }

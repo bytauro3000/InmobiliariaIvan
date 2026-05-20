@@ -40,10 +40,13 @@ public class LetraCambio {
 
     @Temporal(TemporalType.DATE)
     @Column(name = "fecha_vencimiento", nullable = false)
-    private LocalDate  fechaVencimiento;
+    private LocalDate fechaVencimiento;
 
     @Column(name = "importe", nullable = false, precision = 12, scale = 2)
     private BigDecimal importe;
+
+    @Column(name = "saldo_pendiente", nullable = false, precision = 12, scale = 2)
+    private BigDecimal saldoPendiente = BigDecimal.ZERO;
 
     @Column(name = "importe_letras", length = 255)
     private String importeLetras;
@@ -51,10 +54,9 @@ public class LetraCambio {
     @Enumerated(EnumType.STRING)
     @Column(name = "estado_letra", nullable = false)
     private EstadoLetra estadoLetra = EstadoLetra.PENDIENTE;
-    
- // Relación para ver los pagos asociados a esta letra
+
+    // Relación para ver los pagos asociados a esta letra
     @OneToMany(mappedBy = "letra", cascade = CascadeType.ALL)
     @JsonIgnore
     private List<PagoLetras> pagos;
-
 }

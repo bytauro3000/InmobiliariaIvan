@@ -28,13 +28,17 @@ public class SecurityConfig {
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+                // ── Rutas públicas (sin autenticación) ────────────────────────────────
                 .requestMatchers(
                     "/api/auth/**",
                     "/api/public/**",
+                    // Comprobantes de pago individuales y múltiples: acceso abierto
+                    // para que puedan descargarse sin token (window.open desde el frontend)
                     "/api/pagos/*/comprobante-pdf",
                     "/api/pagos/comprobante-multiple/*",
                     "/error"
                 ).permitAll()
+                // ── Rutas de negocio: SECRETARIA o ADMINISTRADOR ──────────────────────
                 .requestMatchers(
                     "/api/distritos/**",
                     "/api/separaciones/**",
@@ -56,8 +60,8 @@ public class SecurityConfig {
                     "/api/tipo-cambio/**",
                     "/api/moras/**",
                     "/api/comprobantes/**"
-                    
-                ).hasAuthority("ROLE_SECRETARIA")
+                ).hasAnyAuthority("ROLE_SECRETARIA", "ROLE_ADMINISTRADOR")
+                // ── Gestión de usuarios: solo ADMINISTRADOR ───────────────────────────
                 .requestMatchers("/api/usuarios/**")
                 .hasAnyAuthority("ROLE_SECRETARIA", "ROLE_ADMINISTRADOR")
                 .anyRequest().authenticated()
@@ -66,13 +70,11 @@ public class SecurityConfig {
             .build();
     }
 
-    //ENCRIPTACION DE CONTRASEÑAS
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-    
-    
+
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
