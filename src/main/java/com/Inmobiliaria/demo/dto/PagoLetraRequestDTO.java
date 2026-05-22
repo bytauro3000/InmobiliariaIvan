@@ -2,6 +2,7 @@ package com.Inmobiliaria.demo.dto;
 
 import com.Inmobiliaria.demo.enums.MedioPago;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -15,6 +16,8 @@ public class PagoLetraRequestDTO {
     private BigDecimal      importePagado;
     private MedioPago       medioPago;
     private String          numeroOperacion;
+
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate       fechaPago;
     private TipoComprobante tipoComprobante;
     private String          numeroComprobantePersonalizado;

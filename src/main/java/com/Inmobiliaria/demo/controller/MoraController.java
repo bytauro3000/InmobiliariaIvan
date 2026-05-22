@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -32,9 +33,20 @@ public class MoraController {
 
     // ── CONSULTAS ─────────────────────────────────────────────────────────────
 
+    /**
+     * Calcula mora para una letra.
+     * Si se pasa el parámetro opcional ?fecha=YYYY-MM-DD, usa esa fecha como referencia
+     * en lugar de la fecha actual. Útil para mostrar la mora correcta cuando el usuario
+     * va a registrar un pago con fecha de operación retroactiva.
+     */
     @GetMapping("/calcular/{idLetra}")
-    public ResponseEntity<CalculoMoraDTO> calcularMora(@PathVariable Integer idLetra) {
-        return ResponseEntity.ok(moraService.calcularMora(idLetra));
+    public ResponseEntity<CalculoMoraDTO> calcularMora(
+            @PathVariable Integer idLetra,
+            @RequestParam(required = false) LocalDate fecha) {
+        CalculoMoraDTO resultado = (fecha != null)
+            ? moraService.calcularMora(idLetra, fecha)
+            : moraService.calcularMora(idLetra);
+        return ResponseEntity.ok(resultado);
     }
 
     @GetMapping("/contrato/{idContrato}")

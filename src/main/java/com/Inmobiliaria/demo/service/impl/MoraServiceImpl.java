@@ -49,20 +49,25 @@ public class MoraServiceImpl implements MoraService {
     @Override
     @Transactional(readOnly = true)
     public CalculoMoraDTO calcularMora(Integer idLetra) {
+        return calcularMora(idLetra, LocalDate.now());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CalculoMoraDTO calcularMora(Integer idLetra, LocalDate fechaReferencia) {
         LetraCambio letra = letraCambioRepository.findById(idLetra)
             .orElseThrow(() -> new NegocioException("Letra no encontrada con id: " + idLetra));
 
-        LocalDate hoy = LocalDate.now();
         LocalDate fechaVenc = letra.getFechaVencimiento();
 
-        if (!fechaVenc.isBefore(hoy)) {
+        if (!fechaVenc.isBefore(fechaReferencia)) {
             throw new NegocioException(
                 "La letra N° " + letra.getNumeroLetra() +
                 " no está vencida. Vence el " + fechaVenc + ". No aplica mora."
             );
         }
 
-        long dias = ChronoUnit.DAYS.between(fechaVenc, hoy);
+        long dias = ChronoUnit.DAYS.between(fechaVenc, fechaReferencia);
         BigDecimal montoPct  = letra.getImporte().multiply(PORCENTAJE_MORA).setScale(2, RoundingMode.HALF_UP);
         BigDecimal montoDiar = MONTO_DIARIO.multiply(BigDecimal.valueOf(dias)).setScale(2, RoundingMode.HALF_UP);
         BigDecimal total = montoPct.add(montoDiar);
@@ -75,7 +80,7 @@ public class MoraServiceImpl implements MoraService {
         }
 
         return new CalculoMoraDTO(idLetra, letra.getNumeroLetra(), letra.getImporte(),
-            fechaVenc, hoy, (int) dias, montoPct, montoDiar, total, tienePrevia, idMoraPrevia);
+            fechaVenc, fechaReferencia, (int) dias, montoPct, montoDiar, total, tienePrevia, idMoraPrevia);
     }
 
     // ─── Generar mora al pagar letra vencida (llamado desde PagoLetraServiceImpl) ──
@@ -84,29 +89,72 @@ public class MoraServiceImpl implements MoraService {
     public MoraLetra generarMoraParaPago(LetraCambio letra, PagoLetras pagoLetra, LocalDate fechaReferencia) {
         LocalDate fechaVenc = letra.getFechaVencimiento();
 
+        // Si el pago se registra con fecha <= vencimiento, no corresponde mora.
+        // Cancelamos cualquier mora PENDIENTE preexistente (pudo crearse por alerta).
         if (!fechaReferencia.isAfter(fechaVenc)) {
             cancelarMoraExistenteSiHay(letra.getIdLetra());
             return null;
         }
 
+        // ── Recalcular días/montos con la fecha real del pago ─────────────────
+        long dias = ChronoUnit.DAYS.between(fechaVenc, fechaReferencia);
+        BigDecimal montoPct  = letra.getImporte()
+            .multiply(PORCENTAJE_MORA).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal montoDiar = MONTO_DIARIO
+            .multiply(BigDecimal.valueOf(dias)).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal total = montoPct.add(montoDiar);
+
+        // ── Buscar mora existente en cualquier estado activo ──────────────────
+        // existeMoraActivaParaLetra excluye ANULADO; puede ser PENDIENTE o PAGADO.
         boolean yaExiste = moraRepository.existeMoraActivaParaLetra(letra.getIdLetra());
+
         if (yaExiste) {
-            if (moraRepository.findByLetraIdLetraAndEstadoMora(letra.getIdLetra(), EstadoMora.PAGADO).isPresent())
-                return null;
-            Optional<MoraLetra> moraExistente = moraRepository
+            // Caso 1: mora PAGADO → ya cobrada correctamente antes del pago de la letra.
+            // FIX: en lugar de return null, verificamos si los días están mal y
+            //      actualizamos los datos de la mora PAGADO para que quede correcto
+            //      en el historial. No se modifica el monto (ya fue cobrado).
+            Optional<MoraLetra> moraPagada = moraRepository
+                .findByLetraIdLetraAndEstadoMora(letra.getIdLetra(), EstadoMora.PAGADO);
+            if (moraPagada.isPresent()) {
+                MoraLetra mora = moraPagada.get();
+                // Solo corregimos días y fechaGeneracion si la mora fue calculada
+                // con LocalDate.now() y los días no coinciden con la fechaReferencia real.
+                // Esto corrige el historial sin alterar el monto ya cobrado.
+                long diasCorrectos = ChronoUnit.DAYS.between(fechaVenc, fechaReferencia);
+                if (mora.getDiasMora() != (int) diasCorrectos) {
+                    BigDecimal montoDiarCorr = MONTO_DIARIO
+                        .multiply(BigDecimal.valueOf(diasCorrectos)).setScale(2, RoundingMode.HALF_UP);
+                    mora.setDiasMora((int) diasCorrectos);
+                    mora.setMontoDiario(montoDiarCorr);
+                    mora.setMontoMoraTotal(mora.getMontoPorcentaje().add(montoDiarCorr));
+                    mora.setFechaGeneracion(fechaReferencia);
+                    mora.setPagoLetra(pagoLetra);
+                    moraRepository.save(mora);
+                }
+                return mora;
+            }
+
+            // Caso 2: mora PENDIENTE → recalcular con la fecha real del pago.
+            Optional<MoraLetra> moraPendiente = moraRepository
                 .findByLetraIdLetraAndEstadoMora(letra.getIdLetra(), EstadoMora.PENDIENTE);
-            if (moraExistente.isPresent()) {
-                MoraLetra mora = moraExistente.get();
+            if (moraPendiente.isPresent()) {
+                MoraLetra mora = moraPendiente.get();
+                mora.setDiasMora((int) dias);
+                mora.setMontoPorcentaje(montoPct);
+                mora.setMontoDiario(montoDiar);
+                mora.setMontoMoraTotal(total);
+                mora.setFechaGeneracion(fechaReferencia);
                 mora.setPagoLetra(pagoLetra);
                 return moraRepository.save(mora);
             }
+
+            // Caso 3: yaExiste == true pero no encontramos ni PENDIENTE ni PAGADO.
+            // Puede ocurrir si solo hay registros ANULADO (raro, por inconsistencia en BD).
+            // existeMoraActivaParaLetra filtra ANULADO, así que esto no debería pasar,
+            // pero por seguridad creamos una mora nueva en lugar de retornar null.
         }
 
-        long dias = ChronoUnit.DAYS.between(fechaVenc, fechaReferencia);
-        BigDecimal montoPct  = letra.getImporte().multiply(PORCENTAJE_MORA).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal montoDiar = MONTO_DIARIO.multiply(BigDecimal.valueOf(dias)).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal total = montoPct.add(montoDiar);
-
+        // ── No existe mora activa → crear nueva ───────────────────────────────
         MoraLetra mora = new MoraLetra();
         mora.setLetra(letra);
         mora.setPagoLetra(pagoLetra);
@@ -162,7 +210,7 @@ public class MoraServiceImpl implements MoraService {
         return new MoraResumenContratoDTO(idContrato, pendientes.size(), total);
     }
 
-    // ─── Pago de mora (el cambio principal) ───────────────────────────────────
+    // ─── Pago de mora ──────────────────────────────────────────────────────────
 
     @Override
     @Transactional
@@ -205,7 +253,6 @@ public class MoraServiceImpl implements MoraService {
             pagoGuardado = pagoMoraRepository.save(pagoGuardado);
         }
 
-        // ── Guardar vouchers en Cloudinary ───────────────────────────────────
         if (vouchers != null && !vouchers.isEmpty()) {
             String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
             for (MultipartFile archivo : vouchers) {
@@ -329,14 +376,12 @@ public class MoraServiceImpl implements MoraService {
         dto.setNumeroOperacion(pago.getNumeroOperacion());
         dto.setObservaciones(pago.getObservaciones());
 
-        // ── Leer comprobante desde la relación centralizada ──────────────────
         if (pago.getComprobante() != null) {
             dto.setIdComprobante(pago.getComprobante().getIdComprobante());
             dto.setTipoComprobante(pago.getComprobante().getTipoComprobante());
             dto.setNumeroComprobante(pago.getComprobante().getNumeroCompleto());
         }
 
-        // ── Leer vouchers del repositorio polimórfico ─────────────────────────
         List<String> urls = voucherRepository
             .findByTipoOrigenAndReferenciaId("PAGO_MORA", pago.getIdPagoMora())
             .stream().map(Voucher::getUrl).collect(Collectors.toList());

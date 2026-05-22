@@ -71,32 +71,54 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         }
     }
 
+ // DESPUÉS (corregido)
     private void validarOrdenDePagoMultiple(Integer idContrato, List<String> numerosLetra) {
         if (numerosLetra == null || numerosLetra.isEmpty()) return;
         List<Integer> nums = numerosLetra.stream()
             .map(this::extraerNumeroLetra).sorted().collect(Collectors.toList());
-        int maxPagado = pagoLetraRepository.findMaxNumeroLetraPagadoByContrato(idContrato)
-            .orElse(0);
+
+        Optional<Integer> maxPagadoOpt = pagoLetraRepository.findMaxNumeroLetraPagadoByContrato(idContrato);
+
+        // ← CORRECCIÓN: si no hay ningún pago en BD, cualquier letra es válida como primera
+        if (maxPagadoOpt.isEmpty() || maxPagadoOpt.get() == null) {
+            // Solo verificar que las letras del lote sean consecutivas entre sí
+            for (int i = 1; i < nums.size(); i++) {
+                if (nums.get(i) != nums.get(i - 1) + 1) {
+                    throw new NegocioException(
+                        "Las letras seleccionadas no son consecutivas: N° " +
+                        nums.get(i - 1) + " y N° " + nums.get(i) + ".");
+                }
+            }
+            return;
+        }
+
+        int maxPagado = maxPagadoOpt.get();
         int primerNum = nums.get(0);
         if (primerNum > maxPagado + 1) {
             throw new NegocioException(
                 "No puede pagar la letra N° " + primerNum +
-                " porque el pago siguiente debe ser la letra N° " + (maxPagado + 1) + "."
-            );
+                " porque el pago siguiente debe ser la letra N° " + (maxPagado + 1) + ".");
         }
         for (int i = 1; i < nums.size(); i++) {
             if (nums.get(i) != nums.get(i - 1) + 1) {
                 throw new NegocioException(
                     "Las letras seleccionadas no son consecutivas: N° " +
-                    nums.get(i - 1) + " y N° " + nums.get(i) + "."
-                );
+                    nums.get(i - 1) + " y N° " + nums.get(i) + ".");
             }
         }
     }
 
+   
     private LocalDate resolverFechaReferenciaMora(int numLetraActual, Integer idContrato, LocalDate fechaOperacion) {
-        int maxPagado = pagoLetraRepository.findMaxNumeroLetraPagadoByContrato(idContrato).orElse(0);
-        return numLetraActual < maxPagado ? fechaOperacion : LocalDate.now();
+        if (fechaOperacion == null) {
+            // Esto no debería ocurrir: el DTO tiene @JsonFormat y el frontend
+            // siempre envía la fecha. Registramos el problema y usamos hoy como fallback.
+            System.err.println("[WARN] resolverFechaReferenciaMora: fechaOperacion es null para " +
+                "letra " + numLetraActual + " del contrato " + idContrato +
+                ". Usando LocalDate.now() como fallback.");
+            return LocalDate.now();
+        }
+        return fechaOperacion;
     }
 
     /**
@@ -170,7 +192,6 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         if (letras == null || letras.isEmpty()) return;
 
         // ── ¿Ya se pagó la última letra? → CANCELADO ────────────────────────
-        // Una letra con PARCIAL no se considera pagada para este efecto
         boolean ultimaLetraPagada = letras.stream()
             .max(Comparator.comparingInt(l -> extraerNumeroLetra(l.getNumeroLetra())))
             .map(l -> l.getEstadoLetra() == EstadoLetra.PAGADO)
@@ -237,12 +258,10 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         dto.setObservaciones(pago.getObservaciones());
         dto.setEsPagoAcuenta(pago.getEsPagoAcuenta());
 
-        // ── Datos de saldo ──────────────────────────────────────────────────
         dto.setImporteLetra(pago.getLetra().getImporte());
         dto.setSaldoPendiente(pago.getLetra().getSaldoPendiente());
         dto.setEstadoLetra(pago.getLetra().getEstadoLetra());
 
-        // ── Comprobante ─────────────────────────────────────────────────────
         if (pago.getComprobante() != null) {
             dto.setIdComprobante(pago.getComprobante().getIdComprobante());
             dto.setTipoComprobante(pago.getComprobante().getTipoComprobante());
@@ -338,21 +357,25 @@ public class PagoLetraServiceImpl implements PagoLetraService {
 
         boolean esPagoAcuenta = Boolean.TRUE.equals(request.getEsPagoAcuenta());
 
-        // ── Validar y calcular nuevo saldo ───────────────────────────────────
         BigDecimal nuevoSaldo = validarYCalcularNuevoSaldo(letra, request.getImportePagado(), esPagoAcuenta);
 
         Integer idContrato = letra.getContrato().getIdContrato();
 
-        // ── Solo validar orden si la letra aún no tiene pagos parciales ──────
-        // Si ya tiene pagos previos (PARCIAL) es el mismo "turno" de esa letra
         if (letra.getEstadoLetra() != EstadoLetra.PARCIAL) {
             validarOrdenDePago(idContrato, letra.getNumeroLetra());
         }
 
+        // ── Resolver fecha de operación ──────────────────────────────────────
+        // FIX: siempre se toma la fecha del request (con fallback a hoy).
+        // Se resuelve ANTES de guardar el pago para usarla consistentemente.
+        LocalDate fechaOperacion = request.getFechaPago() != null
+            ? request.getFechaPago()
+            : LocalDate.now();
+
         // ── Construir el pago ────────────────────────────────────────────────
         PagoLetras pago = new PagoLetras();
         pago.setLetra(letra);
-        pago.setFechaPago(request.getFechaPago());
+        pago.setFechaPago(fechaOperacion);
         pago.setImportePagado(request.getImportePagado());
         pago.setMedioPago(request.getMedioPago());
         pago.setNumeroOperacion(request.getNumeroOperacion());
@@ -370,7 +393,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
                 TipoOrigenComprobante.PAGO_LETRA,
                 pagoGuardado.getIdPago(),
                 request.getImportePagado(),
-                request.getFechaPago(),
+                fechaOperacion,
                 request.getNumeroComprobantePersonalizado()
             );
             pagoGuardado.setComprobante(comprobante);
@@ -383,15 +406,21 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         letra.setSaldoPendiente(nuevoSaldo);
 
         if (nuevoSaldo.compareTo(BigDecimal.ZERO) == 0) {
-            // Pago completado → lógica de mora si aplica
-            if (letra.getEstadoLetra() == EstadoLetra.VENCIDO) {
+            // Pago completado: generar/recalcular mora si la letra estaba vencida.
+            // FIX: también se ejecuta para letras en estado PENDIENTE cuya fecha de
+            //      vencimiento ya pasó pero que el scheduler no marcó como VENCIDO aún.
+            //      generarMoraParaPago verifica internamente si fechaRef > fechaVenc.
+            boolean letraEsVencida = letra.getEstadoLetra() == EstadoLetra.VENCIDO
+                || (letra.getFechaVencimiento() != null
+                    && letra.getFechaVencimiento().isBefore(fechaOperacion));
+
+            if (letraEsVencida) {
                 int numLetra = extraerNumeroLetra(letra.getNumeroLetra());
-                LocalDate fechaRef = resolverFechaReferenciaMora(numLetra, idContrato, request.getFechaPago());
+                LocalDate fechaRef = resolverFechaReferenciaMora(numLetra, idContrato, fechaOperacion);
                 moraService.generarMoraParaPago(letra, pagoGuardado, fechaRef);
             }
             letra.setEstadoLetra(EstadoLetra.PAGADO);
         } else {
-            // Pago parcial → la letra pasa a PARCIAL (o sigue PARCIAL si ya lo era)
             letra.setEstadoLetra(EstadoLetra.PARCIAL);
         }
 
@@ -417,7 +446,6 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             .orElseThrow(() -> new NegocioException("Letra no encontrada: " + idPrimeraLetra));
         Integer idContrato = letraEjemplo.getContrato().getIdContrato();
 
-        // ── Cargar todas las letras del request ──────────────────────────────
         List<LetraCambio> letrasDelLote = new ArrayList<>();
         List<String> numerosLetraRequest = new ArrayList<>();
         for (PagoLetraRequestDTO req : request.getPagos()) {
@@ -428,22 +456,15 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         }
         validarOrdenDePagoMultiple(idContrato, numerosLetraRequest);
 
-        // ── Validar y procesar LETRA GRATIS ──────────────────────────────────
         LetraCambio letraGratis = null;
         if (request.getIdLetraGratis() != null) {
-            // Se pasa la cantidad de letras del lote actual que se van a pagar
-            // para que se incluyan en el conteo de letras pagadas al evaluar
-            // si corresponde otorgar la letra gratis.
             letraGratis = validarLetraGratis(
                 request.getIdLetraGratis(), idContrato, letrasDelLote.size());
         }
 
-        // ── Calcular descuentos ───────────────────────────────────────────────
-        // El descuento se prorratea proporcionalmente al importe de cada letra.
         BigDecimal descuentoTotal = request.getDescuentoNegociado();
         if (descuentoTotal == null) descuentoTotal = BigDecimal.ZERO;
 
-        // El total real cobrado = suma de importes del lote - descuento negociado
         BigDecimal montoTotalBruto = request.getPagos().stream()
             .map(PagoLetraRequestDTO::getImportePagado)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -454,30 +475,32 @@ public class PagoLetraServiceImpl implements PagoLetraService {
 
         BigDecimal montoTotalNeto = montoTotalBruto.subtract(descuentoTotal);
 
-        // ── Subir vouchers una sola vez ───────────────────────────────────────
         List<String> urlsVoucher = new ArrayList<>();
         if (vouchers != null && !vouchers.isEmpty()) {
             for (MultipartFile v : vouchers)
                 urlsVoucher.add(subirImagen(v, idContrato, null));
         }
 
-        // ── Crear UN SOLO comprobante para todo el lote ───────────────────────
         PagoLetraRequestDTO primerPago = request.getPagos().get(0);
+        // FIX: resolver fecha de operación del primer pago una sola vez
+        LocalDate fechaOperacionLote = primerPago.getFechaPago() != null
+            ? primerPago.getFechaPago()
+            : LocalDate.now();
+
         Comprobante comprobanteCompartido = null;
         if (primerPago.getTipoComprobante() != null) {
             comprobanteCompartido = comprobanteService.generarComprobanteConNumero(
                 primerPago.getTipoComprobante(),
                 TipoOrigenComprobante.PAGO_LETRA,
                 null,
-                montoTotalNeto,   // monto neto (ya con descuento aplicado)
-                primerPago.getFechaPago(),
+                montoTotalNeto,
+                fechaOperacionLote,
                 primerPago.getNumeroComprobantePersonalizado()
             );
         }
 
         List<PagoLetraResponseDTO> responses = new ArrayList<>();
 
-        // ── Procesar cada letra del lote ──────────────────────────────────────
         for (int i = 0; i < request.getPagos().size(); i++) {
             PagoLetraRequestDTO pagoReq = request.getPagos().get(i);
             LetraCambio letra = letrasDelLote.get(i);
@@ -485,12 +508,9 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             if (letra.getEstadoLetra() == EstadoLetra.PAGADO)
                 throw new NegocioException("La letra " + letra.getNumeroLetra() + " ya está pagada.");
 
-            // ── Si esta letra es la gratis, se procesa aparte → skip ─────────
             if (letraGratis != null && letra.getIdLetra().equals(letraGratis.getIdLetra()))
                 continue;
 
-            // ── Calcular porción de descuento para esta letra ────────────────
-            // Prorrateo: descuentoLetra = descuentoTotal * (importeLetra / montoTotalBruto)
             BigDecimal descuentoLetra = BigDecimal.ZERO;
             if (descuentoTotal.compareTo(BigDecimal.ZERO) > 0 && montoTotalBruto.compareTo(BigDecimal.ZERO) > 0) {
                 descuentoLetra = descuentoTotal
@@ -499,14 +519,18 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             }
             BigDecimal importeNetoLetra = pagoReq.getImportePagado().subtract(descuentoLetra);
 
-            // ── Validar importe con saldo real de la letra ───────────────────
             boolean esPagoAcuenta = Boolean.TRUE.equals(pagoReq.getEsPagoAcuenta());
             BigDecimal nuevoSaldo = validarYCalcularNuevoSaldo(letra, pagoReq.getImportePagado(), esPagoAcuenta);
 
+            // FIX: resolver fecha por letra (puede diferir en el lote)
+            LocalDate fechaOperacionLetra = pagoReq.getFechaPago() != null
+                ? pagoReq.getFechaPago()
+                : fechaOperacionLote;
+
             PagoLetras pago = new PagoLetras();
             pago.setLetra(letra);
-            pago.setFechaPago(pagoReq.getFechaPago());
-            pago.setImportePagado(importeNetoLetra);   // se guarda el importe neto
+            pago.setFechaPago(fechaOperacionLetra);
+            pago.setImportePagado(importeNetoLetra);
             pago.setMedioPago(pagoReq.getMedioPago());
             pago.setNumeroOperacion(pagoReq.getNumeroOperacion());
             pago.setObservaciones(construirObservaciones(pagoReq.getObservaciones(),
@@ -526,13 +550,17 @@ public class PagoLetraServiceImpl implements PagoLetraService {
                 voucherRepository.save(v);
             }
 
-            // ── Actualizar saldo y estado de la letra ────────────────────────
-            // El saldo se reduce por el importe bruto (sin descuento aplicado al cálculo del saldo)
             letra.setSaldoPendiente(nuevoSaldo);
             if (nuevoSaldo.compareTo(BigDecimal.ZERO) == 0) {
-                if (letra.getEstadoLetra() == EstadoLetra.VENCIDO) {
+                // FIX: misma lógica que en registrarPago — también cubre letras con
+                //      fecha vencida aunque el scheduler no las haya marcado VENCIDO aún.
+                boolean letraEsVencida = letra.getEstadoLetra() == EstadoLetra.VENCIDO
+                    || (letra.getFechaVencimiento() != null
+                        && letra.getFechaVencimiento().isBefore(fechaOperacionLetra));
+
+                if (letraEsVencida) {
                     int numLetra = extraerNumeroLetra(letra.getNumeroLetra());
-                    LocalDate fechaRef = resolverFechaReferenciaMora(numLetra, idContrato, pagoReq.getFechaPago());
+                    LocalDate fechaRef = resolverFechaReferenciaMora(numLetra, idContrato, fechaOperacionLetra);
                     moraService.generarMoraParaPago(letra, guardado, fechaRef);
                 }
                 letra.setEstadoLetra(EstadoLetra.PAGADO);
@@ -544,11 +572,10 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             responses.add(mapToDTO(guardado));
         }
 
-        // ── Procesar LETRA GRATIS (si aplica) ────────────────────────────────
         PagoLetraResponseDTO responseLetraGratis = null;
         if (letraGratis != null) {
             responseLetraGratis = registrarLetraGratis(
-                letraGratis, idContrato, primerPago.getFechaPago(),
+                letraGratis, idContrato, fechaOperacionLote,
                 primerPago.getMedioPago(), comprobanteCompartido,
                 request.getMotivoLetraGratis(), urlsVoucher
             );
@@ -557,7 +584,6 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         letraCambioRepository.findById(request.getPagos().get(0).getIdLetra())
             .ifPresent(l -> verificarYActualizarEstadoContrato(l.getContrato()));
 
-        // ── Armar respuesta ───────────────────────────────────────────────────
         Map<String, Object> resultado = new LinkedHashMap<>();
         resultado.put("pagos", responses);
         resultado.put("numeroComprobanteGenerado",
@@ -574,17 +600,6 @@ public class PagoLetraServiceImpl implements PagoLetraService {
     // Lógica de LETRA GRATIS
     // ═══════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Valida que corresponda otorgar una letra gratis.
-     * Regla: por cada {@value LETRAS_PARA_GRATIS} letras PAGADAS en el contrato
-     * el cliente tiene derecho a 1 letra gratis.
-     *
-     * Cálculo: letrasGratisPosibles = (totalPagadas + letrasEnLote) / LETRAS_PARA_GRATIS
-     *
-     * @param letrasEnLote cantidad de letras del lote ACTUAL que se están pagando
-     *                     en esta misma operación (aún no están en BD como PAGADO).
-     *                     Se suman al conteo para reflejar la situación real post-pago.
-     */
     private LetraCambio validarLetraGratis(Integer idLetraGratis, Integer idContrato,
                                             int letrasEnLote) {
         LetraCambio letra = letraCambioRepository.findById(idLetraGratis)
@@ -596,14 +611,12 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         if (letra.getEstadoLetra() == EstadoLetra.PAGADO)
             throw new NegocioException("La letra marcada como gratis ya está pagada.");
 
-        // Contar letras ya PAGADAS en BD + las del lote actual (se pagarán en esta misma operación)
         long pagadasEnBD = letraCambioRepository.findByContratoIdContrato(idContrato)
             .stream()
             .filter(l -> l.getEstadoLetra() == EstadoLetra.PAGADO)
             .count();
         long totalPagadas = pagadasEnBD + letrasEnLote;
 
-        // Contar cuántas letras gratis ya se han otorgado
         long gratisYaUsadas = pagoLetraRepository
             .findByLetraContratoIdContrato(idContrato)
             .stream()
@@ -623,16 +636,11 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         return letra;
     }
 
-    /**
-     * Registra un pago de $0.00 para la letra gratis.
-     * El descuentoAplicado = importe de la letra (100% condonado).
-     */
     private PagoLetraResponseDTO registrarLetraGratis(
             LetraCambio letra, Integer idContrato, LocalDate fechaPago,
             MedioPago medioPago, Comprobante comprobante,
             String motivo, List<String> urlsVoucher) {
 
-        // Inicializar saldo si es necesario
         if (letra.getSaldoPendiente().compareTo(BigDecimal.ZERO) == 0
                 && letra.getEstadoLetra() == EstadoLetra.PENDIENTE) {
             letra.setSaldoPendiente(letra.getImporte());
@@ -641,12 +649,12 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         PagoLetras pago = new PagoLetras();
         pago.setLetra(letra);
         pago.setFechaPago(fechaPago);
-        pago.setImportePagado(BigDecimal.ZERO);              // no se cobra nada
+        pago.setImportePagado(BigDecimal.ZERO);
         pago.setMedioPago(medioPago);
         pago.setNumeroOperacion(null);
         pago.setObservaciones(motivo != null ? motivo : "Letra gratis por política comercial");
         pago.setEsPagoAcuenta(false);
-        pago.setDescuentoAplicado(letra.getSaldoPendiente()); // descuento = saldo completo
+        pago.setDescuentoAplicado(letra.getSaldoPendiente());
         pago.setEsLetraGratis(true);
         pago.setComprobante(comprobante);
 
@@ -660,7 +668,6 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             voucherRepository.save(v);
         }
 
-        // La letra gratis queda como PAGADO con saldo 0
         letra.setSaldoPendiente(BigDecimal.ZERO);
         letra.setEstadoLetra(EstadoLetra.PAGADO);
         letraCambioRepository.save(letra);
@@ -682,7 +689,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         pago.setImportePagado(request.getImportePagado());
         pago.setMedioPago(request.getMedioPago());
         pago.setNumeroOperacion(request.getNumeroOperacion());
-        pago.setFechaPago(request.getFechaPago());
+        pago.setFechaPago(request.getFechaPago() != null ? request.getFechaPago() : LocalDate.now());
         pago.setObservaciones(request.getObservaciones());
 
         if (vouchers != null && !vouchers.isEmpty()) {
@@ -759,9 +766,6 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         pagoLetraRepository.delete(pago);
 
         if (idComprobante != null && numeroComprobante != null) {
-            // Solo eliminar el comprobante si ningún otro pago lo sigue referenciando.
-            // Se consulta DESPUÉS de haber borrado el pago actual, por lo que un
-            // resultado de 0 significa que el comprobante ya no tiene dueños.
             long otrosPagosConMismoComprobante =
                 pagoLetraRepository.countByComprobanteNumeroCompleto(numeroComprobante);
 
@@ -770,19 +774,16 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             }
         }
 
-        // ── Recalcular saldo de la letra después de eliminar el pago ─────────
         BigDecimal totalPagadoRestante = pagoLetraRepository.sumImportePagadoByLetra(letra.getIdLetra());
         if (totalPagadoRestante == null) totalPagadoRestante = BigDecimal.ZERO;
         BigDecimal nuevoSaldo = letra.getImporte().subtract(totalPagadoRestante);
 
         long count = pagoLetraRepository.countByLetraIdLetra(letra.getIdLetra());
         if (count == 0) {
-            // No quedan pagos → volver a estado original
             letra.setSaldoPendiente(letra.getImporte());
             letra.setEstadoLetra(letra.getFechaVencimiento().isBefore(LocalDate.now())
                 ? EstadoLetra.VENCIDO : EstadoLetra.PENDIENTE);
         } else {
-            // Quedan pagos parciales
             letra.setSaldoPendiente(nuevoSaldo);
             letra.setEstadoLetra(nuevoSaldo.compareTo(BigDecimal.ZERO) == 0
                 ? EstadoLetra.PAGADO : EstadoLetra.PARCIAL);
@@ -805,7 +806,6 @@ public class PagoLetraServiceImpl implements PagoLetraService {
     // Utilidades privadas
     // ═══════════════════════════════════════════════════════════════════════════
 
-    /** Construye el texto de observaciones incluyendo info del descuento si aplica. */
     private String construirObservaciones(String obsBase, BigDecimal descuento, String motivoDescuento, boolean esGratis) {
         StringBuilder sb = new StringBuilder();
         if (obsBase != null && !obsBase.isBlank()) sb.append(obsBase);
