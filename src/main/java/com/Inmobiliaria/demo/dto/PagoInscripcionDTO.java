@@ -9,16 +9,13 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/**
- * DTO para la pantalla de lista de pagos de inscripciones.
- * Combina datos del PagoInicial, su Comprobante y el Lote/Programa del contrato.
- */
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class PagoInscripcionDTO {
 
-    private Integer       idPagoInicial;
+    private Integer       idPagoInscripcionComprobante;   // antes: idPagoInicial
     private Integer       idContrato;
     private BigDecimal    importePagado;
     private LocalDate     fechaPago;
@@ -28,10 +25,10 @@ public class PagoInscripcionDTO {
 
     // Datos del comprobante
     private TipoComprobante tipoComprobante;
-    private String          numeroComprobante;  // ej. "B001-00042"
+    private String          numeroComprobante;
     private LocalDate       fechaEmision;
 
-    // Tipo de servicio extraído de observaciones ("LUZ" o "AGUA")
+    // Tipo de servicio ("LUZ" o "AGUA")
     private String tipoServicio;
 
     // Datos del lote asociado al contrato

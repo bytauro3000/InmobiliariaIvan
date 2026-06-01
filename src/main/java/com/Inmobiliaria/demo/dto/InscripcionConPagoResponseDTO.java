@@ -9,7 +9,7 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class InscripcionConPagoResponseDTO {
 
-    private Integer idPagoInicial;
+    private Integer idPagoInscripcionComprobante;
     private String  numeroComprobante;
     private String  tipoServicio;
     private Integer idContrato;

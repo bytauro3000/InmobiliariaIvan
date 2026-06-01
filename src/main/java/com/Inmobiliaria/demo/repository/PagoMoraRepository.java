@@ -28,18 +28,11 @@ public interface PagoMoraRepository extends JpaRepository<PagoMora, Integer> {
 
     // ─── Consultas vinculadas al comprobante centralizado ──────────────────────
 
-    /**
-     * Busca todos los pagos de mora asociados a un comprobante específico.
-     * Reemplaza la búsqueda anterior por numero_comprobante (campo eliminado).
-     */
     @Query("SELECT pm FROM PagoMora pm " +
            "WHERE pm.comprobante.idComprobante = :idComprobante")
     List<PagoMora> findByComprobanteId(@Param("idComprobante") Long idComprobante);
 
-    /**
-     * Busca pagos de mora cuyo comprobante tiene el numero_completo dado (ej: "EB01-4001").
-     * Útil para verificar que no se registre el mismo comprobante dos veces.
-     */
+   
     @Query("SELECT pm FROM PagoMora pm " +
            "WHERE pm.comprobante.numeroCompleto = :numeroCompleto")
     List<PagoMora> findByComprobanteNumeroCompleto(@Param("numeroCompleto") String numeroCompleto);
@@ -52,10 +45,6 @@ public interface PagoMoraRepository extends JpaRepository<PagoMora, Integer> {
 
     // ─── Consultas para Dashboard de Ingresos Diarios ─────────────────────────
 
-    /**
-     * Suma total de importes pagados en pago_mora para una fecha específica.
-     * Devuelve 0 si no hay registros (COALESCE).
-     */
     @Query(value =
         "SELECT COALESCE(SUM(importe_pagado), 0) " +
         "FROM pago_mora " +
@@ -72,4 +61,43 @@ public interface PagoMoraRepository extends JpaRepository<PagoMora, Integer> {
         "WHERE fecha_pago = :fecha",
         nativeQuery = true)
     long countByFechaPago(@Param("fecha") LocalDate fecha);
+
+    // ── NUEVAS: Consultas para Reporte de Ingresos por Rango de Fechas ────────
+
+    @Query("SELECT pm FROM PagoMora pm " +
+           "JOIN FETCH pm.mora m " +
+           "JOIN FETCH m.letra l " +
+           "JOIN FETCH l.contrato co " +
+           "LEFT JOIN FETCH co.clientes cc " +
+           "LEFT JOIN FETCH cc.cliente cli " +
+           "LEFT JOIN FETCH pm.comprobante c " +
+           "WHERE pm.fechaPago BETWEEN :desde AND :hasta " +
+           "ORDER BY pm.fechaPago ASC")
+    List<PagoMora> findByFechaPagoBetween(
+            @Param("desde") LocalDate desde,
+            @Param("hasta") LocalDate hasta);
+
+    /**
+     * Suma total de pagos de moras dentro de un rango de fechas.
+     */
+    @Query(value =
+        "SELECT COALESCE(SUM(importe_pagado), 0) " +
+        "FROM pago_mora " +
+        "WHERE fecha_pago BETWEEN :desde AND :hasta",
+        nativeQuery = true)
+    BigDecimal sumImportePagadoByRango(
+            @Param("desde") LocalDate desde,
+            @Param("hasta") LocalDate hasta);
+
+    /**
+     * Cuenta pagos de moras dentro de un rango de fechas.
+     */
+    @Query(value =
+        "SELECT COUNT(*) " +
+        "FROM pago_mora " +
+        "WHERE fecha_pago BETWEEN :desde AND :hasta",
+        nativeQuery = true)
+    long countByFechaPagoBetween(
+            @Param("desde") LocalDate desde,
+            @Param("hasta") LocalDate hasta);
 }

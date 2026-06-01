@@ -72,11 +72,6 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
 
     // ── NUEVO: suma de importes ya pagados para una letra (para calcular saldo) ──
 
-    /**
-     * Suma todos los importes abonados a una letra (incluye pagos parciales previos).
-     * Se usa para calcular el saldo pendiente antes de registrar un nuevo pago.
-     * Devuelve 0 si no hay pagos previos (COALESCE).
-     */
     @Query(value =
         "SELECT COALESCE(SUM(importe_pagado), 0) " +
         "FROM pago_letra " +
@@ -99,4 +94,42 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
         "WHERE fecha_pago = :fecha",
         nativeQuery = true)
     long countByFechaPago(@Param("fecha") LocalDate fecha);
+
+    // ── NUEVAS: Consultas para Reporte de Ingresos por Rango de Fechas ────────
+
+    @Query("SELECT DISTINCT p FROM PagoLetras p " +
+           "JOIN FETCH p.letra l " +
+           "JOIN FETCH l.contrato co " +
+           "LEFT JOIN FETCH co.clientes cc " +
+           "LEFT JOIN FETCH cc.cliente cli " +
+           "LEFT JOIN FETCH p.comprobante c " +
+           "WHERE p.fechaPago BETWEEN :desde AND :hasta " +
+           "ORDER BY p.fechaPago ASC")
+    List<PagoLetras> findByFechaPagoBetween(
+            @Param("desde") LocalDate desde,
+            @Param("hasta") LocalDate hasta);
+
+    /**
+     * Suma total de pagos de letras dentro de un rango de fechas.
+     */
+    @Query(value =
+        "SELECT COALESCE(SUM(importe_pagado), 0) " +
+        "FROM pago_letra " +
+        "WHERE fecha_pago BETWEEN :desde AND :hasta",
+        nativeQuery = true)
+    BigDecimal sumImportePagadoByRango(
+            @Param("desde") LocalDate desde,
+            @Param("hasta") LocalDate hasta);
+
+    /**
+     * Cuenta pagos de letras dentro de un rango de fechas.
+     */
+    @Query(value =
+        "SELECT COUNT(*) " +
+        "FROM pago_letra " +
+        "WHERE fecha_pago BETWEEN :desde AND :hasta",
+        nativeQuery = true)
+    long countByFechaPagoBetween(
+            @Param("desde") LocalDate desde,
+            @Param("hasta") LocalDate hasta);
 }

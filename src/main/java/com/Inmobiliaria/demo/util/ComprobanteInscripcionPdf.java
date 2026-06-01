@@ -3,7 +3,7 @@ package com.Inmobiliaria.demo.util;
 import com.Inmobiliaria.demo.entity.Contrato;
 import com.Inmobiliaria.demo.entity.ContratoCliente;
 import com.Inmobiliaria.demo.entity.ContratoLote;
-import com.Inmobiliaria.demo.entity.PagoInicial;
+import com.Inmobiliaria.demo.entity.PagoInscripcionComprobante;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
 import com.itextpdf.barcodes.BarcodeQRCode;
 import com.itextpdf.io.font.PdfEncodings;
@@ -61,11 +61,11 @@ public class ComprobanteInscripcionPdf {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @param pagoInicial  Entidad PagoInicial con contrato, comprobante y datos de pago.
+     * @param pagoInicial  Entidad PagoInscripcionComprobante con contrato, comprobante y datos de pago.
      * @param tipoServicio "LUZ" o "AGUA" (se almacena en observaciones pero se pasa explícitamente).
      * @param rolUsuario   Rol del usuario que registró el pago.
      */
-    public static byte[] generar(PagoInicial pagoInicial, String tipoServicio, String rolUsuario) {
+    public static byte[] generar(PagoInscripcionComprobante pagoInicial, String tipoServicio, String rolUsuario) {
 
         // Cálculo dinámico de márgenes — A5 landscape 595x420 pts
         float fs      = 9.5f;
@@ -145,7 +145,7 @@ public class ComprobanteInscripcionPdf {
                     ? pagoInicial.getObservaciones() : "-";
 
             // ── QR ───────────────────────────────────────────────────────────
-            String urlQr = BASE_URL + "/pago/" + pagoInicial.getIdPagoInicial() + "/comprobante-pdf";
+            String urlQr = BASE_URL + "/pago/" + pagoInicial.getIdPagoInscripcionComprobante() + "/comprobante-pdf";
             BarcodeQRCode qrCode = new BarcodeQRCode(urlQr);
             Image qrImage = new Image(qrCode.createFormXObject(pdf))
                     .setWidth(52).setHeight(52)
