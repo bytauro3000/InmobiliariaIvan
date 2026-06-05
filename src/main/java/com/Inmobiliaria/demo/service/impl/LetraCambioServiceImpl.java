@@ -135,7 +135,7 @@ public class LetraCambioServiceImpl implements LetraCambioService {
                     LetraCambioDTO dto = modelMapper.map(letra, LetraCambioDTO.class);
                     Contrato contrato = letra.getContrato();
                     if (contrato != null && contrato.getClientes() != null && !contrato.getClientes().isEmpty()) {
-                        ContratoCliente contratoCliente = contrato.getClientes().get(0);
+                        ContratoCliente contratoCliente = contrato.getClientes().iterator().next();
                         if (contratoCliente.getCliente() != null) {
                             String nombreCompleto = contratoCliente.getCliente().getNombre()
                                     + " " + contratoCliente.getCliente().getApellidos();

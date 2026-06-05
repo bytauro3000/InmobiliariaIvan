@@ -17,9 +17,6 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
 
     List<PagoLetras> findByLetraIdLetra(Integer idLetra);
 
-    /**
-     * Lista los pagos de un contrato ordenados por número de letra (parte numérica) de menor a mayor.
-     */
     @Query(value =
         "SELECT p.* FROM pago_letra p " +
         "JOIN letra_cambio lc ON p.id_letra = lc.id_letra " +
@@ -35,9 +32,6 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
            "WHERE c.numeroCompleto = :numeroCompleto")
     List<PagoLetras> findByComprobanteNumeroCompleto(@Param("numeroCompleto") String numeroCompleto);
 
-    /**
-     * Cuenta los pagos asociados a un mismo comprobante.
-     */
     @Query("SELECT COUNT(p) FROM PagoLetras p " +
            "JOIN p.comprobante c " +
            "WHERE c.numeroCompleto = :numeroCompleto")
@@ -60,7 +54,7 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
            "AND (p.comprobante IS NULL OR p.comprobante.emailEnviado = false)")
     List<PagoLetras> findByFechaPagoAndEmailEnviadoFalse(@Param("fecha") LocalDate fecha);
 
-    // ── Consultas para lógica de negocio (PagoLetraServiceImpl) ───────────────
+    // ── Consultas para lógica de negocio ──────────────────────────────────────
 
     @Query(value =
         "SELECT MAX(CAST(SUBSTRING_INDEX(lc.numero_letra, '/', 1) AS UNSIGNED)) " +
@@ -70,8 +64,6 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
         nativeQuery = true)
     Optional<Integer> findMaxNumeroLetraPagadoByContrato(@Param("idContrato") Integer idContrato);
 
-    // ── NUEVO: suma de importes ya pagados para una letra (para calcular saldo) ──
-
     @Query(value =
         "SELECT COALESCE(SUM(importe_pagado), 0) " +
         "FROM pago_letra " +
@@ -79,7 +71,7 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
         nativeQuery = true)
     BigDecimal sumImportePagadoByLetra(@Param("idLetra") Integer idLetra);
 
-    // ── Consultas para Dashboard de Ingresos Diarios ──────────────────────────
+    // ── Dashboard ─────────────────────────────────────────────────────────────
 
     @Query(value =
         "SELECT COALESCE(SUM(importe_pagado), 0) " +
@@ -95,7 +87,7 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
         nativeQuery = true)
     long countByFechaPago(@Param("fecha") LocalDate fecha);
 
-    // ── NUEVAS: Consultas para Reporte de Ingresos por Rango de Fechas ────────
+    // ── Reporte ingresos ──────────────────────────────────────────────────────
 
     @Query("SELECT DISTINCT p FROM PagoLetras p " +
            "JOIN FETCH p.letra l " +
@@ -109,9 +101,6 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
             @Param("desde") LocalDate desde,
             @Param("hasta") LocalDate hasta);
 
-    /**
-     * Suma total de pagos de letras dentro de un rango de fechas.
-     */
     @Query(value =
         "SELECT COALESCE(SUM(importe_pagado), 0) " +
         "FROM pago_letra " +
@@ -121,9 +110,6 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
             @Param("desde") LocalDate desde,
             @Param("hasta") LocalDate hasta);
 
-    /**
-     * Cuenta pagos de letras dentro de un rango de fechas.
-     */
     @Query(value =
         "SELECT COUNT(*) " +
         "FROM pago_letra " +
@@ -132,4 +118,53 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
     long countByFechaPagoBetween(
             @Param("desde") LocalDate desde,
             @Param("hasta") LocalDate hasta);
+
+    @Query("SELECT COALESCE(SUM(p.importePagado), 0) FROM PagoLetras p " +
+           "WHERE p.letra.idLetra = :idLetra AND (p.anulado = false OR p.anulado IS NULL)")
+    BigDecimal sumImportePagadoActivoByLetra(@Param("idLetra") Integer idLetra);
+
+    @Query("SELECT COUNT(p) FROM PagoLetras p " +
+           "WHERE p.letra.idLetra = :idLetra AND (p.anulado = false OR p.anulado IS NULL)")
+    long countActivosByLetraIdLetra(@Param("idLetra") Integer idLetra);
+
+    // ── ADMIN: Listado general — QUERY 1: trae pagos + lotes + programa ────────
+    // Se separó en dos queries para evitar MultipleBagFetchException.
+    // Hibernate no permite hacer JOIN FETCH de dos List<> (bags) en la misma query.
+    // Solución: una query trae lotes, otra trae clientes; se combinan en el servicio.
+    @Query("SELECT DISTINCT p FROM PagoLetras p " +
+           "JOIN FETCH p.letra l " +
+           "JOIN FETCH l.contrato co " +
+           "LEFT JOIN FETCH p.comprobante c " +
+           "LEFT JOIN FETCH co.lotes cl " +
+           "LEFT JOIN FETCH cl.lote lot " +
+           "LEFT JOIN FETCH lot.programa prog " +
+           "WHERE (:numeroComprobante IS NULL OR " +
+           "       (c IS NOT NULL AND LOWER(c.numeroCompleto) LIKE LOWER(CONCAT('%', :numeroComprobante, '%')))) " +
+           "AND   (:manzana IS NULL OR " +
+           "       (lot IS NOT NULL AND LOWER(lot.manzana) = LOWER(:manzana))) " +
+           "AND   (:numeroLote IS NULL OR " +
+           "       (lot IS NOT NULL AND LOWER(lot.numeroLote) = LOWER(:numeroLote))) " +
+           "AND   (:idPrograma IS NULL OR " +
+           "       (prog IS NOT NULL AND prog.idPrograma = :idPrograma)) " +
+           "AND   (:desde IS NULL OR p.fechaPago >= :desde) " +
+           "AND   (:hasta IS NULL OR p.fechaPago <= :hasta) " +
+           "ORDER BY p.fechaPago DESC")
+    List<PagoLetras> findTodosConLotes(
+            @Param("numeroComprobante") String numeroComprobante,
+            @Param("manzana")          String manzana,
+            @Param("numeroLote")       String numeroLote,
+            @Param("idPrograma")       Integer idPrograma,
+            @Param("desde")            LocalDate desde,
+            @Param("hasta")            LocalDate hasta);
+
+    // ── ADMIN: Listado general — QUERY 2: trae clientes de los contratos ───────
+    // Recibe los IDs de contrato ya filtrados para cargar solo lo necesario.
+    @Query("SELECT DISTINCT p FROM PagoLetras p " +
+           "JOIN FETCH p.letra l " +
+           "JOIN FETCH l.contrato co " +
+           "LEFT JOIN FETCH co.clientes cc " +
+           "LEFT JOIN FETCH cc.cliente cli " +
+           "WHERE co.idContrato IN :contratoIds")
+    List<PagoLetras> findByContratoIdsConClientes(
+            @Param("contratoIds") List<Integer> contratoIds);
 }

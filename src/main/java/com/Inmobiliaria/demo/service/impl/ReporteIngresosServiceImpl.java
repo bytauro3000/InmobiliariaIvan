@@ -71,7 +71,7 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
         List<PagoMora> pagosMoras = pagoMoraRepository.findByFechaPagoBetween(desde, hasta);
         for (PagoMora p : pagosMoras) {
             Integer idContrato = null;
-            List<ContratoCliente> clientesContrato = null;
+            java.util.Collection<ContratoCliente> clientesContrato = null;
 
             if (p.getMora() != null && p.getMora().getLetra() != null
                     && p.getMora().getLetra().getContrato() != null) {
@@ -239,7 +239,7 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
      * Si no hay titular principal, toma el primer cliente de la lista.
      * Devuelve null si la lista está vacía o es nula.
      */
-    private String resolverNombreCliente(List<ContratoCliente> clientes) {
+    private String resolverNombreCliente(java.util.Collection<ContratoCliente> clientes) {
         if (clientes == null || clientes.isEmpty()) return null;
 
         // Intentar obtener el TITULAR_PRINCIPAL primero
@@ -250,7 +250,7 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
                 .map(cc -> cc.getCliente().getNombre() + " " + cc.getCliente().getApellidos())
                 .orElseGet(() -> {
                     // Si no hay titular principal, tomar el primero disponible
-                    ContratoCliente primero = clientes.get(0);
+                    ContratoCliente primero = clientes.iterator().next();
                     if (primero.getCliente() != null) {
                         return primero.getCliente().getNombre() + " "
                                 + primero.getCliente().getApellidos();

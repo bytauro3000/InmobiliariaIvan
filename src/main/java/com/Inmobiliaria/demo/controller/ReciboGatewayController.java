@@ -63,7 +63,7 @@ public class ReciboGatewayController {
 
         List<LecturaUnificadaDTO> planilla = contratos.stream().map(contrato -> {
             if (contrato.getLotes().isEmpty()) return null;
-            Lote loteEntidad = contrato.getLotes().get(0).getLote();
+            Lote loteEntidad = contrato.getLotes().iterator().next().getLote();
 
             // Filtros de búsqueda (Mz/Lt)
             if (manzana != null && !manzana.trim().isEmpty() && !loteEntidad.getManzana().equalsIgnoreCase(manzana)) return null;
@@ -71,7 +71,7 @@ public class ReciboGatewayController {
 
             LecturaUnificadaDTO dto = new LecturaUnificadaDTO();
             dto.setIdContrato(contrato.getIdContrato());
-            var cliente = contrato.getClientes().get(0).getCliente();
+            var cliente = contrato.getClientes().iterator().next().getCliente();
             dto.setClienteNombre(cliente.getNombre() + " " + cliente.getApellidos());
             dto.setManzana(loteEntidad.getManzana());
             dto.setLote(loteEntidad.getNumeroLote());
@@ -183,7 +183,7 @@ public class ReciboGatewayController {
             if (contrato != null) {
                 // Cliente (ya lo tienes)
                 if (contrato.getClientes() != null && !contrato.getClientes().isEmpty()) {
-                    Cliente cliente = contrato.getClientes().get(0).getCliente();
+                    Cliente cliente = contrato.getClientes().iterator().next().getCliente();
                     dto.setNombreCliente(cliente.getNombre() + " " + cliente.getApellidos());
                 } else {
                     dto.setNombreCliente("Cliente no encontrado");
@@ -191,7 +191,7 @@ public class ReciboGatewayController {
                 
                 // Lotes (tomamos el primer lote del contrato, asumiendo que es el principal)
                 if (contrato.getLotes() != null && !contrato.getLotes().isEmpty()) {
-                    Lote lote = contrato.getLotes().get(0).getLote();
+                    Lote lote = contrato.getLotes().iterator().next().getLote();
                     dto.setManzana(lote.getManzana());
                     dto.setLote(lote.getNumeroLote());
                     dto.setNombrePrograma(lote.getPrograma().getNombrePrograma()); // si necesitas el programa
@@ -237,7 +237,7 @@ public class ReciboGatewayController {
             if (contrato != null) {
                 // Cliente
                 if (contrato.getClientes() != null && !contrato.getClientes().isEmpty()) {
-                    Cliente cliente = contrato.getClientes().get(0).getCliente();
+                    Cliente cliente = contrato.getClientes().iterator().next().getCliente();
                     dto.setNombreCliente(cliente.getNombre() + " " + cliente.getApellidos());
                 } else {
                     dto.setNombreCliente("Cliente no encontrado");
@@ -245,7 +245,7 @@ public class ReciboGatewayController {
                 
                 // Lote (primer lote)
                 if (contrato.getLotes() != null && !contrato.getLotes().isEmpty()) {
-                    Lote lote = contrato.getLotes().get(0).getLote();
+                    Lote lote = contrato.getLotes().iterator().next().getLote();
                     dto.setManzana(lote.getManzana());
                     dto.setLote(lote.getNumeroLote());
                     dto.setNombrePrograma(lote.getPrograma().getNombrePrograma());

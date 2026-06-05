@@ -105,21 +105,13 @@ public class MoraServiceImpl implements MoraService {
         BigDecimal total = montoPct.add(montoDiar);
 
         // ── Buscar mora existente en cualquier estado activo ──────────────────
-        // existeMoraActivaParaLetra excluye ANULADO; puede ser PENDIENTE o PAGADO.
         boolean yaExiste = moraRepository.existeMoraActivaParaLetra(letra.getIdLetra());
 
         if (yaExiste) {
-            // Caso 1: mora PAGADO → ya cobrada correctamente antes del pago de la letra.
-            // FIX: en lugar de return null, verificamos si los días están mal y
-            //      actualizamos los datos de la mora PAGADO para que quede correcto
-            //      en el historial. No se modifica el monto (ya fue cobrado).
             Optional<MoraLetra> moraPagada = moraRepository
                 .findByLetraIdLetraAndEstadoMora(letra.getIdLetra(), EstadoMora.PAGADO);
             if (moraPagada.isPresent()) {
                 MoraLetra mora = moraPagada.get();
-                // Solo corregimos días y fechaGeneracion si la mora fue calculada
-                // con LocalDate.now() y los días no coinciden con la fechaReferencia real.
-                // Esto corrige el historial sin alterar el monto ya cobrado.
                 long diasCorrectos = ChronoUnit.DAYS.between(fechaVenc, fechaReferencia);
                 if (mora.getDiasMora() != (int) diasCorrectos) {
                     BigDecimal montoDiarCorr = MONTO_DIARIO
@@ -134,7 +126,6 @@ public class MoraServiceImpl implements MoraService {
                 return mora;
             }
 
-            // Caso 2: mora PENDIENTE → recalcular con la fecha real del pago.
             Optional<MoraLetra> moraPendiente = moraRepository
                 .findByLetraIdLetraAndEstadoMora(letra.getIdLetra(), EstadoMora.PENDIENTE);
             if (moraPendiente.isPresent()) {
@@ -147,11 +138,6 @@ public class MoraServiceImpl implements MoraService {
                 mora.setPagoLetra(pagoLetra);
                 return moraRepository.save(mora);
             }
-
-            // Caso 3: yaExiste == true pero no encontramos ni PENDIENTE ni PAGADO.
-            // Puede ocurrir si solo hay registros ANULADO (raro, por inconsistencia en BD).
-            // existeMoraActivaParaLetra filtra ANULADO, así que esto no debería pasar,
-            // pero por seguridad creamos una mora nueva en lugar de retornar null.
         }
 
         // ── No existe mora activa → crear nueva ───────────────────────────────
@@ -276,11 +262,11 @@ public class MoraServiceImpl implements MoraService {
         return mapPagoToDTO(pagoGuardado);
     }
 
-    // ─── Anular mora ───────────────────────────────────────────────────────────
+    // ─── Anular mora (MoraLetra) ───────────────────────────────────────────────
 
     @Override
     @Transactional
-    public MoraResponseDTO anularMora(Integer idMora, String motivo) {
+    public MoraResponseDTO anularMora(Integer idMora, String motivo, String anuladoPor) {
         MoraLetra mora = moraRepository.findById(idMora)
             .orElseThrow(() -> new NegocioException("Mora no encontrada con id: " + idMora));
 
@@ -290,8 +276,67 @@ public class MoraServiceImpl implements MoraService {
             throw new NegocioException("Esta mora ya está anulada.");
 
         mora.setEstadoMora(EstadoMora.ANULADO);
+        mora.setMotivoAnulacion(motivo);
+        mora.setFechaAnulacion(LocalDateTime.now());
+        mora.setAnuladoPor(anuladoPor);
         moraRepository.save(mora);
+
         return mapToDTO(mora);
+    }
+    
+    @Override
+    @Transactional
+    public void eliminarPagoMora(Integer idPagoMora) {
+        PagoMora pago = pagoMoraRepository.findById(idPagoMora)
+            .orElseThrow(() -> new NegocioException("Pago de mora no encontrado con id: " + idPagoMora));
+ 
+        // Eliminar vouchers asociados
+        voucherRepository
+            .findByTipoOrigenAndReferenciaId("PAGO_MORA", pago.getIdPagoMora())
+            .forEach(voucherRepository::delete);
+ 
+        // Si la mora queda sin pagos activos → vuelve a PENDIENTE
+        MoraLetra mora = pago.getMora();
+        pagoMoraRepository.delete(pago);
+ 
+        boolean tienePagosActivos = mora.getPagos().stream()
+            .filter(p -> !p.getIdPagoMora().equals(idPagoMora))
+            .anyMatch(p -> !Boolean.TRUE.equals(p.getAnulado()));
+ 
+        if (!tienePagosActivos && mora.getEstadoMora() == EstadoMora.PAGADO) {
+            mora.setEstadoMora(EstadoMora.PENDIENTE);
+            moraRepository.save(mora);
+        }
+    }
+
+    // ─── Anular pago de mora (PagoMora) ───────────────────────────────────────
+
+    @Override
+    @Transactional
+    public PagoMoraResponseDTO anularPagoMora(Integer idPagoMora, String motivo, String anuladoPor) {
+        PagoMora pago = pagoMoraRepository.findById(idPagoMora)
+            .orElseThrow(() -> new NegocioException("Pago de mora no encontrado con id: " + idPagoMora));
+
+        if (Boolean.TRUE.equals(pago.getAnulado()))
+            throw new NegocioException("Este pago de mora ya fue anulado.");
+
+        pago.setAnulado(true);
+        pago.setMotivoAnulacion(motivo);
+        pago.setFechaAnulacion(LocalDateTime.now());
+        pago.setAnuladoPor(anuladoPor);
+        pagoMoraRepository.save(pago);
+
+        // Si todos los pagos de la mora están anulados → mora vuelve a PENDIENTE
+        MoraLetra mora = pago.getMora();
+        boolean todosAnulados = mora.getPagos().stream()
+            .allMatch(p -> Boolean.TRUE.equals(p.getAnulado()));
+
+        if (todosAnulados && mora.getEstadoMora() == EstadoMora.PAGADO) {
+            mora.setEstadoMora(EstadoMora.PENDIENTE);
+            moraRepository.save(mora);
+        }
+
+        return mapPagoToDTO(pago);
     }
 
     // ─── Crear mora pendiente manualmente ─────────────────────────────────────
@@ -360,6 +405,11 @@ public class MoraServiceImpl implements MoraService {
         dto.setMontoMoraTotal(mora.getMontoMoraTotal());
         dto.setFechaGeneracion(mora.getFechaGeneracion());
         dto.setEstadoMora(mora.getEstadoMora());
+        // ── Anulación ─────────────────────────────────────────────────────────
+        dto.setMotivoAnulacion(mora.getMotivoAnulacion());
+        dto.setFechaAnulacion(mora.getFechaAnulacion());
+        dto.setAnuladoPor(mora.getAnuladoPor());
+        // ── Pagos ─────────────────────────────────────────────────────────────
         List<PagoMoraResponseDTO> pagos = mora.getPagos() == null ? List.of()
             : mora.getPagos().stream().map(this::mapPagoToDTO).collect(Collectors.toList());
         dto.setPagos(pagos);
@@ -387,6 +437,70 @@ public class MoraServiceImpl implements MoraService {
             .stream().map(Voucher::getUrl).collect(Collectors.toList());
         dto.setUrlsVoucher(urls);
 
+        // Anulación
+        dto.setAnulado(Boolean.TRUE.equals(pago.getAnulado()));
+        dto.setMotivoAnulacion(pago.getMotivoAnulacion());
+        dto.setFechaAnulacion(pago.getFechaAnulacion());
+        dto.setAnuladoPor(pago.getAnuladoPor());
+
+        // Contexto admin (manzana / lote / programa / cliente)
+        // Solo se popula cuando el query hace JOIN FETCH hasta lotes y clientes
+        // (usado por listarPagosTodos). En otros contextos estos campos quedan null.
+        try {
+            var contrato = pago.getMora().getLetra().getContrato();
+            dto.setIdContrato(contrato.getIdContrato());
+            if (contrato.getMoneda() != null) {
+                dto.setMoneda(contrato.getMoneda().name());
+            }
+            var lotes = contrato.getLotes();
+            if (lotes != null && !lotes.isEmpty()) {
+                var lote = lotes.iterator().next().getLote();
+                if (lote != null) {
+                    dto.setManzana(lote.getManzana());
+                    dto.setNumeroLote(lote.getNumeroLote());
+                    if (lote.getPrograma() != null) {
+                        dto.setIdPrograma(lote.getPrograma().getIdPrograma());
+                        dto.setNombrePrograma(lote.getPrograma().getNombrePrograma());
+                    }
+                }
+            }
+            var clientes = contrato.getClientes();
+            if (clientes != null && !clientes.isEmpty()) {
+                var cc = clientes.iterator().next();
+                if (cc.getCliente() != null) {
+                    var cli = cc.getCliente();
+                    dto.setNombreCliente(cli.getNombre() + " " + cli.getApellidos());
+                }
+            }
+        } catch (Exception ignored) {
+            // Contexto no disponible (lazy not loaded en otros endpoints)
+        }
+
         return dto;
     }
+    
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<PagoMoraResponseDTO> listarPagosTodos(
+            String numeroComprobante,
+            String manzana,
+            String numeroLote,
+            Integer idPrograma,
+            LocalDate desde,
+            LocalDate hasta) {
+     
+        return pagoMoraRepository
+                .findTodos(
+                    (numeroComprobante != null && !numeroComprobante.isBlank()) ? numeroComprobante : null,
+                    (manzana           != null && !manzana.isBlank())           ? manzana           : null,
+                    (numeroLote        != null && !numeroLote.isBlank())        ? numeroLote        : null,
+                    idPrograma,
+                    desde,
+                    hasta)
+                .stream()
+                .map(this::mapPagoToDTO)
+                .collect(Collectors.toList());
+    }
+    
 }

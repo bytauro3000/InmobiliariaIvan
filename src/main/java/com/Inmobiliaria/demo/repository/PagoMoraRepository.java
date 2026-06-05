@@ -13,12 +13,8 @@ import java.util.List;
 @Repository
 public interface PagoMoraRepository extends JpaRepository<PagoMora, Integer> {
 
-    // ─── Consultas básicas ─────────────────────────────────────────────────────
-
-    /** Todos los pagos registrados para una mora específica */
     List<PagoMora> findByMoraIdMora(Integer idMora);
 
-    /** Pagos de mora de un contrato específico (a través de la letra) */
     @Query("SELECT pm FROM PagoMora pm " +
            "JOIN pm.mora m " +
            "JOIN m.letra l " +
@@ -26,24 +22,19 @@ public interface PagoMoraRepository extends JpaRepository<PagoMora, Integer> {
            "ORDER BY pm.fechaPago DESC")
     List<PagoMora> findByContratoId(@Param("idContrato") Integer idContrato);
 
-    // ─── Consultas vinculadas al comprobante centralizado ──────────────────────
-
     @Query("SELECT pm FROM PagoMora pm " +
            "WHERE pm.comprobante.idComprobante = :idComprobante")
     List<PagoMora> findByComprobanteId(@Param("idComprobante") Long idComprobante);
 
-   
     @Query("SELECT pm FROM PagoMora pm " +
            "WHERE pm.comprobante.numeroCompleto = :numeroCompleto")
     List<PagoMora> findByComprobanteNumeroCompleto(@Param("numeroCompleto") String numeroCompleto);
-
-    // ─── Consultas para email ──────────────────────────────────────────────────
 
     @Query("SELECT pm FROM PagoMora pm " +
            "WHERE pm.fechaPago = :fecha")
     List<PagoMora> findByFechaPago(@Param("fecha") LocalDate fecha);
 
-    // ─── Consultas para Dashboard de Ingresos Diarios ─────────────────────────
+    // ── Dashboard ─────────────────────────────────────────────────────────────
 
     @Query(value =
         "SELECT COALESCE(SUM(importe_pagado), 0) " +
@@ -52,9 +43,6 @@ public interface PagoMoraRepository extends JpaRepository<PagoMora, Integer> {
         nativeQuery = true)
     BigDecimal sumImportePagadoByFecha(@Param("fecha") LocalDate fecha);
 
-    /**
-     * Cuenta la cantidad de pagos de moras registrados en una fecha específica.
-     */
     @Query(value =
         "SELECT COUNT(*) " +
         "FROM pago_mora " +
@@ -62,7 +50,7 @@ public interface PagoMoraRepository extends JpaRepository<PagoMora, Integer> {
         nativeQuery = true)
     long countByFechaPago(@Param("fecha") LocalDate fecha);
 
-    // ── NUEVAS: Consultas para Reporte de Ingresos por Rango de Fechas ────────
+    // ── Reporte ingresos ──────────────────────────────────────────────────────
 
     @Query("SELECT pm FROM PagoMora pm " +
            "JOIN FETCH pm.mora m " +
@@ -77,9 +65,6 @@ public interface PagoMoraRepository extends JpaRepository<PagoMora, Integer> {
             @Param("desde") LocalDate desde,
             @Param("hasta") LocalDate hasta);
 
-    /**
-     * Suma total de pagos de moras dentro de un rango de fechas.
-     */
     @Query(value =
         "SELECT COALESCE(SUM(importe_pagado), 0) " +
         "FROM pago_mora " +
@@ -89,9 +74,6 @@ public interface PagoMoraRepository extends JpaRepository<PagoMora, Integer> {
             @Param("desde") LocalDate desde,
             @Param("hasta") LocalDate hasta);
 
-    /**
-     * Cuenta pagos de moras dentro de un rango de fechas.
-     */
     @Query(value =
         "SELECT COUNT(*) " +
         "FROM pago_mora " +
@@ -100,4 +82,35 @@ public interface PagoMoraRepository extends JpaRepository<PagoMora, Integer> {
     long countByFechaPagoBetween(
             @Param("desde") LocalDate desde,
             @Param("hasta") LocalDate hasta);
+
+    // ── ADMIN: Listado general con filtros opcionales ─────────────────────────
+
+    @Query("SELECT DISTINCT pm FROM PagoMora pm " +
+           "JOIN FETCH pm.mora m " +
+           "JOIN FETCH m.letra l " +
+           "JOIN FETCH l.contrato co " +
+           "LEFT JOIN FETCH co.clientes cc " +
+           "LEFT JOIN FETCH cc.cliente cli " +
+           "LEFT JOIN FETCH pm.comprobante c " +
+           "LEFT JOIN FETCH co.lotes cl " +
+           "LEFT JOIN FETCH cl.lote lot " +
+           "LEFT JOIN FETCH lot.programa prog " +
+           "WHERE (:numeroComprobante IS NULL OR " +
+           "       (c IS NOT NULL AND LOWER(c.numeroCompleto) LIKE LOWER(CONCAT('%', :numeroComprobante, '%')))) " +
+           "AND   (:manzana IS NULL OR " +
+           "       (lot IS NOT NULL AND LOWER(lot.manzana) = LOWER(:manzana))) " +
+           "AND   (:numeroLote IS NULL OR " +
+           "       (lot IS NOT NULL AND LOWER(lot.numeroLote) = LOWER(:numeroLote))) " +
+           "AND   (:idPrograma IS NULL OR " +
+           "       (prog IS NOT NULL AND prog.idPrograma = :idPrograma)) " +
+           "AND   (:desde IS NULL OR pm.fechaPago >= :desde) " +
+           "AND   (:hasta IS NULL OR pm.fechaPago <= :hasta) " +
+           "ORDER BY pm.fechaPago DESC")
+    List<PagoMora> findTodos(
+            @Param("numeroComprobante") String numeroComprobante,
+            @Param("manzana")          String manzana,
+            @Param("numeroLote")       String numeroLote,
+            @Param("idPrograma")       Integer idPrograma,
+            @Param("desde")            LocalDate desde,
+            @Param("hasta")            LocalDate hasta);
 }

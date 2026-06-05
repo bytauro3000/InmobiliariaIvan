@@ -7,8 +7,8 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
-
 
 @Data
 public class PagoLetraResponseDTO {
@@ -26,13 +26,23 @@ public class PagoLetraResponseDTO {
     private String          observaciones;
     private List<String>    urlsVoucher;
 
-    // ── Campos de pago parcial ─────────────────────────────────────────────────
-    /** Importe original de la letra (sin descuentos). */
     private BigDecimal      importeLetra;
-    /** Saldo que queda por pagar después de este pago. 0 = letra completada. */
     private BigDecimal      saldoPendiente;
-    /** Estado actual de la letra tras este pago. */
     private EstadoLetra     estadoLetra;
-    /** true si este pago fue registrado como pago a cuenta (parcial). */
     private Boolean         esPagoAcuenta;
+
+    // ── Anulación ─────────────────────────────────────────────────────────────
+    private Boolean         anulado;
+    private String          motivoAnulacion;
+    private LocalDateTime   fechaAnulacion;
+    private String          anuladoPor;
+
+    // ── Contexto admin (solo se popula en /letras/todos) ──────────────────────
+    private Integer         idContrato;
+    private String          manzana;
+    private String          numeroLote;
+    private Integer         idPrograma;
+    private String          nombrePrograma;
+    private String          nombreCliente;
+    private String          moneda;   // "USD" o "PEN" según el contrato
 }

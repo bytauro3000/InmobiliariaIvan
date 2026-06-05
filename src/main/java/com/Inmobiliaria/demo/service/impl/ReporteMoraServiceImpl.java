@@ -39,7 +39,7 @@ public class ReporteMoraServiceImpl implements ReporteMoraService {
         List<Contrato> conLotes    = contratoRepository.findAllConLotes();
 
         // Mapa idContrato → lotes
-        Map<Integer, List<ContratoLote>> lotesPorContrato = conLotes.stream()
+        Map<Integer, Set<ContratoLote>> lotesPorContrato = conLotes.stream()
                 .filter(c -> c.getLotes() != null)
                 .collect(Collectors.toMap(
                         Contrato::getIdContrato,
@@ -97,13 +97,13 @@ public class ReporteMoraServiceImpl implements ReporteMoraService {
 
             // ── Celular del primer titular ────────────────────────────────────
             String celular = (contrato.getClientes() == null || contrato.getClientes().isEmpty()) ? "" :
-                    Optional.ofNullable(contrato.getClientes().get(0).getCliente())
+                    Optional.ofNullable(contrato.getClientes().iterator().next().getCliente())
                             .map(Cliente::getCelular)
                             .orElse("");
 
             // ── Lotes: TODOS ordenados por manzana luego numeroLote ───────────
-            List<ContratoLote> lotesContrato = lotesPorContrato.getOrDefault(
-                    contrato.getIdContrato(), Collections.emptyList());
+            List<ContratoLote> lotesContrato = new java.util.ArrayList<>(
+                    lotesPorContrato.getOrDefault(contrato.getIdContrato(), Collections.emptySet()));
 
             // Ordenar los lotes del contrato: por manzana (alfa) luego por número de lote
             List<ContratoLote> lotesOrdenados = lotesContrato.stream()

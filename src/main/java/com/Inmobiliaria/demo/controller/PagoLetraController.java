@@ -1,5 +1,6 @@
 package com.Inmobiliaria.demo.controller;
 
+import com.Inmobiliaria.demo.dto.AnulacionRequestDTO;
 import com.Inmobiliaria.demo.dto.PagoLetraRequestDTO;
 import com.Inmobiliaria.demo.dto.PagoLetraResponseDTO;
 import com.Inmobiliaria.demo.dto.PagosMultiplesRequestDTO;
@@ -11,10 +12,16 @@ import com.Inmobiliaria.demo.repository.PagoLetraRepository;
 import com.Inmobiliaria.demo.repository.UsuarioRepository;
 import com.Inmobiliaria.demo.service.PagoLetraService;
 import com.Inmobiliaria.demo.util.ComprobantePagoLetraPdf;
+
+import jakarta.validation.Valid;
+
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpHeaders;
@@ -34,6 +41,8 @@ public class PagoLetraController {
     private final PagoLetraRepository pagoLetraRepository;
     private final UsuarioRepository   usuarioRepository;
 
+    // ── Lectura básica ────────────────────────────────────────────────────────
+
     @GetMapping("/contrato/{idContrato}")
     public ResponseEntity<List<PagoLetraResponseDTO>> listarPorContrato(
             @PathVariable Integer idContrato) {
@@ -51,6 +60,8 @@ public class PagoLetraController {
             @PathVariable Integer idPago) {
         return ResponseEntity.ok(pagoLetraService.obtenerPorId(idPago));
     }
+
+    // ── Registro ──────────────────────────────────────────────────────────────
 
     @PostMapping(value = "/registrar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PagoLetraResponseDTO> registrarPago(
@@ -80,12 +91,7 @@ public class PagoLetraController {
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/eliminar/{idPago}")
-    public ResponseEntity<Void> eliminarPago(@PathVariable Integer idPago) throws IOException {
-        pagoLetraService.eliminarPago(idPago);
-        return ResponseEntity.noContent().build();
-    }
-
+    // ── Consultas de apoyo ────────────────────────────────────────────────────
 
     @GetMapping("/letra/{idLetra}/saldo")
     public ResponseEntity<Map<String, Object>> consultarSaldoPendiente(
@@ -100,10 +106,10 @@ public class PagoLetraController {
     @GetMapping("/sugerir-numero")
     public ResponseEntity<SugerenciaNumeroComprobanteDTO> sugerirNumeroComprobante(
             @RequestParam TipoComprobante tipoComprobante) {
-        SugerenciaNumeroComprobanteDTO sugerencia =
-                pagoLetraService.sugerirNumeroComprobante(tipoComprobante); // ← CORREGIDO
-        return ResponseEntity.ok(sugerencia);
+        return ResponseEntity.ok(pagoLetraService.sugerirNumeroComprobante(tipoComprobante));
     }
+
+    // ── Comprobantes PDF ──────────────────────────────────────────────────────
 
     @GetMapping("/{idPago}/comprobante-pdf")
     @Transactional(readOnly = true)
@@ -128,17 +134,11 @@ public class PagoLetraController {
                 .body(pdf);
     }
 
-    /**
-     * Descarga el comprobante PDF de un pago múltiple por número de comprobante.
-     * CORRECCIÓN: usa findByComprobanteNumeroCompleto() en lugar del antiguo
-     * findByNumeroComprobante() que referenciaba un campo ya eliminado.
-     */
     @GetMapping("/comprobante-multiple/{numeroComprobante}")
     @Transactional(readOnly = true)
     public ResponseEntity<byte[]> descargarComprobanteMultiple(
             @PathVariable String numeroComprobante) {
 
-        // ── CORRECCIÓN: buscar por la relación Comprobante.numeroCompleto ──────
         List<PagoLetras> pagos =
                 pagoLetraRepository.findByComprobanteNumeroCompleto(numeroComprobante);
 
@@ -157,11 +157,47 @@ public class PagoLetraController {
         }
 
         byte[] pdf = ComprobantePagoLetraPdf.generarMultiple(pagos, rolUsuarioMultiple);
-
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "inline; filename=comprobante-multiple-" + numeroComprobante + ".pdf")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
+    }
+
+    // ── ADMIN: Anular ─────────────────────────────────────────────────────────
+
+    @PatchMapping("/{idPago}/anular")
+    @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
+    public ResponseEntity<PagoLetraResponseDTO> anularPago(
+            @PathVariable Integer idPago,
+            @Valid @RequestBody AnulacionRequestDTO request,
+            Authentication authentication) {
+        String anuladoPor = authentication.getName();
+        return ResponseEntity.ok(pagoLetraService.anularPago(idPago, request.getMotivo(), anuladoPor));
+    }
+
+    // ── ADMIN: Eliminar físicamente ───────────────────────────────────────────
+
+    @DeleteMapping("/{idPago}")
+    @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
+    public ResponseEntity<Void> eliminarPago(
+            @PathVariable Integer idPago) throws IOException {
+        pagoLetraService.eliminarPago(idPago);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ── ADMIN: Listado general con filtros ────────────────────────────────────
+
+    @GetMapping("/todos")
+    @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
+    public ResponseEntity<List<PagoLetraResponseDTO>> listarTodos(
+            @RequestParam(required = false) String numeroComprobante,
+            @RequestParam(required = false) String manzana,
+            @RequestParam(required = false) String numeroLote,
+            @RequestParam(required = false) Integer idPrograma,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
+        return ResponseEntity.ok(
+            pagoLetraService.listarTodos(numeroComprobante, manzana, numeroLote, idPrograma, desde, hasta));
     }
 }

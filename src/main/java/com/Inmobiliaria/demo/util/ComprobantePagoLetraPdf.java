@@ -87,21 +87,23 @@ public class ComprobantePagoLetraPdf {
             return celda;
         }
 
-        java.util.List<com.Inmobiliaria.demo.entity.ContratoCliente> clientes = contrato.getClientes();
-        for (int i = 0; i < clientes.size(); i++) {
-            com.Inmobiliaria.demo.entity.Cliente c = clientes.get(i).getCliente();
+        java.util.Collection<com.Inmobiliaria.demo.entity.ContratoCliente> clientes = contrato.getClientes();
+        boolean esPrimero = true;
+        for (com.Inmobiliaria.demo.entity.ContratoCliente cc : clientes) {
+            com.Inmobiliaria.demo.entity.Cliente c = cc.getCliente();
             String nombre = c.getNombre() + " " + c.getApellidos();
             String dni    = (c.getNumDoc() != null && !c.getNumDoc().isBlank())
                             ? c.getNumDoc() : "--------";
             String linea  = nombre.toUpperCase() + " (DNI: " + dni + ")";
 
             Paragraph p;
-            if (i == 0) {
+            if (esPrimero) {
                 // Primera línea: "Recibi de:" en bold + nombre en normal
                 p = new Paragraph()
                         .add(new Text("Recibi de:").setFont(bold).setFontSize(size))
                         .add(new Text(linea).setFont(normal).setFontSize(size))
                         .setMarginBottom(0);
+                esPrimero = false;
             } else {
                 // Líneas siguientes: indent equivalente al ancho de "Recibi de:"
                 // Usamos setMarginLeft con el ancho calculado en pts para Courier bold
@@ -169,7 +171,7 @@ public class ComprobantePagoLetraPdf {
 
             String loteInfo = "-";
             if (contrato.getLotes() != null && !contrato.getLotes().isEmpty()) {
-                ContratoLote cl = contrato.getLotes().get(0);
+                ContratoLote cl = contrato.getLotes().iterator().next();
                 loteInfo = "Mz. " + cl.getLote().getManzana()
                         + " Lt. " + cl.getLote().getNumeroLote()
                         + " - " + cl.getLote().getPrograma().getNombrePrograma();
@@ -433,7 +435,7 @@ public class ComprobantePagoLetraPdf {
 
         String loteInfo = "-";
         if (contrato.getLotes() != null && !contrato.getLotes().isEmpty()) {
-            ContratoLote cl = contrato.getLotes().get(0);
+            ContratoLote cl = contrato.getLotes().iterator().next();
             loteInfo = "Mz. " + cl.getLote().getManzana()
                     + " Lt. " + cl.getLote().getNumeroLote()
                     + " - " + cl.getLote().getPrograma().getNombrePrograma();
@@ -522,7 +524,7 @@ public class ComprobantePagoLetraPdf {
             Document doc   = new Document(pdf, PageSize.A5.rotate());
             doc.setMargins(margenTop, 18, margenV, 52);
 
-            String urlQr = BASE_URL + "/" + primero.getIdPago() + "/comprobante-pdf";
+            String urlQr = BASE_URL + "/comprobante-multiple/" + numComp;
             BarcodeQRCode qrCode = new BarcodeQRCode(urlQr);
             Image qrImage = new Image(qrCode.createFormXObject(pdf))
                     .setWidth(52).setHeight(52)

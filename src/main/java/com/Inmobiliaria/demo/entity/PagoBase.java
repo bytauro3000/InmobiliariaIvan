@@ -7,6 +7,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @MappedSuperclass
 @Getter
@@ -32,4 +33,18 @@ public abstract class PagoBase {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_comprobante")
     private Comprobante comprobante;
+
+    // ── Anulación lógica ──────────────────────────────────────────────────────
+
+    @Column(name = "anulado", nullable = false)
+    private Boolean anulado = false;
+
+    @Column(name = "motivo_anulacion", length = 255)
+    private String motivoAnulacion;
+
+    @Column(name = "fecha_anulacion")
+    private LocalDateTime fechaAnulacion;
+
+    @Column(name = "anulado_por", length = 100)
+    private String anuladoPor;
 }

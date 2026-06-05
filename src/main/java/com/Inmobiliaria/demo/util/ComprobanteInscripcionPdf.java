@@ -104,7 +104,7 @@ public class ComprobanteInscripcionPdf {
             // Info del lote
             String loteInfo = "-";
             if (contrato.getLotes() != null && !contrato.getLotes().isEmpty()) {
-                ContratoLote cl = contrato.getLotes().get(0);
+                ContratoLote cl = contrato.getLotes().iterator().next();
                 loteInfo = "Mz. " + cl.getLote().getManzana()
                         + " Lt. " + cl.getLote().getNumeroLote()
                         + " - " + cl.getLote().getPrograma().getNombrePrograma();
@@ -377,20 +377,22 @@ public class ComprobanteInscripcionPdf {
             return celda;
         }
 
-        List<ContratoCliente> clientes = contrato.getClientes();
-        for (int i = 0; i < clientes.size(); i++) {
-            com.Inmobiliaria.demo.entity.Cliente c = clientes.get(i).getCliente();
+        java.util.Collection<ContratoCliente> clientes = contrato.getClientes();
+        boolean esPrimero = true;
+        for (ContratoCliente cc : clientes) {
+            com.Inmobiliaria.demo.entity.Cliente c = cc.getCliente();
             String nombre = c.getNombre() + " " + c.getApellidos();
             String doc    = (c.getNumDoc() != null && !c.getNumDoc().isBlank())
                             ? c.getNumDoc() : "--------";
             String linea  = nombre.toUpperCase() + " (DNI: " + doc + ")";
 
             Paragraph p;
-            if (i == 0) {
+            if (esPrimero) {
                 p = new Paragraph()
                         .add(new Text("Recibi de:").setFont(bold).setFontSize(size))
                         .add(new Text(linea).setFont(normal).setFontSize(size))
                         .setMarginBottom(0);
+                esPrimero = false;
             } else {
                 float indentPts = size * 0.6f * 10f;
                 p = new Paragraph()

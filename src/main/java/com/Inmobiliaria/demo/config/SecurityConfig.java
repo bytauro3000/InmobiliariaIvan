@@ -65,7 +65,7 @@ public class SecurityConfig {
                 ).hasAnyAuthority("ROLE_SECRETARIA", "ROLE_ADMINISTRADOR")
                 // ── Gestión de usuarios: solo ADMINISTRADOR ───────────────────────────
                 .requestMatchers("/api/usuarios/**")
-                .hasAnyAuthority("ROLE_SECRETARIA", "ROLE_ADMINISTRADOR")
+                .hasAuthority("ROLE_ADMINISTRADOR")
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)

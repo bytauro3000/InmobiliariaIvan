@@ -6,6 +6,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -68,6 +69,17 @@ public class MoraLetra {
     @Enumerated(EnumType.STRING)
     @Column(name = "estado_mora", nullable = false, length = 20)
     private EstadoMora estadoMora = EstadoMora.PENDIENTE;
+
+    // ── Anulación lógica ─────────────────────────────────────────────────────
+
+    @Column(name = "motivo_anulacion", length = 255)
+    private String motivoAnulacion;
+
+    @Column(name = "fecha_anulacion")
+    private LocalDateTime fechaAnulacion;
+
+    @Column(name = "anulado_por", length = 100)
+    private String anuladoPor;
 
     // ── Pagos de esta mora ────────────────────────────────────────────────────
     // Un cliente puede pagar la mora en cualquier momento (inmediatamente o después)

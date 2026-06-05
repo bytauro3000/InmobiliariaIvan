@@ -27,7 +27,8 @@ public interface PagoInicialRepository extends JpaRepository<PagoInicial, Intege
            "ORDER BY p.fechaPago DESC")
     List<PagoInicial> findAllByComprobanteOrigen(@Param("origen") TipoOrigenComprobante origen);
 
-    
+    // ── Dashboard ─────────────────────────────────────────────────────────────
+
     @Query(value =
         "SELECT COALESCE(SUM(importe_pagado), 0) " +
         "FROM pago_inicial " +
@@ -35,13 +36,14 @@ public interface PagoInicialRepository extends JpaRepository<PagoInicial, Intege
         nativeQuery = true)
     BigDecimal sumImportePagadoByFecha(@Param("fecha") LocalDate fecha);
 
-    
     @Query(value =
         "SELECT COUNT(*) " +
         "FROM pago_inicial " +
         "WHERE fecha_pago = :fecha",
         nativeQuery = true)
     long countByFechaPago(@Param("fecha") LocalDate fecha);
+
+    // ── Reporte ingresos ──────────────────────────────────────────────────────
 
     @Query("SELECT DISTINCT p FROM PagoInicial p " +
            "JOIN FETCH p.contrato co " +
@@ -54,9 +56,6 @@ public interface PagoInicialRepository extends JpaRepository<PagoInicial, Intege
             @Param("desde") LocalDate desde,
             @Param("hasta") LocalDate hasta);
 
-    /**
-     * Suma total de pagos iniciales dentro de un rango de fechas.
-     */
     @Query(value =
         "SELECT COALESCE(SUM(importe_pagado), 0) " +
         "FROM pago_inicial " +
@@ -66,9 +65,6 @@ public interface PagoInicialRepository extends JpaRepository<PagoInicial, Intege
             @Param("desde") LocalDate desde,
             @Param("hasta") LocalDate hasta);
 
-    /**
-     * Cuenta pagos iniciales dentro de un rango de fechas.
-     */
     @Query(value =
         "SELECT COUNT(*) " +
         "FROM pago_inicial " +
@@ -77,4 +73,33 @@ public interface PagoInicialRepository extends JpaRepository<PagoInicial, Intege
     long countByFechaPagoBetween(
             @Param("desde") LocalDate desde,
             @Param("hasta") LocalDate hasta);
+
+    // ── ADMIN: Listado general con filtros opcionales ─────────────────────────
+
+    @Query("SELECT DISTINCT p FROM PagoInicial p " +
+           "JOIN FETCH p.contrato co " +
+           "LEFT JOIN FETCH co.clientes cc " +
+           "LEFT JOIN FETCH cc.cliente cli " +
+           "LEFT JOIN FETCH p.comprobante c " +
+           "LEFT JOIN FETCH co.lotes cl " +
+           "LEFT JOIN FETCH cl.lote lot " +
+           "LEFT JOIN FETCH lot.programa prog " +
+           "WHERE (:numeroComprobante IS NULL OR " +
+           "       (c IS NOT NULL AND LOWER(c.numeroCompleto) LIKE LOWER(CONCAT('%', :numeroComprobante, '%')))) " +
+           "AND   (:manzana IS NULL OR " +
+           "       (lot IS NOT NULL AND LOWER(lot.manzana) = LOWER(:manzana))) " +
+           "AND   (:numeroLote IS NULL OR " +
+           "       (lot IS NOT NULL AND LOWER(lot.numeroLote) = LOWER(:numeroLote))) " +
+           "AND   (:idPrograma IS NULL OR " +
+           "       (prog IS NOT NULL AND prog.idPrograma = :idPrograma)) " +
+           "AND   (:desde IS NULL OR p.fechaPago >= :desde) " +
+           "AND   (:hasta IS NULL OR p.fechaPago <= :hasta) " +
+           "ORDER BY p.fechaPago DESC")
+    List<PagoInicial> findTodos(
+            @Param("numeroComprobante") String numeroComprobante,
+            @Param("manzana")          String manzana,
+            @Param("numeroLote")       String numeroLote,
+            @Param("idPrograma")       Integer idPrograma,
+            @Param("desde")            LocalDate desde,
+            @Param("hasta")            LocalDate hasta);
 }

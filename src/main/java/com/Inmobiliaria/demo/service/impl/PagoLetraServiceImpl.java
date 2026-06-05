@@ -257,22 +257,96 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         dto.setNumeroOperacion(pago.getNumeroOperacion());
         dto.setObservaciones(pago.getObservaciones());
         dto.setEsPagoAcuenta(pago.getEsPagoAcuenta());
-
+ 
         dto.setImporteLetra(pago.getLetra().getImporte());
         dto.setSaldoPendiente(pago.getLetra().getSaldoPendiente());
         dto.setEstadoLetra(pago.getLetra().getEstadoLetra());
-
+ 
         if (pago.getComprobante() != null) {
             dto.setIdComprobante(pago.getComprobante().getIdComprobante());
             dto.setTipoComprobante(pago.getComprobante().getTipoComprobante());
             dto.setNumeroComprobante(pago.getComprobante().getNumeroCompleto());
         }
-
+ 
         List<String> urls = voucherRepository
             .findByTipoOrigenAndReferenciaId("PAGO_LETRA", pago.getIdPago())
             .stream().map(Voucher::getUrl).collect(Collectors.toList());
         dto.setUrlsVoucher(urls);
+ 
+        // Anulación
+        dto.setAnulado(Boolean.TRUE.equals(pago.getAnulado()));
+        dto.setMotivoAnulacion(pago.getMotivoAnulacion());
+        dto.setFechaAnulacion(pago.getFechaAnulacion());
+        dto.setAnuladoPor(pago.getAnuladoPor());
+
+        // Contexto admin (manzana / lote / programa / cliente)
+        // Solo se popula cuando el query hace JOIN FETCH hasta lotes y clientes
+        // (usado por listarTodos). En otros contextos estos campos quedan null.
+        var lotes = pago.getLetra().getContrato().getLotes();
+        if (lotes != null && !lotes.isEmpty()) {
+            var lote = lotes.iterator().next().getLote();
+            if (lote != null) {
+                dto.setManzana(lote.getManzana());
+                dto.setNumeroLote(lote.getNumeroLote());
+                if (lote.getPrograma() != null) {
+                    dto.setIdPrograma(lote.getPrograma().getIdPrograma());
+                    dto.setNombrePrograma(lote.getPrograma().getNombrePrograma());
+                }
+            }
+        }
+        dto.setIdContrato(pago.getLetra().getContrato().getIdContrato());
+        if (pago.getLetra().getContrato().getMoneda() != null) {
+            dto.setMoneda(pago.getLetra().getContrato().getMoneda().name());
+        }
+        var clientes = pago.getLetra().getContrato().getClientes();
+        if (clientes != null && !clientes.isEmpty()) {
+            var cc = clientes.iterator().next();
+            if (cc.getCliente() != null) {
+                var cli = cc.getCliente();
+                dto.setNombreCliente(cli.getNombre() + " " + cli.getApellidos());
+            }
+        }
+ 
         return dto;
+    }
+ 
+ 
+    @Override
+    @Transactional
+    @CacheEvict(value = "contratos", allEntries = true)
+    public PagoLetraResponseDTO anularPago(Integer idPago, String motivo, String anuladoPor) {
+        PagoLetras pago = pagoLetraRepository.findById(idPago)
+            .orElseThrow(() -> new NegocioException("Pago no encontrado con id: " + idPago));
+ 
+        if (Boolean.TRUE.equals(pago.getAnulado()))
+            throw new NegocioException("Este pago ya fue anulado.");
+ 
+        pago.setAnulado(true);
+        pago.setMotivoAnulacion(motivo);
+        pago.setFechaAnulacion(LocalDateTime.now());
+        pago.setAnuladoPor(anuladoPor);
+        pagoLetraRepository.save(pago);
+ 
+        // Recalcular saldo de la letra (igual que al eliminar, pero sin borrar)
+        LetraCambio letra = pago.getLetra();
+        BigDecimal totalPagado = pagoLetraRepository.sumImportePagadoActivoByLetra(letra.getIdLetra());
+        if (totalPagado == null) totalPagado = BigDecimal.ZERO;
+        BigDecimal nuevoSaldo = letra.getImporte().subtract(totalPagado);
+ 
+        long count = pagoLetraRepository.countActivosByLetraIdLetra(letra.getIdLetra());
+        if (count == 0) {
+            letra.setSaldoPendiente(letra.getImporte());
+            letra.setEstadoLetra(letra.getFechaVencimiento().isBefore(LocalDate.now())
+                ? EstadoLetra.VENCIDO : EstadoLetra.PENDIENTE);
+        } else {
+            letra.setSaldoPendiente(nuevoSaldo);
+            letra.setEstadoLetra(nuevoSaldo.compareTo(BigDecimal.ZERO) == 0
+                ? EstadoLetra.PAGADO : EstadoLetra.PARCIAL);
+        }
+        letraCambioRepository.save(letra);
+        recalcularEstadoContrato(letra.getContrato());
+ 
+        return mapToDTO(pago);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -834,5 +908,67 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             System.err.println("Error al extraer publicId: " + e.getMessage());
             return null;
         }
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<PagoLetraResponseDTO> listarTodos(
+            String numeroComprobante,
+            String manzana,
+            String numeroLote,
+            Integer idPrograma,
+            LocalDate desde,
+            LocalDate hasta) {
+
+        // ── PASO 1: Query con lotes/programa (sin clientes).
+        // Se divide en dos queries para evitar MultipleBagFetchException:
+        // Hibernate no permite JOIN FETCH de dos List<> (bags) en la misma query.
+        List<PagoLetras> pagosConLotes = pagoLetraRepository.findTodosConLotes(
+                (numeroComprobante != null && !numeroComprobante.isBlank()) ? numeroComprobante : null,
+                (manzana           != null && !manzana.isBlank())           ? manzana           : null,
+                (numeroLote        != null && !numeroLote.isBlank())        ? numeroLote        : null,
+                idPrograma,
+                desde,
+                hasta);
+
+        if (pagosConLotes.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+
+        // ── PASO 2: Obtener IDs de contratos únicos y cargar clientes por separado ──
+        List<Integer> contratoIds = pagosConLotes.stream()
+                .map(p -> p.getLetra().getContrato().getIdContrato())
+                .distinct()
+                .collect(Collectors.toList());
+
+        List<PagoLetras> pagosConClientes = pagoLetraRepository
+                .findByContratoIdsConClientes(contratoIds);
+
+        // Mapa contratoId -> nombre cliente para lookup O(1)
+        java.util.Map<Integer, String> nombreClientePorContrato = new java.util.HashMap<>();
+        for (PagoLetras p : pagosConClientes) {
+            Integer idContrato = p.getLetra().getContrato().getIdContrato();
+            if (!nombreClientePorContrato.containsKey(idContrato)) {
+                var clientes = p.getLetra().getContrato().getClientes();
+                if (clientes != null && !clientes.isEmpty()) {
+                    var cc = clientes.iterator().next();
+                    if (cc.getCliente() != null) {
+                        var cli = cc.getCliente();
+                        nombreClientePorContrato.put(idContrato,
+                                cli.getNombre() + " " + cli.getApellidos());
+                    }
+                }
+            }
+        }
+
+        // ── PASO 3: Mapear combinando lotes ya cargados + mapa de clientes ──
+        return pagosConLotes.stream()
+                .map(p -> {
+                    PagoLetraResponseDTO dto = mapToDTO(p);
+                    Integer idContrato = p.getLetra().getContrato().getIdContrato();
+                    dto.setNombreCliente(nombreClientePorContrato.get(idContrato));
+                    return dto;
+                })
+                .collect(Collectors.toList());
     }
 }

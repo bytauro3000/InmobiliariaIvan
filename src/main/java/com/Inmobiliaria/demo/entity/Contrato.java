@@ -3,6 +3,7 @@ package com.Inmobiliaria.demo.entity;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import com.Inmobiliaria.demo.enums.TipoContrato;
@@ -80,8 +81,8 @@ public class Contrato {
     private List<LetraCambio> letrasCambio;
 
     @OneToMany(mappedBy = "contrato", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ContratoCliente> clientes;
+    private Set<ContratoCliente> clientes;
 
     @OneToMany(mappedBy = "contrato", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ContratoLote> lotes;
+    private Set<ContratoLote> lotes;
 }

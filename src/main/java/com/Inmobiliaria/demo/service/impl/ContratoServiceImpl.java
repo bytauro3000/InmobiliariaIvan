@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.security.Principal;
@@ -278,6 +279,16 @@ public class ContratoServiceImpl implements ContratoService {
         contrato.setCantidadLetras(nuevaCantidad);
         contrato.setObservaciones(requestDTO.getObservaciones());
         contrato.setMoneda(monedaNueva);
+
+        // ── Actualizar vendedor ────────────────────────────────────────────────
+        if (requestDTO.getIdVendedor() != null) {
+            Vendedor vendedorActualizado = vendedorService.obtenerVendedorPorId(requestDTO.getIdVendedor())
+                    .orElseThrow(() -> new NegocioException("Vendedor no encontrado con ID: " + requestDTO.getIdVendedor()));
+            contrato.setVendedor(vendedorActualizado);
+        } else {
+            contrato.setVendedor(null);
+        }
+
         contrato.getClientes().clear();
 
         Contrato contratoActualizado = contratoRepository.saveAndFlush(contrato);
@@ -337,11 +348,11 @@ public class ContratoServiceImpl implements ContratoService {
         List<Contrato> contratosConClientes = contratoRepository.findAllConClientes();
         List<Contrato> contratosConLotes    = contratoRepository.findAllConLotes();
 
-        Map<Integer, List<ContratoLote>> lotesMap = contratosConLotes.stream()
+        Map<Integer, Set<ContratoLote>> lotesMap = contratosConLotes.stream()
             .collect(Collectors.toMap(Contrato::getIdContrato, Contrato::getLotes));
 
         contratosConClientes.forEach(c ->
-            c.setLotes(lotesMap.getOrDefault(c.getIdContrato(), List.of()))
+            c.setLotes(lotesMap.getOrDefault(c.getIdContrato(), new java.util.HashSet<>()))
         );
 
         return contratosConClientes.stream()

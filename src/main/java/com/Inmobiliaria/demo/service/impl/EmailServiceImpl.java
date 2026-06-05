@@ -140,7 +140,7 @@ public class EmailServiceImpl implements EmailService {
         String cliente = "-";
         if (pago.getLetra().getContrato().getClientes() != null
                 && !pago.getLetra().getContrato().getClientes().isEmpty()) {
-            var c = pago.getLetra().getContrato().getClientes().get(0).getCliente();
+            var c = pago.getLetra().getContrato().getClientes().iterator().next().getCliente();
             cliente = c.getNombre() + " " + c.getApellidos();
         }
 

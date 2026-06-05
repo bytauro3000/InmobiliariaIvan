@@ -2,40 +2,54 @@ package com.Inmobiliaria.demo.dto;
 
 import com.Inmobiliaria.demo.enums.MedioPago;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
-
+/**
+ * DTO de respuesta para pagos de inscripción de servicios básicos.
+ *
+ * Campos base     → usados por secretaria y admin (/pagos)
+ * Campos anulación→ seteados siempre; el frontend decide si mostrarlos
+ * Campos admin    → nombreCliente; solo se popula en /pagos/todos (admin)
+ */
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class PagoInscripcionDTO {
 
-    private Integer       idPagoInscripcionComprobante;   // antes: idPagoInicial
-    private Integer       idContrato;
-    private BigDecimal    importePagado;
-    private LocalDate     fechaPago;
-    private MedioPago     medioPago;
-    private String        numeroOperacion;
-    private String        observaciones;
+    // ── Identificación ────────────────────────────────────────────────────────
+    private Integer         idPagoInscripcionComprobante;
+    private Integer         idContrato;
 
-    // Datos del comprobante
+    // ── Datos del pago ────────────────────────────────────────────────────────
+    private BigDecimal      importePagado;
+    private LocalDate       fechaPago;
+    private MedioPago       medioPago;
+    private String          numeroOperacion;
+    private String          observaciones;
+    private String          tipoServicio;   // "LUZ" | "AGUA"
+
+    // ── Comprobante ───────────────────────────────────────────────────────────
     private TipoComprobante tipoComprobante;
     private String          numeroComprobante;
     private LocalDate       fechaEmision;
 
-    // Tipo de servicio ("LUZ" o "AGUA")
-    private String tipoServicio;
+    // ── Ubicación del lote ────────────────────────────────────────────────────
+    private Integer         idPrograma;
+    private String          nombrePrograma;
+    private String          manzana;
+    private String          numeroLote;
 
-    // Datos del lote asociado al contrato
-    private String  manzana;
-    private String  numeroLote;
+    // ── Anulación ─────────────────────────────────────────────────────────────
+    private Boolean         anulado;
+    private String          motivoAnulacion;
+    private LocalDateTime   fechaAnulacion;
+    private String          anuladoPor;
 
-    // Datos del programa al que pertenece el lote
-    private Integer idPrograma;
-    private String  nombrePrograma;
+    // ── Solo admin (/pagos/todos) ─────────────────────────────────────────────
+    private String          nombreCliente;
+    private String          moneda;   // "USD" o "PEN"
 }

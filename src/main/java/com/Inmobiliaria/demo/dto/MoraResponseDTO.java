@@ -5,6 +5,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -13,10 +14,10 @@ public class MoraResponseDTO {
     private Integer idMora;
 
     // Datos de la letra que originó la mora
-    private Integer idLetra;
-    private String  numeroLetra;
+    private Integer    idLetra;
+    private String     numeroLetra;
     private BigDecimal importeLetra;
-    private LocalDate fechaVencimientoLetra;
+    private LocalDate  fechaVencimientoLetra;
 
     // Pago de letra asociado (si se registró en el mismo acto)
     private Integer idPagoLetra;
@@ -29,8 +30,13 @@ public class MoraResponseDTO {
     private BigDecimal montoMoraTotal;       // total a cobrar
 
     // Metadatos
-    private LocalDate fechaGeneracion;
+    private LocalDate  fechaGeneracion;
     private EstadoMora estadoMora;
+
+    // ── Anulación ─────────────────────────────────────────────────────────────
+    private String        motivoAnulacion;
+    private LocalDateTime fechaAnulacion;
+    private String        anuladoPor;
 
     // Pagos realizados sobre esta mora
     private List<PagoMoraResponseDTO> pagos;

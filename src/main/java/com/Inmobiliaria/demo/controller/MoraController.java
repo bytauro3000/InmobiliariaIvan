@@ -8,11 +8,15 @@ import com.Inmobiliaria.demo.repository.PagoMoraRepository;
 import com.Inmobiliaria.demo.service.MoraService;
 import com.Inmobiliaria.demo.service.PagoLetraService;
 import com.Inmobiliaria.demo.util.ComprobanteMoraPdf;
+
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,14 +35,8 @@ public class MoraController {
     private final PagoMoraRepository   pagoMoraRepository;
     private final PagoLetraService     pagoLetraService;
 
-    // ── CONSULTAS ─────────────────────────────────────────────────────────────
+    // ── Consultas ─────────────────────────────────────────────────────────────
 
-    /**
-     * Calcula mora para una letra.
-     * Si se pasa el parámetro opcional ?fecha=YYYY-MM-DD, usa esa fecha como referencia
-     * en lugar de la fecha actual. Útil para mostrar la mora correcta cuando el usuario
-     * va a registrar un pago con fecha de operación retroactiva.
-     */
     @GetMapping("/calcular/{idLetra}")
     public ResponseEntity<CalculoMoraDTO> calcularMora(
             @PathVariable Integer idLetra,
@@ -72,15 +70,10 @@ public class MoraController {
         return ResponseEntity.ok(moraService.obtenerPorId(idMora));
     }
 
-    /**
-     * Sugiere el siguiente número de comprobante disponible.
-     * CORRECCIÓN: ahora llama a sugerirNumeroComprobante() que existe en la interfaz
-     * y devuelve directamente SugerenciaNumeroComprobanteDTO.
-     */
     @GetMapping("/sugerir-numero")
     public ResponseEntity<SugerenciaNumeroComprobanteDTO> sugerirNumeroComprobante(
             @RequestParam TipoComprobante tipoComprobante) {
-        return ResponseEntity.ok(pagoLetraService.sugerirNumeroComprobante(tipoComprobante)); // ← CORREGIDO
+        return ResponseEntity.ok(pagoLetraService.sugerirNumeroComprobante(tipoComprobante));
     }
 
     @PostMapping("/crear-pendiente/{idLetra}")
@@ -95,7 +88,7 @@ public class MoraController {
         return ResponseEntity.ok(moraService.obtenerResumenPorContrato(idContrato));
     }
 
-    // ── ACCIONES ──────────────────────────────────────────────────────────────
+    // ── Acciones ──────────────────────────────────────────────────────────────
 
     @PostMapping(value = "/pagar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PagoMoraResponseDTO> pagarMora(
@@ -103,13 +96,6 @@ public class MoraController {
             @RequestPart(value = "vouchers", required = false) List<MultipartFile> vouchers)
             throws java.io.IOException {
         return new ResponseEntity<>(moraService.pagarMora(request, vouchers), HttpStatus.CREATED);
-    }
-
-    @PatchMapping("/{idMora}/anular")
-    public ResponseEntity<MoraResponseDTO> anularMora(
-            @PathVariable Integer idMora,
-            @RequestParam(required = false, defaultValue = "") String motivo) {
-        return ResponseEntity.ok(moraService.anularMora(idMora, motivo));
     }
 
     @GetMapping("/pago/{idPagoMora}/comprobante-pdf")
@@ -132,11 +118,9 @@ public class MoraController {
             }
 
             byte[] pdf = ComprobanteMoraPdf.generar(pagoMora, rolUsuario);
-
-            String nombreArchivo = "comprobante-mora-" + idPagoMora + ".pdf";
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "inline; filename=\"" + nombreArchivo + "\"")
+                            "inline; filename=\"comprobante-mora-" + idPagoMora + ".pdf\"")
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
 
@@ -145,5 +129,53 @@ public class MoraController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    // ── ADMIN: Anular mora ────────────────────────────────────────────────────
+
+    @PatchMapping("/{idMora}/anular")
+    @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
+    public ResponseEntity<MoraResponseDTO> anularMora(
+            @PathVariable Integer idMora,
+            @Valid @RequestBody AnulacionRequestDTO request,
+            Authentication authentication) {
+        return ResponseEntity.ok(
+            moraService.anularMora(idMora, request.getMotivo(), authentication.getName()));
+    }
+
+    // ── ADMIN: Anular pago de mora ────────────────────────────────────────────
+
+    @PatchMapping("/pago/{idPagoMora}/anular")
+    @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
+    public ResponseEntity<PagoMoraResponseDTO> anularPagoMora(
+            @PathVariable Integer idPagoMora,
+            @Valid @RequestBody AnulacionRequestDTO request,
+            Authentication authentication) {
+        return ResponseEntity.ok(
+            moraService.anularPagoMora(idPagoMora, request.getMotivo(), authentication.getName()));
+    }
+
+    // ── ADMIN: Eliminar pago de mora físicamente ──────────────────────────────
+
+    @DeleteMapping("/pago/{idPagoMora}")
+    @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
+    public ResponseEntity<Void> eliminarPagoMora(@PathVariable Integer idPagoMora) {
+        moraService.eliminarPagoMora(idPagoMora);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ── ADMIN: Listado general de pagos de mora con filtros ───────────────────
+
+    @GetMapping("/pagos/todos")
+    @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
+    public ResponseEntity<List<PagoMoraResponseDTO>> listarPagosTodos(
+            @RequestParam(required = false) String numeroComprobante,
+            @RequestParam(required = false) String manzana,
+            @RequestParam(required = false) String numeroLote,
+            @RequestParam(required = false) Integer idPrograma,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
+        return ResponseEntity.ok(
+            moraService.listarPagosTodos(numeroComprobante, manzana, numeroLote, idPrograma, desde, hasta));
     }
 }
