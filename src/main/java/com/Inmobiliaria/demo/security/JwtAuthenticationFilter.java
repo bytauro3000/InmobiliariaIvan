@@ -35,6 +35,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 || path.equals("/favicon.ico")
                 || path.equals("/favicon.png")
                 || path.matches(".*/api/pagos/\\d+/comprobante-pdf")
+                || path.matches(".*/api/pagos/comprobante-multiple/[^/]+")
                 || path.equals("/")) {
             filterChain.doFilter(request, response);
             return;
