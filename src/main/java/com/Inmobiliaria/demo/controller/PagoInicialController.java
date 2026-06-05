@@ -8,6 +8,8 @@ import com.Inmobiliaria.demo.service.PagoInicialService;
 import com.Inmobiliaria.demo.util.ComprobantePagoInicialPdf;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -16,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -25,6 +28,8 @@ import java.util.List;
 @RequestMapping("/api/contratos")
 @RequiredArgsConstructor
 public class PagoInicialController {
+
+    private static final Logger log = LoggerFactory.getLogger(PagoInicialController.class);
 
     private final PagoInicialService pagoInicialService;
 
@@ -39,6 +44,7 @@ public class PagoInicialController {
     // ── Descargar PDF del comprobante de pago inicial ─────────────────────────
 
     @GetMapping("/{idContrato}/pago-inicial/comprobante-pdf")
+    @Transactional(readOnly = true)
     public ResponseEntity<byte[]> descargarComprobantePagoInicial(
             @PathVariable Integer idContrato,
             Authentication authentication) {
@@ -66,7 +72,9 @@ public class PagoInicialController {
         } catch (NegocioException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+            log.error("Error generando comprobante PDF para contrato {}: ", idContrato, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(("Error generando PDF: " + e.getClass().getSimpleName() + ": " + e.getMessage()).getBytes());
         }
     }
 

@@ -17,6 +17,28 @@ public interface PagoInicialRepository extends JpaRepository<PagoInicial, Intege
 
     Optional<PagoInicial> findByContratoIdContrato(Integer idContrato);
 
+    // ── Para generación de PDF: evita LazyInitializationException cargando
+    //    comprobante + contrato + clientes + cliente + usuario. Hibernate no
+    //    permite JOIN FETCH de dos colecciones (clientes + lotes) en la misma
+    //    query, por eso se separa en 2 métodos.
+
+    @Query("SELECT p FROM PagoInicial p " +
+           "JOIN FETCH p.comprobante c " +
+           "JOIN FETCH p.contrato co " +
+           "LEFT JOIN FETCH co.clientes cc " +
+           "LEFT JOIN FETCH cc.cliente cli " +
+           "LEFT JOIN FETCH co.usuario u " +
+           "WHERE co.idContrato = :idContrato")
+    Optional<PagoInicial> findByContratoIdConClientesYComprobante(@Param("idContrato") Integer idContrato);
+
+    @Query("SELECT p FROM PagoInicial p " +
+           "JOIN FETCH p.contrato co " +
+           "LEFT JOIN FETCH co.lotes cl " +
+           "LEFT JOIN FETCH cl.lote l " +
+           "LEFT JOIN FETCH l.programa prog " +
+           "WHERE co.idContrato = :idContrato")
+    Optional<PagoInicial> findByContratoIdConLotes(@Param("idContrato") Integer idContrato);
+
     @Query("SELECT DISTINCT p FROM PagoInicial p " +
            "JOIN FETCH p.comprobante c " +
            "JOIN FETCH p.contrato co " +

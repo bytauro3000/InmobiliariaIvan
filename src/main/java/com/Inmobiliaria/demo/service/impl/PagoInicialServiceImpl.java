@@ -37,9 +37,13 @@ public class PagoInicialServiceImpl implements PagoInicialService {
     @Override
     @Transactional(readOnly = true)
     public PagoInicial obtenerEntidadPorContrato(Integer idContrato) {
-        return pagoInicialRepository.findByContratoIdContrato(idContrato)
-            .orElseThrow(() -> new NegocioException(
-                "No existe pago inicial para el contrato con id: " + idContrato));
+        PagoInicial pago = pagoInicialRepository
+                .findByContratoIdConClientesYComprobante(idContrato)
+                .orElseThrow(() -> new NegocioException(
+                    "No existe pago inicial para el contrato con id: " + idContrato));
+        // Segunda query: hidrata lotes+lote+programa en la misma sesión
+        pagoInicialRepository.findByContratoIdConLotes(idContrato);
+        return pago;
     }
 
     // ── Anulación lógica ──────────────────────────────────────────────────────
