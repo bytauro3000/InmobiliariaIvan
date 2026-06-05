@@ -32,10 +32,12 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/auth/**",
                     "/api/public/**",
-                    // Comprobantes de pago individuales y múltiples: acceso abierto
-                    // para que puedan descargarse sin token (window.open desde el frontend)
+                    // Comprobantes de pago: acceso abierto para QR y descarga directa
+                    // desde el frontend (window.open) sin token
                     "/api/pagos/*/comprobante-pdf",
                     "/api/pagos/comprobante-multiple/*",
+                    "/api/gateway/inscripciones/pago/*/comprobante-pdf",
+                    "/api/moras/pago/*/comprobante-pdf",
                     "/error"
                 ).permitAll()
                 // ── Rutas de negocio: SECRETARIA o ADMINISTRADOR ──────────────────────
