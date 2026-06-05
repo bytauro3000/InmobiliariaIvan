@@ -38,6 +38,7 @@ public class SecurityConfig {
                     "/api/pagos/comprobante-multiple/*",
                     "/api/gateway/inscripciones/pago/*/comprobante-pdf",
                     "/api/moras/pago/*/comprobante-pdf",
+                    "/api/contratos/*/pago-inicial/comprobante-pdf",
                     "/error"
                 ).permitAll()
                 // ── Rutas de negocio: SECRETARIA o ADMINISTRADOR ──────────────────────

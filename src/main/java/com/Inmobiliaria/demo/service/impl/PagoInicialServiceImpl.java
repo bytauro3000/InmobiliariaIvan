@@ -34,6 +34,14 @@ public class PagoInicialServiceImpl implements PagoInicialService {
         return mapToDTO(pago);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public PagoInicial obtenerEntidadPorContrato(Integer idContrato) {
+        return pagoInicialRepository.findByContratoIdContrato(idContrato)
+            .orElseThrow(() -> new NegocioException(
+                "No existe pago inicial para el contrato con id: " + idContrato));
+    }
+
     // ── Anulación lógica ──────────────────────────────────────────────────────
 
     @Override

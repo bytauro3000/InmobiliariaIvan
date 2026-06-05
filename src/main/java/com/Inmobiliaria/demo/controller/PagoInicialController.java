@@ -2,13 +2,20 @@ package com.Inmobiliaria.demo.controller;
 
 import com.Inmobiliaria.demo.dto.AnulacionRequestDTO;
 import com.Inmobiliaria.demo.dto.PagoInicialResponseDTO;
+import com.Inmobiliaria.demo.entity.PagoInicial;
+import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.service.PagoInicialService;
+import com.Inmobiliaria.demo.util.ComprobantePagoInicialPdf;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -27,6 +34,40 @@ public class PagoInicialController {
     public ResponseEntity<PagoInicialResponseDTO> obtenerPorContrato(
             @PathVariable Integer idContrato) {
         return ResponseEntity.ok(pagoInicialService.obtenerPorContrato(idContrato));
+    }
+
+    // ── Descargar PDF del comprobante de pago inicial ─────────────────────────
+
+    @GetMapping("/{idContrato}/pago-inicial/comprobante-pdf")
+    public ResponseEntity<byte[]> descargarComprobantePagoInicial(
+            @PathVariable Integer idContrato,
+            Authentication authentication) {
+
+        try {
+            PagoInicial pago = pagoInicialService.obtenerEntidadPorContrato(idContrato);
+
+            String rolUsuario = "SECRETARIA";
+            if (authentication != null && authentication.getAuthorities() != null) {
+                rolUsuario = authentication.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .map(r -> r.replace("ROLE_", ""))
+                        .findFirst()
+                        .orElse("SECRETARIA");
+            }
+
+            byte[] pdf = ComprobantePagoInicialPdf.generar(pago, rolUsuario);
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "inline; filename=\"comprobante-inicial-" + idContrato + ".pdf\"")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+
+        } catch (NegocioException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     // ── ADMIN: Listado general con filtros ────────────────────────────────────

@@ -1,6 +1,7 @@
 package com.Inmobiliaria.demo.service;
 
 import com.Inmobiliaria.demo.dto.PagoInicialResponseDTO;
+import com.Inmobiliaria.demo.entity.PagoInicial;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -8,6 +9,9 @@ import java.util.List;
 public interface PagoInicialService {
 
     PagoInicialResponseDTO obtenerPorContrato(Integer idContrato);
+
+    /** Devuelve la entidad PagoInicial con sus relaciones para generación de PDF. */
+    PagoInicial obtenerEntidadPorContrato(Integer idContrato);
 
     /** Anulación lógica. Solo ROLE_ADMINISTRADOR. */
     PagoInicialResponseDTO anularPagoInicial(Integer idContrato, String motivo, String anuladoPor);

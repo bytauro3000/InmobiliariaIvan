@@ -95,6 +95,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 || path.matches(".*/api/pagos/comprobante-multiple/[^/]+")
                 || path.matches(".*/api/gateway/inscripciones/pago/\\d+/comprobante-pdf")
                 || path.matches(".*/api/moras/pago/\\d+/comprobante-pdf")
+                || path.matches(".*/api/contratos/\\d+/pago-inicial/comprobante-pdf")
                 || path.equals("/");
     }
 
