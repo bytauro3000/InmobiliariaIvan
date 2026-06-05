@@ -41,6 +41,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
     private final Cloudinary            cloudinary;
     private final MoraRepository        moraRepository;
     private final MoraServiceImpl       moraService;
+    private final PagoMoraRepository    pagoMoraRepository;
 
     private final ComprobanteService    comprobanteService;
 
@@ -830,7 +831,9 @@ public class PagoLetraServiceImpl implements PagoLetraService {
                 pm.setMotivoAnulacion(motivo);
                 pm.setFechaAnulacion(ahora);
                 pm.setAnuladoPor(usuarioEliminacion);
+                pagoMoraRepository.save(pm);
             }
+            mora.setPagoLetra(null);
             mora.setMotivoAnulacion(motivo);
             mora.setFechaAnulacion(ahora);
             mora.setAnuladoPor(usuarioEliminacion);
