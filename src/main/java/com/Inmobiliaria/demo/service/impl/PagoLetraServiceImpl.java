@@ -18,6 +18,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.Authentication;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -818,13 +820,21 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         }
 
         List<MoraLetra> morasAsociadas = moraRepository.findByPagoLetraIdPago(idPago);
+        String usuarioEliminacion = obtenerUsuarioActual();
+        LocalDateTime ahora = LocalDateTime.now();
+        String motivo = "Anulación por eliminación de pago letra #" + idPago;
+
         for (MoraLetra mora : morasAsociadas) {
-            if (mora.getEstadoMora() == EstadoMora.PENDIENTE) {
-                moraRepository.delete(mora);
-            } else {
-                mora.setPagoLetra(null);
-                moraRepository.save(mora);
+            for (PagoMora pm : mora.getPagos()) {
+                pm.setAnulado(true);
+                pm.setMotivoAnulacion(motivo);
+                pm.setFechaAnulacion(ahora);
+                pm.setAnuladoPor(usuarioEliminacion);
             }
+            mora.setMotivoAnulacion(motivo);
+            mora.setFechaAnulacion(ahora);
+            mora.setAnuladoPor(usuarioEliminacion);
+            moraRepository.save(mora);
         }
 
         Long idComprobante = pago.getComprobante() != null
@@ -908,6 +918,11 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             System.err.println("Error al extraer publicId: " + e.getMessage());
             return null;
         }
+    }
+
+    private String obtenerUsuarioActual() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return (auth != null && auth.isAuthenticated()) ? auth.getName() : "SISTEMA";
     }
     
     @Override
