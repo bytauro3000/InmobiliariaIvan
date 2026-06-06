@@ -1,51 +1,61 @@
 package com.Inmobiliaria.demo.controller;
 	
-	import com.Inmobiliaria.demo.client.InscripcionClient;
-	import com.Inmobiliaria.demo.dto.*;
-	import com.Inmobiliaria.demo.entity.Comprobante;
-	import com.Inmobiliaria.demo.entity.Contrato;
-	import com.Inmobiliaria.demo.entity.Lote;
-	import com.Inmobiliaria.demo.entity.PagoInscripcionComprobante;
-	import com.Inmobiliaria.demo.enums.TipoOrigenComprobante;
-	import com.Inmobiliaria.demo.exception.NegocioException;
-	import com.Inmobiliaria.demo.repository.ContratoRepository;
-	import com.Inmobiliaria.demo.repository.PagoInscripcionComprobanteRepository;
-	import com.Inmobiliaria.demo.service.ComprobanteService;
-	import com.Inmobiliaria.demo.service.impl.InscripcionComprobanteServiceImpl;
-	import com.Inmobiliaria.demo.util.ComprobanteInscripcionPdf;
-	import feign.FeignException;
-	import jakarta.validation.Valid;
-	import lombok.RequiredArgsConstructor;
-	import org.springframework.cache.CacheManager;
-	import org.springframework.format.annotation.DateTimeFormat;
-	import org.springframework.http.HttpHeaders;
-	import org.springframework.http.HttpStatus;
-	import org.springframework.http.MediaType;
-	import org.springframework.http.ResponseEntity;
-	import org.springframework.security.access.prepost.PreAuthorize;
-	import org.springframework.security.core.Authentication;
-	import org.springframework.security.core.GrantedAuthority;
-	import org.springframework.transaction.annotation.Transactional;
-	import org.springframework.web.bind.annotation.*;
-	
-	import java.time.LocalDate;
-	import java.util.Comparator;
-	import java.util.HashMap;
-	import java.util.List;
-	import java.util.Map;
-	import java.util.stream.Collectors;
+import com.Inmobiliaria.demo.client.InscripcionClient;
+import com.Inmobiliaria.demo.dto.*;
+import com.Inmobiliaria.demo.entity.Comprobante;
+import com.Inmobiliaria.demo.entity.Contrato;
+import com.Inmobiliaria.demo.entity.Lote;
+import com.Inmobiliaria.demo.entity.PagoInscripcionComprobante;
+import com.Inmobiliaria.demo.entity.Voucher;
+import com.Inmobiliaria.demo.enums.TipoOrigenComprobante;
+import com.Inmobiliaria.demo.exception.NegocioException;
+import com.Inmobiliaria.demo.repository.ContratoRepository;
+import com.Inmobiliaria.demo.repository.PagoInscripcionComprobanteRepository;
+import com.Inmobiliaria.demo.repository.VoucherRepository;
+import com.Inmobiliaria.demo.service.ComprobanteService;
+import com.Inmobiliaria.demo.service.impl.InscripcionComprobanteServiceImpl;
+import com.Inmobiliaria.demo.util.ComprobanteInscripcionPdf;
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
+import feign.FeignException;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.cache.CacheManager;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 	
 	@RestController
 	@RequestMapping("/api/gateway/inscripciones")
 	@RequiredArgsConstructor
 	public class InscripcionGatewayController {
 	
-	    private final CacheManager                         cacheManager;
-	    private final InscripcionClient                    inscripcionClient;
-	    private final ContratoRepository                   contratoRepository;
-	    private final PagoInscripcionComprobanteRepository pagoInscripcionComprobanteRepository;
-	    private final ComprobanteService                   comprobanteService;
-	    private final InscripcionComprobanteServiceImpl    inscripcionComprobanteService;
+    private final CacheManager                         cacheManager;
+    private final InscripcionClient                    inscripcionClient;
+    private final ContratoRepository                   contratoRepository;
+    private final PagoInscripcionComprobanteRepository pagoInscripcionComprobanteRepository;
+    private final ComprobanteService                   comprobanteService;
+    private final InscripcionComprobanteServiceImpl    inscripcionComprobanteService;
+    private final VoucherRepository                    voucherRepository;
+    private final Cloudinary                           cloudinary;
 	
 	    // ── 1. Listar resumen contratos con servicios ────────────────────────────
 	
@@ -164,13 +174,14 @@ package com.Inmobiliaria.demo.controller;
 	    }
 	
 	    // ── 3. Registrar abono a una inscripción existente ───────────────────────
-	
-	    @PostMapping("/{idInscripcion}/abonar")
+
+	    @PostMapping(value = "/{idInscripcion}/abonar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	    @PreAuthorize("hasAuthority('ROLE_SECRETARIA')")
 	    @Transactional
 	    public ResponseEntity<?> registrarAbono(
 	            @PathVariable Integer idInscripcion,
-	            @RequestBody AbonoInscripcionRequestDTO request,
+	            @RequestPart("pago") AbonoInscripcionRequestDTO request,
+	            @RequestPart(value = "vouchers", required = false) List<MultipartFile> vouchers,
 	            Authentication authentication) {
 	
 	        if (request.getIdContrato() == null)
@@ -242,7 +253,15 @@ package com.Inmobiliaria.demo.controller;
 	
 	        PagoInscripcionComprobante pagoGuardado =
 	                pagoInscripcionComprobanteRepository.save(pago);
-	
+
+	        // e) Guardar vouchers (opcional, en paralelo al resto del flujo)
+	        try {
+	            guardarVouchers(vouchers, pagoGuardado, request.getIdContrato(), idInscripcion);
+	        } catch (Exception e) {
+	            // No interrumpimos el pago si falla la subida del voucher
+	            System.err.println("Error al guardar vouchers del pago de inscripción: " + e.getMessage());
+	        }
+
 	        InscripcionConPagoResponseDTO response = new InscripcionConPagoResponseDTO(
 	                pagoGuardado.getIdPagoInscripcionComprobante(),
 	                comprobante.getNumeroCompleto(),
@@ -510,10 +529,36 @@ package com.Inmobiliaria.demo.controller;
 	    }
 	
 	    // ── Helper ────────────────────────────────────────────────────────────────
-	
+
 	    private void limpiarCache() {
 	        if (cacheManager.getCache("contratos") != null) {
 	            cacheManager.getCache("contratos").clear();
+	        }
+	    }
+
+	    // ═══════════════════════════════════════════════════════════════════════════
+	    // Vouchers
+	    // ═══════════════════════════════════════════════════════════════════════════
+
+	    private String subirImagenVoucher(MultipartFile file, Integer idContrato, Integer idInscripcion) throws IOException {
+	        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
+	        String publicId = "inscripcion-" + idInscripcion + "-" + timestamp;
+	        Map<?, ?> params = ObjectUtils.asMap(
+	            "folder", "vouchers/contrato-" + idContrato, "public_id", publicId);
+	        Map<?, ?> result = cloudinary.uploader().upload(file.getBytes(), params);
+	        return result.get("url").toString();
+	    }
+
+	    private void guardarVouchers(List<MultipartFile> files, PagoInscripcionComprobante pago,
+	                                  Integer idContrato, Integer idInscripcion) throws IOException {
+	        if (files != null && !files.isEmpty()) {
+	            for (MultipartFile file : files) {
+	                Voucher v = new Voucher();
+	                v.setTipoOrigen("PAGO_INSCRIPCION");
+	                v.setReferenciaId(pago.getIdPagoInscripcionComprobante());
+	                v.setUrl(subirImagenVoucher(file, idContrato, idInscripcion));
+	                voucherRepository.save(v);
+	            }
 	        }
 	    }
 	}
