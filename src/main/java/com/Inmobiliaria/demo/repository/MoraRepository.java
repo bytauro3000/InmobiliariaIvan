@@ -21,6 +21,7 @@ public interface MoraRepository extends JpaRepository<MoraLetra, Integer> {
         "SELECT m.* FROM mora_letra m " +
         "JOIN letra_cambio lc ON m.id_letra = lc.id_letra " +
         "WHERE lc.id_contrato = :idContrato " +
+        "AND m.estado_mora <> 'ANULADO' " +
         "ORDER BY CAST(SUBSTRING_INDEX(lc.numero_letra, '/', 1) AS UNSIGNED) ASC",
         nativeQuery = true)
     List<MoraLetra> findByContratoIdContrato(@Param("idContrato") Integer idContrato);

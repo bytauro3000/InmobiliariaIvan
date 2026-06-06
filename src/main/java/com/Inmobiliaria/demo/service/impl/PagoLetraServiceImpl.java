@@ -834,6 +834,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
                 pagoMoraRepository.save(pm);
             }
             mora.setPagoLetra(null);
+            mora.setEstadoMora(EstadoMora.ANULADO);
             mora.setMotivoAnulacion(motivo);
             mora.setFechaAnulacion(ahora);
             mora.setAnuladoPor(usuarioEliminacion);
