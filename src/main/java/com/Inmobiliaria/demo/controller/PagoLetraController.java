@@ -6,10 +6,12 @@ import com.Inmobiliaria.demo.dto.PagoLetraResponseDTO;
 import com.Inmobiliaria.demo.dto.PagosMultiplesRequestDTO;
 import com.Inmobiliaria.demo.dto.SugerenciaNumeroComprobanteDTO;
 import com.Inmobiliaria.demo.entity.PagoLetras;
+import com.Inmobiliaria.demo.entity.Voucher;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
 import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.repository.PagoLetraRepository;
 import com.Inmobiliaria.demo.repository.UsuarioRepository;
+import com.Inmobiliaria.demo.repository.VoucherRepository;
 import com.Inmobiliaria.demo.service.PagoLetraService;
 import com.Inmobiliaria.demo.util.ComprobantePagoLetraPdf;
 
@@ -22,6 +24,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpHeaders;
@@ -40,6 +43,7 @@ public class PagoLetraController {
     private final PagoLetraService    pagoLetraService;
     private final PagoLetraRepository pagoLetraRepository;
     private final UsuarioRepository   usuarioRepository;
+    private final VoucherRepository   voucherRepository;
 
     // ── Lectura básica ────────────────────────────────────────────────────────
 
@@ -126,7 +130,11 @@ public class PagoLetraController {
             }
         }
 
-        byte[] pdf = ComprobantePagoLetraPdf.generar(pago, rolUsuario);
+        // Obtener vouchers adjuntos al pago
+        List<Voucher> vouchers = voucherRepository
+                .findByTipoOrigenAndReferenciaId("PAGO_LETRA", idPago);
+
+        byte[] pdf = ComprobantePagoLetraPdf.generar(pago, rolUsuario, vouchers);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "inline; filename=comprobante-pago-" + idPago + ".pdf")
@@ -156,7 +164,14 @@ public class PagoLetraController {
             }
         }
 
-        byte[] pdf = ComprobantePagoLetraPdf.generarMultiple(pagos, rolUsuarioMultiple);
+        // Obtener todos los vouchers de todos los pagos del comprobante
+        List<Voucher> vouchers = new ArrayList<>();
+        for (PagoLetras p : pagos) {
+            vouchers.addAll(voucherRepository
+                    .findByTipoOrigenAndReferenciaId("PAGO_LETRA", p.getIdPago()));
+        }
+
+        byte[] pdf = ComprobantePagoLetraPdf.generarMultiple(pagos, rolUsuarioMultiple, vouchers);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "inline; filename=comprobante-multiple-" + numeroComprobante + ".pdf")
