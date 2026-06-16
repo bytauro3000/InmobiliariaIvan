@@ -117,14 +117,20 @@ public class ContratoFloridaPdf {
 		String nombreDistrito = (titular.getDistrito() != null) ? titular.getDistrito().getNombre() : "";
 		String domicilioCalle = (titular.getDireccion() != null) ? titular.getDireccion().toUpperCase() : "";
 
-		// 🔹 INICIO DEL AJUSTE PARA EL CALLAO
+		// 🔹 INICIO DEL AJUSTE POR DEPARTAMENTO
+		String nombreDepartamento = (titular.getDistrito() != null && titular.getDistrito().getDepartamento() != null)
+		        ? titular.getDistrito().getDepartamento().toUpperCase()
+		        : "";
+
 		String ubicacionDinamica;
-		if (nombreDistrito.toUpperCase().contains("CALLAO")) {
-		    // Si el distrito es Callao, se usa Provincia del Callao y no Departamento de Lima
-		    ubicacionDinamica = ", Distrito del Callao, Provincia Constitucional del Callao";
+		if (nombreDepartamento.contains("CALLAO")) {
+		    // Provincia Constitucional del Callao (Ventanilla, Bellavista, Mi Perú, etc.)
+		    ubicacionDinamica = ", Distrito de " + nombreDistrito + ", Provincia Constitucional del Callao";
 		} else {
-		    // Caso estándar para los distritos de Lima
-		    ubicacionDinamica = ", Distrito de " + nombreDistrito + ", Provincia y Departamento de Lima";
+		    // Caso estándar: Lima u otros departamentos
+		    String depFormatted = nombreDepartamento.isEmpty() ? "Lima" 
+		        : nombreDepartamento.charAt(0) + nombreDepartamento.substring(1).toLowerCase();
+		    ubicacionDinamica = ", Distrito de " + nombreDistrito + ", Provincia y Departamento de " + depFormatted;
 		}
 
 		String direccionRealParaContrato = domicilioCalle + ubicacionDinamica;
