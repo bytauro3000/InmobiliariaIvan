@@ -24,6 +24,10 @@ public class PagoMoraResponseDTO {
     private String          observaciones;
     private List<String>    urlsVoucher;
 
+    // ── SUNAT ─────────────────────────────────────────────────────────────────
+    private Boolean         sunatAceptado;
+    private String          sunatMensaje;
+
     // ── Anulación ─────────────────────────────────────────────────────────────
     private Boolean         anulado;
     private String          motivoAnulacion;

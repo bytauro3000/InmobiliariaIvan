@@ -11,9 +11,12 @@ import com.Inmobiliaria.demo.repository.PagoMoraRepository;
 import com.Inmobiliaria.demo.repository.VoucherRepository;
 import com.Inmobiliaria.demo.service.ComprobanteService;
 import com.Inmobiliaria.demo.service.MoraService;
+import com.Inmobiliaria.demo.service.SunatEnvioService;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -34,6 +37,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MoraServiceImpl implements MoraService {
 
+    private static final Logger log = LoggerFactory.getLogger(MoraServiceImpl.class);
     private static final BigDecimal PORCENTAJE_MORA = new BigDecimal("0.05");
     private static final BigDecimal MONTO_DIARIO    = new BigDecimal("1.00");
 
@@ -41,6 +45,7 @@ public class MoraServiceImpl implements MoraService {
     private final PagoMoraRepository    pagoMoraRepository;
     private final LetraCambioRepository letraCambioRepository;
     private final ComprobanteService    comprobanteService;
+    private final SunatEnvioService     sunatEnvioService;
     private final VoucherRepository     voucherRepository;
     private final Cloudinary            cloudinary;
 
@@ -224,6 +229,7 @@ public class MoraServiceImpl implements MoraService {
         pago.setNumeroOperacion(request.getNumeroOperacion());
         pago.setObservaciones(request.getObservaciones());
 
+        Map<String, Object> sunatRespuesta = null;
         PagoMora pagoGuardado = pagoMoraRepository.save(pago);
 
         if (request.getTipoComprobante() != null) {
@@ -237,6 +243,12 @@ public class MoraServiceImpl implements MoraService {
             );
             pagoGuardado.setComprobante(comprobante);
             pagoGuardado = pagoMoraRepository.save(pagoGuardado);
+
+            // Enviar a SUNAT sincronamente — si rechaza, @Transactional revierte todo
+           /* Cliente cliente = mora.getLetra().getContrato().getClientes().iterator().next().getCliente();
+            String descripcion = "Pago de mora";
+            sunatRespuesta = sunatEnvioService.enviarBoleta(cliente, mora.getLetra().getContrato(),
+                    comprobante, request.getMontoPagado(), descripcion);*/
         }
 
         if (vouchers != null && !vouchers.isEmpty()) {
@@ -259,7 +271,12 @@ public class MoraServiceImpl implements MoraService {
         mora.setEstadoMora(EstadoMora.PAGADO);
         moraRepository.save(mora);
 
-        return mapPagoToDTO(pagoGuardado);
+        PagoMoraResponseDTO dto = mapPagoToDTO(pagoGuardado);
+        if (sunatRespuesta != null) {
+            dto.setSunatAceptado(true);
+            dto.setSunatMensaje((String) sunatRespuesta.getOrDefault("mensaje", "ACEPTADA"));
+        }
+        return dto;
     }
 
     // ─── Anular mora (MoraLetra) ───────────────────────────────────────────────

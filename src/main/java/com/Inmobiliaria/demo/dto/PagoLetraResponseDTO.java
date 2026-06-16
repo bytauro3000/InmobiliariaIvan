@@ -31,6 +31,10 @@ public class PagoLetraResponseDTO {
     private EstadoLetra     estadoLetra;
     private Boolean         esPagoAcuenta;
 
+    // ── SUNAT ─────────────────────────────────────────────────────────────────
+    private Boolean         sunatAceptado;
+    private String          sunatMensaje;
+
     // ── Anulación ─────────────────────────────────────────────────────────────
     private Boolean         anulado;
     private String          motivoAnulacion;

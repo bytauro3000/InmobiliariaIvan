@@ -16,6 +16,15 @@ public class Distrito {
     @Column(name = "id_distrito")
     private Integer idDistrito;
 
-    @Column(name = "nombre", nullable = false, unique = true, length = 100)
+    @Column(name = "nombre", nullable = false, length = 100)
     private String nombre;
+
+    @Column(name = "codigo_ubigeo", length = 6)
+    private String codigoUbigeo;
+
+    @Column(name = "provincia", length = 100)
+    private String provincia;
+
+    @Column(name = "departamento", length = 100)
+    private String departamento;
 }

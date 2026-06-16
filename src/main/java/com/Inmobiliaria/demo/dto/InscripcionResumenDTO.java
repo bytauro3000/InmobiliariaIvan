@@ -17,6 +17,7 @@ public class InscripcionResumenDTO {
 
     private String manzana;
     private String numeroLote;
+    private String nombrePrograma;
 
     /** true si el contrato tiene inscripción de LUZ activa/completada */
     private boolean tieneLuz;

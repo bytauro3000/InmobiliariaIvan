@@ -12,9 +12,12 @@ import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.repository.*;
 import com.Inmobiliaria.demo.service.ComprobanteService;
 import com.Inmobiliaria.demo.service.PagoLetraService;
+import com.Inmobiliaria.demo.service.SunatEnvioService;
 
 import org.springframework.cache.annotation.CacheEvict;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -34,6 +37,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PagoLetraServiceImpl implements PagoLetraService {
 
+    private static final Logger log = LoggerFactory.getLogger(PagoLetraServiceImpl.class);
+
     private final PagoLetraRepository   pagoLetraRepository;
     private final LetraCambioRepository letraCambioRepository;
     private final VoucherRepository     voucherRepository;
@@ -44,6 +49,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
     private final PagoMoraRepository    pagoMoraRepository;
 
     private final ComprobanteService    comprobanteService;
+    private final SunatEnvioService     sunatEnvioService;
 
     // ─── LETRAS PAGADAS NECESARIAS PARA OBTENER UNA GRATIS ────────────────────
     private static final int LETRAS_PARA_GRATIS = 10;
@@ -461,6 +467,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         pago.setDescuentoAplicado(BigDecimal.ZERO);
         pago.setEsLetraGratis(false);
 
+        Map<String, Object> sunatRespuesta = null;
         PagoLetras pagoGuardado = pagoLetraRepository.save(pago);
 
         // ── Comprobante ──────────────────────────────────────────────────────
@@ -475,6 +482,13 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             );
             pagoGuardado.setComprobante(comprobante);
             pagoGuardado = pagoLetraRepository.save(pagoGuardado);
+
+            /* Enviar a SUNAT sincronamente — si rechaza, @Transactional revierte todo
+            Cliente cliente = letra.getContrato().getClientes().iterator().next().getCliente();
+            String descripcion = "Pago de letra " + letra.getNumeroLetra();
+            sunatRespuesta = sunatEnvioService.enviarBoleta(
+                    cliente, letra.getContrato(), comprobante,
+                    request.getImportePagado(), descripcion);*/
         }
 
         guardarVouchers(vouchers, pagoGuardado, idContrato, letra.getIdLetra());
@@ -504,7 +518,12 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         letraCambioRepository.save(letra);
         verificarYActualizarEstadoContrato(letra.getContrato());
 
-        return mapToDTO(pagoGuardado);
+        PagoLetraResponseDTO dto = mapToDTO(pagoGuardado);
+        if (sunatRespuesta != null) {
+            dto.setSunatAceptado(true);
+            dto.setSunatMensaje((String) sunatRespuesta.getOrDefault("mensaje", "ACEPTADA"));
+        }
+        return dto;
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -649,6 +668,15 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             responses.add(mapToDTO(guardado));
         }
 
+        Map<String, Object> sunatRespuestaMulti = null;
+        if (comprobanteCompartido != null) {
+            /*Cliente cliente = letraEjemplo.getContrato().getClientes().iterator().next().getCliente();
+            String descripcion = "Pago multiple de letras";
+            sunatRespuestaMulti = sunatEnvioService.enviarBoleta(
+                    cliente, letraEjemplo.getContrato(),
+                    comprobanteCompartido, montoTotalNeto, descripcion);*/
+        }
+
         PagoLetraResponseDTO responseLetraGratis = null;
         if (letraGratis != null) {
             responseLetraGratis = registrarLetraGratis(
@@ -660,6 +688,14 @@ public class PagoLetraServiceImpl implements PagoLetraService {
 
         letraCambioRepository.findById(request.getPagos().get(0).getIdLetra())
             .ifPresent(l -> verificarYActualizarEstadoContrato(l.getContrato()));
+
+        // Poblar sunatAceptado/sunatMensaje en cada response
+        for (PagoLetraResponseDTO r : responses) {
+            if (sunatRespuestaMulti != null) {
+                r.setSunatAceptado(true);
+                r.setSunatMensaje((String) sunatRespuestaMulti.getOrDefault("mensaje", "ACEPTADA"));
+            }
+        }
 
         Map<String, Object> resultado = new LinkedHashMap<>();
         resultado.put("pagos", responses);

@@ -1,5 +1,6 @@
 package com.Inmobiliaria.demo.repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -126,4 +127,12 @@ public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
            "LEFT JOIN FETCH c.lotes cl " +
            "LEFT JOIN FETCH cl.lote")
     List<Contrato> findResumenInscripcionesConLotes();
+
+    // QUERY batch: trae varios contratos con sus clientes y los clientes de cada uno
+    // en una sola consulta (evita N+1 al resolver nombre de cliente en inscripciones)
+    @Query("SELECT DISTINCT c FROM Contrato c " +
+           "LEFT JOIN FETCH c.clientes cc " +
+           "LEFT JOIN FETCH cc.cliente " +
+           "WHERE c.idContrato IN :ids")
+    List<Contrato> findAllByIdConClientes(@Param("ids") Collection<Integer> ids);
 }

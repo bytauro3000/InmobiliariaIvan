@@ -1,0 +1,45 @@
+package com.Inmobiliaria.demo.service.impl;
+
+import com.Inmobiliaria.demo.entity.Cliente;
+import com.Inmobiliaria.demo.entity.Comprobante;
+import com.Inmobiliaria.demo.entity.Contrato;
+import com.Inmobiliaria.demo.exception.NegocioException;
+import com.Inmobiliaria.demo.service.SunatEnvioService;
+import com.Inmobiliaria.demo.service.SunatIntegrationService;
+import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.util.Map;
+
+@Service
+@RequiredArgsConstructor
+public class SunatEnvioServiceImpl implements SunatEnvioService {
+
+    private static final Logger log = LoggerFactory.getLogger(SunatEnvioServiceImpl.class);
+
+    private final SunatIntegrationService sunatIntegrationService;
+
+    @Override
+    public Map<String, Object> enviarBoleta(Cliente cliente, Contrato contrato,
+                                            Comprobante comprobante, BigDecimal monto,
+                                            String descripcionDetalle) {
+        log.info("Enviando comprobante {} a SUNAT...", comprobante.getNumeroCompleto());
+        Map<String, Object> respuesta = sunatIntegrationService.enviarBoleta(
+                cliente, contrato, comprobante, monto, descripcionDetalle);
+
+        String estado = respuesta != null ? (String) respuesta.get("estadoSunat") : "ERROR";
+        if ("ERROR".equals(estado)) {
+            String msg = respuesta != null
+                    ? (String) respuesta.getOrDefault("mensaje", "Error desconocido de SUNAT")
+                    : "No se obtuvo respuesta del servicio SUNAT";
+            log.error("SUNAT rechazo comprobante {}: {}", comprobante.getNumeroCompleto(), msg);
+            throw new NegocioException("SUNAT rechazó la boleta: " + msg);
+        }
+
+        log.info("SUNAT acepto comprobante {} correctamente", comprobante.getNumeroCompleto());
+        return respuesta;
+    }
+}

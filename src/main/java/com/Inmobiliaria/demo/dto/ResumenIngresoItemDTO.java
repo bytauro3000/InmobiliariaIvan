@@ -17,6 +17,7 @@ import java.time.LocalDate;
 public class ResumenIngresoItemDTO {
 
     private String tipoIngreso;
+    private String tipoComprobante;
     private Integer idPago;
     private String numeroComprobante;
     private LocalDate fechaPago;

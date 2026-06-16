@@ -3,11 +3,13 @@ package com.Inmobiliaria.demo.service.impl;
 import com.Inmobiliaria.demo.client.InscripcionClient;
 import com.Inmobiliaria.demo.dto.ResumenIngresoItemDTO;
 import com.Inmobiliaria.demo.dto.ResumenIngresosRangoDTO;
+import com.Inmobiliaria.demo.entity.Contrato;
 import com.Inmobiliaria.demo.entity.ContratoCliente;
 import com.Inmobiliaria.demo.entity.PagoInicial;
 import com.Inmobiliaria.demo.entity.PagoLetras;
 import com.Inmobiliaria.demo.entity.PagoMora;
 import com.Inmobiliaria.demo.enums.MedioPago;
+import com.Inmobiliaria.demo.repository.ContratoRepository;
 import com.Inmobiliaria.demo.repository.PagoInicialRepository;
 import com.Inmobiliaria.demo.repository.PagoLetraRepository;
 import com.Inmobiliaria.demo.repository.PagoMoraRepository;
@@ -20,9 +22,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -32,6 +38,7 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
     private final PagoLetraRepository   pagoLetraRepository;
     private final PagoMoraRepository    pagoMoraRepository;
     private final PagoInicialRepository pagoInicialRepository;
+    private final ContratoRepository    contratoRepository;
     private final InscripcionClient     inscripcionClient;
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -49,6 +56,8 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
         for (PagoLetras p : pagosLetras) {
             detalle.add(ResumenIngresoItemDTO.builder()
                     .tipoIngreso("LETRA")
+                    .tipoComprobante(p.getComprobante() != null
+                            ? p.getComprobante().getTipoComprobante().name() : null)
                     .idPago(p.getIdPago())
                     .numeroComprobante(p.getComprobante() != null
                             ? p.getComprobante().getNumeroCompleto() : null)
@@ -81,6 +90,8 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
 
             detalle.add(ResumenIngresoItemDTO.builder()
                     .tipoIngreso("MORA")
+                    .tipoComprobante(p.getComprobante() != null
+                            ? p.getComprobante().getTipoComprobante().name() : null)
                     .idPago(p.getIdPagoMora())
                     .numeroComprobante(p.getComprobante() != null
                             ? p.getComprobante().getNumeroCompleto() : null)
@@ -104,6 +115,8 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
 
             detalle.add(ResumenIngresoItemDTO.builder()
                     .tipoIngreso("INICIAL")
+                    .tipoComprobante(p.getComprobante() != null
+                            ? p.getComprobante().getTipoComprobante().name() : null)
                     .idPago(p.getIdPagoInicial())
                     .numeroComprobante(p.getComprobante() != null
                             ? p.getComprobante().getNumeroCompleto() : null)
@@ -123,9 +136,21 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
         List<ResumenIngresoItemDTO> itemsInscripciones = obtenerItemsInscripcionesPorRango(desde, hasta);
         detalle.addAll(itemsInscripciones);
 
-        // ─── Ordenar toda la lista por fecha ASC, luego por tipo ─────────────
-        detalle.sort(Comparator.comparing(ResumenIngresoItemDTO::getFechaPago)
-                .thenComparing(ResumenIngresoItemDTO::getTipoIngreso));
+        // ─── Ordenar toda la lista: 1) fecha ASC, 2) RECIBO antes que BOLETA,
+        //                                   3) N° comprobante ASC dentro de cada tipo
+        //      Para los items sin comprobante (ej. INSCRIPCION_SERVICIO) van al final.
+        detalle.sort(
+            Comparator.comparing(ResumenIngresoItemDTO::getFechaPago,
+                            Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(
+                    ResumenIngresoItemDTO::getTipoComprobante,
+                    Comparator.nullsLast(compararTipoComprobante())
+                )
+                .thenComparing(
+                    ResumenIngresoItemDTO::getNumeroComprobante,
+                    Comparator.nullsLast(Comparator.naturalOrder())
+                )
+        );
 
         // ─── Calcular subtotales ──────────────────────────────────────────────
         BigDecimal totalLetras = pagoLetraRepository.sumImportePagadoByRango(desde, hasta);
@@ -180,6 +205,23 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
 
             if (respuesta == null) return items;
 
+            // ── Pre-paso: recolectar idContrato únicos para batch query ─────────
+            Set<Integer> idContratosUnicos = new HashSet<>();
+            for (Map<String, Object> abono : respuesta) {
+                if (abono.get("idContrato") != null) {
+                    idContratosUnicos.add(Integer.valueOf(abono.get("idContrato").toString()));
+                }
+            }
+
+            // ── Batch query: traer todos los contratos con sus clientes en UNA sola SQL
+            Map<Integer, Contrato> contratosPorId = new HashMap<>();
+            if (!idContratosUnicos.isEmpty()) {
+                List<Contrato> contratos = contratoRepository.findAllByIdConClientes(idContratosUnicos);
+                for (Contrato c : contratos) {
+                    contratosPorId.put(c.getIdContrato(), c);
+                }
+            }
+
             for (Map<String, Object> abono : respuesta) {
                 BigDecimal monto = abono.get("montoPagado") != null
                         ? new BigDecimal(abono.get("montoPagado").toString())
@@ -207,10 +249,20 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
                 String tipoServicio = abono.get("tipoServicio") != null
                         ? abono.get("tipoServicio").toString() : null;
 
+                // ── Resolver nombre del cliente cruzando con el monolito ─────
+                String nombreCliente = null;
+                if (idContrato != null) {
+                    Contrato contrato = contratosPorId.get(idContrato);
+                    if (contrato != null) {
+                        nombreCliente = resolverNombreCliente(contrato.getClientes());
+                    }
+                }
+
                 items.add(ResumenIngresoItemDTO.builder()
                         .tipoIngreso("INSCRIPCION_SERVICIO")
+                        .tipoComprobante(null)   // El microservicio no emite comprobante centralizado
                         .idPago(idPago)
-                        .numeroComprobante(null)   // El microservicio no emite comprobante centralizado
+                        .numeroComprobante(null) // El microservicio no emite comprobante centralizado
                         .fechaPago(fechaPago)
                         .importePagado(monto)
                         .medioPago(medioPago)
@@ -218,8 +270,7 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
                                 ? abono.get("numeroOperacion").toString() : null)
                         .referencia(tipoServicio)
                         .idContrato(idContrato)
-                        .nombreCliente(abono.get("nombreCliente") != null
-                                ? abono.get("nombreCliente").toString() : null)
+                        .nombreCliente(nombreCliente)
                         .observaciones(abono.get("observaciones") != null
                                 ? abono.get("observaciones").toString() : null)
                         .build());
@@ -257,5 +308,24 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
                     }
                     return null;
                 });
+    }
+
+    /**
+     * Comparator que ordena los tipos de comprobante de la siguiente forma:
+     *  1) RECIBO   (primero)
+     *  2) BOLETA
+     *  3) FACTURA  (al final, por si llegara a aparecer)
+     *  Cualquier otro valor se considera "después de FACTURA".
+     */
+    private static Comparator<String> compararTipoComprobante() {
+        Map<String, Integer> orden = new HashMap<>();
+        orden.put("RECIBO", 1);
+        orden.put("BOLETA", 2);
+        orden.put("FACTURA", 3);
+        return (a, b) -> {
+            Integer oa = orden.getOrDefault(a, 99);
+            Integer ob = orden.getOrDefault(b, 99);
+            return oa.compareTo(ob);
+        };
     }
 }

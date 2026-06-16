@@ -2,6 +2,7 @@ package com.Inmobiliaria.demo.controller;
 	
 import com.Inmobiliaria.demo.client.InscripcionClient;
 import com.Inmobiliaria.demo.dto.*;
+import com.Inmobiliaria.demo.entity.Cliente;
 import com.Inmobiliaria.demo.entity.Comprobante;
 import com.Inmobiliaria.demo.entity.Contrato;
 import com.Inmobiliaria.demo.entity.Lote;
@@ -13,6 +14,7 @@ import com.Inmobiliaria.demo.repository.ContratoRepository;
 import com.Inmobiliaria.demo.repository.PagoInscripcionComprobanteRepository;
 import com.Inmobiliaria.demo.repository.VoucherRepository;
 import com.Inmobiliaria.demo.service.ComprobanteService;
+import com.Inmobiliaria.demo.service.SunatEnvioService;
 import com.Inmobiliaria.demo.service.impl.InscripcionComprobanteServiceImpl;
 import com.Inmobiliaria.demo.util.ComprobanteInscripcionPdf;
 import com.cloudinary.Cloudinary;
@@ -53,6 +55,7 @@ import java.util.stream.Collectors;
     private final ContratoRepository                   contratoRepository;
     private final PagoInscripcionComprobanteRepository pagoInscripcionComprobanteRepository;
     private final ComprobanteService                   comprobanteService;
+    private final SunatEnvioService                    sunatEnvioService;
     private final InscripcionComprobanteServiceImpl    inscripcionComprobanteService;
     private final VoucherRepository                    voucherRepository;
     private final Cloudinary                           cloudinary;
@@ -94,13 +97,16 @@ import java.util.stream.Collectors;
 	                    nombre = cliente.getNombre() + " " + cliente.getApellidos();
 	                }
 	
-	                String manzana = "", numeroLote = "";
-	                Contrato cLotes = contratosConLotes.get(c.getIdContrato());
-	                if (cLotes != null && cLotes.getLotes() != null && !cLotes.getLotes().isEmpty()) {
-	                    Lote l = cLotes.getLotes().iterator().next().getLote();
-	                    manzana    = l.getManzana();
-	                    numeroLote = l.getNumeroLote();
-	                }
+                String manzana = "", numeroLote = "", nombrePrograma = "";
+                Contrato cLotes = contratosConLotes.get(c.getIdContrato());
+                if (cLotes != null && cLotes.getLotes() != null && !cLotes.getLotes().isEmpty()) {
+                    Lote l = cLotes.getLotes().iterator().next().getLote();
+                    manzana    = l.getManzana();
+                    numeroLote = l.getNumeroLote();
+                    if (l.getPrograma() != null) {
+                        nombrePrograma = l.getPrograma().getNombrePrograma();
+                    }
+                }
 	
 	                List<String> servicios = serviciosPorContrato
 	                        .getOrDefault(c.getIdContrato(), List.of());
@@ -127,13 +133,14 @@ import java.util.stream.Collectors;
 	                    }
 	                }
 	
-	                InscripcionResumenDTO dto = new InscripcionResumenDTO();
-	                dto.setIdContrato(c.getIdContrato());
-	                dto.setNombreCliente(nombre);
-	                dto.setManzana(manzana);
-	                dto.setNumeroLote(numeroLote);
-	                dto.setTieneLuz(servicios.contains("LUZ"));
-	                dto.setTieneAgua(servicios.contains("AGUA"));
+                InscripcionResumenDTO dto = new InscripcionResumenDTO();
+                dto.setIdContrato(c.getIdContrato());
+                dto.setNombreCliente(nombre);
+                dto.setManzana(manzana);
+                dto.setNumeroLote(numeroLote);
+                dto.setNombrePrograma(nombrePrograma);
+                dto.setTieneLuz(servicios.contains("LUZ"));
+                dto.setTieneAgua(servicios.contains("AGUA"));
 	                dto.setTienePendienteLuz(pendienteLuz != null);
 	                dto.setTienePendienteAgua(pendienteAgua != null);
 	                dto.setPendienteLuz(pendienteLuz);
@@ -253,6 +260,12 @@ import java.util.stream.Collectors;
 	
 	        PagoInscripcionComprobante pagoGuardado =
 	                pagoInscripcionComprobanteRepository.save(pago);
+
+            /* f) Enviar a SUNAT sincronamente — si rechaza, @Transactional revierte todo
+            Cliente cliente = contrato.getClientes().iterator().next().getCliente();
+            String descripcion = "Abono inscripcion servicio de " + request.getTipoServicio().toUpperCase();
+            sunatEnvioService.enviarBoleta(cliente, contrato, comprobante,
+                    request.getMontoPagado(), descripcion);*/
 
 	        // e) Guardar vouchers (opcional, en paralelo al resto del flujo)
 	        try {

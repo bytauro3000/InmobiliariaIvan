@@ -61,6 +61,7 @@ public class ContratoServiceImpl implements ContratoService {
     private final PagoInicialRepository pagoInicialRepository;
     private final ModelMapper modelMapper;
     private final ComprobanteService comprobanteService;
+    private final SunatEnvioService sunatEnvioService;
     private final Cloudinary cloudinary;
     private final com.Inmobiliaria.demo.repository.VoucherRepository voucherRepository;
 
@@ -169,6 +170,12 @@ public class ContratoServiceImpl implements ContratoService {
                 pagoGuardado.setComprobante(compInicial);
                 contratoGuardado.setComprobanteInicial(compInicial);
                 pagoGuardado = pagoInicialRepository.save(pagoGuardado);
+
+                /* Enviar a SUNAT sincronamente — si rechaza, @Transactional revierte todo
+                Cliente cliente = contratoGuardado.getClientes().iterator().next().getCliente();
+                String descripcion = "Pago inicial de contrato";
+                sunatEnvioService.enviarBoleta(cliente, contratoGuardado, compInicial,
+                        pagoGuardado.getImportePagado(), descripcion);*/
             }
 
             // ── PASO 3: enlazar el pago (con comprobante) al contrato ────────
