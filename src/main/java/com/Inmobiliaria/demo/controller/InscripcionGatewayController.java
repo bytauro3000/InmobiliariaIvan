@@ -337,7 +337,11 @@ import java.util.stream.Collectors;
 	            String tipoServicio = pago.getTipoServicio() != null
 	                    ? pago.getTipoServicio() : "SERVICIO";
 	
-	            byte[] pdf = ComprobanteInscripcionPdf.generar(pago, tipoServicio, rolUsuario);
+	            List<Voucher> vouchers = voucherRepository
+	                    .findByTipoOrigenAndReferenciaId("PAGO_INSCRIPCION",
+	                            pago.getIdPagoInscripcionComprobante());
+	
+	            byte[] pdf = ComprobanteInscripcionPdf.generar(pago, tipoServicio, rolUsuario, vouchers);
 	
 	            return ResponseEntity.ok()
 	                    .header(HttpHeaders.CONTENT_DISPOSITION,

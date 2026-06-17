@@ -4,9 +4,11 @@ import com.Inmobiliaria.demo.entity.Contrato;
 import com.Inmobiliaria.demo.entity.ContratoCliente;
 import com.Inmobiliaria.demo.entity.ContratoLote;
 import com.Inmobiliaria.demo.entity.PagoInscripcionComprobante;
+import com.Inmobiliaria.demo.entity.Voucher;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
 import com.itextpdf.barcodes.BarcodeQRCode;
 import com.itextpdf.io.font.PdfEncodings;
+import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.io.util.StreamUtil;
 import com.itextpdf.kernel.colors.ColorConstants;
 import com.itextpdf.kernel.colors.DeviceGray;
@@ -15,32 +17,36 @@ import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfPage;
+import com.itextpdf.kernel.pdf.PdfReader;
+import com.itextpdf.kernel.pdf.PdfViewerPreferences;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.borders.SolidBorder;
+import com.itextpdf.layout.element.AreaBreak;
 import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Image;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.element.Text;
+import com.itextpdf.layout.properties.AreaBreakType;
 import com.itextpdf.layout.properties.HorizontalAlignment;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import com.itextpdf.layout.properties.VerticalAlignment;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.net.URL;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * Genera el comprobante PDF de pago de inscripción de servicio (LUZ / AGUA).
- * Diseño idéntico a ComprobanteMoraPdf, adaptado para el contexto de inscripción.
- */
 public class ComprobanteInscripcionPdf {
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -57,17 +63,20 @@ public class ComprobanteInscripcionPdf {
     private static final String BASE_URL  = "https://inmobiliariaivan.onrender.com/api/gateway/inscripciones";
 
     // ─────────────────────────────────────────────────────────────────────────
+    // OVERLOAD sin vouchers (compatibilidad hacia atrás)
+    // ─────────────────────────────────────────────────────────────────────────
+    public static byte[] generar(PagoInscripcionComprobante pagoInicial,
+                                  String tipoServicio, String rolUsuario) {
+        return generar(pagoInicial, tipoServicio, rolUsuario, Collections.emptyList());
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // MÉTODO PRINCIPAL
     // ─────────────────────────────────────────────────────────────────────────
+    public static byte[] generar(PagoInscripcionComprobante pagoInicial,
+                                  String tipoServicio, String rolUsuario,
+                                  List<Voucher> vouchers) {
 
-    /**
-     * @param pagoInicial  Entidad PagoInscripcionComprobante con contrato, comprobante y datos de pago.
-     * @param tipoServicio "LUZ" o "AGUA" (se almacena en observaciones pero se pasa explícitamente).
-     * @param rolUsuario   Rol del usuario que registró el pago.
-     */
-    public static byte[] generar(PagoInscripcionComprobante pagoInicial, String tipoServicio, String rolUsuario) {
-
-        // Cálculo dinámico de márgenes — A5 landscape 595x420 pts
         float fs      = 9.5f;
         float lineH   = fs * 1.55f;
         float cH      = (5f * lineH) + (3f * 2f) + (4f * 3f);
@@ -87,10 +96,8 @@ public class ComprobanteInscripcionPdf {
 
             Contrato contrato = pagoInicial.getContrato();
 
-            // Moneda: inscripciones siempre en USD
             String simbolo = "$";
 
-            // Tipo y número de comprobante
             TipoComprobante tipoComp = (pagoInicial.getComprobante() != null)
                     ? pagoInicial.getComprobante().getTipoComprobante() : null;
 
@@ -101,7 +108,6 @@ public class ComprobanteInscripcionPdf {
                     && pagoInicial.getComprobante().getNumeroCompleto() != null)
                     ? pagoInicial.getComprobante().getNumeroCompleto() : "----------";
 
-            // Info del lote
             String loteInfo = "-";
             if (contrato.getLotes() != null && !contrato.getLotes().isEmpty()) {
                 ContratoLote cl = contrato.getLotes().iterator().next();
@@ -110,16 +116,14 @@ public class ComprobanteInscripcionPdf {
                         + " - " + cl.getLote().getPrograma().getNombrePrograma();
             }
 
-            // Datos del responsable del contrato
             String usuarioRegistro = "-";
             if (contrato.getUsuario() != null) {
                 usuarioRegistro = contrato.getUsuario().getNombres()
                         + " " + contrato.getUsuario().getApellidos();
             }
 
-            // Textos del cuerpo
             String servicioNombre = (tipoServicio != null) ? tipoServicio.toUpperCase() : "SERVICIO";
-            String emojiServicio  = "LUZ".equalsIgnoreCase(tipoServicio) ? "⚡" : "💧";
+            String emojiServicio  = "LUZ".equalsIgnoreCase(tipoServicio) ? "\u26a1" : "\ud83d\udca7";
 
             String concepto = "Pago de derecho de inscripcion de servicio de "
                     + servicioNombre + " " + emojiServicio
@@ -153,8 +157,7 @@ public class ComprobanteInscripcionPdf {
 
             // ── Logo ─────────────────────────────────────────────────────────
             String logoUrl = "https://res.cloudinary.com/dlgqaifrk/image/upload/e_grayscale,w_200,h_200,c_fit,f_auto,q_auto/v1773725974/logogrande_rfvxhu.png";
-            Image logoImg = new Image(
-                    com.itextpdf.io.image.ImageDataFactory.create(new java.net.URL(logoUrl)))
+            Image logoImg = new Image(ImageDataFactory.create(new URL(logoUrl)))
                     .setWidth(70).setHeight(70)
                     .setHorizontalAlignment(HorizontalAlignment.CENTER);
 
@@ -250,13 +253,13 @@ public class ComprobanteInscripcionPdf {
                     .setPaddingLeft(8).setPaddingRight(8)
                     .setPaddingTop(3).setPaddingBottom(3);
 
-            celdaCuerpo.add(lineaDato("La cantidad de: ",  montoEnLetras,  courier, courierBold, 9.5f));
+            celdaCuerpo.add(lineaDato("La cantidad de: ",  montoEnLetras,        courier, courierBold, 9.5f));
             celdaCuerpo.add(separadorLinea());
-            celdaCuerpo.add(lineaDato("Por concepto de: ", concepto,        courier, courierBold, 9.5f));
+            celdaCuerpo.add(lineaDato("Por concepto de: ", concepto,             courier, courierBold, 9.5f));
             celdaCuerpo.add(separadorLinea());
             celdaCuerpo.add(lineaDato("Medio de pago: ",   medioPagoStr + numOp, courier, courierBold, 9.5f));
             celdaCuerpo.add(separadorLinea());
-            celdaCuerpo.add(lineaDato("Observaciones: ",   observaciones,  courier, courierBold, 9.5f));
+            celdaCuerpo.add(lineaDato("Observaciones: ",   observaciones,        courier, courierBold, 9.5f));
             celdaCuerpo.add(separadorLinea());
             cuerpo.addCell(celdaCuerpo);
             doc.add(cuerpo);
@@ -337,13 +340,124 @@ public class ComprobanteInscripcionPdf {
                   .stroke();
             canvas.release();
 
+            // ── REVERSO: vouchers adjuntos ────────────────────────────────────
+            agregarPaginaReverso(doc, pdf, vouchers, courierBold);
+
             doc.close();
 
         } catch (Exception e) {
             throw new RuntimeException("Error generando comprobante inscripcion PDF: " + e.getMessage(), e);
         }
 
-        return out.toByteArray();
+        return eliminarPaginasEnBlanco(out.toByteArray());
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // PÁGINA REVERSO: imágenes de vouchers (3 columnas, 6 por página)
+    // ─────────────────────────────────────────────────────────────────────────
+    private static void agregarPaginaReverso(Document doc, PdfDocument pdf,
+                                              List<Voucher> vouchers, PdfFont courierBold) {
+        if (vouchers == null || vouchers.isEmpty()) return;
+
+        pdf.getCatalog().setViewerPreferences(
+            new PdfViewerPreferences()
+                .setDuplex(PdfViewerPreferences.PdfViewerPreferencesConstants.DUPLEX_FLIP_LONG_EDGE)
+        );
+
+        doc.setTopMargin(8f);
+        doc.setBottomMargin(8f);
+        doc.setLeftMargin(10f);
+        doc.setRightMargin(10f);
+
+        doc.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
+
+        doc.add(new Paragraph("COMPROBANTES DE PAGO ADJUNTOS")
+                .setFont(courierBold).setFontSize(10f)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginBottom(4).setMarginTop(0));
+
+        Table lineaTitulo = new Table(UnitValue.createPercentArray(new float[]{1}))
+                .setWidth(UnitValue.createPercentValue(100)).setMarginBottom(6);
+        lineaTitulo.addCell(new Cell()
+                .setBorder(Border.NO_BORDER)
+                .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                .setPadding(0).setHeight(1));
+        doc.add(lineaTitulo);
+
+        int cols      = 3;
+        float imgMaxW = 185f;
+        float imgMaxH = 178f;
+        float cellH   = 183f;
+
+        float[] colWidths = new float[cols];
+        Arrays.fill(colWidths, 1f);
+        Table grid = new Table(UnitValue.createPercentArray(colWidths))
+                .setWidth(UnitValue.createPercentValue(100));
+
+        for (Voucher v : vouchers) {
+            Cell cell = new Cell()
+                    .setBorder(Border.NO_BORDER)
+                    .setPadding(3)
+                    .setHeight(cellH)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setVerticalAlignment(VerticalAlignment.MIDDLE);
+            try {
+                Image img = new Image(ImageDataFactory.create(new URL(v.getUrl())))
+                        .setMaxWidth(imgMaxW)
+                        .setMaxHeight(imgMaxH)
+                        .setAutoScale(false)
+                        .setHorizontalAlignment(HorizontalAlignment.CENTER);
+                cell.add(img);
+            } catch (Exception e) {
+                cell.add(new Paragraph("[ Imagen no\ndisponible ]")
+                        .setFont(courierBold).setFontSize(7f)
+                        .setFontColor(GRIS_MEDIO)
+                        .setTextAlignment(TextAlignment.CENTER));
+            }
+            grid.addCell(cell);
+        }
+
+        int resto = vouchers.size() % cols;
+        if (resto != 0) {
+            for (int i = 0; i < (cols - resto); i++) {
+                grid.addCell(new Cell().setBorder(Border.NO_BORDER).setHeight(cellH));
+            }
+        }
+
+        doc.add(grid);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Elimina páginas en blanco al final del PDF
+    // ─────────────────────────────────────────────────────────────────────────
+    private static byte[] eliminarPaginasEnBlanco(byte[] pdfBytes) {
+        try {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            PdfDocument pdfDoc = new PdfDocument(
+                    new PdfReader(new ByteArrayInputStream(pdfBytes)),
+                    new PdfWriter(out));
+            int n = pdfDoc.getNumberOfPages();
+            for (int i = n; i >= 1; i--) {
+                PdfPage page = pdfDoc.getPage(i);
+                boolean esBlanco = true;
+                for (int j = 0; j < page.getContentStreamCount(); j++) {
+                    byte[] content = page.getContentStream(j).getBytes();
+                    if (content != null && content.length > 10) {
+                        esBlanco = false;
+                        break;
+                    }
+                }
+                if (esBlanco) {
+                    pdfDoc.removePage(i);
+                } else {
+                    break;
+                }
+            }
+            pdfDoc.close();
+            return out.toByteArray();
+        } catch (Exception e) {
+            return pdfBytes;
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
