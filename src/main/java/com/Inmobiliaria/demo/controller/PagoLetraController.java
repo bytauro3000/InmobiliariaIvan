@@ -164,11 +164,21 @@ public class PagoLetraController {
             }
         }
 
-        // Obtener todos los vouchers de todos los pagos del comprobante
+        // Obtener todos los vouchers de todos los pagos del comprobante.
+        // OJO: al registrar un pago múltiple, el mismo voucher se guarda una vez
+        // por cada letra del lote (mismo url, distinto referenciaId) para que cada
+        // pago individual pueda mostrarlo. Si no deduplicamos aquí por url, el
+        // comprobante combinado terminaría mostrando la misma imagen N veces
+        // (una por cada letra pagada).
         List<Voucher> vouchers = new ArrayList<>();
+        java.util.Set<String> urlsVistas = new java.util.HashSet<>();
         for (PagoLetras p : pagos) {
-            vouchers.addAll(voucherRepository
-                    .findByTipoOrigenAndReferenciaId("PAGO_LETRA", p.getIdPago()));
+            for (Voucher v : voucherRepository
+                    .findByTipoOrigenAndReferenciaId("PAGO_LETRA", p.getIdPago())) {
+                if (urlsVistas.add(v.getUrl())) {
+                    vouchers.add(v);
+                }
+            }
         }
 
         byte[] pdf = ComprobantePagoLetraPdf.generarMultiple(pagos, rolUsuarioMultiple, vouchers);
