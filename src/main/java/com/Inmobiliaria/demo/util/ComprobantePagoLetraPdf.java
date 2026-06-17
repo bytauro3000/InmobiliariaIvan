@@ -126,85 +126,97 @@ public class ComprobantePagoLetraPdf {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // PÁGINA REVERSO: imágenes de vouchers adjuntos (3 columnas, tamaño fijo)
-    // Caben hasta 6 imágenes por página; si hay más se desbordan a página siguiente.
+    // PÁGINA REVERSO: vouchers adjuntos
+    // Siempre 3 por página en fila, mismo tamaño fijo.
+    // Si hay menos de 3 en la última página, se centran con celdas vacías.
     // ─────────────────────────────────────────────────────────────────────────
     private static void agregarPaginaReverso(Document doc, PdfDocument pdf,
                                               List<Voucher> vouchers, PdfFont courierBold) {
         if (vouchers == null || vouchers.isEmpty()) return;
 
-        // Activar impresión doble cara en las opciones de la impresora
         pdf.getCatalog().setViewerPreferences(
             new PdfViewerPreferences()
                 .setDuplex(PdfViewerPreferences.PdfViewerPreferencesConstants.DUPLEX_FLIP_LONG_EDGE)
         );
 
-        // Reducir todos los márgenes ANTES del salto para que la nueva página los herede
         doc.setTopMargin(8f);
         doc.setBottomMargin(8f);
         doc.setLeftMargin(10f);
         doc.setRightMargin(10f);
 
-        doc.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
+        // Tamaño fijo siempre igual — el mismo que se ve bien con 3 vouchers
+        final int    COLS    = 3;
+        final float  IMG_W   = 172f;
+        final float  IMG_H   = 280f;
+        final float  CELL_H  = 290f;
 
-        doc.add(new Paragraph("COMPROBANTES DE PAGO ADJUNTOS")
-                .setFont(courierBold).setFontSize(10f)
-                .setTextAlignment(TextAlignment.CENTER)
-                .setMarginBottom(4).setMarginTop(0));
+        int total = vouchers.size();
+        int idx   = 0;
 
-        // Línea divisoria bajo el título
-        Table lineaTitulo = new Table(UnitValue.createPercentArray(new float[]{1}))
-                .setWidth(UnitValue.createPercentValue(100)).setMarginBottom(6);
-        lineaTitulo.addCell(new Cell()
-                .setBorder(Border.NO_BORDER)
-                .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.8f))
-                .setPadding(0).setHeight(1));
-        doc.add(lineaTitulo);
+        while (idx < total) {
+            List<Voucher> grupo = vouchers.subList(idx, Math.min(idx + COLS, total));
+            int n = grupo.size();
 
-        // Grid 3 columnas — sin bordes, imágenes más grandes (6 por página: 2 filas × 3 cols)
-        // A5 landscape ~595×420pt, márgenes 10pt → útil: 575×404pt, título ~25pt → 379pt para 2 filas
-        int cols      = 3;
-        float imgMaxW = 185f;
-        float imgMaxH = 178f;
-        float cellH   = 183f;
+            doc.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
 
-        float[] colWidths = new float[cols];
-        Arrays.fill(colWidths, 1f);
-        Table grid = new Table(UnitValue.createPercentArray(colWidths))
-                .setWidth(UnitValue.createPercentValue(100));
-
-        for (Voucher v : vouchers) {
-            Cell cell = new Cell()
-                    .setBorder(Border.NO_BORDER)
-                    .setPadding(3)
-                    .setHeight(cellH)
+            doc.add(new Paragraph("COMPROBANTES DE PAGO ADJUNTOS")
+                    .setFont(courierBold).setFontSize(10f)
                     .setTextAlignment(TextAlignment.CENTER)
-                    .setVerticalAlignment(VerticalAlignment.MIDDLE);
-            try {
-                Image img = new Image(ImageDataFactory.create(new URL(v.getUrl())))
-                        .setMaxWidth(imgMaxW)
-                        .setMaxHeight(imgMaxH)
-                        .setAutoScale(false)
-                        .setHorizontalAlignment(HorizontalAlignment.CENTER);
-                cell.add(img);
-            } catch (Exception e) {
-                cell.add(new Paragraph("[ Imagen no\ndisponible ]")
-                        .setFont(courierBold).setFontSize(7f)
-                        .setFontColor(GRIS_MEDIO)
-                        .setTextAlignment(TextAlignment.CENTER));
-            }
-            grid.addCell(cell);
-        }
+                    .setMarginBottom(4).setMarginTop(0));
 
-        // Completar última fila con celdas vacías sin borde
-        int resto = vouchers.size() % cols;
-        if (resto != 0) {
-            for (int i = 0; i < (cols - resto); i++) {
-                grid.addCell(new Cell().setBorder(Border.NO_BORDER).setHeight(cellH));
-            }
-        }
+            Table lineaTitulo = new Table(UnitValue.createPercentArray(new float[]{1}))
+                    .setWidth(UnitValue.createPercentValue(100)).setMarginBottom(6);
+            lineaTitulo.addCell(new Cell()
+                    .setBorder(Border.NO_BORDER)
+                    .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                    .setPadding(0).setHeight(1));
+            doc.add(lineaTitulo);
 
-        doc.add(grid);
+            // Siempre 3 columnas — las vacías centran los vouchers cuando hay menos de 3
+            float[] colWidths = new float[COLS];
+            Arrays.fill(colWidths, 1f);
+            Table grid = new Table(UnitValue.createPercentArray(colWidths))
+                    .setWidth(UnitValue.createPercentValue(100));
+
+            // Celdas vacías a la izquierda para centrar cuando hay 1 o 2 vouchers
+            int vaciosIzq = (COLS - n) / 2;
+            for (int i = 0; i < vaciosIzq; i++) {
+                grid.addCell(new Cell().setBorder(Border.NO_BORDER).setHeight(CELL_H));
+            }
+
+            for (Voucher v : grupo) {
+                Cell cell = new Cell()
+                        .setBorder(Border.NO_BORDER)
+                        .setPadding(4)
+                        .setHeight(CELL_H)
+                        .setTextAlignment(TextAlignment.CENTER)
+                        .setVerticalAlignment(VerticalAlignment.MIDDLE);
+                try {
+                    Image img = new Image(ImageDataFactory.create(new URL(v.getUrl())))
+                            .setWidth(IMG_W)
+                            .setHeight(IMG_H)
+                            .setAutoScale(false)
+                            .setHorizontalAlignment(HorizontalAlignment.CENTER);
+                    cell.add(img);
+                } catch (Exception e) {
+                    cell.add(new Paragraph("[ Imagen no\ndisponible ]")
+                            .setFont(courierBold).setFontSize(7f)
+                            .setFontColor(GRIS_MEDIO)
+                            .setTextAlignment(TextAlignment.CENTER));
+                }
+                grid.addCell(cell);
+            }
+
+            // Celdas vacías a la derecha
+            int vaciosDer = COLS - n - vaciosIzq;
+            for (int i = 0; i < vaciosDer; i++) {
+                grid.addCell(new Cell().setBorder(Border.NO_BORDER).setHeight(CELL_H));
+            }
+
+            doc.add(grid);
+
+            idx += COLS;
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
