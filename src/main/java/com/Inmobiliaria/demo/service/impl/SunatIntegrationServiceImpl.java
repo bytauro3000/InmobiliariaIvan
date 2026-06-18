@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 
 import java.math.BigDecimal;
 import java.time.LocalTime;
@@ -34,8 +35,15 @@ public class SunatIntegrationServiceImpl implements SunatIntegrationService {
     private static final Logger log = LoggerFactory.getLogger(SunatIntegrationServiceImpl.class);
     private static final String LEYENDA_DEFAULT = "OPERACION INAFECTA - VENTA DE TERRENO";
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(10_000);
+        factory.setReadTimeout(30_000);
+        this.restTemplate = new RestTemplate(factory);
+    }
 
     @Value("${apisperu.base-url:https://facturacion.apisperu.com/api/v1}")
     private String apisperuBaseUrl;
@@ -76,7 +84,7 @@ public class SunatIntegrationServiceImpl implements SunatIntegrationService {
         // LOG: JSON request completo para debug
         try {
             String requestJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
-            log.info("=== REQUEST JSON A APIPERU ===\n{}", requestJson);
+            log.debug("=== REQUEST JSON A APIPERU ===\n{}", requestJson);
         } catch (Exception e) {
             log.warn("No se pudo serializar request para log: {}", e.getMessage());
         }
@@ -92,12 +100,12 @@ public class SunatIntegrationServiceImpl implements SunatIntegrationService {
                 ApisperuResponse body = response.getBody();
                 ApisperuSunatResponse sunat = body.getSunatResponse();
                 
-                log.info("=== RESPUESTA COMPLETA APIPERU ===");
-                log.info("success: {}", sunat != null ? sunat.getSuccess() : "null");
-                log.info("description: {}", sunat != null ? sunat.getDescription() : "null");
-                log.info("error: {}", sunat != null ? sunat.getError() : "null");
-                log.info("cdrResponse: {}", sunat != null ? sunat.getCdrResponse() : "null");
-                log.info("note: {}", sunat != null ? sunat.getNote() : "null");
+                log.debug("=== RESPUESTA COMPLETA APIPERU ===");
+                log.debug("success: {}", sunat != null ? sunat.getSuccess() : "null");
+                log.debug("description: {}", sunat != null ? sunat.getDescription() : "null");
+                log.debug("error: {}", sunat != null ? sunat.getError() : "null");
+                log.debug("cdrResponse: {}", sunat != null ? sunat.getCdrResponse() : "null");
+                log.debug("note: {}", sunat != null ? sunat.getNote() : "null");
                 
                 boolean isSuccess = sunat != null && Boolean.TRUE.equals(sunat.getSuccess());
                 result.put("estadoSunat", isSuccess ? "ACEPTADA" : "ERROR");
@@ -182,7 +190,7 @@ public class SunatIntegrationServiceImpl implements SunatIntegrationService {
 
         try {
             String requestJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
-            log.info("=== REQUEST NOTA CREDITO A APIPERU ===\n{}", requestJson);
+            log.debug("=== REQUEST NOTA CREDITO A APIPERU ===\n{}", requestJson);
         } catch (Exception e) {
             log.warn("No se pudo serializar request NC para log: {}", e.getMessage());
         }
@@ -198,11 +206,11 @@ public class SunatIntegrationServiceImpl implements SunatIntegrationService {
                 ApisperuResponse body = response.getBody();
                 ApisperuSunatResponse sunat = body.getSunatResponse();
 
-                log.info("=== RESPUESTA NOTA CREDITO APIPERU ===");
-                log.info("success: {}", sunat != null ? sunat.getSuccess() : "null");
-                log.info("description: {}", sunat != null ? sunat.getDescription() : "null");
-                log.info("error: {}", sunat != null ? sunat.getError() : "null");
-                log.info("cdrResponse: {}", sunat != null ? sunat.getCdrResponse() : "null");
+                log.debug("=== RESPUESTA NOTA CREDITO APIPERU ===");
+                log.debug("success: {}", sunat != null ? sunat.getSuccess() : "null");
+                log.debug("description: {}", sunat != null ? sunat.getDescription() : "null");
+                log.debug("error: {}", sunat != null ? sunat.getError() : "null");
+                log.debug("cdrResponse: {}", sunat != null ? sunat.getCdrResponse() : "null");
 
                 boolean isSuccess = sunat != null && Boolean.TRUE.equals(sunat.getSuccess());
                 result.put("estadoSunat", isSuccess ? "ACEPTADA" : "ERROR");
