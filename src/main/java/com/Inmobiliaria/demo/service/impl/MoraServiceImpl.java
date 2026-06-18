@@ -3,8 +3,10 @@ package com.Inmobiliaria.demo.service.impl;
 import com.Inmobiliaria.demo.dto.*;
 import com.Inmobiliaria.demo.entity.*;
 import com.Inmobiliaria.demo.enums.EstadoMora;
+import com.Inmobiliaria.demo.enums.TipoComprobante;
 import com.Inmobiliaria.demo.enums.TipoOrigenComprobante;
 import com.Inmobiliaria.demo.exception.NegocioException;
+import com.Inmobiliaria.demo.repository.ComprobanteRepository;
 import com.Inmobiliaria.demo.repository.LetraCambioRepository;
 import com.Inmobiliaria.demo.repository.MoraRepository;
 import com.Inmobiliaria.demo.repository.PagoMoraRepository;
@@ -15,8 +17,6 @@ import com.Inmobiliaria.demo.service.SunatEnvioService;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -37,7 +37,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MoraServiceImpl implements MoraService {
 
-    private static final Logger log = LoggerFactory.getLogger(MoraServiceImpl.class);
     private static final BigDecimal PORCENTAJE_MORA = new BigDecimal("0.05");
     private static final BigDecimal MONTO_DIARIO    = new BigDecimal("1.00");
 
@@ -45,6 +44,7 @@ public class MoraServiceImpl implements MoraService {
     private final PagoMoraRepository    pagoMoraRepository;
     private final LetraCambioRepository letraCambioRepository;
     private final ComprobanteService    comprobanteService;
+    private final ComprobanteRepository comprobanteRepository;
     private final SunatEnvioService     sunatEnvioService;
     private final VoucherRepository     voucherRepository;
     private final Cloudinary            cloudinary;
@@ -229,26 +229,36 @@ public class MoraServiceImpl implements MoraService {
         pago.setNumeroOperacion(request.getNumeroOperacion());
         pago.setObservaciones(request.getObservaciones());
 
+        // ── Comprobante (enviar a APIPERU antes de guardar si es BOLETA) ───────
+        Comprobante comprobante = null;
         Map<String, Object> sunatRespuesta = null;
-        PagoMora pagoGuardado = pagoMoraRepository.save(pago);
 
         if (request.getTipoComprobante() != null) {
-            Comprobante comprobante = comprobanteService.generarComprobanteConNumero(
+            comprobante = comprobanteService.generarComprobanteConNumero(
                 request.getTipoComprobante(),
                 TipoOrigenComprobante.PAGO_MORA,
-                pagoGuardado.getIdPagoMora(),
+                null, // id temporal
                 request.getMontoPagado(),
                 request.getFechaPago(),
                 request.getNumeroComprobantePersonalizado()
             );
+
+            // Si es BOLETA, enviar a APIPERU ANTES de guardar en BD
+            if (request.getTipoComprobante() == TipoComprobante.BOLETA) {
+                Cliente cliente = mora.getLetra().getContrato().getClientes().iterator().next().getCliente();
+                String descripcion = "Pago de mora";
+                sunatRespuesta = sunatEnvioService.enviarBoleta(cliente, mora.getLetra().getContrato(),
+                        comprobante, request.getMontoPagado(), descripcion);
+            }
+        }
+
+        PagoMora pagoGuardado = pagoMoraRepository.save(pago);
+
+        if (comprobante != null) {
+            comprobante.setReferenciaId(pagoGuardado.getIdPagoMora());
+            comprobante = comprobanteRepository.save(comprobante);
             pagoGuardado.setComprobante(comprobante);
             pagoGuardado = pagoMoraRepository.save(pagoGuardado);
-
-            // Enviar a SUNAT sincronamente — si rechaza, @Transactional revierte todo
-           /* Cliente cliente = mora.getLetra().getContrato().getClientes().iterator().next().getCliente();
-            String descripcion = "Pago de mora";
-            sunatRespuesta = sunatEnvioService.enviarBoleta(cliente, mora.getLetra().getContrato(),
-                    comprobante, request.getMontoPagado(), descripcion);*/
         }
 
         if (vouchers != null && !vouchers.isEmpty()) {

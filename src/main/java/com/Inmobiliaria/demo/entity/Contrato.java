@@ -5,6 +5,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
+import org.hibernate.annotations.BatchSize;
 import org.springframework.format.annotation.DateTimeFormat;
 import com.Inmobiliaria.demo.enums.TipoContrato;
 import com.Inmobiliaria.demo.enums.EstadoContrato;
@@ -78,11 +79,14 @@ public class Contrato {
     private PagoInicial pagoInicial;
 
     @OneToMany(mappedBy = "contrato", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 50)
     private List<LetraCambio> letrasCambio;
 
     @OneToMany(mappedBy = "contrato", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 50)
     private Set<ContratoCliente> clientes;
 
     @OneToMany(mappedBy = "contrato", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 50)
     private Set<ContratoLote> lotes;
 }

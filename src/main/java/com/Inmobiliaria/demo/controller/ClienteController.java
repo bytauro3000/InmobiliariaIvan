@@ -1,92 +1,131 @@
 package com.Inmobiliaria.demo.controller;
 
+import com.Inmobiliaria.demo.dto.ClienteRequestDTO;
+import com.Inmobiliaria.demo.dto.ClienteResponseDTO;
 import com.Inmobiliaria.demo.dto.ConsultaDniDTO;
+import com.Inmobiliaria.demo.dto.DistritoDTO;
 import com.Inmobiliaria.demo.entity.Cliente;
+import com.Inmobiliaria.demo.entity.Distrito;
 import com.Inmobiliaria.demo.service.ClienteService;
 import com.Inmobiliaria.demo.service.ConsultaDniService;
+import com.Inmobiliaria.demo.repository.DistritoRepository;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
-//COMPLETO
 @RestController
 @RequestMapping("/api/clientes")
-@RequiredArgsConstructor 
+@RequiredArgsConstructor
 public class ClienteController {
 
     private final ClienteService clienteService;
     private final ConsultaDniService consultaDniService;
-
-  
+    private final DistritoRepository distritoRepository;
+    private final ModelMapper modelMapper;
 
     @GetMapping("/listar")
-    public List<Cliente> listarClientes() {
-        return clienteService.listarClientes();
+    public List<ClienteResponseDTO> listarClientes() {
+        return clienteService.listarClientes().stream()
+                .map(this::toResponseDTO)
+                .collect(Collectors.toList());
     }
-    
+
     @GetMapping("/buscar/{id}")
-    public Cliente obtenerClientePorId(@PathVariable Integer id) {
-        return clienteService.buscarClientePorId(id);
+    public ResponseEntity<ClienteResponseDTO> obtenerClientePorId(@PathVariable Integer id) {
+        Cliente cliente = clienteService.buscarClientePorId(id);
+        if (cliente == null) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(toResponseDTO(cliente));
     }
-   
+
     @GetMapping("/buscar/numDoc/{numDoc}")
-    public Cliente obtenerClientePorNumDoc(@PathVariable String numDoc) {
-        return clienteService.buscarClientePorNumDoc(numDoc);
+    public ResponseEntity<ClienteResponseDTO> obtenerClientePorNumDoc(@PathVariable String numDoc) {
+        Cliente cliente = clienteService.buscarClientePorNumDoc(numDoc);
+        if (cliente == null) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(toResponseDTO(cliente));
     }
-    
+
     @GetMapping("/externo/reniec/{dni}")
     public ResponseEntity<ConsultaDniDTO> consultarReniec(@PathVariable String dni) {
         ConsultaDniDTO resultado = consultaDniService.buscarEnReniec(dni);
-        
         if (resultado.isSuccess()) {
             return ResponseEntity.ok(resultado);
         } else {
-            // Si falla el API (limite excedido o error), devolvemos 404 para que Angular permita ingreso manual
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
-  
-    //ENDPOINT DE BÚSQUEDA DINÁMICA
+
     @GetMapping("/buscar/filtro")
-    public List<Cliente> buscarClientes(
-            @RequestParam("termino") String termino, 
+    public List<ClienteResponseDTO> buscarClientes(
+            @RequestParam("termino") String termino,
             @RequestParam("tipo") String tipo) {
-        
+        List<Cliente> clientes;
         if ("documento".equals(tipo)) {
-            // Si el select en Angular es 'documento'
-            return clienteService.buscarPorDocumento(termino);
+            clientes = clienteService.buscarPorDocumento(termino);
         } else {
-            // Por defecto busca por nombres y apellidos
-            return clienteService.buscarPorNombresYApellidos(termino);
+            clientes = clienteService.buscarPorNombresYApellidos(termino);
         }
+        return clientes.stream().map(this::toResponseDTO).collect(Collectors.toList());
     }
 
     @PostMapping("/agregar")
-    public ResponseEntity<Cliente> agregarCliente(@RequestBody Cliente cliente) {
+    public ResponseEntity<ClienteResponseDTO> agregarCliente(@Valid @RequestBody ClienteRequestDTO dto) {
+        Cliente cliente = toEntity(dto);
         Cliente nuevoCliente = clienteService.guardarCliente(cliente);
-        return new ResponseEntity<>(nuevoCliente, HttpStatus.CREATED);
+        return new ResponseEntity<>(toResponseDTO(nuevoCliente), HttpStatus.CREATED);
     }
- 
+
     @PutMapping("/actualizar/{id}")
-    public Cliente actualizarCliente(@PathVariable Integer id, @RequestBody Cliente cliente) {
+    public ResponseEntity<ClienteResponseDTO> actualizarCliente(@PathVariable Integer id, @Valid @RequestBody ClienteRequestDTO dto) {
+        Cliente existente = clienteService.buscarClientePorId(id);
+        Cliente cliente = toEntity(dto);
         cliente.setIdCliente(id);
-        return clienteService.editarCliente(cliente);
+        if (existente != null) {
+            cliente.setFechaRegistro(existente.getFechaRegistro());
+        }
+        Cliente actualizado = clienteService.editarCliente(cliente);
+        return ResponseEntity.ok(toResponseDTO(actualizado));
     }
- 
+
     @DeleteMapping("/eliminar/{id}")
     public void eliminarCliente(@PathVariable Integer id) {
         clienteService.eliminarClienteById(id);
     }
 
-    //método para manejar la excepción y devolver el mensaje al frontend
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<String> handleIllegalArgumentException(IllegalArgumentException ex) {
-        // Devuelve un código de estado 409 (Conflict) y el mensaje de la excepción
-        return new ResponseEntity<>(ex.getMessage(), HttpStatus.CONFLICT);
+    private ClienteResponseDTO toResponseDTO(Cliente cliente) {
+        ClienteResponseDTO dto = modelMapper.map(cliente, ClienteResponseDTO.class);
+        if (cliente.getDistrito() != null) {
+            Distrito d = cliente.getDistrito();
+            dto.setDistrito(new DistritoDTO(
+                d.getIdDistrito(), d.getNombre(), d.getCodigoUbigeo(), d.getProvincia(), d.getDepartamento()
+            ));
+        }
+        return dto;
+    }
+
+    private Cliente toEntity(ClienteRequestDTO dto) {
+        Cliente cliente = new Cliente();
+        cliente.setNombre(dto.getNombre());
+        cliente.setApellidos(dto.getApellidos());
+        cliente.setEstadoCivil(dto.getEstadoCivil());
+        cliente.setTipoCliente(dto.getTipoCliente());
+        cliente.setNumDoc(dto.getNumDoc());
+        cliente.setCelular(dto.getCelular());
+        cliente.setTelefono(dto.getTelefono());
+        cliente.setDireccion(dto.getDireccion());
+        cliente.setEmail(dto.getEmail());
+        cliente.setGenero(dto.getGenero());
+        cliente.setNacionalidad(dto.getNacionalidad());
+        if (dto.getIdDistrito() != null) {
+            cliente.setDistrito(distritoRepository.findById(dto.getIdDistrito()).orElse(null));
+        }
+        return cliente;
     }
 }

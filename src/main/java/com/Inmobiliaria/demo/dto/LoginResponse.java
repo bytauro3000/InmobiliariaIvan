@@ -8,6 +8,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class LoginResponse {
-	//Contenedor para enviar el token JWT al cliente
     private String token;
+    private String refreshToken;
+
+    public LoginResponse(String token) {
+        this.token = token;
+    }
+
 }

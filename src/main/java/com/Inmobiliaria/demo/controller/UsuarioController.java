@@ -6,6 +6,7 @@ import java.util.List;
 
 
 import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,7 +33,7 @@ public class UsuarioController {
 
     // Endpoint para crear el usuario
     @PostMapping("/registrar")
-    public ResponseEntity<?> registrarUsuario(@RequestBody UsuarioRegistroDTO dto) {
+    public ResponseEntity<?> registrarUsuario(@Valid @RequestBody UsuarioRegistroDTO dto) {
         try {
             Usuario nuevoUsuario = usuarioService.registrarUsuario(dto);
             return new ResponseEntity<>(nuevoUsuario, HttpStatus.CREATED);
@@ -52,7 +53,7 @@ public class UsuarioController {
     }
     
     @PutMapping("/editar/{id}")
-    public ResponseEntity<?> editarUsuario(@PathVariable Integer id, @RequestBody UsuarioRegistroDTO dto) {
+    public ResponseEntity<?> editarUsuario(@PathVariable Integer id, @Valid @RequestBody UsuarioRegistroDTO dto) {
         try {
             Usuario actualizado = usuarioService.editarUsuario(id, dto);
             return new ResponseEntity<>(actualizado, HttpStatus.OK);

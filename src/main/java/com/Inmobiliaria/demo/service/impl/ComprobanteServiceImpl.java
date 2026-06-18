@@ -28,9 +28,10 @@ public class ComprobanteServiceImpl implements ComprobanteService {
     // ─── Serie por defecto para cada tipo ─────────────────────────────────────
     private String serieDefecto(TipoComprobante tipo) {
         return switch (tipo) {
-            case BOLETA  -> "EB01";
-            case FACTURA -> "F001";
-            case RECIBO  -> "RB01";   // Los recibos usan serie RB01
+            case BOLETA      -> "EB01";
+            case FACTURA     -> "F001";
+            case RECIBO      -> "RB01";
+            case NOTA_CREDITO -> "BB01";
         };
     }
 
@@ -152,6 +153,184 @@ public class ComprobanteServiceImpl implements ComprobanteService {
         comp.setEmailEnviado(false);
 
         return comprobanteRepository.save(comp);
+    }
+
+    // ─── Generación con número y serie personalizada ─────────────────────────
+
+    @Override
+    @Transactional
+    public Comprobante generarComprobanteConNumeroY(
+            TipoComprobante tipoComprobante,
+            TipoOrigenComprobante tipoOrigen,
+            Integer referenciaId,
+            BigDecimal monto,
+            LocalDate fechaEmision,
+            String numeroPersonalizado,
+            String seriePersonalizada) {
+
+        if (numeroPersonalizado == null || numeroPersonalizado.isBlank()) {
+            if (seriePersonalizada == null || seriePersonalizada.isBlank()) {
+                return generarComprobante(tipoComprobante, tipoOrigen, referenciaId, monto, fechaEmision);
+            }
+            return generarConSeriePersonalizada(tipoComprobante, tipoOrigen, referenciaId, monto, fechaEmision, seriePersonalizada);
+        }
+
+        String serie;
+        int numeroInt;
+
+        if (numeroPersonalizado.contains("-")) {
+            String[] partes = numeroPersonalizado.split("-", 2);
+            String serieExtraida = partes[0].trim().toUpperCase();
+            String numeroStr = partes[1].trim();
+            if (serieExtraida.isEmpty() || numeroStr.isEmpty()) {
+                throw new NegocioException(
+                    "El formato del comprobante no es válido: \"" + numeroPersonalizado + "\". "
+                    + "Use el formato Serie-Número (ej: B001-1)."
+                );
+            }
+            serie = (seriePersonalizada != null && !seriePersonalizada.isBlank())
+                    ? seriePersonalizada.trim().toUpperCase()
+                    : serieExtraida;
+            try {
+                numeroInt = Integer.parseInt(numeroStr);
+            } catch (NumberFormatException e) {
+                throw new NegocioException(
+                    "El número correlativo no es válido: \"" + numeroStr + "\"."
+                );
+            }
+        } else {
+            serie = (seriePersonalizada != null && !seriePersonalizada.isBlank())
+                    ? seriePersonalizada.trim().toUpperCase()
+                    : serieDefecto(tipoComprobante);
+            try {
+                numeroInt = Integer.parseInt(numeroPersonalizado.trim());
+            } catch (NumberFormatException e) {
+                throw new NegocioException(
+                    "El número de comprobante personalizado no es válido: \"" + numeroPersonalizado + "\". "
+                    + "Ingrese solo el número correlativo (ej: 45)."
+                );
+            }
+        }
+
+        String numeroCompleto = formatearNumeroCompleto(tipoComprobante, serie, numeroInt);
+
+        if (comprobanteRepository.existsByNumeroCompleto(numeroCompleto)) {
+            throw new NegocioException(
+                "Ya existe un comprobante con el número \"" + numeroCompleto + "\". "
+                + "Verifique el número ingresado."
+            );
+        }
+
+        serieComprobanteRepository
+                .findByTipoComprobanteAndSerieForUpdate(tipoComprobante, serie)
+                .ifPresent(contador -> {
+                    if (numeroInt > contador.getUltimoNumero()) {
+                        contador.setUltimoNumero(numeroInt);
+                        serieComprobanteRepository.save(contador);
+                    }
+                });
+
+        Comprobante comp = new Comprobante();
+        comp.setTipoComprobante(tipoComprobante);
+        comp.setSerie(serie);
+        comp.setNumero(numeroInt);
+        comp.setNumeroCompleto(numeroCompleto);
+        comp.setFechaEmision(fechaEmision != null ? fechaEmision : LocalDate.now());
+        comp.setMonto(monto);
+        comp.setTipoOrigen(tipoOrigen);
+        comp.setReferenciaId(referenciaId);
+        comp.setEmailEnviado(false);
+
+        return comprobanteRepository.save(comp);
+    }
+
+    @Transactional
+    private Comprobante generarConSeriePersonalizada(
+            TipoComprobante tipoComprobante,
+            TipoOrigenComprobante tipoOrigen,
+            Integer referenciaId,
+            BigDecimal monto,
+            LocalDate fechaEmision,
+            String seriePersonalizada) {
+
+        String serie = seriePersonalizada.trim().toUpperCase();
+
+        int desdeContador = serieComprobanteRepository
+                .findByTipoComprobanteAndSerie(tipoComprobante, serie)
+                .map(SerieComprobante::getUltimoNumero)
+                .orElse(0);
+
+        Integer desdeTablaRaw = comprobanteRepository
+                .findMaxNumeroByTipoAndSerie(tipoComprobante, serie);
+        int desdeTabla = (desdeTablaRaw != null) ? desdeTablaRaw : 0;
+
+        int siguiente = Math.max(desdeContador, desdeTabla) + 1;
+
+        serieComprobanteRepository
+                .findByTipoComprobanteAndSerieForUpdate(tipoComprobante, serie)
+                .ifPresent(contador -> {
+                    if (siguiente > contador.getUltimoNumero()) {
+                        contador.setUltimoNumero(siguiente);
+                        serieComprobanteRepository.save(contador);
+                    }
+                });
+
+        String numeroCompleto = formatearNumeroCompleto(tipoComprobante, serie, siguiente);
+
+        Comprobante comp = new Comprobante();
+        comp.setTipoComprobante(tipoComprobante);
+        comp.setSerie(serie);
+        comp.setNumero(siguiente);
+        comp.setNumeroCompleto(numeroCompleto);
+        comp.setFechaEmision(fechaEmision != null ? fechaEmision : LocalDate.now());
+        comp.setMonto(monto);
+        comp.setTipoOrigen(tipoOrigen);
+        comp.setReferenciaId(referenciaId);
+        comp.setEmailEnviado(false);
+
+        return comprobanteRepository.save(comp);
+    }
+
+    // ─── Generación de Nota de Crédito ────────────────────────────────────────
+
+    @Override
+    @Transactional
+    public Comprobante generarNotaCredito(Comprobante comprobanteOriginal,
+                                           String codigoMotivo,
+                                           String motivoNotaCredito,
+                                           String anuladoPor) {
+        TipoComprobante tipo = TipoComprobante.NOTA_CREDITO;
+        String serie = serieDefecto(tipo);
+
+        SerieComprobante contador = serieComprobanteRepository
+                .findByTipoComprobanteAndSerieForUpdate(tipo, serie)
+                .orElseThrow(() -> new NegocioException(
+                        "No existe serie configurada para NOTA_CREDITO / serie: " + serie
+                        + ". Ejecute el SQL de inicialización de serie_comprobante."
+                ));
+
+        int nuevoNumero = contador.getUltimoNumero() + 1;
+        contador.setUltimoNumero(nuevoNumero);
+        serieComprobanteRepository.save(contador);
+
+        String numeroCompleto = formatearNumeroCompleto(tipo, serie, nuevoNumero);
+
+        Comprobante nc = new Comprobante();
+        nc.setTipoComprobante(TipoComprobante.NOTA_CREDITO);
+        nc.setSerie(serie);
+        nc.setNumero(nuevoNumero);
+        nc.setNumeroCompleto(numeroCompleto);
+        nc.setFechaEmision(LocalDate.now());
+        nc.setMonto(comprobanteOriginal.getMonto());
+        nc.setTipoOrigen(comprobanteOriginal.getTipoOrigen());
+        nc.setReferenciaId(comprobanteOriginal.getReferenciaId());
+        nc.setEmailEnviado(false);
+        nc.setComprobanteReferencia(comprobanteOriginal);
+        nc.setCodigoMotivo(codigoMotivo);
+        nc.setMotivoNotaCredito(motivoNotaCredito);
+        nc.setEstadoSunat("PENDIENTE");
+
+        return comprobanteRepository.save(nc);
     }
 
     // ─── Eliminación de comprobante + resincronización del contador ────────────

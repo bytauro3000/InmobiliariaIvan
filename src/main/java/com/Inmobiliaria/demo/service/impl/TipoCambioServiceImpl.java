@@ -68,10 +68,11 @@ public class TipoCambioServiceImpl implements TipoCambioService {
 
     // Se ejecuta al arrancar y luego cada hora
     @Scheduled(fixedRate = 3_600_000)
+    @SuppressWarnings("unchecked")
     public void actualizarTipoCambio() {
         try {
             String url   = String.format(API_URL, apiKey);
-            Map response = restTemplate.getForObject(url, Map.class);
+            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
             if (response != null && "success".equals(response.get("result"))) {
                 Map<String, Object> rates = (Map<String, Object>) response.get("conversion_rates");
                 if (rates != null && rates.containsKey("PEN")) {

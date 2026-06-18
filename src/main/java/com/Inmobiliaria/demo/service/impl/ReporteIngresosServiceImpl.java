@@ -22,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -192,7 +191,6 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
     }
 
 
-    @SuppressWarnings("unchecked")
     private List<ResumenIngresoItemDTO> obtenerItemsInscripcionesPorRango(
             LocalDate desde, LocalDate hasta) {
 

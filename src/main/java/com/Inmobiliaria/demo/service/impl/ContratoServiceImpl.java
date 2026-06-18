@@ -4,12 +4,11 @@ import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.security.Principal;
-import java.text.SimpleDateFormat;
-import java.text.ParseException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.cache.annotation.CacheConfig;
@@ -26,6 +25,7 @@ import com.Inmobiliaria.demo.enums.EstadoLote;
 import com.Inmobiliaria.demo.enums.EstadoContrato;
 import com.Inmobiliaria.demo.enums.EstadoSeparacion;
 import com.Inmobiliaria.demo.enums.TipoContrato;
+import com.Inmobiliaria.demo.enums.TipoComprobante;
 import com.Inmobiliaria.demo.enums.TipoOrigenComprobante;
 import com.Inmobiliaria.demo.enums.Moneda;
 import com.Inmobiliaria.demo.enums.TipoPropietario;
@@ -61,6 +61,7 @@ public class ContratoServiceImpl implements ContratoService {
     private final PagoInicialRepository pagoInicialRepository;
     private final ModelMapper modelMapper;
     private final ComprobanteService comprobanteService;
+
     private final SunatEnvioService sunatEnvioService;
     private final Cloudinary cloudinary;
     private final com.Inmobiliaria.demo.repository.VoucherRepository voucherRepository;
@@ -115,12 +116,9 @@ public class ContratoServiceImpl implements ContratoService {
         Contrato contrato = modelMapper.map(requestDTO, Contrato.class);
         if (contrato.getMoneda() == null) contrato.setMoneda(Moneda.USD);
 
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        try {
-            contrato.setFechaContrato(dateFormat.parse(requestDTO.getFechaContrato()));
-        } catch (ParseException e) {
-            throw new RuntimeException("Error al parsear la fecha del contrato.", e);
-        }
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        LocalDate localDate = LocalDate.parse(requestDTO.getFechaContrato(), dateFormatter);
+        contrato.setFechaContrato(java.sql.Date.valueOf(localDate));
 
         Vendedor vendedor = null;
         if (requestDTO.getIdSeparacion() != null) {
@@ -159,23 +157,27 @@ public class ContratoServiceImpl implements ContratoService {
 
             // ── PASO 2: ahora que pagoGuardado tiene ID, generar comprobante ──
             if (piReq.getTipoComprobante() != null) {
+                // ── Comprobante inicial (enviar a APIPERU antes de guardar si es BOLETA) ──
                 Comprobante compInicial = comprobanteService.generarComprobanteConNumero(
                     piReq.getTipoComprobante(),
                     TipoOrigenComprobante.PAGO_INICIAL,
-                    contratoGuardado.getIdContrato(),
+                    null, // id temporal
                     pagoGuardado.getImportePagado(),
                     pagoGuardado.getFechaPago(),
                     piReq.getNumeroComprobantePersonalizado()
                 );
+
+                // Si es BOLETA, enviar a APIPERU ANTES de guardar en BD
+                if (piReq.getTipoComprobante() == TipoComprobante.BOLETA) {
+                    Cliente cliente = contratoGuardado.getClientes().iterator().next().getCliente();
+                    String descripcion = "Pago inicial de contrato";
+                    sunatEnvioService.enviarBoleta(cliente, contratoGuardado, compInicial,
+                            pagoGuardado.getImportePagado(), descripcion);
+                }
+
                 pagoGuardado.setComprobante(compInicial);
                 contratoGuardado.setComprobanteInicial(compInicial);
                 pagoGuardado = pagoInicialRepository.save(pagoGuardado);
-
-                /* Enviar a SUNAT sincronamente — si rechaza, @Transactional revierte todo
-                Cliente cliente = contratoGuardado.getClientes().iterator().next().getCliente();
-                String descripcion = "Pago inicial de contrato";
-                sunatEnvioService.enviarBoleta(cliente, contratoGuardado, compInicial,
-                        pagoGuardado.getImportePagado(), descripcion);*/
             }
 
             // ── PASO 3: enlazar el pago (con comprobante) al contrato ────────
@@ -274,12 +276,9 @@ public class ContratoServiceImpl implements ContratoService {
             contrato.getLetrasCambio().clear();
         }
 
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        try {
-            contrato.setFechaContrato(dateFormat.parse(requestDTO.getFechaContrato()));
-        } catch (ParseException e) {
-            throw new NegocioException("Formato de fecha invalido. Use el formato yyyy-MM-dd");
-        }
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        LocalDate localDate = LocalDate.parse(requestDTO.getFechaContrato(), dateFormatter);
+        contrato.setFechaContrato(java.sql.Date.valueOf(localDate));
         contrato.setMontoTotal(nuevoMonto);
         contrato.setInicial(nuevoInicial);
         contrato.setSaldo(nuevoSaldo);
@@ -352,17 +351,8 @@ public class ContratoServiceImpl implements ContratoService {
     @Transactional(readOnly = true)
     @Cacheable
     public List<ContratoResponseDTO> listarContratos() {
-        List<Contrato> contratosConClientes = contratoRepository.findAllConClientes();
-        List<Contrato> contratosConLotes    = contratoRepository.findAllConLotes();
-
-        Map<Integer, Set<ContratoLote>> lotesMap = contratosConLotes.stream()
-            .collect(Collectors.toMap(Contrato::getIdContrato, Contrato::getLotes));
-
-        contratosConClientes.forEach(c ->
-            c.setLotes(lotesMap.getOrDefault(c.getIdContrato(), new java.util.HashSet<>()))
-        );
-
-        return contratosConClientes.stream()
+        List<Contrato> contratos = contratoRepository.findAllConClientesYLotes();
+        return contratos.stream()
                 .map(this::mapToContratoResponseDTO)
                 .collect(Collectors.toList());
     }
@@ -371,7 +361,7 @@ public class ContratoServiceImpl implements ContratoService {
     @Transactional(readOnly = true)
     @Cacheable(key = "#idContrato")
     public ContratoResponseDTO buscarPorId(Integer idContrato) {
-        Contrato contrato = contratoRepository.findById(idContrato).orElse(null);
+        Contrato contrato = contratoRepository.findByIdConTodo(idContrato);
         if (contrato == null) return null;
         return mapToContratoResponseDTO(contrato);
     }
@@ -399,8 +389,8 @@ public class ContratoServiceImpl implements ContratoService {
     @Transactional
     @CacheEvict(allEntries = true)
     public void eliminarContrato(Integer idContrato) {
-        Contrato contrato = contratoRepository.findById(idContrato)
-                .orElseThrow(() -> new NegocioException("No se encontro el contrato con ID: " + idContrato));
+        Contrato contrato = contratoRepository.findByIdConTodo(idContrato);
+        if (contrato == null) throw new NegocioException("No se encontro el contrato con ID: " + idContrato);
 
         if (contrato.getLotes() != null && !contrato.getLotes().isEmpty()) {
             for (ContratoLote contratoLote : contrato.getLotes()) {
@@ -419,8 +409,8 @@ public class ContratoServiceImpl implements ContratoService {
     @Override
     @Transactional(readOnly = true)
     public byte[] generarPdf(Integer idContrato) {
-        Contrato contrato = contratoRepository.findById(idContrato)
-                .orElseThrow(() -> new NegocioException("No se encontro el contrato con ID: " + idContrato));
+        Contrato contrato = contratoRepository.findByIdConTodo(idContrato);
+        if (contrato == null) throw new NegocioException("No se encontro el contrato con ID: " + idContrato);
         ContratoResponseDTO dto = this.mapToContratoResponseDTO(contrato);
         LetraCambio primeraLetra = letraCambioRepository
                 .findFirstByContratoIdContratoOrderByNumeroLetraAsc(idContrato).orElse(null);
@@ -514,8 +504,10 @@ public class ContratoServiceImpl implements ContratoService {
             Lote l = cl.getLote();
             return new LoteResponseDTO(l.getIdLote(), l.getManzana(), l.getNumeroLote(), l.getArea(),
                 l.getLargo1(), l.getLargo2(), l.getAncho1(), l.getAncho2(),
+                l.getPrecioM2(),
                 l.getColindanteNorte(), l.getColindanteSur(), l.getColindanteEste(),
-                l.getColindanteOeste(), l.getPrograma().getNombrePrograma());
+                l.getColindanteOeste(), l.getPrograma().getNombrePrograma(),
+                l.getPrograma().getIdPrograma(), l.getEstado().name());
         }).collect(Collectors.toList());
 
         Integer idVendedor = contrato.getVendedor() != null ? contrato.getVendedor().getIdVendedor() : null;
@@ -546,7 +538,7 @@ public class ContratoServiceImpl implements ContratoService {
 
         try {
             String publicId = "inicial-" + idContrato + "-" + System.currentTimeMillis();
-            Map<String, Object> params = ObjectUtils.asMap(
+            Map<?, ?> params = ObjectUtils.asMap(
                 "folder",    "vouchers/contrato-" + idContrato,
                 "public_id", publicId
             );
@@ -579,12 +571,19 @@ public class ContratoServiceImpl implements ContratoService {
         if (contrato.getClientes() != null) {
             dto.setClientes(contrato.getClientes().stream().map(cc -> {
                 Cliente c = cc.getCliente();
+                Distrito d = c.getDistrito();
+                DistritoDTO distritoDTO = d != null ? new DistritoDTO(
+                    d.getIdDistrito(), d.getNombre(), d.getCodigoUbigeo(), d.getProvincia(), d.getDepartamento()
+                ) : null;
                 return new ClienteResponseDTO(
                         c.getIdCliente(), c.getNombre(), c.getApellidos(),
                         c.getEstadoCivil(), c.getNumDoc(), c.getDireccion(), c.getCelular(),
-                        c.getDistrito(), c.getGenero(),
+                        c.getTelefono(), c.getEmail(),
+                        distritoDTO, c.getGenero(),
                         c.getTipoCliente(),
-                        c.getNacionalidad()
+                        c.getNacionalidad(),
+                        c.getEstado(),
+                        c.getFechaRegistro()
                     );
             }).collect(Collectors.toList()));
         }
@@ -594,8 +593,10 @@ public class ContratoServiceImpl implements ContratoService {
                 Lote l = cl.getLote();
                 return new LoteResponseDTO(l.getIdLote(), l.getManzana(), l.getNumeroLote(),
                     l.getArea(), l.getLargo1(), l.getLargo2(), l.getAncho1(), l.getAncho2(),
+                    l.getPrecioM2(),
                     l.getColindanteNorte(), l.getColindanteSur(), l.getColindanteEste(),
-                    l.getColindanteOeste(), l.getPrograma().getNombrePrograma());
+                    l.getColindanteOeste(), l.getPrograma().getNombrePrograma(),
+                    l.getPrograma().getIdPrograma(), l.getEstado().name());
             }).collect(Collectors.toList()));
         }
 

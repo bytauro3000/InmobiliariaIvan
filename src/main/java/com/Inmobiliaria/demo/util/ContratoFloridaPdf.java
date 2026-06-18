@@ -26,7 +26,6 @@ import java.text.DecimalFormatSymbols;
 import java.util.Locale;
 import java.util.List;
 import java.util.Map;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.time.LocalDate;
@@ -47,32 +46,25 @@ public class ContratoFloridaPdf {
 		Document document = new Document(pdf);
 		document.setMargins(122, 85, 57, 85); //multiplicar los cm * 28.35 = margenes
 
-		// 🔹 CARGA DE FUENTES (NORMAL, NEGRITA Y NEGRITA-CURSIVA)
-		PdfFont arialNormal;
+		// 🔹 CARGA DE FUENTES (NEGRITA, NEGRITA-CURSIVA, CURSIVA)
 		PdfFont arialBold;
 		PdfFont arialBoldItalic;
 		PdfFont arialItalic;
 
 		try {
-			// 1. Arial Normal (Para el cuerpo del texto)
-			byte[] nBytes = StreamUtil.inputStreamToArray(
-					ContratoFloridaPdf.class.getClassLoader().getResourceAsStream("fonts/ARIAL.TTF")
-					);
-			arialNormal = PdfFontFactory.createFont(nBytes, PdfEncodings.WINANSI);
-
-			// 2. Arial Bold (Para nombres y datos en negrita)
+			// 1. Arial Bold (Para nombres y datos en negrita)
 			byte[] bBytes = StreamUtil.inputStreamToArray(
 					ContratoFloridaPdf.class.getClassLoader().getResourceAsStream("fonts/ARIALBD.TTF")
 					);
 			arialBold = PdfFontFactory.createFont(bBytes, PdfEncodings.WINANSI);
 
-			// 3. Arial Bold Italic (Para el título del contrato)
+			// 2. Arial Bold Italic (Para el título del contrato)
 			byte[] biBytes = StreamUtil.inputStreamToArray(
 					ContratoFloridaPdf.class.getClassLoader().getResourceAsStream("fonts/ARIALBI.TTF")
 					);
 			arialBoldItalic = PdfFontFactory.createFont(biBytes, PdfEncodings.WINANSI);
 
-			// 4. Carga de Arial Italic (Solo Cursiva)
+			// 3. Arial Italic (Solo Cursiva)
 			byte[] iBytes = StreamUtil.inputStreamToArray(
 					ContratoFloridaPdf.class.getClassLoader().getResourceAsStream("fonts/ARIALI.TTF")
 					);
@@ -199,9 +191,6 @@ public class ContratoFloridaPdf {
 
 		// --- DATOS DEL LOTE Y PRECIO (RESTAURADO) ---
 		LoteResponseDTO lote = contrato.getLotes().get(0);
-		LetraResponseDTO pL = contrato.getLetras().get(0);
-		LetraResponseDTO uL = contrato.getLetras().get(contrato.getLetras().size() - 1);
-		String montoTexto = pL.getImporteLetras().split(" POR ")[0];
 
 
 
@@ -563,7 +552,6 @@ public class ContratoFloridaPdf {
 		    } else {
 		        // CASO 2: Variantes - Resaltamos cantidad y monto de cada grupo
 		        subclausula32.add("(");
-		        List<String> partesPrendidas = new ArrayList<>();
 		        
 		        int indexGrupo = 0;
 		        for (Map.Entry<BigDecimal, Integer> entry : gruposMonto.entrySet()) {

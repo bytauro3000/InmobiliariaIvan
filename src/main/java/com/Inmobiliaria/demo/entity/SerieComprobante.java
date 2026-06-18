@@ -21,7 +21,7 @@ public class SerieComprobante {
 
     // Columna en BD: "tipo_comprobante"
     @Enumerated(EnumType.STRING)
-    @Column(name = "tipo_comprobante", nullable = false, length = 10)
+    @Column(name = "tipo_comprobante", nullable = false, length = 15)
     private TipoComprobante tipoComprobante;
 
     @Column(name = "serie", nullable = false, length = 10)

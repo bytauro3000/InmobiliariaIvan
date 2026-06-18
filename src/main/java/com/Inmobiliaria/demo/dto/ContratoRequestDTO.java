@@ -2,6 +2,8 @@ package com.Inmobiliaria.demo.dto;
 
 import java.util.List;
 import com.Inmobiliaria.demo.enums.Moneda;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -10,9 +12,15 @@ import lombok.AllArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ContratoRequestDTO {
+    @NotBlank
     private String fechaContrato;
+
+    @NotBlank
     private String tipoContrato;
+
+    @NotNull
     private Double montoTotal;
+
     private Double inicial;
     private Double saldo;
     private Integer cantidadLetras;

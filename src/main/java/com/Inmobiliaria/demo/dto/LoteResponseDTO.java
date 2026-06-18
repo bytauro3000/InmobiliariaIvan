@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class LoteResponseDTO {
-	private Integer idLote;
+    private Integer idLote;
     private String manzana;
     private String numeroLote;
     private BigDecimal area;
@@ -17,9 +17,12 @@ public class LoteResponseDTO {
     private BigDecimal largo2;
     private BigDecimal ancho1;
     private BigDecimal ancho2;
+    private BigDecimal precioM2;
     private String colindanteNorte;
     private String colindanteSur;
     private String colindanteEste;
     private String colindanteOeste;
-    private String nombrePrograma; // Para validar la plantilla en el PDF
+    private String nombrePrograma;
+    private Integer idPrograma;
+    private String estado;
 }

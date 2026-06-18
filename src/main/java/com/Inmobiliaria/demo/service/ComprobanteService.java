@@ -25,6 +25,16 @@ public interface ComprobanteService {
             BigDecimal monto,
             LocalDate fechaEmision,
             String numeroPersonalizado);
+
+    Comprobante generarComprobanteConNumeroY(
+            TipoComprobante tipoComprobante,
+            TipoOrigenComprobante tipoOrigen,
+            Integer referenciaId,
+            BigDecimal monto,
+            LocalDate fechaEmision,
+            String numeroPersonalizado,
+            String seriePersonalizada);
+
     ComprobanteResponseDTO obtenerPorId(Long idComprobante);
     ComprobanteResponseDTO obtenerPorNumeroCompleto(String numeroCompleto);
     List<ComprobanteResponseDTO> listarPorTipo(TipoComprobante tipoComprobante);
@@ -33,4 +43,6 @@ public interface ComprobanteService {
     String previewSiguienteNumero(TipoComprobante tipoComprobante);
 
     void eliminarComprobante(Long idComprobante);
+
+    Comprobante generarNotaCredito(Comprobante comprobanteOriginal, String codigoMotivo, String motivoNotaCredito, String anuladoPor);
 }

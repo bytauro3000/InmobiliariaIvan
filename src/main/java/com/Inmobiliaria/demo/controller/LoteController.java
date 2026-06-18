@@ -1,6 +1,8 @@
 package com.Inmobiliaria.demo.controller;
 
 import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,31 +15,41 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.Inmobiliaria.demo.dto.LoteProgramaResponseDTO;
+import com.Inmobiliaria.demo.dto.LoteRequestDTO;
+import com.Inmobiliaria.demo.dto.LoteResponseDTO;
 import com.Inmobiliaria.demo.entity.Lote;
 import com.Inmobiliaria.demo.service.LoteService;
+import com.Inmobiliaria.demo.repository.ProgramaRepository;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.modelmapper.ModelMapper;
 
 @RestController
 @RequestMapping("/api/lotes")
 @RequiredArgsConstructor
 public class LoteController {
-	
+
     private final LoteService loteService;
+    private final ProgramaRepository programaRepository;
+    private final ModelMapper modelMapper;
 
-    //Listar todos los lotes (entidad completa)
     @GetMapping
-    public ResponseEntity<List<Lote>> listarLotes() {
-        return ResponseEntity.ok(loteService.listarLotes());
+    public ResponseEntity<List<LoteResponseDTO>> listarLotes() {
+        List<LoteResponseDTO> lotes = loteService.listarLotes().stream()
+                .map(this::toResponseDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(lotes);
     }
 
-    // Reporte de lotes agrupados por programa — para impresion/PDF
     @GetMapping("/reporte")
-    public ResponseEntity<List<Lote>> listarLotesParaReporte() {
-        return ResponseEntity.ok(loteService.listarLotesParaReporte());
+    public ResponseEntity<List<LoteResponseDTO>> listarLotesParaReporte() {
+        List<LoteResponseDTO> lotes = loteService.listarLotesParaReporte().stream()
+                .map(this::toResponseDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(lotes);
     }
-    
-    //USO esta lista para VISTA CONTRATO
+
     @GetMapping("/listarPorPrograma/{idPrograma}")
     public ResponseEntity<List<LoteProgramaResponseDTO>> listarLotesPorPrograma(@PathVariable Integer idPrograma) {
         List<LoteProgramaResponseDTO> lotesDTO = loteService.listarLotesPorPrograma(idPrograma);
@@ -47,54 +59,55 @@ public class LoteController {
         return ResponseEntity.ok(lotesDTO);
     }
 
-    //Obtener un lote por su ID
     @GetMapping("/{id}")
-    public ResponseEntity<Lote> obtenerLotePorId(@PathVariable Integer id) {
+    public ResponseEntity<LoteResponseDTO> obtenerLotePorId(@PathVariable Integer id) {
         Lote lote = loteService.obtenerLotePorId(id);
-        return (lote != null) ? ResponseEntity.ok(lote) : ResponseEntity.notFound().build();
+        return (lote != null) ? ResponseEntity.ok(toResponseDTO(lote)) : ResponseEntity.notFound().build();
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Lote> actualizarLote(@PathVariable Integer id, @RequestBody Lote lote) {
+    public ResponseEntity<LoteResponseDTO> actualizarLote(@PathVariable Integer id, @Valid @RequestBody LoteRequestDTO dto) {
+        Lote lote = toEntity(dto);
         lote.setIdLote(id);
         Lote actualizado = loteService.actualizarLote(lote);
-        return (actualizado != null) ? ResponseEntity.ok(actualizado) : ResponseEntity.badRequest().build();
+        return (actualizado != null) ? ResponseEntity.ok(toResponseDTO(actualizado)) : ResponseEntity.badRequest().build();
     }
 
     @PostMapping
-    public ResponseEntity<?> crearLote(@RequestBody Lote lote) {
+    public ResponseEntity<?> crearLote(@Valid @RequestBody LoteRequestDTO dto) {
         try {
+            Lote lote = toEntity(dto);
             Lote nuevo = loteService.crearLote(lote);
-            return ResponseEntity.ok(nuevo);
+            return ResponseEntity.ok(toResponseDTO(nuevo));
         } catch (RuntimeException e) {
-            // 🟢 Retornamos un 400 (Bad Request) con el mensaje de error personalizado
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
-    
+
     @DeleteMapping("/{id}")
-    public void EliminarLote(@PathVariable Integer id) {
-    	loteService.eliminarLote(id);
+    public void eliminarLote(@PathVariable Integer id) {
+        loteService.eliminarLote(id);
     }
-    
- // URL: GET /api/lotes/gestion/programa/{idPrograma}
+
     @GetMapping("/gestion/programa/{idPrograma}")
-    public ResponseEntity<List<Lote>> obtenerLotesParaGestion(@PathVariable Integer idPrograma) {
-        List<Lote> lotes = loteService.listarLotesPorProgramaGestion(idPrograma);
+    public ResponseEntity<List<LoteResponseDTO>> obtenerLotesParaGestion(@PathVariable Integer idPrograma) {
+        List<LoteResponseDTO> lotes = loteService.listarLotesPorProgramaGestion(idPrograma).stream()
+                .map(this::toResponseDTO)
+                .collect(Collectors.toList());
         return ResponseEntity.ok(lotes);
     }
 
     @GetMapping("/buscar")
-    public ResponseEntity<List<Lote>> buscarLotes(
+    public ResponseEntity<List<LoteResponseDTO>> buscarLotes(
             @RequestParam Integer idPrograma,
             @RequestParam(required = false, defaultValue = "") String manzana,
             @RequestParam(required = false, defaultValue = "") String numeroLote) {
-            
-        List<Lote> resultados = loteService.buscarLotesPorGestion(idPrograma, manzana, numeroLote);
+        List<LoteResponseDTO> resultados = loteService.buscarLotesPorGestion(idPrograma, manzana, numeroLote).stream()
+                .map(this::toResponseDTO)
+                .collect(Collectors.toList());
         return ResponseEntity.ok(resultados);
     }
-    
-    //VALIDAMOS LA EXISTENCIA DE LOTES DUPLICADOS PARA EVITAR SU REGISTRO 
+
     @GetMapping("/validar-duplicado")
     public ResponseEntity<Boolean> verificarDuplicado(
             @RequestParam Integer idPrograma,
@@ -102,5 +115,37 @@ public class LoteController {
             @RequestParam String numeroLote) {
         boolean existe = loteService.existeLote(idPrograma, manzana, numeroLote);
         return ResponseEntity.ok(existe);
+    }
+
+    private LoteResponseDTO toResponseDTO(Lote lote) {
+        LoteResponseDTO dto = modelMapper.map(lote, LoteResponseDTO.class);
+        if (lote.getPrograma() != null) {
+            dto.setNombrePrograma(lote.getPrograma().getNombrePrograma());
+            dto.setIdPrograma(lote.getPrograma().getIdPrograma());
+        }
+        if (lote.getEstado() != null) {
+            dto.setEstado(lote.getEstado().name());
+        }
+        return dto;
+    }
+
+    private Lote toEntity(LoteRequestDTO dto) {
+        Lote lote = new Lote();
+        lote.setManzana(dto.getManzana());
+        lote.setNumeroLote(dto.getNumeroLote());
+        lote.setArea(dto.getArea());
+        lote.setLargo1(dto.getLargo1());
+        lote.setLargo2(dto.getLargo2());
+        lote.setAncho1(dto.getAncho1());
+        lote.setAncho2(dto.getAncho2());
+        lote.setPrecioM2(dto.getPrecioM2());
+        lote.setColindanteNorte(dto.getColindanteNorte());
+        lote.setColindanteSur(dto.getColindanteSur());
+        lote.setColindanteEste(dto.getColindanteEste());
+        lote.setColindanteOeste(dto.getColindanteOeste());
+        if (dto.getIdPrograma() != null) {
+            lote.setPrograma(programaRepository.findById(dto.getIdPrograma()).orElse(null));
+        }
+        return lote;
     }
 }

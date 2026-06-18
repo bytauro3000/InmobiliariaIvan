@@ -42,4 +42,32 @@ public class SunatEnvioServiceImpl implements SunatEnvioService {
         log.info("SUNAT acepto comprobante {} correctamente", comprobante.getNumeroCompleto());
         return respuesta;
     }
+
+    @Override
+    public Map<String, Object> enviarNotaCredito(Cliente cliente, Contrato contrato,
+                                                  Comprobante notaCredito,
+                                                  Comprobante comprobanteOriginal,
+                                                  BigDecimal monto,
+                                                  String descripcionDetalle,
+                                                  String codMotivo,
+                                                  String desMotivo) {
+        log.info("Enviando nota de credito {} a SUNAT (anula {})...",
+                notaCredito.getNumeroCompleto(), comprobanteOriginal.getNumeroCompleto());
+
+        Map<String, Object> respuesta = sunatIntegrationService.enviarNotaCredito(
+                cliente, contrato, notaCredito, comprobanteOriginal, monto,
+                descripcionDetalle, codMotivo, desMotivo);
+
+        String estado = respuesta != null ? (String) respuesta.get("estadoSunat") : "ERROR";
+        if ("ERROR".equals(estado)) {
+            String msg = respuesta != null
+                    ? (String) respuesta.getOrDefault("mensaje", "Error desconocido de SUNAT")
+                    : "No se obtuvo respuesta del servicio SUNAT";
+            log.error("SUNAT rechazo nota de credito {}: {}", notaCredito.getNumeroCompleto(), msg);
+            throw new NegocioException("SUNAT rechazó la nota de crédito: " + msg);
+        }
+
+        log.info("SUNAT acepto nota de credito {} correctamente", notaCredito.getNumeroCompleto());
+        return respuesta;
+    }
 }

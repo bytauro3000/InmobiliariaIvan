@@ -6,6 +6,7 @@ import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 import com.Inmobiliaria.demo.dto.ContratoRequestDTO;
 import com.Inmobiliaria.demo.dto.ContratoResponseDTO;
 import com.Inmobiliaria.demo.dto.TransferenciaResponseDTO;
@@ -25,7 +26,7 @@ public class ContratoController {
 
     @PostMapping("/agregar")
     public ResponseEntity<ContratoResponseDTO> guardarContrato(
-        @RequestBody ContratoRequestDTO requestDTO,
+        @Valid @RequestBody ContratoRequestDTO requestDTO,
         Principal principal
     ) {
         ContratoResponseDTO contratoGuardado = contratoService.guardarContrato(requestDTO, principal);
@@ -35,7 +36,7 @@ public class ContratoController {
     @PutMapping("/actualizar/{id}")
     public ResponseEntity<ContratoResponseDTO> actualizarContrato(
         @PathVariable Integer id,
-        @RequestBody ContratoRequestDTO requestDTO
+        @Valid @RequestBody ContratoRequestDTO requestDTO
     ) {
         ContratoResponseDTO actualizado = contratoService.actualizarContrato(id, requestDTO);
         return new ResponseEntity<>(actualizado, HttpStatus.OK);

@@ -14,11 +14,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.Inmobiliaria.demo.client.InscripcionClient;
 import com.Inmobiliaria.demo.dto.IngresoDiarioDTO;
-import com.Inmobiliaria.demo.repository.ContratoRepository;
-import com.Inmobiliaria.demo.repository.PagoInicialRepository;
-import com.Inmobiliaria.demo.repository.PagoLetraRepository;
-import com.Inmobiliaria.demo.repository.PagoMoraRepository;
 import com.Inmobiliaria.demo.service.ClienteService;
+import com.Inmobiliaria.demo.service.DashboardService;
 import com.Inmobiliaria.demo.service.LoteService;
 import com.Inmobiliaria.demo.service.ParceleroService;
 import com.Inmobiliaria.demo.service.ProgramaService;
@@ -33,17 +30,12 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class DashboardController {
 
-    private final VendedorService      vendedorService;
-    private final ParceleroService     parceleroService;
-    private final ProgramaService      programaService;
-    private final LoteService          loteService;
-    private final ClienteService       clienteService;
-    private final ContratoRepository   contratoRepository;
-
-    // ── Repositorios de pagos (para ingresos diarios) ─────────────────────────
-    private final PagoLetraRepository  pagoLetraRepository;
-    private final PagoMoraRepository   pagoMoraRepository;
-    private final PagoInicialRepository pagoInicialRepository;
+    private final VendedorService    vendedorService;
+    private final ParceleroService   parceleroService;
+    private final ProgramaService    programaService;
+    private final LoteService        loteService;
+    private final ClienteService     clienteService;
+    private final DashboardService   dashboardService;
 
     // ── Cliente Feign hacia ms-servicios-basicos ───────────────────────────────
     private final InscripcionClient    inscripcionClient;
@@ -68,7 +60,7 @@ public class DashboardController {
         respuesta.put("graficoLotes", procesarResultadosParaGrafico(resultadosLotes));
 
         // 3. Gráfico de Contratos (CONTADO vs FINANCIADO)
-        List<Object[]> resultadosContratos = contratoRepository.contarContratosPorProgramaYTipo();
+        List<Object[]> resultadosContratos = dashboardService.contarContratosPorProgramaYTipo();
         respuesta.put("graficoContratos", procesarResultadosParaGrafico(resultadosContratos));
 
         return respuesta;
@@ -95,16 +87,16 @@ public class DashboardController {
         LocalDate diaConsulta = (fecha != null) ? fecha : LocalDate.now();
 
         // ① Pago de letras
-        BigDecimal totalLetras    = pagoLetraRepository.sumImportePagadoByFecha(diaConsulta);
-        long       cantidadLetras = pagoLetraRepository.countByFechaPago(diaConsulta);
+        BigDecimal totalLetras    = dashboardService.sumPagoLetrasByFecha(diaConsulta);
+        long       cantidadLetras = dashboardService.countPagoLetrasByFecha(diaConsulta);
 
         // ② Pago de moras
-        BigDecimal totalMoras    = pagoMoraRepository.sumImportePagadoByFecha(diaConsulta);
-        long       cantidadMoras = pagoMoraRepository.countByFechaPago(diaConsulta);
+        BigDecimal totalMoras    = dashboardService.sumPagoMorasByFecha(diaConsulta);
+        long       cantidadMoras = dashboardService.countPagoMorasByFecha(diaConsulta);
 
         // ③ Pago de iniciales (contratos)
-        BigDecimal totalIniciales    = pagoInicialRepository.sumImportePagadoByFecha(diaConsulta);
-        long       cantidadIniciales = pagoInicialRepository.countByFechaPago(diaConsulta);
+        BigDecimal totalIniciales    = dashboardService.sumPagoInicialesByFecha(diaConsulta);
+        long       cantidadIniciales = dashboardService.countPagoInicialesByFecha(diaConsulta);
 
         // ④ Inscripciones de servicios básicos (microservicio externo)
         BigDecimal totalInscripciones    = BigDecimal.ZERO;

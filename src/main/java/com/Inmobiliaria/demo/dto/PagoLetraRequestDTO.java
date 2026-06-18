@@ -23,4 +23,5 @@ public class PagoLetraRequestDTO {
     private String          numeroComprobantePersonalizado;
     private String          observaciones;
     private Boolean esPagoAcuenta = false;
+    private String          seriePersonalizada;
 }

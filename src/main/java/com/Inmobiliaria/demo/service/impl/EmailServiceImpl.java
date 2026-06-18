@@ -1,9 +1,14 @@
 package com.Inmobiliaria.demo.service.impl;
 
+import com.Inmobiliaria.demo.entity.Comprobante;
+import com.Inmobiliaria.demo.entity.LetraCambio;
 import com.Inmobiliaria.demo.entity.PagoLetras;
 import com.Inmobiliaria.demo.enums.Moneda;
+import com.Inmobiliaria.demo.enums.TipoComprobante;
 import com.Inmobiliaria.demo.service.EmailService;
+import com.Inmobiliaria.demo.util.BoletaElectronicaPdf;
 import com.Inmobiliaria.demo.util.ComprobantePagoLetraPdf;
+import com.Inmobiliaria.demo.util.NumeroALetras;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -25,7 +30,18 @@ public class EmailServiceImpl implements EmailService {
     @Override
     public void enviarComprobante(PagoLetras pago, String destinatario) {
         try {
-            byte[] pdf = ComprobantePagoLetraPdf.generar(pago, "SECRETARIA");
+            String nombreArchivo;
+            byte[] pdf;
+
+            Comprobante comp = pago.getComprobante();
+            if (comp != null && comp.getTipoComprobante() == TipoComprobante.BOLETA
+                    && comp.getHashCdr() != null && !comp.getHashCdr().isBlank()) {
+                pdf = generarBoletaPdf(comp, pago.getLetra());
+                nombreArchivo = "boleta-electronica-" + comp.getNumeroCompleto() + ".pdf";
+            } else {
+                pdf = ComprobantePagoLetraPdf.generar(pago, "SECRETARIA");
+                nombreArchivo = "comprobante-pago-" + pago.getIdPago() + ".pdf";
+            }
 
             MimeMessage mensaje = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mensaje, true, "UTF-8");
@@ -33,11 +49,7 @@ public class EmailServiceImpl implements EmailService {
             helper.setTo(destinatario);
             helper.setSubject("Comprobante de Pago - Inmobiliaria Constructora IVAN E.I.R.L.");
             helper.setText(construirCuerpo(pago), true);
-            helper.addAttachment(
-                "comprobante-pago-" + pago.getIdPago() + ".pdf",
-                new ByteArrayResource(pdf),
-                "application/pdf"
-            );
+            helper.addAttachment(nombreArchivo, new ByteArrayResource(pdf), "application/pdf");
 
             mailSender.send(mensaje);
             log.info("Comprobante enviado a {} para el pago ID {}", destinatario, pago.getIdPago());
@@ -53,21 +65,28 @@ public class EmailServiceImpl implements EmailService {
         if (pagos == null || pagos.isEmpty() || destinatarios == null || destinatarios.isEmpty()) return;
 
         try {
-            byte[] pdf = pagos.size() == 1
-                    ? ComprobantePagoLetraPdf.generar(pagos.get(0), "SECRETARIA")
-                    : ComprobantePagoLetraPdf.generarMultiple(pagos, "SECRETARIA");
-
             PagoLetras primero = pagos.get(0);
+            Comprobante comp = primero.getComprobante();
+            boolean esBoleta = comp != null && comp.getTipoComprobante() == TipoComprobante.BOLETA
+                    && comp.getHashCdr() != null && !comp.getHashCdr().isBlank();
+
+            byte[] pdf;
+            String nombreArchivo;
+
+            if (esBoleta) {
+                pdf = generarBoletaPdf(comp, primero.getLetra());
+                nombreArchivo = "boleta-electronica-" + comp.getNumeroCompleto() + ".pdf";
+            } else {
+                pdf = pagos.size() == 1
+                        ? ComprobantePagoLetraPdf.generar(primero, "SECRETARIA")
+                        : ComprobantePagoLetraPdf.generarMultiple(pagos, "SECRETARIA");
+                String nroComp = comp != null ? comp.getNumeroCompleto() : String.valueOf(primero.getIdPago());
+                nombreArchivo = pagos.size() == 1
+                        ? "comprobante-pago-" + primero.getIdPago() + ".pdf"
+                        : "comprobante-" + nroComp + ".pdf";
+            }
+
             String cuerpo = construirCuerpoMultiple(pagos);
-
-            // ── CORRECCIÓN: leer número desde la relación Comprobante ─────────
-            String numeroComprobante = (primero.getComprobante() != null)
-                    ? primero.getComprobante().getNumeroCompleto()
-                    : String.valueOf(primero.getIdPago());
-
-            String nombreArchivo = pagos.size() == 1
-                    ? "comprobante-pago-" + primero.getIdPago() + ".pdf"
-                    : "comprobante-" + numeroComprobante + ".pdf";
 
             for (String destinatario : destinatarios) {
                 try {
@@ -134,6 +153,54 @@ public class EmailServiceImpl implements EmailService {
             + "Av. Alfredo Mendiola N° 3623, 3er. Piso Of. 301<br>"
             + "Telf.: (01) 413-8679</p>"
             + "</body></html>";
+    }
+
+    private byte[] generarBoletaPdf(Comprobante comp, LetraCambio letra) {
+        var contrato = letra.getContrato();
+
+        String numeroLetra = letra.getNumeroLetra();
+        if (numeroLetra != null && numeroLetra.contains("/")) {
+            numeroLetra = numeroLetra.substring(0, numeroLetra.indexOf("/"));
+        }
+
+        String nombrePrograma = "";
+        if (contrato.getLotes() != null && !contrato.getLotes().isEmpty()) {
+            var lote = contrato.getLotes().iterator().next().getLote();
+            if (lote != null && lote.getPrograma() != null) {
+                nombrePrograma = lote.getPrograma().getNombrePrograma();
+            }
+        }
+        String descripcion = "LETRA " + numeroLetra
+            + " POR LA COMPRA DE UN LOTE DE TERRENO RUSTICO PROGRAMA DE VIV. "
+            + (nombrePrograma != null ? nombrePrograma.toUpperCase() : "");
+
+        String clienteNombre = "";
+        String clienteDoc = "";
+        String direccionCliente = "";
+        if (contrato.getClientes() != null && !contrato.getClientes().isEmpty()) {
+            var c = contrato.getClientes().iterator().next().getCliente();
+            clienteNombre = (c.getNombre() + " " + c.getApellidos()).trim().toUpperCase();
+            clienteDoc = c.getNumDoc() != null ? c.getNumDoc() : "";
+            direccionCliente = c.getDireccion() != null ? c.getDireccion().toUpperCase() : "-";
+        }
+
+        String moneda = contrato.getMoneda() != null ? contrato.getMoneda().name() : "USD";
+        String montoStr = String.format("%.2f", comp.getMonto());
+
+        return BoletaElectronicaPdf.generarBoletaSimple(
+            comp.getSerie(),
+            comp.getNumero().toString(),
+            comp.getFechaEmision().toString(),
+            moneda,
+            montoStr,
+            clienteNombre,
+            clienteDoc,
+            direccionCliente,
+            descripcion,
+            NumeroALetras.convertir(comp.getMonto(), contrato.getMoneda()),
+            comp.getMonto(),
+            comp.getHashCdr()
+        );
     }
 
     private String construirCuerpo(PagoLetras pago) {

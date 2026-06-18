@@ -1,6 +1,7 @@
 package com.Inmobiliaria.demo.service.impl;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -293,7 +294,7 @@ public class LetraCambioServiceImpl implements LetraCambioService {
                 try {
                     String importeStr = grupo.getImporte()
                             .replace("$", "").replace("S/", "").replace(",", "").trim();
-                    BigDecimal imp = new BigDecimal(importeStr).setScale(2, BigDecimal.ROUND_HALF_UP);
+                    BigDecimal imp = new BigDecimal(importeStr).setScale(2, RoundingMode.HALF_UP);
                     if (imp.compareTo(BigDecimal.ZERO) <= 0)
                         throw new IllegalArgumentException("El importe del grupo " + (g + 1) + " debe ser mayor a cero.");
                     importesGrupo.add(imp);
@@ -303,7 +304,7 @@ public class LetraCambioServiceImpl implements LetraCambioService {
             }
 
             // Validar que la suma total de los grupos == saldo del contrato
-            BigDecimal saldoRedondeado = saldo.setScale(2, BigDecimal.ROUND_HALF_UP);
+            BigDecimal saldoRedondeado = saldo.setScale(2, RoundingMode.HALF_UP);
             BigDecimal sumaGrupos = BigDecimal.ZERO;
             for (int g = 0; g < grupos.size(); g++) {
                 sumaGrupos = sumaGrupos.add(
@@ -347,10 +348,10 @@ public class LetraCambioServiceImpl implements LetraCambioService {
             BigDecimal importePorLetra;
             BigDecimal importeUltimaLetra;
 
-            BigDecimal saldoEntero = saldo.setScale(0, BigDecimal.ROUND_HALF_UP);
-            importePorLetra = saldoEntero.divide(new BigDecimal(cantidad), 0, BigDecimal.ROUND_DOWN);
+            BigDecimal saldoEntero = saldo.setScale(0, RoundingMode.HALF_UP);
+            importePorLetra = saldoEntero.divide(new BigDecimal(cantidad), 0, RoundingMode.DOWN);
             BigDecimal sumaParcial = importePorLetra.multiply(new BigDecimal(cantidad - 1));
-            importeUltimaLetra = saldoEntero.subtract(sumaParcial).setScale(0, BigDecimal.ROUND_HALF_UP);
+            importeUltimaLetra = saldoEntero.subtract(sumaParcial).setScale(0, RoundingMode.HALF_UP);
 
             for (int i = 1; i <= cantidad; i++) {
                 LocalDate fechaCalculada = fechaVencimientoInicial.plusMonths(i - 1);
@@ -378,11 +379,11 @@ public class LetraCambioServiceImpl implements LetraCambioService {
             try {
                 String importeStr = generarLetrasRequest.getImporte()
                         .replace("$", "").replace("S/", "").replace(",", "").trim();
-                importePorLetra = new BigDecimal(importeStr).setScale(2, BigDecimal.ROUND_HALF_UP);
+                importePorLetra = new BigDecimal(importeStr).setScale(2, RoundingMode.HALF_UP);
             } catch (NumberFormatException e) {
                 throw new IllegalArgumentException("Importe invalido: " + generarLetrasRequest.getImporte());
             }
-            BigDecimal saldoRedondeado = saldo.setScale(2, BigDecimal.ROUND_HALF_UP);
+            BigDecimal saldoRedondeado = saldo.setScale(2, RoundingMode.HALF_UP);
             BigDecimal sumaParcialManual = importePorLetra.multiply(new BigDecimal(cantidad - 1));
             BigDecimal ultimaLetraManual = saldoRedondeado.subtract(sumaParcialManual);
             if (ultimaLetraManual.compareTo(BigDecimal.ZERO) <= 0) {

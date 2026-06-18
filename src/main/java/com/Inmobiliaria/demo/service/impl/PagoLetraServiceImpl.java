@@ -9,6 +9,7 @@ import com.Inmobiliaria.demo.dto.SugerenciaNumeroComprobanteDTO;
 import com.Inmobiliaria.demo.entity.*;
 import com.Inmobiliaria.demo.enums.*;
 import com.Inmobiliaria.demo.exception.NegocioException;
+import com.Inmobiliaria.demo.repository.ComprobanteRepository;
 import com.Inmobiliaria.demo.repository.*;
 import com.Inmobiliaria.demo.service.ComprobanteService;
 import com.Inmobiliaria.demo.service.PagoLetraService;
@@ -49,6 +50,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
     private final PagoMoraRepository    pagoMoraRepository;
 
     private final ComprobanteService    comprobanteService;
+    private final ComprobanteRepository comprobanteRepository;
     private final SunatEnvioService     sunatEnvioService;
 
     // ─── LETRAS PAGADAS NECESARIAS PARA OBTENER UNA GRATIS ────────────────────
@@ -122,9 +124,8 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         if (fechaOperacion == null) {
             // Esto no debería ocurrir: el DTO tiene @JsonFormat y el frontend
             // siempre envía la fecha. Registramos el problema y usamos hoy como fallback.
-            System.err.println("[WARN] resolverFechaReferenciaMora: fechaOperacion es null para " +
-                "letra " + numLetraActual + " del contrato " + idContrato +
-                ". Usando LocalDate.now() como fallback.");
+            log.warn("resolverFechaReferenciaMora: fechaOperacion es null para letra {} del contrato {}. Usando LocalDate.now() como fallback.",
+                numLetraActual, idContrato);
             return LocalDate.now();
         }
         return fechaOperacion;
@@ -275,6 +276,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             dto.setIdComprobante(pago.getComprobante().getIdComprobante());
             dto.setTipoComprobante(pago.getComprobante().getTipoComprobante());
             dto.setNumeroComprobante(pago.getComprobante().getNumeroCompleto());
+            dto.setSunatHash(pago.getComprobante().getHashCdr());
         }
  
         List<String> urls = voucherRepository
@@ -356,6 +358,66 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         recalcularEstadoContrato(letra.getContrato());
  
         return mapToDTO(pago);
+    }
+
+    @Override
+    @Transactional
+    public void anularPagoConMoras(Integer idPago, String motivo, String anuladoPor) {
+        PagoLetras pago = pagoLetraRepository.findById(idPago)
+            .orElseThrow(() -> new NegocioException("Pago no encontrado con id: " + idPago));
+
+        if (Boolean.TRUE.equals(pago.getAnulado()))
+            throw new NegocioException("Este pago ya fue anulado.");
+
+        // 1. Anular el pago
+        pago.setAnulado(true);
+        pago.setMotivoAnulacion(motivo);
+        pago.setFechaAnulacion(LocalDateTime.now());
+        pago.setAnuladoPor(anuladoPor);
+        pagoLetraRepository.save(pago);
+
+        // 2. Restaurar la letra (saldo + estado)
+        LetraCambio letra = pago.getLetra();
+        BigDecimal totalPagado = pagoLetraRepository.sumImportePagadoActivoByLetra(letra.getIdLetra());
+        if (totalPagado == null) totalPagado = BigDecimal.ZERO;
+        BigDecimal nuevoSaldo = letra.getImporte().subtract(totalPagado);
+
+        long count = pagoLetraRepository.countActivosByLetraIdLetra(letra.getIdLetra());
+        if (count == 0) {
+            letra.setSaldoPendiente(letra.getImporte());
+            letra.setEstadoLetra(letra.getFechaVencimiento().isBefore(LocalDate.now())
+                ? EstadoLetra.VENCIDO : EstadoLetra.PENDIENTE);
+        } else {
+            letra.setSaldoPendiente(nuevoSaldo);
+            letra.setEstadoLetra(nuevoSaldo.compareTo(BigDecimal.ZERO) == 0
+                ? EstadoLetra.PAGADO : EstadoLetra.PARCIAL);
+        }
+        letraCambioRepository.save(letra);
+
+        // 3. Anular moras generadas por este pago
+        List<MoraLetra> moras = moraRepository.findByPagoLetraIdPago(idPago);
+        for (MoraLetra mora : moras) {
+            if (mora.getEstadoMora() == EstadoMora.ANULADO) continue;
+
+            // Anular PagoMora asociados a esta mora
+            for (PagoMora pm : mora.getPagos()) {
+                if (Boolean.TRUE.equals(pm.getAnulado())) continue;
+                pm.setAnulado(true);
+                pm.setMotivoAnulacion(motivo);
+                pm.setFechaAnulacion(LocalDateTime.now());
+                pm.setAnuladoPor(anuladoPor);
+                pagoMoraRepository.save(pm);
+            }
+
+            mora.setEstadoMora(EstadoMora.ANULADO);
+            mora.setMotivoAnulacion(motivo);
+            mora.setFechaAnulacion(LocalDateTime.now());
+            mora.setAnuladoPor(anuladoPor);
+            moraRepository.save(mora);
+        }
+
+        // 4. Recalcular estado del contrato
+        recalcularEstadoContrato(letra.getContrato());
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -467,28 +529,68 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         pago.setDescuentoAplicado(BigDecimal.ZERO);
         pago.setEsLetraGratis(false);
 
+        // ── Comprobante (enviar a APIPERU antes de guardar si es BOLETA) ───────
+        Comprobante comprobante = null;
         Map<String, Object> sunatRespuesta = null;
-        PagoLetras pagoGuardado = pagoLetraRepository.save(pago);
 
-        // ── Comprobante ──────────────────────────────────────────────────────
         if (request.getTipoComprobante() != null) {
-            Comprobante comprobante = comprobanteService.generarComprobanteConNumero(
+            comprobante = comprobanteService.generarComprobanteConNumeroY(
                 request.getTipoComprobante(),
                 TipoOrigenComprobante.PAGO_LETRA,
-                pagoGuardado.getIdPago(),
+                null, // id temporal, se asigna después de guardar pago
                 request.getImportePagado(),
                 fechaOperacion,
-                request.getNumeroComprobantePersonalizado()
+                request.getNumeroComprobantePersonalizado(),
+                request.getSeriePersonalizada()
             );
+
+            // Si es BOLETA con serie B (B001), enviar a APIPERU ANTES de guardar en BD
+            // Serie E (EB01) se registra localmente como RECIBO
+            if (request.getTipoComprobante() == TipoComprobante.BOLETA
+                && comprobante.getSerie() != null
+                && comprobante.getSerie().startsWith("B")) {
+                Cliente cliente = letra.getContrato().getClientes().iterator().next().getCliente();
+                
+                String numeroLetra = letra.getNumeroLetra();
+                if (numeroLetra != null && numeroLetra.contains("/")) {
+                    numeroLetra = numeroLetra.substring(0, numeroLetra.indexOf("/"));
+                }
+                
+                String nombrePrograma = "";
+                if (letra.getContrato().getLotes() != null && !letra.getContrato().getLotes().isEmpty()) {
+                    ContratoLote primerLote = letra.getContrato().getLotes().iterator().next();
+                    if (primerLote.getLote() != null && primerLote.getLote().getPrograma() != null) {
+                        nombrePrograma = primerLote.getLote().getPrograma().getNombrePrograma();
+                    }
+                }
+                
+                String descripcion = "LETRA " + numeroLetra + " POR LA COMPRA DE UN LOTE DE TERRENO RUSTICO PROGRAMA DE VIV. " + nombrePrograma.toUpperCase();
+                sunatRespuesta = sunatEnvioService.enviarBoleta(
+                        cliente, letra.getContrato(), comprobante,
+                        request.getImportePagado(), descripcion);
+                
+                // Si SUNAT aceptó, guardar hash y CDR en el comprobante
+                if (sunatRespuesta != null && "ACEPTADA".equals(sunatRespuesta.get("estadoSunat"))) {
+                    String hash = (String) sunatRespuesta.get("hash");
+                    String cdrZip = (String) sunatRespuesta.get("cdrZip");
+                    if (hash != null && !hash.isBlank()) {
+                        comprobante.setHashCdr(hash);
+                    }
+                    if (cdrZip != null && !cdrZip.isBlank()) {
+                        comprobante.setCdrBase64(cdrZip);
+                    }
+                }
+                // Si APIPERU rechaza, lanza excepción y @Transactional hace rollback
+            }
+        }
+
+        PagoLetras pagoGuardado = pagoLetraRepository.save(pago);
+
+        if (comprobante != null) {
+            comprobante.setReferenciaId(pagoGuardado.getIdPago());
+            comprobante = comprobanteRepository.save(comprobante);
             pagoGuardado.setComprobante(comprobante);
             pagoGuardado = pagoLetraRepository.save(pagoGuardado);
-
-            /* Enviar a SUNAT sincronamente — si rechaza, @Transactional revierte todo
-            Cliente cliente = letra.getContrato().getClientes().iterator().next().getCliente();
-            String descripcion = "Pago de letra " + letra.getNumeroLetra();
-            sunatRespuesta = sunatEnvioService.enviarBoleta(
-                    cliente, letra.getContrato(), comprobante,
-                    request.getImportePagado(), descripcion);*/
         }
 
         guardarVouchers(vouchers, pagoGuardado, idContrato, letra.getIdLetra());
@@ -585,13 +687,14 @@ public class PagoLetraServiceImpl implements PagoLetraService {
 
         Comprobante comprobanteCompartido = null;
         if (primerPago.getTipoComprobante() != null) {
-            comprobanteCompartido = comprobanteService.generarComprobanteConNumero(
+            comprobanteCompartido = comprobanteService.generarComprobanteConNumeroY(
                 primerPago.getTipoComprobante(),
                 TipoOrigenComprobante.PAGO_LETRA,
                 null,
                 montoTotalNeto,
                 fechaOperacionLote,
-                primerPago.getNumeroComprobantePersonalizado()
+                primerPago.getNumeroComprobantePersonalizado(),
+                primerPago.getSeriePersonalizada()
             );
         }
 
@@ -669,12 +772,21 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         }
 
         Map<String, Object> sunatRespuestaMulti = null;
-        if (comprobanteCompartido != null) {
-            /*Cliente cliente = letraEjemplo.getContrato().getClientes().iterator().next().getCliente();
-            String descripcion = "Pago multiple de letras";
+        if (comprobanteCompartido != null
+            && comprobanteCompartido.getTipoComprobante() == TipoComprobante.BOLETA
+            && comprobanteCompartido.getSerie() != null
+            && comprobanteCompartido.getSerie().startsWith("B")) {
+            Cliente cliente = letraEjemplo.getContrato().getClientes().iterator().next().getCliente();
+            String descripcion = "PAGO MULTIPLE DE LETRAS - CONTRATO " + idContrato;
             sunatRespuestaMulti = sunatEnvioService.enviarBoleta(
                     cliente, letraEjemplo.getContrato(),
-                    comprobanteCompartido, montoTotalNeto, descripcion);*/
+                    comprobanteCompartido, montoTotalNeto, descripcion);
+            if (sunatRespuestaMulti != null && "ACEPTADA".equals(sunatRespuestaMulti.get("estadoSunat"))) {
+                String hash = (String) sunatRespuestaMulti.get("hash");
+                String cdrZip = (String) sunatRespuestaMulti.get("cdrZip");
+                if (hash != null && !hash.isBlank()) comprobanteCompartido.setHashCdr(hash);
+                if (cdrZip != null && !cdrZip.isBlank()) comprobanteCompartido.setCdrBase64(cdrZip);
+            }
         }
 
         PagoLetraResponseDTO responseLetraGratis = null;
@@ -813,7 +925,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
                     String publicId = extractPublicIdFromUrl(v.getUrl());
                     if (publicId != null) cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
                 } catch (Exception e) {
-                    System.err.println("Error al eliminar imagen antigua: " + e.getMessage());
+                    log.error("Error al eliminar imagen antigua", e);
                 }
                 voucherRepository.delete(v);
             }
@@ -851,7 +963,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
                 String publicId = extractPublicIdFromUrl(v.getUrl());
                 if (publicId != null) cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
             } catch (Exception e) {
-                System.err.println("Error al eliminar imagen de Cloudinary: " + e.getMessage());
+                log.error("Error al eliminar imagen de Cloudinary", e);
             }
             voucherRepository.delete(v);
         }
@@ -955,7 +1067,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             }
             return null;
         } catch (Exception e) {
-            System.err.println("Error al extraer publicId: " + e.getMessage());
+            log.error("Error al extraer publicId", e);
             return null;
         }
     }

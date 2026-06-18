@@ -5,7 +5,6 @@ import com.Inmobiliaria.demo.entity.LetraCambio;
 import com.Inmobiliaria.demo.enums.EstadoContrato;
 import com.Inmobiliaria.demo.enums.EstadoLetra;
 import com.Inmobiliaria.demo.repository.ContratoRepository;
-import com.Inmobiliaria.demo.repository.PagoLetraRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -24,8 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class ContratoEstadoScheduler {
 
     private final ContratoRepository  contratoRepository;
-    private final PagoLetraRepository pagoLetraRepository;
-
+   
     // Semáforo en memoria: garantiza que solo una ejecución corra a la vez.
     private final AtomicBoolean ejecutando = new AtomicBoolean(false);
 

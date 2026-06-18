@@ -33,19 +33,8 @@ public class ReporteMoraServiceImpl implements ReporteMoraService {
     @Transactional(readOnly = true)
     public List<ReporteClientesMoraDTO> obtenerClientesEnMora() {
 
-        // 1. Traer contratos con clientes y lotes (dos queries para evitar
-        //    MultipleBagFetchException, mismo patrón de ContratoServiceImpl)
-        List<Contrato> conClientes = contratoRepository.findAllConClientes();
-        List<Contrato> conLotes    = contratoRepository.findAllConLotes();
-
-        // Mapa idContrato → lotes
-        Map<Integer, Set<ContratoLote>> lotesPorContrato = conLotes.stream()
-                .filter(c -> c.getLotes() != null)
-                .collect(Collectors.toMap(
-                        Contrato::getIdContrato,
-                        Contrato::getLotes,
-                        (a, b) -> a
-                ));
+        // 1. Traer contratos con clientes y lotes en una sola query
+        List<Contrato> conClientesYLotes = contratoRepository.findAllConClientesYLotes();
 
         // 2. Traer letras (misma query que usa el scheduler)
         List<Contrato> contratosConLetras = contratoRepository.findFinanciadosActivosConLetras();
@@ -57,7 +46,7 @@ public class ReporteMoraServiceImpl implements ReporteMoraService {
                 ));
 
         // 3. Filtrar solo contratos EN MORA
-        List<Contrato> contratosEnMora = conClientes.stream()
+        List<Contrato> contratosEnMora = conClientesYLotes.stream()
                 .filter(c -> EstadoContrato.MORA == c.getEstadoContrato())
                 .collect(Collectors.toList());
 
@@ -102,8 +91,9 @@ public class ReporteMoraServiceImpl implements ReporteMoraService {
                             .orElse("");
 
             // ── Lotes: TODOS ordenados por manzana luego numeroLote ───────────
-            List<ContratoLote> lotesContrato = new java.util.ArrayList<>(
-                    lotesPorContrato.getOrDefault(contrato.getIdContrato(), Collections.emptySet()));
+            List<ContratoLote> lotesContrato = contrato.getLotes() != null
+                    ? new java.util.ArrayList<>(contrato.getLotes())
+                    : new java.util.ArrayList<>();
 
             // Ordenar los lotes del contrato: por manzana (alfa) luego por número de lote
             List<ContratoLote> lotesOrdenados = lotesContrato.stream()

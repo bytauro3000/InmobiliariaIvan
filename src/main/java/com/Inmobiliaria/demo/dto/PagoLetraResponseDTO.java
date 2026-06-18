@@ -34,6 +34,7 @@ public class PagoLetraResponseDTO {
     // ── SUNAT ─────────────────────────────────────────────────────────────────
     private Boolean         sunatAceptado;
     private String          sunatMensaje;
+    private String          sunatHash;
 
     // ── Anulación ─────────────────────────────────────────────────────────────
     private Boolean         anulado;

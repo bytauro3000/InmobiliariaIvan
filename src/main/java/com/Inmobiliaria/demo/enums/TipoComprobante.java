@@ -1,7 +1,8 @@
 package com.Inmobiliaria.demo.enums;
 
 public enum TipoComprobante {
-	RECIBO,
+    RECIBO,
     BOLETA,
-    FACTURA
+    FACTURA,
+    NOTA_CREDITO
 }

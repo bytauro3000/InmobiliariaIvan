@@ -64,7 +64,8 @@ public class SecurityConfig {
                     "/api/moras/**",
                     "/api/reporte-mora/**",
                     "/api/reporte-ingresos/**",
-                    "/api/comprobantes/**"
+                    "/api/comprobantes/**",
+                    "/api/nota-credito/**"
                 ).hasAnyAuthority("ROLE_SECRETARIA", "ROLE_ADMINISTRADOR")
                 // ── Gestión de usuarios: solo ADMINISTRADOR ───────────────────────────
                 .requestMatchers("/api/usuarios/**")

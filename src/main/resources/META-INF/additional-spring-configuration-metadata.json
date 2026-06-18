@@ -53,5 +53,25 @@
     "name": "sunat.soap.url",
     "type": "java.lang.String",
     "description": "A description for 'sunat.soap.url'"
+  },
+  {
+    "name": "apisperu.base-url",
+    "type": "java.lang.String",
+    "description": "A description for 'apisperu.base-url'"
+  },
+  {
+    "name": "apisperu.company-token",
+    "type": "java.lang.String",
+    "description": "A description for 'apisperu.company-token'"
+  },
+  {
+    "name": "apisperu.ruc",
+    "type": "java.lang.String",
+    "description": "A description for 'apisperu.ruc'"
+  },
+  {
+    "name": "apisperu.environment",
+    "type": "java.lang.String",
+    "description": "A description for 'apisperu.environment'"
   }
 ]}

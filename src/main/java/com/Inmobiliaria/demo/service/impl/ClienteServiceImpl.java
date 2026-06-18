@@ -28,8 +28,9 @@ public class ClienteServiceImpl implements ClienteService {
 
     @Override
     @CacheEvict(value = "contratos", allEntries = true)
-    public Cliente editarCliente(Cliente cliente) {      
-        return clienteRepository.save(cliente);
+    public Cliente editarCliente(Cliente cliente) {
+        clienteRepository.save(cliente);
+        return clienteRepository.findByIdWithDistrito(cliente.getIdCliente());
     }
 
     @Override
@@ -44,7 +45,7 @@ public class ClienteServiceImpl implements ClienteService {
     
     @Override
     public Cliente buscarClientePorId(Integer idCliente) {
-        return clienteRepository.findById(idCliente).orElse(null);
+        return clienteRepository.findByIdWithDistrito(idCliente);
     }
     
     @Override

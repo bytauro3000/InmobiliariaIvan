@@ -19,24 +19,32 @@ public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
                "GROUP BY cl.lote.programa.nombrePrograma, c.tipoContrato")
     List<Object[]> contarContratosPorProgramaYTipo();
 
-    // ✅ QUERY 1 — Trae contratos con CLIENTES y vendedor
-    // Hibernate no permite JOIN FETCH de dos List (clientes + lotes) en una sola query
-    // → MultipleBagFetchException. Solución: dos queries separadas combinadas en memoria.
+    // ✅ QUERY ÚNICA — Trae contratos con CLIENTES, LOTES y vendedor
     @Query("SELECT DISTINCT c FROM Contrato c " +
            "LEFT JOIN FETCH c.clientes cc " +
            "LEFT JOIN FETCH cc.cliente " +
-           "LEFT JOIN FETCH c.vendedor " +
-           "ORDER BY c.idContrato DESC")
-    List<Contrato> findAllConClientes();
-
-    // ✅ QUERY 2 — Trae contratos con LOTES
-    // Se ejecuta después de findAllConClientes() y se combina en el service por ID
-    @Query("SELECT DISTINCT c FROM Contrato c " +
+           "LEFT JOIN FETCH cc.cliente.distrito " +
            "LEFT JOIN FETCH c.lotes cl " +
            "LEFT JOIN FETCH cl.lote l " +
            "LEFT JOIN FETCH l.programa " +
+           "LEFT JOIN FETCH c.vendedor " +
+           "LEFT JOIN FETCH c.comprobanteInicial " +
+           "LEFT JOIN FETCH c.pagoInicial " +
            "ORDER BY c.idContrato DESC")
-    List<Contrato> findAllConLotes();
+    List<Contrato> findAllConClientesYLotes();
+
+    @Query("SELECT DISTINCT c FROM Contrato c " +
+           "LEFT JOIN FETCH c.clientes cc " +
+           "LEFT JOIN FETCH cc.cliente " +
+           "LEFT JOIN FETCH cc.cliente.distrito " +
+           "LEFT JOIN FETCH c.lotes cl " +
+           "LEFT JOIN FETCH cl.lote l " +
+           "LEFT JOIN FETCH l.programa " +
+           "LEFT JOIN FETCH c.vendedor " +
+           "LEFT JOIN FETCH c.comprobanteInicial " +
+           "LEFT JOIN FETCH c.pagoInicial " +
+           "WHERE c.idContrato = :id")
+    Contrato findByIdConTodo(@Param("id") Integer id);
 
     // Se mantiene por compatibilidad con otros usos internos
     List<Contrato> findAllByOrderByIdContratoDesc();
@@ -106,10 +114,19 @@ public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
 
     // Consulta de nombre + apellidos
     @Query("SELECT DISTINCT c FROM Contrato c " +
-               "JOIN c.clientes cc " +
-               "JOIN cc.cliente cl " +
-               "WHERE LOWER(CONCAT(cl.nombre, ' ', cl.apellidos)) LIKE LOWER(CONCAT('%', :termino, '%')) " +
-               "ORDER BY c.idContrato DESC")
+           "LEFT JOIN FETCH c.clientes cc " +
+           "LEFT JOIN FETCH cc.cliente " +
+           "LEFT JOIN FETCH cc.cliente.distrito " +
+           "LEFT JOIN FETCH c.lotes cl " +
+           "LEFT JOIN FETCH cl.lote l " +
+           "LEFT JOIN FETCH l.programa " +
+           "LEFT JOIN FETCH c.vendedor " +
+           "LEFT JOIN FETCH c.comprobanteInicial " +
+           "LEFT JOIN FETCH c.pagoInicial " +
+           "JOIN c.clientes cc2 " +
+           "JOIN cc2.cliente cl2 " +
+           "WHERE LOWER(CONCAT(cl2.nombre, ' ', cl2.apellidos)) LIKE LOWER(CONCAT('%', :termino, '%')) " +
+           "ORDER BY c.idContrato DESC")
     List<Contrato> findByClienteNombreContaining(@Param("termino") String termino);
 
     // ── CORRECCIÓN: Pantalla de inscripciones ────────────────────────────────

@@ -1,7 +1,9 @@
 package com.Inmobiliaria.demo.dto;
 
-import com.Inmobiliaria.demo.entity.Distrito;
+import java.util.Date;
+
 import com.Inmobiliaria.demo.enums.EstadoCivil;
+import com.Inmobiliaria.demo.enums.EstadoCliente;
 import com.Inmobiliaria.demo.enums.Genero;
 import com.Inmobiliaria.demo.enums.TipoCliente;
 
@@ -20,8 +22,12 @@ public class ClienteResponseDTO {
     private String numDoc;
     private String direccion;
     private String celular;
-    private Distrito distrito;
+    private String telefono;
+    private String email;
+    private DistritoDTO distrito;
     private Genero genero;
     private TipoCliente tipoCliente;
     private String nacionalidad;
+    private EstadoCliente estado;
+    private Date fechaRegistro;
 }

@@ -54,14 +54,16 @@ public interface PagoInicialRepository extends JpaRepository<PagoInicial, Intege
     @Query(value =
         "SELECT COALESCE(SUM(importe_pagado), 0) " +
         "FROM pago_inicial " +
-        "WHERE fecha_pago = :fecha",
+        "WHERE fecha_pago = :fecha " +
+        "AND (anulado = false OR anulado IS NULL)",
         nativeQuery = true)
     BigDecimal sumImportePagadoByFecha(@Param("fecha") LocalDate fecha);
 
     @Query(value =
         "SELECT COUNT(*) " +
         "FROM pago_inicial " +
-        "WHERE fecha_pago = :fecha",
+        "WHERE fecha_pago = :fecha " +
+        "AND (anulado = false OR anulado IS NULL)",
         nativeQuery = true)
     long countByFechaPago(@Param("fecha") LocalDate fecha);
 
@@ -81,7 +83,8 @@ public interface PagoInicialRepository extends JpaRepository<PagoInicial, Intege
     @Query(value =
         "SELECT COALESCE(SUM(importe_pagado), 0) " +
         "FROM pago_inicial " +
-        "WHERE fecha_pago BETWEEN :desde AND :hasta",
+        "WHERE fecha_pago BETWEEN :desde AND :hasta " +
+        "AND (anulado = false OR anulado IS NULL)",
         nativeQuery = true)
     BigDecimal sumImportePagadoByRango(
             @Param("desde") LocalDate desde,
@@ -90,7 +93,8 @@ public interface PagoInicialRepository extends JpaRepository<PagoInicial, Intege
     @Query(value =
         "SELECT COUNT(*) " +
         "FROM pago_inicial " +
-        "WHERE fecha_pago BETWEEN :desde AND :hasta",
+        "WHERE fecha_pago BETWEEN :desde AND :hasta " +
+        "AND (anulado = false OR anulado IS NULL)",
         nativeQuery = true)
     long countByFechaPagoBetween(
             @Param("desde") LocalDate desde,

@@ -80,7 +80,7 @@ public class Cliente {
     @Column(name = "estado", nullable = false)
     private EstadoCliente estado = EstadoCliente.ACTIVO;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_distrito")
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Distrito distrito;

@@ -1,8 +1,6 @@
 package com.Inmobiliaria.demo.service.impl;
 
-import com.Inmobiliaria.demo.dto.sunat.BoletaRequest;
-import com.Inmobiliaria.demo.dto.sunat.ClienteDto;
-import com.Inmobiliaria.demo.dto.sunat.DetalleDto;
+import com.Inmobiliaria.demo.dto.apisperu.*;
 import com.Inmobiliaria.demo.entity.Cliente;
 import com.Inmobiliaria.demo.entity.Comprobante;
 import com.Inmobiliaria.demo.entity.Contrato;
@@ -11,27 +9,23 @@ import com.Inmobiliaria.demo.enums.TipoCliente;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
 import com.Inmobiliaria.demo.service.SunatIntegrationService;
 import com.Inmobiliaria.demo.util.NumeroALetras;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import jakarta.annotation.PostConstruct;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Service
@@ -40,115 +34,389 @@ public class SunatIntegrationServiceImpl implements SunatIntegrationService {
     private static final Logger log = LoggerFactory.getLogger(SunatIntegrationServiceImpl.class);
     private static final String LEYENDA_DEFAULT = "OPERACION INAFECTA - VENTA DE TERRENO";
 
-    private final RestTemplate restTemplate;
-    private final String sunatSoapUrl;
-    private final String gatewaySecretKey;
+    private final RestTemplate restTemplate = new RestTemplate();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public SunatIntegrationServiceImpl(
-            @Value("${sunat.soap.url}") String sunatSoapUrl,
-            @Value("${gateway.secret-key}") String gatewaySecretKey) {
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(10000);
-        factory.setReadTimeout(30000);
-        this.restTemplate = new RestTemplate(factory);
-        this.sunatSoapUrl = sunatSoapUrl;
-        this.gatewaySecretKey = gatewaySecretKey;
+    @Value("${apisperu.base-url:https://facturacion.apisperu.com/api/v1}")
+    private String apisperuBaseUrl;
+
+    @Value("${apisperu.company-token}")
+    private String companyToken;
+
+    @Value("${apisperu.ruc:20537853108}")
+    private String rucEmisor;
+
+    @Value("${apisperu.environment:produccion}")
+    private String environment;
+
+    @PostConstruct
+    public void init() {
+        log.info("APIPERU configurado en ambiente: {}", environment);
     }
 
     @Override
     public Map<String, Object> enviarBoleta(Cliente cliente, Contrato contrato,
                                              Comprobante comprobante, BigDecimal monto,
                                              String descripcionDetalle) {
-        BoletaRequest request = buildRequest(cliente, contrato, comprobante, monto, descripcionDetalle);
+        // Solo enviar si es BOLETA
+        if (comprobante.getTipoComprobante() != TipoComprobante.BOLETA) {
+            Map<String, Object> skip = new HashMap<>();
+            skip.put("estadoSunat", "NO_ENVIADO");
+            skip.put("mensaje", "Solo se envían boletas (tipoDoc=03)");
+            return skip;
+        }
+
+        ApisperuInvoiceRequest request = buildApisperuRequest(cliente, contrato, comprobante, monto, descripcionDetalle);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("X-Gateway-Secret", gatewaySecretKey);
-        HttpEntity<BoletaRequest> entity = new HttpEntity<>(request, headers);
+        headers.setBearerAuth(companyToken);
+        HttpEntity<ApisperuInvoiceRequest> entity = new HttpEntity<>(request, headers);
 
-        String url = sunatSoapUrl + "/api/sunat/enviar";
-        log.info("Enviando boleta a SUNAT: {} {} - {}", comprobante.getSerie(), comprobante.getNumeroCompleto(), url);
+        // LOG: JSON request completo para debug
+        try {
+            String requestJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
+            log.info("=== REQUEST JSON A APIPERU ===\n{}", requestJson);
+        } catch (Exception e) {
+            log.warn("No se pudo serializar request para log: {}", e.getMessage());
+        }
+
+        String url = apisperuBaseUrl + "/invoice/send";
+        log.info("Enviando boleta a APIPERU: {} {} - {}", comprobante.getSerie(), comprobante.getNumeroCompleto(), url);
 
         try {
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
-            log.info("Respuesta SUNAT: {}", response.getStatusCode());
-            return response.getBody();
+            ResponseEntity<ApisperuResponse> response = restTemplate.postForEntity(url, entity, ApisperuResponse.class);
+            
+            Map<String, Object> result = new HashMap<>();
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                ApisperuResponse body = response.getBody();
+                ApisperuSunatResponse sunat = body.getSunatResponse();
+                
+                log.info("=== RESPUESTA COMPLETA APIPERU ===");
+                log.info("success: {}", sunat != null ? sunat.getSuccess() : "null");
+                log.info("description: {}", sunat != null ? sunat.getDescription() : "null");
+                log.info("error: {}", sunat != null ? sunat.getError() : "null");
+                log.info("cdrResponse: {}", sunat != null ? sunat.getCdrResponse() : "null");
+                log.info("note: {}", sunat != null ? sunat.getNote() : "null");
+                
+                boolean isSuccess = sunat != null && Boolean.TRUE.equals(sunat.getSuccess());
+                result.put("estadoSunat", isSuccess ? "ACEPTADA" : "ERROR");
+                
+                String mensaje = "Sin mensaje";
+                if (sunat != null) {
+                    if (sunat.getDescription() != null && !sunat.getDescription().isEmpty()) {
+                        mensaje = sunat.getDescription();
+                    } else if (sunat.getError() != null) {
+                        mensaje = sunat.getError().toString();
+                    } else if (sunat.getCdrResponse() != null) {
+                        Object cdr = sunat.getCdrResponse();
+                        if (cdr instanceof Map) {
+                            Object desc = ((Map<?, ?>) cdr).get("description");
+                            if (desc != null) mensaje = desc.toString();
+                        }
+                    } else if (sunat.getNote() != null) {
+                        mensaje = sunat.getNote();
+                    }
+                }
+                result.put("mensaje", mensaje);
+                result.put("xml", body.getXml());
+                result.put("hash", body.getHash());
+                result.put("cdrZip", sunat != null ? sunat.getCdrZip() : null);
+                result.put("sunatResponse", sunat);
+                log.info("APIPERU resultado: success={}, mensaje={}", isSuccess, mensaje);
+            } else {
+                result.put("estadoSunat", "ERROR");
+                result.put("mensaje", "Error HTTP: " + response.getStatusCode());
+            }
+            return result;
         } catch (HttpClientErrorException | HttpServerErrorException e) {
-            log.error("Error HTTP {} del servicio SUNAT: {}", e.getStatusCode(), e.getResponseBodyAsString());
-            Map<String, Object> error = new HashMap<>();
-            error.put("codigo", "-1");
-            error.put("mensaje", "Error del servicio SUNAT (" + e.getStatusCode() + "): " + e.getResponseBodyAsString());
+            String responseBody = e.getResponseBodyAsString();
+            log.error("=== ERROR RESPONSE APIPERU ===");
+            log.error("Status: {}", e.getStatusCode());
+            log.error("Body: {}", responseBody);
+            Map<String, Object> error = parseErrorResponse(responseBody);
             error.put("estadoSunat", "ERROR");
-            try {
-                String body = e.getResponseBodyAsString();
-                ObjectMapper mapper = new ObjectMapper();
-                Map<String, Object> parsed = mapper.readValue(body, Map.class);
-                error.putAll(parsed);
-            } catch (Exception ignored) {}
             return error;
         } catch (Exception e) {
-            log.error("Error al enviar boleta a SUNAT: {}", e.getMessage(), e);
+            log.error("Error al enviar boleta a APIPERU: {}", e.getMessage(), e);
             Map<String, Object> error = new HashMap<>();
-            error.put("codigo", "-1");
-            error.put("mensaje", e.getMessage());
             error.put("estadoSunat", "ERROR");
+            error.put("mensaje", e.getMessage());
             return error;
         }
     }
 
-    private BoletaRequest buildRequest(Cliente cliente, Contrato contrato,
-                                        Comprobante comprobante, BigDecimal monto,
-                                        String descripcionDetalle) {
+    private Map<String, Object> parseErrorResponse(String body) {
+        Map<String, Object> error = new HashMap<>();
+        error.put("mensaje", "Error de APIPERU");
+        try {
+            Map<String, Object> parsed = objectMapper.readValue(body, new TypeReference<Map<String, Object>>() {});
+            if (parsed.containsKey("message")) {
+                error.put("mensaje", parsed.get("message"));
+            } else if (parsed.containsKey("errors")) {
+                error.put("mensaje", parsed.get("errors").toString());
+            }
+            error.putAll(parsed);
+        } catch (Exception ignored) {
+            error.put("mensaje", body);
+        }
+        return error;
+    }
+
+    @Override
+    public Map<String, Object> enviarNotaCredito(Cliente cliente, Contrato contrato,
+                                                  Comprobante notaCredito,
+                                                  Comprobante comprobanteOriginal,
+                                                  BigDecimal monto,
+                                                  String descripcionDetalle,
+                                                  String codMotivo,
+                                                  String desMotivo) {
+
+        ApisperuCreditNoteRequest request = buildCreditNoteRequest(cliente, contrato,
+                notaCredito, comprobanteOriginal, monto, descripcionDetalle, codMotivo, desMotivo);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(companyToken);
+        HttpEntity<ApisperuCreditNoteRequest> entity = new HttpEntity<>(request, headers);
+
+        try {
+            String requestJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
+            log.info("=== REQUEST NOTA CREDITO A APIPERU ===\n{}", requestJson);
+        } catch (Exception e) {
+            log.warn("No se pudo serializar request NC para log: {}", e.getMessage());
+        }
+
+        String url = apisperuBaseUrl + "/note/send";
+        log.info("Enviando nota de credito a APIPERU: {} {} - {}", notaCredito.getSerie(), notaCredito.getNumeroCompleto(), url);
+
+        try {
+            ResponseEntity<ApisperuResponse> response = restTemplate.postForEntity(url, entity, ApisperuResponse.class);
+
+            Map<String, Object> result = new HashMap<>();
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                ApisperuResponse body = response.getBody();
+                ApisperuSunatResponse sunat = body.getSunatResponse();
+
+                log.info("=== RESPUESTA NOTA CREDITO APIPERU ===");
+                log.info("success: {}", sunat != null ? sunat.getSuccess() : "null");
+                log.info("description: {}", sunat != null ? sunat.getDescription() : "null");
+                log.info("error: {}", sunat != null ? sunat.getError() : "null");
+                log.info("cdrResponse: {}", sunat != null ? sunat.getCdrResponse() : "null");
+
+                boolean isSuccess = sunat != null && Boolean.TRUE.equals(sunat.getSuccess());
+                result.put("estadoSunat", isSuccess ? "ACEPTADA" : "ERROR");
+
+                String mensaje = "Sin mensaje";
+                if (sunat != null) {
+                    if (sunat.getDescription() != null && !sunat.getDescription().isEmpty()) {
+                        mensaje = sunat.getDescription();
+                    } else if (sunat.getError() != null) {
+                        mensaje = sunat.getError().toString();
+                    } else if (sunat.getCdrResponse() != null) {
+                        Object cdr = sunat.getCdrResponse();
+                        if (cdr instanceof Map) {
+                            Object desc = ((Map<?, ?>) cdr).get("description");
+                            if (desc != null) mensaje = desc.toString();
+                        }
+                    } else if (sunat.getNote() != null) {
+                        mensaje = sunat.getNote();
+                    }
+                }
+                result.put("mensaje", mensaje);
+                result.put("xml", body.getXml());
+                result.put("hash", body.getHash());
+                result.put("cdrZip", sunat != null ? sunat.getCdrZip() : null);
+                result.put("sunatResponse", sunat);
+                log.info("APIPERU NC resultado: success={}, mensaje={}", isSuccess, mensaje);
+            } else {
+                result.put("estadoSunat", "ERROR");
+                result.put("mensaje", "Error HTTP: " + response.getStatusCode());
+            }
+            return result;
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            String responseBody = e.getResponseBodyAsString();
+            log.error("=== ERROR RESPONSE NOTA CREDITO APIPERU ===");
+            log.error("Status: {}", e.getStatusCode());
+            log.error("Body: {}", responseBody);
+            Map<String, Object> error = parseErrorResponse(responseBody);
+            error.put("estadoSunat", "ERROR");
+            return error;
+        } catch (Exception e) {
+            log.error("Error al enviar nota de credito a APIPERU: {}", e.getMessage(), e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("estadoSunat", "ERROR");
+            error.put("mensaje", e.getMessage());
+            return error;
+        }
+    }
+
+    private ApisperuCreditNoteRequest buildCreditNoteRequest(Cliente cliente, Contrato contrato,
+                                                              Comprobante notaCredito,
+                                                              Comprobante comprobanteOriginal,
+                                                              BigDecimal monto,
+                                                              String descripcionDetalle,
+                                                              String codMotivo,
+                                                              String desMotivo) {
         Moneda moneda = contrato.getMoneda();
         String monedaCodigo = moneda != null ? moneda.name() : "PEN";
 
-        ClienteDto clienteDto = ClienteDto.builder()
-                .tipoDocumento(mapTipoDocumento(cliente.getTipoCliente()))
-                .numeroDocumento(cliente.getNumDoc())
-                .razonSocial(buildRazonSocial(cliente))
-                .direccion(buildDireccion(cliente))
-                .ubigeo(cliente.getDistrito() != null ? cliente.getDistrito().getCodigoUbigeo() : null)
-                .email(cliente.getEmail())
+        BigDecimal igv = BigDecimal.ZERO;
+        BigDecimal valorVenta = monto;
+        BigDecimal mtoOperGravadas = BigDecimal.ZERO;
+        BigDecimal mtoOperInafectas = monto;
+
+        ApisperuClient client = ApisperuClient.builder()
+                .tipoDoc(mapTipoDocumento(cliente.getTipoCliente()))
+                .numDoc(cliente.getNumDoc())
+                .rznSocial(buildRazonSocial(cliente))
+                .address(buildAddress(cliente))
                 .build();
 
-        List<DetalleDto> detalles = Collections.singletonList(DetalleDto.builder()
+        ApisperuDetail detail = ApisperuDetail.builder()
+                .unidad("NIU")
                 .descripcion(descripcionDetalle)
                 .cantidad(BigDecimal.ONE)
-                .precioUnitario(monto)
-                .subtotal(monto)
-                .codigoAfectacionIgv("30")
-                .build());
+                .mtoValorUnitario(monto)
+                .mtoValorVenta(monto)
+                .mtoBaseIgv(monto)
+                .porcentajeIgv(BigDecimal.ZERO)
+                .igv(BigDecimal.ZERO)
+                .tipAfeIgv("30")
+                .totalImpuestos(BigDecimal.ZERO)
+                .mtoPrecioUnitario(monto)
+                .codProducto("SERV001")
+                .build();
 
-        BigDecimal totalGravado = BigDecimal.ZERO;
-        BigDecimal totalIgv = BigDecimal.ZERO;
+        String fechaEmision = notaCredito.getFechaEmision().format(DateTimeFormatter.ISO_LOCAL_DATE);
+        String horaEmision = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+        String fechaHoraEmision = fechaEmision + "T" + horaEmision + "-05:00";
 
-        String fechaStr = comprobante.getFechaEmision().format(DateTimeFormatter.ISO_LOCAL_DATE);
-        String horaStr = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
-        String montoLetras = NumeroALetras.convertir(monto, moneda);
-
-        return BoletaRequest.builder()
-                .tipoDocumento(mapTipoComprobante(comprobante.getTipoComprobante()))
-                .serie(comprobante.getSerie())
-                .numero(comprobante.getNumero())
-                .fechaEmision(fechaStr)
-                .horaEmision(horaStr)
-                .moneda(monedaCodigo)
-                .cliente(clienteDto)
-                .detalles(detalles)
-                .totalGravado(totalGravado)
-                .totalIgv(totalIgv)
-                .total(monto)
-                .leyenda(LEYENDA_DEFAULT)
-                .montoLetras(montoLetras)
+        return ApisperuCreditNoteRequest.builder()
+                .ublVersion("2.1")
+                .tipoDoc("07")
+                .serie(notaCredito.getSerie())
+                .correlativo(notaCredito.getNumero().toString())
+                .fechaEmision(fechaHoraEmision)
+                .tipDocAfectado("03")
+                .numDocfectado(comprobanteOriginal.getNumeroCompleto())
+                .codMotivo(codMotivo)
+                .desMotivo(desMotivo)
+                .tipoMoneda(monedaCodigo)
+                .client(client)
+                .company(ApisperuCompany.builder()
+                        .ruc(Long.valueOf(rucEmisor))
+                        .razonSocial("INMOBILIARIA CONSTRUCTORA IVAN E.I.R.L.")
+                        .nombreComercial("INMOBILIARIA CONSTRUCTORA IVAN E.I.R.L.")
+                        .address(ApisperuAddress.builder()
+                                .direccion("AV. ALFREDO MENDIOLA 3623 INT. 3A")
+                                .ubigueo("150117")
+                                .distrito("LOS OLIVOS")
+                                .provincia("LIMA")
+                                .departamento("LIMA")
+                                .build())
+                        .build())
+                .mtoOperGravadas(mtoOperGravadas)
+                .mtoOperInafectas(mtoOperInafectas)
+                .mtoIGV(igv)
+                .valorVenta(valorVenta)
+                .totalImpuestos(igv)
+                .subTotal(monto)
+                .mtoImpVenta(monto)
+                .details(Collections.singletonList(detail))
+                .legends(Collections.singletonList(
+                        ApisperuLegend.builder()
+                                .code("1000")
+                                .value(LEYENDA_DEFAULT)
+                                .build()))
+                .montoLetras(NumeroALetras.convertir(monto, moneda))
                 .build();
     }
 
-    private String mapTipoComprobante(TipoComprobante tipo) {
-        return switch (tipo) {
-            case BOLETA -> "03";
-            case FACTURA -> "01";
-            case RECIBO -> "03";
-        };
+    private ApisperuInvoiceRequest buildApisperuRequest(Cliente cliente, Contrato contrato,
+                                                         Comprobante comprobante, BigDecimal monto,
+                                                         String descripcionDetalle) {
+        Moneda moneda = contrato.getMoneda();
+        String monedaCodigo = moneda != null ? moneda.name() : "PEN";
+
+        // VENTA DE TERRENO = OPERACION INAFECTA (código 30) - SIN IGV
+        BigDecimal igv = BigDecimal.ZERO;
+        BigDecimal valorVenta = monto; // El monto total ES la valor venta para inafecta
+        BigDecimal mtoOperGravadas = BigDecimal.ZERO;
+        BigDecimal mtoOperInafectas = monto;
+
+        // Cliente
+        ApisperuClient client = ApisperuClient.builder()
+                .tipoDoc(mapTipoDocumento(cliente.getTipoCliente()))
+                .numDoc(cliente.getNumDoc())
+                .rznSocial(buildRazonSocial(cliente))
+                .address(buildAddress(cliente))
+                .build();
+
+        // Detalle - INAFECTA (código 30)
+        ApisperuDetail detail = ApisperuDetail.builder()
+                .unidad("NIU")
+                .descripcion(descripcionDetalle)
+                .cantidad(BigDecimal.ONE)
+                .mtoValorUnitario(monto)
+                .mtoValorVenta(monto)
+                .mtoBaseIgv(monto)
+                .porcentajeIgv(BigDecimal.ZERO)
+                .igv(BigDecimal.ZERO)
+                .tipAfeIgv("30")
+                .totalImpuestos(BigDecimal.ZERO)
+                .mtoPrecioUnitario(monto)
+                .codProducto("SERV001")
+                .build();
+
+        // Forma de pago
+        ApisperuFormaPago formaPago = ApisperuFormaPago.builder()
+                .moneda(monedaCodigo)
+                .tipo("Contado")
+                .build();
+
+        // Fecha emisión con hora
+        String fechaEmision = comprobante.getFechaEmision().format(DateTimeFormatter.ISO_LOCAL_DATE);
+        String horaEmision = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+        String fechaHoraEmision = fechaEmision + "T" + horaEmision + "-05:00";
+
+        return ApisperuInvoiceRequest.builder()
+                .ublVersion("2.1")
+                .tipoOperacion("0101")
+                .tipoDoc("03") // Boleta
+                .serie(comprobante.getSerie())
+                .correlativo(comprobante.getNumero().toString())
+                .fechaEmision(fechaHoraEmision)
+                .formaPago(formaPago)
+                .tipoMoneda(monedaCodigo)
+                .client(client)
+                .company(ApisperuCompany.builder()
+                        .ruc(Long.valueOf(rucEmisor))
+                        .razonSocial("INMOBILIARIA CONSTRUCTORA IVAN E.I.R.L.")
+                        .nombreComercial("INMOBILIARIA CONSTRUCTORA IVAN E.I.R.L.")
+                        .address(ApisperuAddress.builder()
+                                .direccion("AV. ALFREDO MENDIOLA 3623 INT. 3A")
+                                .ubigueo("150117")
+                                .distrito("LOS OLIVOS")
+                                .provincia("LIMA")
+                                .departamento("LIMA")
+                                .build())
+                        .build())
+                .mtoOperGravadas(mtoOperGravadas)
+                .mtoOperInafectas(mtoOperInafectas)
+                .mtoIGV(igv)
+                .valorVenta(valorVenta)
+                .totalImpuestos(igv)
+                .subTotal(monto)
+                .mtoImpVenta(monto)
+                .details(Collections.singletonList(detail))
+                .legends(Collections.singletonList(
+                        ApisperuLegend.builder()
+                                .code("1000")
+                                .value(LEYENDA_DEFAULT)
+                                .build()))
+                .montoLetras(NumeroALetras.convertir(monto, moneda))
+                .build();
     }
 
     private String mapTipoDocumento(TipoCliente tipoCliente) {
@@ -156,7 +424,7 @@ public class SunatIntegrationServiceImpl implements SunatIntegrationService {
         return switch (tipoCliente) {
             case NATURAL -> "1";
             case JURIDICO -> "6";
-            case CE -> "7";
+            case CE -> "4"; // 4 = Carné de Extranjería en catálogo SUNAT
         };
     }
 
@@ -169,14 +437,64 @@ public class SunatIntegrationServiceImpl implements SunatIntegrationService {
         return (nombre + apellidos).trim();
     }
 
-    private String buildDireccion(Cliente cliente) {
-        StringBuilder dir = new StringBuilder(cliente.getDireccion() != null ? cliente.getDireccion() : "");
+    private ApisperuAddress buildAddress(Cliente cliente) {
+        ApisperuAddress.ApisperuAddressBuilder builder = ApisperuAddress.builder();
+        
+        StringBuilder direccion = new StringBuilder();
+        if (cliente.getDireccion() != null) {
+            direccion.append(cliente.getDireccion());
+        }
         if (cliente.getDistrito() != null) {
-            dir.append(", ").append(cliente.getDistrito().getNombre());
+            if (direccion.length() > 0) direccion.append(", ");
+            direccion.append(cliente.getDistrito().getNombre());
             if (cliente.getDistrito().getProvincia() != null) {
-                dir.append(", ").append(cliente.getDistrito().getProvincia());
+                direccion.append(", ").append(cliente.getDistrito().getProvincia());
             }
         }
-        return dir.toString();
+        builder.direccion(direccion.toString());
+        
+        if (cliente.getDistrito() != null) {
+            String codigoUbigeo = cliente.getDistrito().getCodigoUbigeo();
+            builder.ubigueo(codigoUbigeo);
+            builder.distrito(cliente.getDistrito().getNombre());
+            if (cliente.getDistrito().getProvincia() != null) {
+                builder.provincia(cliente.getDistrito().getProvincia());
+            }
+            // Derivar departamento del ubigeo (primeros 2 dígitos)
+            if (codigoUbigeo != null && codigoUbigeo.length() >= 2) {
+                String codDept = codigoUbigeo.substring(0, 2);
+                String nombreDept = switch (codDept) {
+                    case "01" -> "AMAZONAS";
+                    case "02" -> "ANCASH";
+                    case "03" -> "APURIMAC";
+                    case "04" -> "AREQUIPA";
+                    case "05" -> "AYACUCHO";
+                    case "06" -> "CAJAMARCA";
+                    case "07" -> "CALLAO";
+                    case "08" -> "CUSCO";
+                    case "09" -> "HUANCAVELICA";
+                    case "10" -> "HUANUCO";
+                    case "11" -> "ICA";
+                    case "12" -> "JUNIN";
+                    case "13" -> "LA LIBERTAD";
+                    case "14" -> "LAMBAYEQUE";
+                    case "15" -> "LIMA";
+                    case "16" -> "LORETO";
+                    case "17" -> "MADRE DE DIOS";
+                    case "18" -> "MOQUEGUA";
+                    case "19" -> "PASCO";
+                    case "20" -> "PIURA";
+                    case "21" -> "PUNO";
+                    case "22" -> "SAN MARTIN";
+                    case "23" -> "TACNA";
+                    case "24" -> "TUMBES";
+                    case "25" -> "UCAYALI";
+                    default -> "LIMA";
+                };
+                builder.departamento(nombreDept);
+            }
+        }
+        
+        return builder.build();
     }
 }

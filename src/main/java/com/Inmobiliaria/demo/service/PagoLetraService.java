@@ -29,6 +29,12 @@ public interface PagoLetraService {
     PagoLetraResponseDTO anularPago(Integer idPago, String motivo, String anuladoPor);
 
     /**
+     * Anula el pago + restaura la letra + anula las moras asociadas.
+     * Usado tanto por anulación simple como por nota de crédito SUNAT.
+     */
+    void anularPagoConMoras(Integer idPago, String motivo, String anuladoPor);
+
+    /**
      * Listado general para el panel admin con filtros opcionales.
      * Cualquier parámetro puede ser null (sin filtro).
      */

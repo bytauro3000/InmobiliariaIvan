@@ -41,7 +41,6 @@ public class LetraCambioPdf {
             DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     // ── Rutas de fuentes en el classpath (idénticas a ComprobantePagoLetraPdf) ─
-    private static final String FONT_COURIER      = "fonts/COUR.TTF";
     private static final String FONT_COURIER_BOLD = "fonts/COURBD.TTF";
 
     // ────────────────────────────────────────────────────────────────────────────
@@ -83,8 +82,7 @@ public class LetraCambioPdf {
             // Mismas fuentes que usan los recibos (ComprobantePagoLetraPdf).
             // PdfEncodings.WINANSI garantiza correcta representación de caracteres
             // latinos (ñ, tildes, etc.) en todos los sistemas operativos.
-            PdfFont fontNormal = cargarFuente(FONT_COURIER);
-            PdfFont fontBold   = cargarFuente(FONT_COURIER_BOLD);
+            PdfFont fontBold = cargarFuente(FONT_COURIER_BOLD);
 
             // ── SÍMBOLO DE MONEDA ─────────────────────────────────────────────
             // El frontend usa el template literal:

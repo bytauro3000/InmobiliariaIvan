@@ -5,6 +5,8 @@ import com.Inmobiliaria.demo.dto.PagoLetraRequestDTO;
 import com.Inmobiliaria.demo.dto.PagoLetraResponseDTO;
 import com.Inmobiliaria.demo.dto.PagosMultiplesRequestDTO;
 import com.Inmobiliaria.demo.dto.SugerenciaNumeroComprobanteDTO;
+import com.Inmobiliaria.demo.entity.Comprobante;
+import com.Inmobiliaria.demo.entity.LetraCambio;
 import com.Inmobiliaria.demo.entity.PagoLetras;
 import com.Inmobiliaria.demo.entity.Voucher;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
@@ -14,6 +16,8 @@ import com.Inmobiliaria.demo.repository.UsuarioRepository;
 import com.Inmobiliaria.demo.repository.VoucherRepository;
 import com.Inmobiliaria.demo.service.PagoLetraService;
 import com.Inmobiliaria.demo.util.ComprobantePagoLetraPdf;
+import com.Inmobiliaria.demo.util.BoletaElectronicaPdf;
+import com.Inmobiliaria.demo.util.NumeroALetras;
 
 import jakarta.validation.Valid;
 
@@ -25,6 +29,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpHeaders;
@@ -134,6 +139,11 @@ public class PagoLetraController {
         List<Voucher> vouchers = voucherRepository
                 .findByTipoOrigenAndReferenciaId("PAGO_LETRA", idPago);
 
+        // Si es boleta electrónica con hash, usar el nuevo PDF con QR SUNAT
+        if (esBoletaElectronica(pago)) {
+            return generarRespuestaBoleta(pago.getComprobante(), pago.getLetra());
+        }
+
         byte[] pdf = ComprobantePagoLetraPdf.generar(pago, rolUsuario, vouchers);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
@@ -153,6 +163,13 @@ public class PagoLetraController {
         if (pagos == null || pagos.isEmpty()) {
             throw new NegocioException(
                     "No se encontraron pagos con el comprobante: " + numeroComprobante);
+        }
+
+        PagoLetras primero = pagos.get(0);
+
+        // Si es boleta electrónica con hash, usar el nuevo PDF con QR SUNAT
+        if (esBoletaElectronica(primero)) {
+            return generarRespuestaBoleta(primero.getComprobante(), primero.getLetra());
         }
 
         String rolUsuarioMultiple = "SECRETARIA";
@@ -189,16 +206,86 @@ public class PagoLetraController {
                 .body(pdf);
     }
 
+    // ── Helpers de boleta electrónica ─────────────────────────────────────────
+
+    private boolean esBoletaElectronica(PagoLetras pago) {
+        return pago.getComprobante() != null
+                && pago.getComprobante().getTipoComprobante() == TipoComprobante.BOLETA
+                && pago.getComprobante().getHashCdr() != null
+                && !pago.getComprobante().getHashCdr().isBlank();
+    }
+
+    private ResponseEntity<byte[]> generarRespuestaBoleta(
+            Comprobante comp,
+            LetraCambio letra) {
+
+        var contrato = letra.getContrato();
+
+        String numeroLetra = letra.getNumeroLetra();
+        if (numeroLetra != null && numeroLetra.contains("/")) {
+            numeroLetra = numeroLetra.substring(0, numeroLetra.indexOf("/"));
+        }
+
+        String nombrePrograma = "";
+        if (contrato.getLotes() != null && !contrato.getLotes().isEmpty()) {
+            var lote = contrato.getLotes().iterator().next().getLote();
+            if (lote != null && lote.getPrograma() != null) {
+                nombrePrograma = lote.getPrograma().getNombrePrograma();
+            }
+        }
+        String descripcion = "LETRA " + numeroLetra
+            + " POR LA COMPRA DE UN LOTE DE TERRENO RUSTICO PROGRAMA DE VIV. "
+            + (nombrePrograma != null ? nombrePrograma.toUpperCase() : "");
+
+        String clienteNombre = "";
+        String clienteDoc = "";
+        String direccionCliente = "";
+        if (contrato.getClientes() != null && !contrato.getClientes().isEmpty()) {
+            var c = contrato.getClientes().iterator().next().getCliente();
+            clienteNombre = (c.getNombre() + " " + c.getApellidos()).trim().toUpperCase();
+            clienteDoc = c.getNumDoc() != null ? c.getNumDoc() : "";
+            direccionCliente = c.getDireccion() != null ? c.getDireccion().toUpperCase() : "-";
+        }
+
+        String moneda = contrato.getMoneda() != null ? contrato.getMoneda().name() : "USD";
+        String montoStr = String.format("%.2f", comp.getMonto());
+
+        byte[] pdf = BoletaElectronicaPdf.generarBoletaSimple(
+            comp.getSerie(),
+            comp.getNumero().toString(),
+            comp.getFechaEmision().toString(),
+            moneda,
+            montoStr,
+            clienteNombre,
+            clienteDoc,
+            direccionCliente,
+            descripcion,
+            NumeroALetras.convertir(comp.getMonto(), contrato.getMoneda()),
+            comp.getMonto(),
+            comp.getHashCdr()
+        );
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "inline; filename=boleta-electronica-" + comp.getNumeroCompleto() + ".pdf")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
     // ── ADMIN: Anular ─────────────────────────────────────────────────────────
 
     @PatchMapping("/{idPago}/anular")
     @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
-    public ResponseEntity<PagoLetraResponseDTO> anularPago(
+    public ResponseEntity<Map<String, Object>> anularPago(
             @PathVariable Integer idPago,
             @Valid @RequestBody AnulacionRequestDTO request,
             Authentication authentication) {
         String anuladoPor = authentication.getName();
-        return ResponseEntity.ok(pagoLetraService.anularPago(idPago, request.getMotivo(), anuladoPor));
+        pagoLetraService.anularPagoConMoras(idPago, request.getMotivo(), anuladoPor);
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("mensaje", "Pago anulado correctamente. Letra restaurada y moras canceladas.");
+        return ResponseEntity.ok(result);
     }
 
     // ── ADMIN: Eliminar físicamente ───────────────────────────────────────────
