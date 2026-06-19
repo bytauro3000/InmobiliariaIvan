@@ -7,6 +7,7 @@ import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.io.util.StreamUtil;
 import com.itextpdf.kernel.colors.ColorConstants;
 import com.itextpdf.kernel.colors.DeviceGray;
+import com.itextpdf.kernel.colors.DeviceRgb;
 import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.geom.PageSize;
@@ -38,15 +39,15 @@ public class BoletaElectronicaPdf {
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DecimalFormat     DF  = new DecimalFormat("#,##0.00", new DecimalFormatSymbols(Locale.US));
 
-    private static final DeviceGray GRIS_OSCURO = new DeviceGray(0.15f);
     private static final DeviceGray GRIS_MEDIO  = new DeviceGray(0.45f);
+    private static final DeviceRgb  AZUL_MARINO = new DeviceRgb(0, 32, 96);
 
     private static final String EMPRESA   = "INMOBILIARIA CONSTRUCTORA \"IVAN\" E.I.R.L.";
     private static final String DIRECCION = "Av. Alfredo Mendiola N 3623  3er. Piso Of. 301 - Urb. Panamericana Norte - Los Olivos - Lima";
     private static final String TELEFONO  = "Cel.: +51 987-891-788";
     private static final String RUC       = "R.U.C.: 20537853108";
 
-    private static final String LOGO_URL = "https://res.cloudinary.com/dlgqaifrk/image/upload/e_grayscale,w_200,h_200,c_fit,f_auto,q_auto/v1773725974/logogrande_rfvxhu.png";
+    private static final String LOGO_URL = "https://res.cloudinary.com/dlgqaifrk/image/upload/w_200,h_200,c_fit,f_auto,q_auto/v1773725974/logogrande_rfvxhu.png";
 
     // ─────────────────────────────────────────────────────────────────────────
     // MÉTODO PRINCIPAL (usa ApisperuInvoiceRequest)
@@ -156,10 +157,11 @@ public class BoletaElectronicaPdf {
                     .setTextAlignment(TextAlignment.CENTER).setMarginBottom(4));
             celdaEmpresa.add(new Paragraph("BOLETA DE VENTA ELECTRÓNICA")
                     .setFont(courierBold).setFontSize(14)
+                    .setFontColor(AZUL_MARINO)
                     .setTextAlignment(TextAlignment.CENTER).setMarginBottom(1));
             celdaEmpresa.add(new Paragraph("N° " + serieCorrelativo)
                     .setFont(courierBold).setFontSize(9f)
-                    .setFontColor(GRIS_OSCURO)
+                    .setFontColor(AZUL_MARINO)
                     .setTextAlignment(TextAlignment.CENTER)
                     .setMarginTop(0).setMarginBottom(1));
             encabezado.addCell(celdaEmpresa);
@@ -225,7 +227,7 @@ public class BoletaElectronicaPdf {
             String[] headersDetalle = {"DESCRIPCIÓN", "CANT.", "VALOR UNIT.", "IMPORTE"};
             for (String h : headersDetalle) {
                 tablaDetalle.addHeaderCell(new Cell()
-                        .setBackgroundColor(GRIS_OSCURO)
+                        .setBackgroundColor(AZUL_MARINO)
                         .setPadding(3)
                         .add(new Paragraph(h)
                                 .setFont(courierBold).setFontSize(9f)
@@ -401,9 +403,10 @@ public class BoletaElectronicaPdf {
                     .setTextAlignment(TextAlignment.CENTER).setMarginBottom(4));
             celdaEmpresa.add(new Paragraph("BOLETA DE VENTA ELECTRÓNICA")
                     .setFont(courierBold).setFontSize(14)
+                    .setFontColor(AZUL_MARINO)
                     .setTextAlignment(TextAlignment.CENTER).setMarginBottom(1));
             celdaEmpresa.add(new Paragraph("N° " + serieCorrelativo)
-                    .setFont(courierBold).setFontSize(9f).setFontColor(GRIS_OSCURO)
+                    .setFont(courierBold).setFontSize(9f).setFontColor(AZUL_MARINO)
                     .setTextAlignment(TextAlignment.CENTER)
                     .setMarginTop(0).setMarginBottom(1));
             encabezado.addCell(celdaEmpresa);
@@ -450,7 +453,7 @@ public class BoletaElectronicaPdf {
             String[] headersDetalle = {"DESCRIPCIÓN", "CANT.", "VALOR UNIT.", "IMPORTE"};
             for (String h : headersDetalle) {
                 tablaDetalle.addHeaderCell(new Cell()
-                        .setBackgroundColor(GRIS_OSCURO).setPadding(3)
+                        .setBackgroundColor(AZUL_MARINO).setPadding(3)
                         .add(new Paragraph(h).setFont(courierBold).setFontSize(9f)
                                 .setFontColor(ColorConstants.WHITE)
                                 .setTextAlignment(h.equals("DESCRIPCIÓN") ? TextAlignment.LEFT : TextAlignment.RIGHT)));
