@@ -28,7 +28,7 @@ public class ComprobanteServiceImpl implements ComprobanteService {
     // ─── Serie por defecto para cada tipo ─────────────────────────────────────
     private String serieDefecto(TipoComprobante tipo) {
         return switch (tipo) {
-            case BOLETA      -> "EB01";
+            case BOLETA      -> "B001";
             case FACTURA     -> "F001";
             case RECIBO      -> "RB01";
             case NOTA_CREDITO -> "BB01";
@@ -38,7 +38,20 @@ public class ComprobanteServiceImpl implements ComprobanteService {
     // ─── Formatea el número completo según el tipo ─────────────────────────────
     // BOLETA/FACTURA/RECIBO → "RB01-0001", "EB01-0001", "F001-0001"
     private String formatearNumeroCompleto(TipoComprobante tipo, String serie, Integer numero) {
-        return String.format("%s-%04d", serie, numero);
+        return String.format("%s-%d", serie, numero);
+    }
+
+    // ─── Calcula el siguiente número esperado para una serie ───────────────────
+    // Toma el MAYOR entre el contador y el max real en comprobante, luego suma 1
+    private int calcularSiguienteEsperado(TipoComprobante tipo, String serie) {
+        int desdeContador = serieComprobanteRepository
+                .findByTipoComprobanteAndSerie(tipo, serie)
+                .map(SerieComprobante::getUltimoNumero)
+                .orElse(0);
+        Integer desdeTablaRaw = comprobanteRepository
+                .findMaxNumeroByTipoAndSerie(tipo, serie);
+        int desdeTabla = (desdeTablaRaw != null) ? desdeTablaRaw : 0;
+        return Math.max(desdeContador, desdeTabla) + 1;
     }
 
     @Override
@@ -126,6 +139,22 @@ public class ComprobanteServiceImpl implements ComprobanteService {
                 "Ya existe un comprobante con el número \"" + numeroCompleto + "\". "
                 + "Verifique el número ingresado."
             );
+        }
+
+        // ── Validar correlatividad para series SUNAT (B001, BB01, etc.) ─────
+        // Las series que empiezan con "B" son emitidas por este CEE y SUNAT
+        // exige números consecutivos. Las series "E" (EB01) vienen del portal
+        // SOL y se registran con números libres.
+        if (serie.startsWith("B")) {
+            int esperado = calcularSiguienteEsperado(tipoComprobante, serie);
+            if (numeroInt != esperado) {
+                throw new NegocioException(
+                    "La serie " + serie + " requiere numeración correlativa. "
+                    + "El siguiente número debe ser "
+                    + formatearNumeroCompleto(tipoComprobante, serie, esperado)
+                    + ", no " + formatearNumeroCompleto(tipoComprobante, serie, numeroInt) + "."
+                );
+            }
         }
 
         // ── Actualizar el contador si el número manual es mayor al último registrado ──
@@ -219,6 +248,19 @@ public class ComprobanteServiceImpl implements ComprobanteService {
                 "Ya existe un comprobante con el número \"" + numeroCompleto + "\". "
                 + "Verifique el número ingresado."
             );
+        }
+
+        // ── Validar correlatividad para series SUNAT ──────────────────────────
+        if (serie.startsWith("B")) {
+            int esperado = calcularSiguienteEsperado(tipoComprobante, serie);
+            if (numeroInt != esperado) {
+                throw new NegocioException(
+                    "La serie " + serie + " requiere numeración correlativa. "
+                    + "El siguiente número debe ser "
+                    + formatearNumeroCompleto(tipoComprobante, serie, esperado)
+                    + ", no " + formatearNumeroCompleto(tipoComprobante, serie, numeroInt) + "."
+                );
+            }
         }
 
         serieComprobanteRepository
