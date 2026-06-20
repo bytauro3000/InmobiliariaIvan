@@ -12,7 +12,9 @@ import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfPage;
 import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.borders.SolidBorder;
@@ -57,8 +59,8 @@ public class BoletaElectronicaPdf {
              PdfDocument pdf = new PdfDocument(new PdfWriter(baos));
              Document doc = new Document(pdf, PageSize.A5.rotate())) {
 
-            // Márgenes compactos para caber en una página A5 landscape
-            doc.setMargins(10, 10, 10, 10);
+            // Margen izquierdo para perforación / encuadernación
+            doc.setMargins(10, 18, 10, 52);
 
             PdfFont courier     = cargarFuente("fonts/COUR.TTF");
             PdfFont courierBold = cargarFuente("fonts/COURBD.TTF");
@@ -116,11 +118,13 @@ public class BoletaElectronicaPdf {
 
             BarcodeQRCode qrCode = new BarcodeQRCode(qrData);
             Image qrImage = new Image(qrCode.createFormXObject(pdf))
-                    .setWidth(60).setHeight(60)
+                    .setWidth(50).setHeight(50)
+                    .setAutoScale(true)
                     .setHorizontalAlignment(HorizontalAlignment.CENTER);
 
             Image logoImg = new Image(ImageDataFactory.create(new URL(LOGO_URL)))
-                    .setWidth(65).setHeight(65)
+                    .setWidth(50).setHeight(50)
+                    .setAutoScale(true)
                     .setHorizontalAlignment(HorizontalAlignment.CENTER);
 
             // ═══════════════════════════════════════
@@ -320,6 +324,16 @@ public class BoletaElectronicaPdf {
                     .setTextAlignment(TextAlignment.CENTER)
                     .setMarginTop(0));
 
+            // ── LÍNEA GRIS IZQUIERDA (guía para perforación) ──
+            PdfPage primeraPagina = pdf.getFirstPage();
+            PdfCanvas lienzo = new PdfCanvas(primeraPagina);
+            lienzo.setStrokeColor(new DeviceGray(0.55f))
+                  .setLineWidth(1.2f)
+                  .moveTo(0, 210f)
+                  .lineTo(28, 210f)
+                  .stroke();
+            lienzo.release();
+
             doc.close();
             return baos.toByteArray();
 
@@ -340,9 +354,10 @@ public class BoletaElectronicaPdf {
 
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
              PdfDocument pdf = new PdfDocument(new PdfWriter(baos));
-             Document doc = new Document(pdf, PageSize.A5.rotate())) {
+              Document doc = new Document(pdf, PageSize.A5.rotate())) {
 
-            doc.setMargins(10, 10, 10, 10);
+            // Margen izquierdo para perforación / encuadernación
+            doc.setMargins(10, 18, 10, 52);
 
             PdfFont courier     = cargarFuente("fonts/COUR.TTF");
             PdfFont courierBold = cargarFuente("fonts/COURBD.TTF");
@@ -366,11 +381,13 @@ public class BoletaElectronicaPdf {
 
             BarcodeQRCode qrCode = new BarcodeQRCode(qrData);
             Image qrImage = new Image(qrCode.createFormXObject(pdf))
-                    .setWidth(60).setHeight(60)
+                    .setWidth(50).setHeight(50)
+                    .setAutoScale(true)
                     .setHorizontalAlignment(HorizontalAlignment.CENTER);
 
             Image logoImg = new Image(ImageDataFactory.create(new URL(LOGO_URL)))
-                    .setWidth(65).setHeight(65)
+                    .setWidth(50).setHeight(50)
+                    .setAutoScale(true)
                     .setHorizontalAlignment(HorizontalAlignment.CENTER);
 
             // ── Encabezado ──
@@ -521,6 +538,16 @@ public class BoletaElectronicaPdf {
                     .setFont(arial).setFontSize(7.5f).setFontColor(GRIS_MEDIO)
                     .setTextAlignment(TextAlignment.CENTER)
                     .setMarginTop(0));
+
+            // ── LÍNEA GRIS IZQUIERDA (guía para perforación) ──
+            PdfPage primeraPagina = pdf.getFirstPage();
+            PdfCanvas lienzo = new PdfCanvas(primeraPagina);
+            lienzo.setStrokeColor(new DeviceGray(0.55f))
+                  .setLineWidth(1.2f)
+                  .moveTo(0, 210f)
+                  .lineTo(28, 210f)
+                  .stroke();
+            lienzo.release();
 
             doc.close();
             return baos.toByteArray();
