@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "pago_letra")
@@ -32,4 +33,7 @@ public class PagoLetras extends PagoBase {
 
     @Column(name = "es_letra_gratis", nullable = false)
     private Boolean esLetraGratis = false;
+
+    @Column(name = "fecha_operacion")
+    private LocalDate fechaOperacion;
 }

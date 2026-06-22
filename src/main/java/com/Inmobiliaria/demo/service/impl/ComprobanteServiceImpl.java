@@ -10,6 +10,8 @@ import com.Inmobiliaria.demo.repository.ComprobanteRepository;
 import com.Inmobiliaria.demo.repository.SerieComprobanteRepository;
 import com.Inmobiliaria.demo.service.ComprobanteService;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ComprobanteServiceImpl implements ComprobanteService {
+
+    private static final Logger log = LoggerFactory.getLogger(ComprobanteServiceImpl.class);
 
     private final ComprobanteRepository       comprobanteRepository;
     private final SerieComprobanteRepository   serieComprobanteRepository;
@@ -87,7 +91,13 @@ public class ComprobanteServiceImpl implements ComprobanteService {
         comp.setSerie(serie);
         comp.setNumero(nuevoNumero);
         comp.setNumeroCompleto(numeroCompleto);
-        comp.setFechaEmision(fechaEmision != null ? fechaEmision : LocalDate.now());
+        if (fechaEmision != null) {
+            comp.setFechaEmision(fechaEmision);
+        } else {
+            log.warn("fechaEmision es null para nuevo {}/{} — usando LocalDate.now() = {}",
+                    tipoComprobante, serie, LocalDate.now());
+            comp.setFechaEmision(LocalDate.now());
+        }
         comp.setMonto(monto);
         comp.setTipoOrigen(tipoOrigen);
         comp.setReferenciaId(referenciaId);

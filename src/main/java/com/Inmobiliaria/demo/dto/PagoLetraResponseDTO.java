@@ -17,6 +17,7 @@ public class PagoLetraResponseDTO {
     private Integer         idLetra;
     private String          numeroLetra;
     private LocalDate       fechaPago;
+    private LocalDate       fechaOperacion;
     private BigDecimal      importePagado;
     private MedioPago       medioPago;
     private String          numeroOperacion;

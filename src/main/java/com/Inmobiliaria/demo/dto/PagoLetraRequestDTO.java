@@ -19,6 +19,9 @@ public class PagoLetraRequestDTO {
 
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate       fechaPago;
+
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate       fechaOperacion;
     private TipoComprobante tipoComprobante;
     private String          numeroComprobantePersonalizado;
     private String          observaciones;

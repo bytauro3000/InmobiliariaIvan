@@ -267,6 +267,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         dto.setIdLetra(pago.getLetra().getIdLetra());
         dto.setNumeroLetra(pago.getLetra().getNumeroLetra());
         dto.setFechaPago(pago.getFechaPago());
+        dto.setFechaOperacion(pago.getFechaOperacion());
         dto.setImportePagado(pago.getImportePagado());
         dto.setMedioPago(pago.getMedioPago());
         dto.setNumeroOperacion(pago.getNumeroOperacion());
@@ -512,17 +513,17 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             validarOrdenDePago(idContrato, letra.getNumeroLetra());
         }
 
-        // ── Resolver fecha de operación ──────────────────────────────────────
-        // FIX: siempre se toma la fecha del request (con fallback a hoy).
-        // Se resuelve ANTES de guardar el pago para usarla consistentemente.
-        LocalDate fechaOperacion = request.getFechaPago() != null
-            ? request.getFechaPago()
-            : LocalDate.now();
+        // ── Fechas ───────────────────────────────────────────────────────────
+        // fechaPago = hoy (registro del pago)
+        // fechaOperacion = fecha del voucher (solo referencial, nullable)
+        LocalDate fechaPago = LocalDate.now();
+        LocalDate fechaOperacion = request.getFechaOperacion();
 
         // ── Construir el pago ────────────────────────────────────────────────
         PagoLetras pago = new PagoLetras();
         pago.setLetra(letra);
-        pago.setFechaPago(fechaOperacion);
+        pago.setFechaPago(fechaPago);
+        pago.setFechaOperacion(fechaOperacion);
         pago.setImportePagado(request.getImportePagado());
         pago.setMedioPago(request.getMedioPago());
         pago.setNumeroOperacion(request.getNumeroOperacion());
@@ -541,7 +542,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
                 TipoOrigenComprobante.PAGO_LETRA,
                 null, // id temporal, se asigna después de guardar pago
                 request.getImportePagado(),
-                fechaOperacion,
+                fechaPago,
                 request.getNumeroComprobantePersonalizado(),
                 request.getSeriePersonalizada()
             );
@@ -607,11 +608,11 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             //      generarMoraParaPago verifica internamente si fechaRef > fechaVenc.
             boolean letraEsVencida = letra.getEstadoLetra() == EstadoLetra.VENCIDO
                 || (letra.getFechaVencimiento() != null
-                    && letra.getFechaVencimiento().isBefore(fechaOperacion));
+                    && letra.getFechaVencimiento().isBefore(fechaPago));
 
             if (letraEsVencida) {
                 int numLetra = extraerNumeroLetra(letra.getNumeroLetra());
-                LocalDate fechaRef = resolverFechaReferenciaMora(numLetra, idContrato, fechaOperacion);
+                LocalDate fechaRef = resolverFechaReferenciaMora(numLetra, idContrato, fechaPago);
                 moraService.generarMoraParaPago(letra, pagoGuardado, fechaRef);
             }
             letra.setEstadoLetra(EstadoLetra.PAGADO);
@@ -682,10 +683,8 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         }
 
         PagoLetraRequestDTO primerPago = request.getPagos().get(0);
-        // FIX: resolver fecha de operación del primer pago una sola vez
-        LocalDate fechaOperacionLote = primerPago.getFechaPago() != null
-            ? primerPago.getFechaPago()
-            : LocalDate.now();
+        // fechaPago = hoy (registro del pago)
+        LocalDate fechaPago = LocalDate.now();
 
         Comprobante comprobanteCompartido = null;
         if (primerPago.getTipoComprobante() != null) {
@@ -694,7 +693,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
                 TipoOrigenComprobante.PAGO_LETRA,
                 null,
                 montoTotalNeto,
-                fechaOperacionLote,
+                fechaPago,
                 primerPago.getNumeroComprobantePersonalizado(),
                 primerPago.getSeriePersonalizada()
             );
@@ -723,14 +722,10 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             boolean esPagoAcuenta = Boolean.TRUE.equals(pagoReq.getEsPagoAcuenta());
             BigDecimal nuevoSaldo = validarYCalcularNuevoSaldo(letra, pagoReq.getImportePagado(), esPagoAcuenta);
 
-            // FIX: resolver fecha por letra (puede diferir en el lote)
-            LocalDate fechaOperacionLetra = pagoReq.getFechaPago() != null
-                ? pagoReq.getFechaPago()
-                : fechaOperacionLote;
-
             PagoLetras pago = new PagoLetras();
             pago.setLetra(letra);
-            pago.setFechaPago(fechaOperacionLetra);
+            pago.setFechaPago(fechaPago);
+            pago.setFechaOperacion(pagoReq.getFechaOperacion());
             pago.setImportePagado(importeNetoLetra);
             pago.setMedioPago(pagoReq.getMedioPago());
             pago.setNumeroOperacion(pagoReq.getNumeroOperacion());
@@ -757,11 +752,11 @@ public class PagoLetraServiceImpl implements PagoLetraService {
                 //      fecha vencida aunque el scheduler no las haya marcado VENCIDO aún.
                 boolean letraEsVencida = letra.getEstadoLetra() == EstadoLetra.VENCIDO
                     || (letra.getFechaVencimiento() != null
-                        && letra.getFechaVencimiento().isBefore(fechaOperacionLetra));
+                        && letra.getFechaVencimiento().isBefore(fechaPago));
 
                 if (letraEsVencida) {
                     int numLetra = extraerNumeroLetra(letra.getNumeroLetra());
-                    LocalDate fechaRef = resolverFechaReferenciaMora(numLetra, idContrato, fechaOperacionLetra);
+                    LocalDate fechaRef = resolverFechaReferenciaMora(numLetra, idContrato, fechaPago);
                     moraService.generarMoraParaPago(letra, guardado, fechaRef);
                 }
                 letra.setEstadoLetra(EstadoLetra.PAGADO);
@@ -824,7 +819,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         PagoLetraResponseDTO responseLetraGratis = null;
         if (letraGratis != null) {
             responseLetraGratis = registrarLetraGratis(
-                letraGratis, idContrato, fechaOperacionLote,
+                letraGratis, idContrato, fechaPago,
                 primerPago.getMedioPago(), comprobanteCompartido,
                 request.getMotivoLetraGratis(), urlsVoucher
             );

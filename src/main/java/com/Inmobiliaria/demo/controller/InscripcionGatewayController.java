@@ -220,7 +220,7 @@ import java.util.stream.Collectors;
 	                        "Contrato no encontrado con ID: " + request.getIdContrato()));
 	
 	        // c) Generar comprobante en el monolito
-	        LocalDate fechaPago = request.getFechaPago() != null ? request.getFechaPago() : LocalDate.now();
+	        LocalDate fechaPago = LocalDate.now();
 	
 	        Comprobante comprobante;
 	        if (request.getNumeroComprobantePersonalizado() != null

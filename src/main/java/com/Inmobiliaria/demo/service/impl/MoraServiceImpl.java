@@ -224,7 +224,7 @@ public class MoraServiceImpl implements MoraService {
         PagoMora pago = new PagoMora();
         pago.setMora(mora);
         pago.setImportePagado(request.getMontoPagado());
-        pago.setFechaPago(request.getFechaPago());
+        pago.setFechaPago(LocalDate.now());
         pago.setMedioPago(request.getMedioPago());
         pago.setNumeroOperacion(request.getNumeroOperacion());
         pago.setObservaciones(request.getObservaciones());
@@ -239,7 +239,7 @@ public class MoraServiceImpl implements MoraService {
                 TipoOrigenComprobante.PAGO_MORA,
                 null, // id temporal
                 request.getMontoPagado(),
-                request.getFechaPago(),
+                LocalDate.now(),
                 request.getNumeroComprobantePersonalizado()
             );
 
