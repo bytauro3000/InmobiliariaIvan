@@ -352,8 +352,29 @@ public class ContratoServiceImpl implements ContratoService {
     @Cacheable
     public List<ContratoResponseDTO> listarContratos() {
         List<Contrato> contratos = contratoRepository.findAllConClientesYLotes();
+        if (contratos.isEmpty()) return List.of();
+
+        // Batch-fetch vouchers de todos los pagos iniciales en 1 consulta
+        List<Integer> pagoInicialIds = contratos.stream()
+                .map(Contrato::getPagoInicial)
+                .filter(Objects::nonNull)
+                .map(PagoInicial::getIdPagoInicial)
+                .collect(Collectors.toList());
+
+        Map<Integer, List<String>> vouchersPorPagoInicial;
+        if (!pagoInicialIds.isEmpty()) {
+            List<Voucher> vouchers = voucherRepository
+                    .findByTipoOrigenAndReferenciaIdIn("PAGO_INICIAL", pagoInicialIds);
+            vouchersPorPagoInicial = vouchers.stream()
+                    .collect(Collectors.groupingBy(
+                            Voucher::getReferenciaId,
+                            Collectors.mapping(Voucher::getUrl, Collectors.toList())));
+        } else {
+            vouchersPorPagoInicial = Map.of();
+        }
+
         return contratos.stream()
-                .map(this::mapToContratoResponseDTO)
+                .map(c -> mapToContratoResponseDTO(c, vouchersPorPagoInicial))
                 .collect(Collectors.toList());
     }
 
@@ -558,6 +579,11 @@ public class ContratoServiceImpl implements ContratoService {
     // ── Mapeo a DTO ────────────────────────────────────────────────────────────
 
     private ContratoResponseDTO mapToContratoResponseDTO(Contrato contrato) {
+        return mapToContratoResponseDTO(contrato, Map.of());
+    }
+
+    private ContratoResponseDTO mapToContratoResponseDTO(
+            Contrato contrato, Map<Integer, List<String>> vouchersPorPagoInicial) {
         if (contrato == null) return null;
 
         ContratoResponseDTO dto = modelMapper.map(contrato, ContratoResponseDTO.class);
@@ -626,9 +652,8 @@ public class ContratoServiceImpl implements ContratoService {
             piDto.setMedioPago(pi.getMedioPago());
             piDto.setNumeroOperacion(pi.getNumeroOperacion());
             piDto.setObservaciones(pi.getObservaciones());
-            List<String> urlsVoucher = voucherRepository
-                .findByTipoOrigenAndReferenciaId("PAGO_INICIAL", pi.getIdPagoInicial())
-                .stream().map(Voucher::getUrl).collect(java.util.stream.Collectors.toList());
+            List<String> urlsVoucher = vouchersPorPagoInicial
+                    .getOrDefault(pi.getIdPagoInicial(), List.of());
             piDto.setUrlsVoucher(urlsVoucher);
             if (pi.getComprobante() != null) {
                 piDto.setIdComprobante(pi.getComprobante().getIdComprobante());

@@ -135,9 +135,15 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
     // Se separó en dos queries para evitar MultipleBagFetchException.
     // Hibernate no permite hacer JOIN FETCH de dos List<> (bags) en la misma query.
     // Solución: una query trae lotes, otra trae clientes; se combinan en el servicio.
+    // Los JOIN FETCH de @ManyToOne (distrito, separacion, vendedor, usuario) evitan
+    // queries EAGER adicionales por cada fila.
     @Query("SELECT DISTINCT p FROM PagoLetras p " +
            "JOIN FETCH p.letra l " +
+           "LEFT JOIN FETCH l.distrito " +
            "JOIN FETCH l.contrato co " +
+           "LEFT JOIN FETCH co.separacion " +
+           "LEFT JOIN FETCH co.vendedor " +
+           "LEFT JOIN FETCH co.usuario " +
            "LEFT JOIN FETCH p.comprobante c " +
            "LEFT JOIN FETCH co.lotes cl " +
            "LEFT JOIN FETCH cl.lote lot " +
@@ -160,15 +166,4 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
             @Param("idPrograma")       Integer idPrograma,
             @Param("desde")            LocalDate desde,
             @Param("hasta")            LocalDate hasta);
-
-    // ── ADMIN: Listado general — QUERY 2: trae clientes de los contratos ───────
-    // Recibe los IDs de contrato ya filtrados para cargar solo lo necesario.
-    @Query("SELECT DISTINCT p FROM PagoLetras p " +
-           "JOIN FETCH p.letra l " +
-           "JOIN FETCH l.contrato co " +
-           "LEFT JOIN FETCH co.clientes cc " +
-           "LEFT JOIN FETCH cc.cliente cli " +
-           "WHERE co.idContrato IN :contratoIds")
-    List<PagoLetras> findByContratoIdsConClientes(
-            @Param("contratoIds") List<Integer> contratoIds);
 }

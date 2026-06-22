@@ -444,6 +444,11 @@ public class MoraServiceImpl implements MoraService {
     }
 
     private PagoMoraResponseDTO mapPagoToDTO(PagoMora pago) {
+        return mapPagoToDTO(pago, null);
+    }
+
+    private PagoMoraResponseDTO mapPagoToDTO(PagoMora pago,
+                                               Map<Integer, List<String>> vouchersPorPago) {
         PagoMoraResponseDTO dto = new PagoMoraResponseDTO();
         dto.setIdPagoMora(pago.getIdPagoMora());
         dto.setIdMora(pago.getMora().getIdMora());
@@ -459,10 +464,15 @@ public class MoraServiceImpl implements MoraService {
             dto.setNumeroComprobante(pago.getComprobante().getNumeroCompleto());
         }
 
-        List<String> urls = voucherRepository
-            .findByTipoOrigenAndReferenciaId("PAGO_MORA", pago.getIdPagoMora())
-            .stream().map(Voucher::getUrl).collect(Collectors.toList());
-        dto.setUrlsVoucher(urls);
+        if (vouchersPorPago != null) {
+            dto.setUrlsVoucher(
+                vouchersPorPago.getOrDefault(pago.getIdPagoMora(), List.of()));
+        } else {
+            List<String> urls = voucherRepository
+                .findByTipoOrigenAndReferenciaId("PAGO_MORA", pago.getIdPagoMora())
+                .stream().map(Voucher::getUrl).collect(Collectors.toList());
+            dto.setUrlsVoucher(urls);
+        }
 
         // Anulación
         dto.setAnulado(Boolean.TRUE.equals(pago.getAnulado()));
@@ -516,17 +526,32 @@ public class MoraServiceImpl implements MoraService {
             Integer idPrograma,
             LocalDate desde,
             LocalDate hasta) {
-     
-        return pagoMoraRepository
-                .findTodos(
-                    (numeroComprobante != null && !numeroComprobante.isBlank()) ? numeroComprobante : null,
-                    (manzana           != null && !manzana.isBlank())           ? manzana           : null,
-                    (numeroLote        != null && !numeroLote.isBlank())        ? numeroLote        : null,
-                    idPrograma,
-                    desde,
-                    hasta)
-                .stream()
-                .map(this::mapPagoToDTO)
+
+        List<PagoMora> pagos = pagoMoraRepository.findTodos(
+                (numeroComprobante != null && !numeroComprobante.isBlank()) ? numeroComprobante : null,
+                (manzana           != null && !manzana.isBlank())           ? manzana           : null,
+                (numeroLote        != null && !numeroLote.isBlank())        ? numeroLote        : null,
+                idPrograma,
+                desde,
+                hasta);
+
+        if (pagos.isEmpty()) return List.of();
+
+        // Batch-fetch vouchers para todos los pagos en 1 consulta
+        List<Integer> pagoIds = pagos.stream()
+                .map(PagoMora::getIdPagoMora)
+                .collect(Collectors.toList());
+
+        List<Voucher> vouchers = voucherRepository
+                .findByTipoOrigenAndReferenciaIdIn("PAGO_MORA", pagoIds);
+
+        Map<Integer, List<String>> vouchersPorPago = vouchers.stream()
+                .collect(Collectors.groupingBy(
+                        Voucher::getReferenciaId,
+                        Collectors.mapping(Voucher::getUrl, Collectors.toList())));
+
+        return pagos.stream()
+                .map(p -> mapPagoToDTO(p, vouchersPorPago))
                 .collect(Collectors.toList());
     }
     

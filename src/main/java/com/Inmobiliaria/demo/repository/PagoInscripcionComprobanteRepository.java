@@ -45,6 +45,9 @@ public interface PagoInscripcionComprobanteRepository
     @Query("SELECT DISTINCT p FROM PagoInscripcionComprobante p " +
            "JOIN FETCH p.comprobante c " +
            "JOIN FETCH p.contrato co " +
+           "LEFT JOIN FETCH co.separacion " +
+           "LEFT JOIN FETCH co.vendedor " +
+           "LEFT JOIN FETCH co.usuario " +
            "LEFT JOIN FETCH co.clientes cc " +
            "LEFT JOIN FETCH cc.cliente cli " +
            "LEFT JOIN FETCH co.lotes cl " +

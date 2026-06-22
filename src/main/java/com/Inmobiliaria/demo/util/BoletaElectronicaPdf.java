@@ -60,7 +60,7 @@ public class BoletaElectronicaPdf {
              Document doc = new Document(pdf, PageSize.A5.rotate())) {
 
             // Margen izquierdo para perforación / encuadernación
-            doc.setMargins(10, 18, 10, 52);
+            doc.setMargins(16, 18, 10, 52);
 
             PdfFont courier     = cargarFuente("fonts/COUR.TTF");
             PdfFont courierBold = cargarFuente("fonts/COURBD.TTF");
@@ -190,7 +190,7 @@ public class BoletaElectronicaPdf {
             // ═══════════════════════════════════════
             // DATOS DEL CLIENTE (formato SUNAT)
             // ═══════════════════════════════════════
-            float[] clientCols = {0.30f, 1};
+            float[] clientCols = {0.20f, 1};
             Table tablaCliente = new Table(UnitValue.createPercentArray(clientCols))
                     .setWidth(UnitValue.createPercentValue(100))
                     .setMarginTop(4);
@@ -357,7 +357,7 @@ public class BoletaElectronicaPdf {
               Document doc = new Document(pdf, PageSize.A5.rotate())) {
 
             // Margen izquierdo para perforación / encuadernación
-            doc.setMargins(10, 18, 10, 52);
+            doc.setMargins(16, 18, 10, 52);
 
             PdfFont courier     = cargarFuente("fonts/COUR.TTF");
             PdfFont courierBold = cargarFuente("fonts/COURBD.TTF");
@@ -444,7 +444,7 @@ public class BoletaElectronicaPdf {
             doc.add(encabezado);
 
             // ── Datos del cliente ──
-            Table tablaCliente = new Table(UnitValue.createPercentArray(new float[]{0.30f, 1}))
+            Table tablaCliente = new Table(UnitValue.createPercentArray(new float[]{0.20f, 1}))
                     .setWidth(UnitValue.createPercentValue(100)).setMarginTop(4);
 
             tablaCliente.addCell(labelCell("Señor(es)", courierBold));
@@ -565,8 +565,8 @@ public class BoletaElectronicaPdf {
     private static Cell labelCell(String texto, PdfFont bold) {
         return new Cell()
                 .setBorder(Border.NO_BORDER)
-                .setPadding(1.5f)
-                .add(new Paragraph(texto + " :").setFont(bold).setFontSize(8.5f)
+                .setPadding(0.5f)
+                .add(new Paragraph(texto).setFont(bold).setFontSize(8.5f)
                         .setTextAlignment(TextAlignment.LEFT));
     }
 
@@ -575,7 +575,7 @@ public class BoletaElectronicaPdf {
         return new Cell()
                 .setBorder(Border.NO_BORDER)
                 .setPadding(1.5f)
-                .add(new Paragraph(texto != null ? texto : "-").setFont(normal).setFontSize(8.5f));
+                .add(new Paragraph(": " + (texto != null ? texto : "-")).setFont(normal).setFontSize(8.5f));
     }
 
     /**

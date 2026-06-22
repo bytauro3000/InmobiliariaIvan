@@ -3,7 +3,7 @@ package com.Inmobiliaria.demo.service.impl;
 import com.Inmobiliaria.demo.dto.EnviarWhatsappRequest;
 import com.Inmobiliaria.demo.service.WhatsappService;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,9 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
-
 import jakarta.annotation.PostConstruct;
-import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.*;
@@ -26,7 +24,7 @@ public class WhatsappServiceImpl implements WhatsappService {
     private static final DecimalFormat DF = new DecimalFormat("#,##0.00", new DecimalFormatSymbols(Locale.US));
 
     private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+  
 
     private String token;
     private String deviceId;

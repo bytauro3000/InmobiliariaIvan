@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -96,22 +97,42 @@ public class PagoInicialServiceImpl implements PagoInicialService {
             LocalDate desde,
             LocalDate hasta) {
 
-        return pagoInicialRepository
-                .findTodos(
-                    (numeroComprobante != null && !numeroComprobante.isBlank()) ? numeroComprobante : null,
-                    (manzana           != null && !manzana.isBlank())           ? manzana           : null,
-                    (numeroLote        != null && !numeroLote.isBlank())        ? numeroLote        : null,
-                    idPrograma,
-                    desde,
-                    hasta)
-                .stream()
-                .map(this::mapToDTO)
+        List<PagoInicial> pagos = pagoInicialRepository.findTodos(
+                (numeroComprobante != null && !numeroComprobante.isBlank()) ? numeroComprobante : null,
+                (manzana           != null && !manzana.isBlank())           ? manzana           : null,
+                (numeroLote        != null && !numeroLote.isBlank())        ? numeroLote        : null,
+                idPrograma,
+                desde,
+                hasta);
+
+        if (pagos.isEmpty()) return List.of();
+
+        // Batch-fetch vouchers para todos los pagos en 1 consulta
+        List<Integer> pagoIds = pagos.stream()
+                .map(PagoInicial::getIdPagoInicial)
+                .collect(Collectors.toList());
+
+        List<Voucher> vouchers = voucherRepository
+                .findByTipoOrigenAndReferenciaIdIn("PAGO_INICIAL", pagoIds);
+
+        Map<Integer, List<String>> vouchersPorPago = vouchers.stream()
+                .collect(Collectors.groupingBy(
+                        Voucher::getReferenciaId,
+                        Collectors.mapping(Voucher::getUrl, Collectors.toList())));
+
+        return pagos.stream()
+                .map(p -> mapToDTO(p, vouchersPorPago))
                 .collect(Collectors.toList());
     }
 
     // ── Mapper privado ────────────────────────────────────────────────────────
 
     private PagoInicialResponseDTO mapToDTO(PagoInicial pago) {
+        return mapToDTO(pago, null);
+    }
+
+    private PagoInicialResponseDTO mapToDTO(PagoInicial pago,
+                                              Map<Integer, List<String>> vouchersPorPago) {
         PagoInicialResponseDTO dto = new PagoInicialResponseDTO();
         dto.setIdPagoInicial(pago.getIdPagoInicial());
         dto.setImportePagado(pago.getImportePagado());
@@ -126,10 +147,15 @@ public class PagoInicialServiceImpl implements PagoInicialService {
             dto.setNumeroComprobante(pago.getComprobante().getNumeroCompleto());
         }
 
-        List<String> urls = voucherRepository
-            .findByTipoOrigenAndReferenciaId("PAGO_INICIAL", pago.getIdPagoInicial())
-            .stream().map(Voucher::getUrl).collect(Collectors.toList());
-        dto.setUrlsVoucher(urls);
+        if (vouchersPorPago != null) {
+            dto.setUrlsVoucher(
+                vouchersPorPago.getOrDefault(pago.getIdPagoInicial(), List.of()));
+        } else {
+            List<String> urls = voucherRepository
+                .findByTipoOrigenAndReferenciaId("PAGO_INICIAL", pago.getIdPagoInicial())
+                .stream().map(Voucher::getUrl).collect(Collectors.toList());
+            dto.setUrlsVoucher(urls);
+        }
 
         // Anulación
         dto.setAnulado(Boolean.TRUE.equals(pago.getAnulado()));

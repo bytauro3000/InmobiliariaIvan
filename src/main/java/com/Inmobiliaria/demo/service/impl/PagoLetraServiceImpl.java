@@ -257,6 +257,11 @@ public class PagoLetraServiceImpl implements PagoLetraService {
     // ═══════════════════════════════════════════════════════════════════════════
 
     private PagoLetraResponseDTO mapToDTO(PagoLetras pago) {
+        return mapToDTO(pago, null);
+    }
+
+    private PagoLetraResponseDTO mapToDTO(PagoLetras pago,
+                                           Map<Integer, List<String>> vouchersPorPago) {
         PagoLetraResponseDTO dto = new PagoLetraResponseDTO();
         dto.setIdPago(pago.getIdPago());
         dto.setIdLetra(pago.getLetra().getIdLetra());
@@ -267,32 +272,37 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         dto.setNumeroOperacion(pago.getNumeroOperacion());
         dto.setObservaciones(pago.getObservaciones());
         dto.setEsPagoAcuenta(pago.getEsPagoAcuenta());
- 
+
         dto.setImporteLetra(pago.getLetra().getImporte());
         dto.setSaldoPendiente(pago.getLetra().getSaldoPendiente());
         dto.setEstadoLetra(pago.getLetra().getEstadoLetra());
- 
+
         if (pago.getComprobante() != null) {
             dto.setIdComprobante(pago.getComprobante().getIdComprobante());
             dto.setTipoComprobante(pago.getComprobante().getTipoComprobante());
             dto.setNumeroComprobante(pago.getComprobante().getNumeroCompleto());
             dto.setSunatHash(pago.getComprobante().getHashCdr());
         }
- 
-        List<String> urls = voucherRepository
-            .findByTipoOrigenAndReferenciaId("PAGO_LETRA", pago.getIdPago())
-            .stream().map(Voucher::getUrl).collect(Collectors.toList());
-        dto.setUrlsVoucher(urls);
- 
+
+        // Vouchers: usa mapa pre-cargado si está disponible (evita N+1 en listarTodos)
+        if (vouchersPorPago != null) {
+            dto.setUrlsVoucher(
+                vouchersPorPago.getOrDefault(pago.getIdPago(), List.of()));
+        } else {
+            List<String> urls = voucherRepository
+                .findByTipoOrigenAndReferenciaId("PAGO_LETRA", pago.getIdPago())
+                .stream().map(Voucher::getUrl).collect(Collectors.toList());
+            dto.setUrlsVoucher(urls);
+        }
+
         // Anulación
         dto.setAnulado(Boolean.TRUE.equals(pago.getAnulado()));
         dto.setMotivoAnulacion(pago.getMotivoAnulacion());
         dto.setFechaAnulacion(pago.getFechaAnulacion());
         dto.setAnuladoPor(pago.getAnuladoPor());
 
-        // Contexto admin (manzana / lote / programa / cliente)
-        // Solo se popula cuando el query hace JOIN FETCH hasta lotes y clientes
-        // (usado por listarTodos). En otros contextos estos campos quedan null.
+        // Contexto admin (manzana / lote / programa)
+        // El nombre del cliente se asigna externamente en listarTodos.
         var lotes = pago.getLetra().getContrato().getLotes();
         if (lotes != null && !lotes.isEmpty()) {
             var lote = lotes.iterator().next().getLote();
@@ -309,15 +319,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         if (pago.getLetra().getContrato().getMoneda() != null) {
             dto.setMoneda(pago.getLetra().getContrato().getMoneda().name());
         }
-        var clientes = pago.getLetra().getContrato().getClientes();
-        if (clientes != null && !clientes.isEmpty()) {
-            var cc = clientes.iterator().next();
-            if (cc.getCliente() != null) {
-                var cli = cc.getCliente();
-                dto.setNombreCliente(cli.getNombre() + " " + cli.getApellidos());
-            }
-        }
- 
+
         return dto;
     }
  
@@ -777,7 +779,37 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             && comprobanteCompartido.getSerie() != null
             && comprobanteCompartido.getSerie().startsWith("B")) {
             Cliente cliente = letraEjemplo.getContrato().getClientes().iterator().next().getCliente();
-            String descripcion = "PAGO MULTIPLE DE LETRAS - CONTRATO " + idContrato;
+
+            // Construir descripción dinámica: "LETRA 75, 76 Y 77 POR LA COMPRA DE..."
+            List<String> numsLimpios = new ArrayList<>();
+            for (String nl : numerosLetraRequest) {
+                String n = nl;
+                if (n != null && n.contains("/")) n = n.substring(0, n.indexOf("/"));
+                numsLimpios.add(n);
+            }
+            String letrasStr;
+            if (numsLimpios.size() == 1) {
+                letrasStr = "LETRA " + numsLimpios.get(0);
+            } else if (numsLimpios.size() == 2) {
+                letrasStr = "LETRA " + numsLimpios.get(0) + " Y " + numsLimpios.get(1);
+            } else {
+                StringBuilder sb = new StringBuilder("LETRA ");
+                for (int i = 0; i < numsLimpios.size() - 1; i++) {
+                    sb.append(numsLimpios.get(i));
+                    if (i < numsLimpios.size() - 2) sb.append(", ");
+                }
+                sb.append(" Y ").append(numsLimpios.get(numsLimpios.size() - 1));
+                letrasStr = sb.toString();
+            }
+            String nombrePrograma = "";
+            if (letraEjemplo.getContrato().getLotes() != null && !letraEjemplo.getContrato().getLotes().isEmpty()) {
+                ContratoLote primerLote = letraEjemplo.getContrato().getLotes().iterator().next();
+                if (primerLote.getLote() != null && primerLote.getLote().getPrograma() != null) {
+                    nombrePrograma = primerLote.getLote().getPrograma().getNombrePrograma();
+                }
+            }
+            String descripcion = letrasStr + " POR LA COMPRA DE UN LOTE DE TERRENO RUSTICO PROGRAMA DE VIV. " + nombrePrograma.toUpperCase();
+
             sunatRespuestaMulti = sunatEnvioService.enviarBoleta(
                     cliente, letraEjemplo.getContrato(),
                     comprobanteCompartido, montoTotalNeto, descripcion);
@@ -1087,10 +1119,11 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             LocalDate desde,
             LocalDate hasta) {
 
-        // ── PASO 1: Query con lotes/programa (sin clientes).
-        // Se divide en dos queries para evitar MultipleBagFetchException:
-        // Hibernate no permite JOIN FETCH de dos List<> (bags) en la misma query.
-        List<PagoLetras> pagosConLotes = pagoLetraRepository.findTodosConLotes(
+        // ── PASO 1: Query única con lotes/programa + EAGER associations.
+        // La query incluye JOIN FETCH para @ManyToOne (distrito, separacion,
+        // vendedor, usuario) que evita queries EAGER adicionales.
+        // Los clientes se cargan por separado (MultipleBagFetchException).
+        List<PagoLetras> pagos = pagoLetraRepository.findTodosConLotes(
                 (numeroComprobante != null && !numeroComprobante.isBlank()) ? numeroComprobante : null,
                 (manzana           != null && !manzana.isBlank())           ? manzana           : null,
                 (numeroLote        != null && !numeroLote.isBlank())        ? numeroLote        : null,
@@ -1098,40 +1131,47 @@ public class PagoLetraServiceImpl implements PagoLetraService {
                 desde,
                 hasta);
 
-        if (pagosConLotes.isEmpty()) {
-            return java.util.Collections.emptyList();
+        if (pagos.isEmpty()) {
+            return Collections.emptyList();
         }
 
-        // ── PASO 2: Obtener IDs de contratos únicos y cargar clientes por separado ──
-        List<Integer> contratoIds = pagosConLotes.stream()
+        // ── PASO 2: Batch-fetch vouchers para TODOS los pagos en 1 consulta ──
+        List<Integer> pagoIds = pagos.stream()
+                .map(PagoLetras::getIdPago)
+                .collect(Collectors.toList());
+
+        List<Voucher> vouchers = voucherRepository
+                .findByTipoOrigenAndReferenciaIdIn("PAGO_LETRA", pagoIds);
+
+        Map<Integer, List<String>> vouchersPorPago = vouchers.stream()
+                .collect(Collectors.groupingBy(
+                        Voucher::getReferenciaId,
+                        Collectors.mapping(Voucher::getUrl, Collectors.toList())));
+
+        // ── PASO 3: Batch-fetch nombres de clientes de contratos involucrados ──
+        List<Integer> contratoIds = pagos.stream()
                 .map(p -> p.getLetra().getContrato().getIdContrato())
                 .distinct()
                 .collect(Collectors.toList());
 
-        List<PagoLetras> pagosConClientes = pagoLetraRepository
-                .findByContratoIdsConClientes(contratoIds);
+        List<Contrato> contratosConClientes = contratoRepository
+                .findAllByIdConClientes(contratoIds);
 
-        // Mapa contratoId -> nombre cliente para lookup O(1)
-        java.util.Map<Integer, String> nombreClientePorContrato = new java.util.HashMap<>();
-        for (PagoLetras p : pagosConClientes) {
-            Integer idContrato = p.getLetra().getContrato().getIdContrato();
-            if (!nombreClientePorContrato.containsKey(idContrato)) {
-                var clientes = p.getLetra().getContrato().getClientes();
-                if (clientes != null && !clientes.isEmpty()) {
-                    var cc = clientes.iterator().next();
-                    if (cc.getCliente() != null) {
-                        var cli = cc.getCliente();
-                        nombreClientePorContrato.put(idContrato,
-                                cli.getNombre() + " " + cli.getApellidos());
-                    }
+        Map<Integer, String> nombreClientePorContrato = new HashMap<>();
+        for (Contrato c : contratosConClientes) {
+            if (c.getClientes() != null && !c.getClientes().isEmpty()) {
+                var cc = c.getClientes().iterator().next();
+                if (cc.getCliente() != null) {
+                    nombreClientePorContrato.put(c.getIdContrato(),
+                            cc.getCliente().getNombre() + " " + cc.getCliente().getApellidos());
                 }
             }
         }
 
-        // ── PASO 3: Mapear combinando lotes ya cargados + mapa de clientes ──
-        return pagosConLotes.stream()
+        // ── PASO 4: Mapear a DTO con datos pre-cargados ──
+        return pagos.stream()
                 .map(p -> {
-                    PagoLetraResponseDTO dto = mapToDTO(p);
+                    PagoLetraResponseDTO dto = mapToDTO(p, vouchersPorPago);
                     Integer idContrato = p.getLetra().getContrato().getIdContrato();
                     dto.setNombreCliente(nombreClientePorContrato.get(idContrato));
                     return dto;

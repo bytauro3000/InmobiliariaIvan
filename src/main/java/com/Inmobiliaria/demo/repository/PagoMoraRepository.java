@@ -92,7 +92,11 @@ public interface PagoMoraRepository extends JpaRepository<PagoMora, Integer> {
     @Query("SELECT DISTINCT pm FROM PagoMora pm " +
            "JOIN FETCH pm.mora m " +
            "JOIN FETCH m.letra l " +
+           "LEFT JOIN FETCH l.distrito " +
            "JOIN FETCH l.contrato co " +
+           "LEFT JOIN FETCH co.separacion " +
+           "LEFT JOIN FETCH co.vendedor " +
+           "LEFT JOIN FETCH co.usuario " +
            "LEFT JOIN FETCH co.clientes cc " +
            "LEFT JOIN FETCH cc.cliente cli " +
            "LEFT JOIN FETCH pm.comprobante c " +
