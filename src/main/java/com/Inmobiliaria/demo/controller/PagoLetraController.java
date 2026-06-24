@@ -14,13 +14,16 @@ import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.repository.PagoLetraRepository;
 import com.Inmobiliaria.demo.repository.UsuarioRepository;
 import com.Inmobiliaria.demo.repository.VoucherRepository;
+import com.Inmobiliaria.demo.service.ComprobanteService;
 import com.Inmobiliaria.demo.service.PagoLetraService;
+import com.Inmobiliaria.demo.repository.ComprobanteRepository;
 import com.Inmobiliaria.demo.util.ComprobantePagoLetraPdf;
 import com.Inmobiliaria.demo.util.BoletaElectronicaPdf;
 import com.Inmobiliaria.demo.util.NumeroALetras;
 
 import jakarta.validation.Valid;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -45,10 +48,12 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class PagoLetraController {
 
-    private final PagoLetraService    pagoLetraService;
-    private final PagoLetraRepository pagoLetraRepository;
-    private final UsuarioRepository   usuarioRepository;
-    private final VoucherRepository   voucherRepository;
+    private final PagoLetraService     pagoLetraService;
+    private final PagoLetraRepository  pagoLetraRepository;
+    private final UsuarioRepository    usuarioRepository;
+    private final VoucherRepository    voucherRepository;
+    private final ComprobanteService   comprobanteService;
+    private final ComprobanteRepository comprobanteRepository;
 
     // ── Lectura básica ────────────────────────────────────────────────────────
 
@@ -272,16 +277,42 @@ public class PagoLetraController {
                 .body(pdf);
     }
 
+    // ── PIN: Validar PIN de autorización ───────────────────────────────────────
+    @Value("${app.pago.pin}")
+    private String pagoPin;
+
+    @PostMapping("/validar-pin")
+    public ResponseEntity<Map<String, Object>> validarPin(@RequestBody Map<String, String> body) {
+        String pin = body.get("pin");
+        boolean valido = pin != null && pin.equals(pagoPin);
+        Map<String, Object> result = new HashMap<>();
+        result.put("valido", valido);
+        return ResponseEntity.ok(result);
+    }
+
     // ── ADMIN: Anular ─────────────────────────────────────────────────────────
 
     @PatchMapping("/{idPago}/anular")
     @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
+    @Transactional
     public ResponseEntity<Map<String, Object>> anularPago(
             @PathVariable Integer idPago,
             @Valid @RequestBody AnulacionRequestDTO request,
             Authentication authentication) {
         String anuladoPor = authentication.getName();
         pagoLetraService.anularPagoConMoras(idPago, request.getMotivo(), anuladoPor);
+
+        // Crear NC interna para comprobantes no SUNAT (RB01, etc.)
+        pagoLetraRepository.findById(idPago).ifPresent(pago -> {
+            Comprobante orig = pago.getComprobante();
+            if (orig != null && orig.getSerie() != null && !orig.getSerie().startsWith("B")) {
+                Comprobante nc = comprobanteService.generarNotaCredito(
+                        orig, "01", request.getMotivo(), anuladoPor);
+                orig.setIdNotaCreditoAnulacion(nc.getIdComprobante());
+                comprobanteRepository.save(orig);
+            }
+        });
+
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
         result.put("mensaje", "Pago anulado correctamente. Letra restaurada y moras canceladas.");

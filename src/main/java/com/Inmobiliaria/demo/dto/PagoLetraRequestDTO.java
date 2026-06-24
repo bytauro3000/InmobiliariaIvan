@@ -27,4 +27,6 @@ public class PagoLetraRequestDTO {
     private String          observaciones;
     private Boolean esPagoAcuenta = false;
     private String          seriePersonalizada;
+
+    private String          pin;
 }

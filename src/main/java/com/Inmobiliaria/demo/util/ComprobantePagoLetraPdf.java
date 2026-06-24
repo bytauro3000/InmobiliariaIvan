@@ -313,6 +313,8 @@ public class ComprobantePagoLetraPdf {
             String medioPago    = pago.getMedioPago() != null ? pago.getMedioPago().name() : "-";
             String numOp        = (pago.getNumeroOperacion() != null && !pago.getNumeroOperacion().isBlank())
                                   ? "   N\u00b0 Op: " + pago.getNumeroOperacion() : "";
+            String fechaOpStr   = pago.getFechaOperacion() != null
+                                  ? "   Fecha Op: " + pago.getFechaOperacion().format(FMT) : "";
 
             Moneda monedaContrato = contrato.getMoneda() != null ? contrato.getMoneda() : Moneda.USD;
             String simboloMoneda  = (monedaContrato == Moneda.PEN) ? "S/" : "$";
@@ -425,7 +427,7 @@ public class ComprobantePagoLetraPdf {
             celdaCuerpo.add(separadorLinea());
             celdaCuerpo.add(lineaDato("Por concepto de: ", concepto, courier, courierBold, 10f));
             celdaCuerpo.add(separadorLinea());
-            celdaCuerpo.add(lineaDato("Medio de pago: ", medioPago + numOp, courier, courierBold, 10f));
+            celdaCuerpo.add(lineaDato("Medio de pago: ", medioPago + numOp + fechaOpStr, courier, courierBold, 10f));
             celdaCuerpo.add(separadorLinea());
             celdaCuerpo.add(lineaDato("Fecha venc. letra: ", fechaVencStr, courier, courierBold, 10f));
             celdaCuerpo.add(separadorLinea());
@@ -595,6 +597,8 @@ public class ComprobantePagoLetraPdf {
         String medioPago    = primero.getMedioPago() != null ? primero.getMedioPago().name() : "-";
         String numOp        = (primero.getNumeroOperacion() != null && !primero.getNumeroOperacion().isBlank())
                               ? "   N\u00b0 Op: " + primero.getNumeroOperacion() : "";
+        String fechaOpStr   = primero.getFechaOperacion() != null
+                              ? "   Fecha Op: " + primero.getFechaOperacion().format(FMT) : "";
 
         List<String> fechasVenc = pagos.stream()
                 .sorted(java.util.Comparator.comparingInt(p -> {
@@ -735,7 +739,7 @@ public class ComprobantePagoLetraPdf {
             celdaCuerpo.add(separadorLinea());
             celdaCuerpo.add(lineaDato("Por concepto de: ", concepto, courier, courierBold, fsCuerpo));
             celdaCuerpo.add(separadorLinea());
-            celdaCuerpo.add(lineaDato("Medio de pago: ", medioPago + numOp, courier, courierBold, fsCuerpo));
+            celdaCuerpo.add(lineaDato("Medio de pago: ", medioPago + numOp + fechaOpStr, courier, courierBold, fsCuerpo));
             celdaCuerpo.add(separadorLinea());
             celdaCuerpo.add(lineaDato("Fechas de vencimiento: ", fechasVencStr, courier, courierBold, fsCuerpo));
             celdaCuerpo.add(separadorLinea());

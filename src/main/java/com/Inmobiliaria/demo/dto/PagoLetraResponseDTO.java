@@ -42,6 +42,7 @@ public class PagoLetraResponseDTO {
     private String          motivoAnulacion;
     private LocalDateTime   fechaAnulacion;
     private String          anuladoPor;
+    private Long            idNotaCredito;
 
     // ── Contexto admin (solo se popula en /letras/todos) ──────────────────────
     private Integer         idContrato;

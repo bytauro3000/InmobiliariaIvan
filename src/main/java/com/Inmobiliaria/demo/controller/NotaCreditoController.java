@@ -2,16 +2,23 @@ package com.Inmobiliaria.demo.controller;
 
 import com.Inmobiliaria.demo.dto.NotaCreditoRequestDTO;
 import com.Inmobiliaria.demo.entity.*;
+import com.Inmobiliaria.demo.enums.Moneda;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
+import com.Inmobiliaria.demo.enums.TipoOrigenComprobante;
 import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.repository.*;
 import com.Inmobiliaria.demo.service.ComprobanteService;
 import com.Inmobiliaria.demo.service.PagoLetraService;
 import com.Inmobiliaria.demo.service.SunatEnvioService;
+import com.Inmobiliaria.demo.util.NotaCreditoElectronicaPdf;
+import com.Inmobiliaria.demo.util.NotaCreditoReciboPdf;
+import com.Inmobiliaria.demo.util.NumeroALetras;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
@@ -110,6 +117,9 @@ public class NotaCreditoController {
                     + " emitida y aceptada por SUNAT. Boleta " + comprobanteOriginal.getNumeroCompleto() + " anulada.");
             result.put("notaCredito", notaCredito.getNumeroCompleto());
             result.put("comprobanteAnulado", comprobanteOriginal.getNumeroCompleto());
+            result.put("idNotaCredito", notaCredito.getIdComprobante());
+            result.put("tipoComprobanteNC", notaCredito.getTipoComprobante().name());
+            result.put("serieNC", notaCredito.getSerie());
             return ResponseEntity.ok(result);
 
         } catch (NegocioException e) {
@@ -172,6 +182,170 @@ public class NotaCreditoController {
         } else if (pago instanceof PagoInscripcionComprobante pic) {
             pagoInscripcionRepository.save(pic);
         }
+    }
+
+    // ─── PDF: Nota de Crédito Electrónica ─────────────────────────────────
+    @GetMapping("/{idNotaCredito}/pdf")
+    @Transactional(readOnly = true)
+    public ResponseEntity<byte[]> descargarPdfNotaCredito(
+            @PathVariable Long idNotaCredito) {
+        Comprobante nc = comprobanteRepository.findById(idNotaCredito)
+                .orElseThrow(() -> new NegocioException("Nota de crédito no encontrada: " + idNotaCredito));
+
+        if (nc.getTipoComprobante() != TipoComprobante.NOTA_CREDITO) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        Comprobante orig = nc.getComprobanteReferencia();
+        if (orig == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        PagoBase pago = findPagoByTipoOrigen(
+                nc.getTipoOrigen(),
+                nc.getReferenciaId());
+        Cliente cliente = extractCliente(pago);
+        String clienteNombre = (cliente.getNombre() + " " + (cliente.getApellidos() != null ? cliente.getApellidos() : "")).trim();
+        String clienteDoc = cliente.getNumDoc() != null ? cliente.getNumDoc() : "";
+        String direccionCliente = cliente.getDireccion() != null ? cliente.getDireccion().toUpperCase() : "-";
+        Contrato contrato = extractContrato(pago);
+        Moneda moneda = contrato.getMoneda() != null ? contrato.getMoneda() : Moneda.USD;
+
+        String descripcion = buildDescripcionAnulacion(orig, pago, contrato);
+
+        byte[] pdf = NotaCreditoElectronicaPdf.generar(
+                nc.getSerie(), nc.getNumero().toString(), nc.getFechaEmision().toString(),
+                moneda.name(), String.format("%.2f", nc.getMonto()),
+                clienteNombre.toUpperCase(), clienteDoc, direccionCliente,
+                descripcion,
+                NumeroALetras.convertir(nc.getMonto(), moneda),
+                nc.getMonto(),
+                nc.getHashCdr(),
+                nc.getCodigoMotivo() != null ? nc.getCodigoMotivo() : "",
+                nc.getMotivoNotaCredito() != null ? nc.getMotivoNotaCredito() : "",
+                orig.getSerie(), orig.getNumero().toString(),
+                orig.getFechaEmision() != null ? orig.getFechaEmision().toString() : ""
+        );
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "inline; filename=nc-electronica-" + nc.getNumeroCompleto() + ".pdf")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
+    // ─── PDF: Nota de Crédito de Recibo ─────────────────────────────────
+    @GetMapping("/recibo/{idNotaCredito}/pdf")
+    @Transactional(readOnly = true)
+    public ResponseEntity<byte[]> descargarPdfNotaCreditoRecibo(
+            @PathVariable Long idNotaCredito) {
+        Comprobante nc = comprobanteRepository.findById(idNotaCredito)
+                .orElseThrow(() -> new NegocioException("Nota de crédito no encontrada: " + idNotaCredito));
+
+        if (nc.getTipoComprobante() != TipoComprobante.NOTA_CREDITO) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        Comprobante orig = nc.getComprobanteReferencia();
+        if (orig == null) {
+            orig = nc;
+        }
+
+        PagoBase pago = findPagoByTipoOrigen(
+                nc.getTipoOrigen(),
+                nc.getReferenciaId());
+        Cliente cliente = extractCliente(pago);
+        String clienteNombre = (cliente.getNombre() + " " + (cliente.getApellidos() != null ? cliente.getApellidos() : "")).trim();
+        String clienteDoc = cliente.getNumDoc() != null ? cliente.getNumDoc() : "";
+        String direccionCliente = cliente.getDireccion() != null ? cliente.getDireccion().toUpperCase() : "-";
+        Contrato contrato = extractContrato(pago);
+        Moneda moneda = contrato.getMoneda() != null ? contrato.getMoneda() : Moneda.USD;
+
+        String descripcion = buildDescripcionAnulacion(orig, pago, contrato);
+
+        byte[] pdf = NotaCreditoReciboPdf.generar(
+                nc.getSerie(), nc.getNumero().toString(), nc.getFechaEmision().toString(),
+                moneda.name(), String.format("%.2f", nc.getMonto()),
+                clienteNombre.toUpperCase(), clienteDoc, direccionCliente,
+                descripcion,
+                NumeroALetras.convertir(nc.getMonto(), moneda),
+                nc.getMonto(),
+                orig.getSerie(), orig.getNumero().toString(),
+                orig.getFechaEmision() != null ? orig.getFechaEmision().toString() : ""
+        );
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "inline; filename=nc-recibo-" + nc.getNumeroCompleto() + ".pdf")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
+    // ─── Buscar NC por ID del comprobante original ─────────────────────
+    @GetMapping("/por-original/{idOriginal}")
+    @Transactional(readOnly = true)
+    public ResponseEntity<?> buscarPorComprobanteOriginal(@PathVariable Long idOriginal) {
+        var ncOpt = comprobanteRepository.findByComprobanteReferenciaIdComprobante(idOriginal);
+        if (ncOpt.isEmpty()) {
+            var empty = new HashMap<String, Object>();
+            empty.put("idNotaCredito", null);
+            return ResponseEntity.ok(empty);
+        }
+        Comprobante nc = ncOpt.get();
+        return ResponseEntity.ok(Map.of(
+                "idNotaCredito", nc.getIdComprobante(),
+                "numeroCompleto", nc.getNumeroCompleto(),
+                "serie", nc.getSerie()
+        ));
+    }
+
+    // ─── Helper: descripción enriquecida con datos de letra y lote ────────
+    private String buildDescripcionAnulacion(Comprobante orig, PagoBase pago, Contrato contrato) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("ANULACION - ").append(orig.getNumeroCompleto());
+
+        String letraNumero = "";
+        if (pago instanceof PagoLetras pl) {
+            String nl = pl.getLetra().getNumeroLetra();
+            if (nl != null) {
+                if (nl.contains("/")) nl = nl.substring(0, nl.indexOf("/"));
+                letraNumero = nl;
+            }
+        }
+
+        String loteInfo = "";
+        if (contrato.getLotes() != null && !contrato.getLotes().isEmpty()) {
+            var lot = contrato.getLotes().iterator().next().getLote();
+            if (lot != null) {
+                loteInfo = "MZ." + lot.getManzana() + " LT." + lot.getNumeroLote();
+                if (lot.getPrograma() != null) {
+                    loteInfo += " DEL PROGRAMA " + lot.getPrograma().getNombrePrograma().toUpperCase();
+                }
+            }
+        }
+
+        if (!letraNumero.isEmpty() || !loteInfo.isEmpty()) {
+            sb.append("\n");
+            if (!letraNumero.isEmpty()) sb.append("LETRA N° ").append(letraNumero).append(" ");
+            sb.append(loteInfo);
+        }
+
+        return sb.toString();
+    }
+
+    // ─── Helper para encontrar pago por tipo de origen ───────────────────
+    private PagoBase findPagoByTipoOrigen(TipoOrigenComprobante tipoOrigen, Integer referenciaId) {
+        if (referenciaId == null) throw new NegocioException("El comprobante no tiene referencia de pago.");
+        return switch (tipoOrigen) {
+            case PAGO_LETRA -> pagoLetraRepository.findById(referenciaId)
+                    .orElseThrow(() -> new NegocioException("Pago de letra no encontrado: " + referenciaId));
+            case PAGO_MORA -> pagoMoraRepository.findById(referenciaId)
+                    .orElseThrow(() -> new NegocioException("Pago de mora no encontrado: " + referenciaId));
+            case PAGO_INICIAL -> pagoInicialRepository.findById(referenciaId)
+                    .orElseThrow(() -> new NegocioException("Pago inicial no encontrado: " + referenciaId));
+            case PAGO_INSCRIPCION -> pagoInscripcionRepository.findById(referenciaId)
+                    .orElseThrow(() -> new NegocioException("Pago de inscripción no encontrado: " + referenciaId));
+        };
     }
 
     @GetMapping("/motivos")

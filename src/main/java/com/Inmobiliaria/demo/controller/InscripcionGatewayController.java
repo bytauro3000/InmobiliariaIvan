@@ -9,6 +9,7 @@ import com.Inmobiliaria.demo.entity.PagoInscripcionComprobante;
 import com.Inmobiliaria.demo.entity.Voucher;
 import com.Inmobiliaria.demo.enums.TipoOrigenComprobante;
 import com.Inmobiliaria.demo.exception.NegocioException;
+import com.Inmobiliaria.demo.repository.ComprobanteRepository;
 import com.Inmobiliaria.demo.repository.ContratoRepository;
 import com.Inmobiliaria.demo.repository.PagoInscripcionComprobanteRepository;
 import com.Inmobiliaria.demo.repository.VoucherRepository;
@@ -53,6 +54,7 @@ import java.util.stream.Collectors;
     private final ContratoRepository                   contratoRepository;
     private final PagoInscripcionComprobanteRepository pagoInscripcionComprobanteRepository;
     private final ComprobanteService                   comprobanteService;
+    private final ComprobanteRepository                comprobanteRepository;
     private final InscripcionComprobanteServiceImpl    inscripcionComprobanteService;
     private final VoucherRepository                    voucherRepository;
     private final Cloudinary                           cloudinary;
@@ -468,6 +470,15 @@ import java.util.stream.Collectors;
 	            pago.setFechaAnulacion(java.time.LocalDateTime.now());
 	            pago.setAnuladoPor(authentication.getName());
 	            pagoInscripcionComprobanteRepository.save(pago);
+
+	            // Crear NC interna para comprobantes no SUNAT
+	            Comprobante orig = pago.getComprobante();
+	            if (orig != null && orig.getSerie() != null && !orig.getSerie().startsWith("B")) {
+	                Comprobante nc = comprobanteService.generarNotaCredito(
+	                        orig, "01", request.getMotivo(), authentication.getName());
+	                orig.setIdNotaCreditoAnulacion(nc.getIdComprobante());
+	                comprobanteRepository.save(orig);
+	            }
 	
 	            return ResponseEntity.ok(Map.of(
 	                    "mensaje", "Pago de inscripción anulado correctamente.",
@@ -500,12 +511,13 @@ import java.util.stream.Collectors;
 	        dto.setObservaciones(p.getObservaciones());
 	        dto.setTipoServicio(p.getTipoServicio());
 	
-	        Comprobante c = p.getComprobante();
-	        if (c != null) {
-	            dto.setTipoComprobante(c.getTipoComprobante());
-	            dto.setNumeroComprobante(c.getNumeroCompleto());
-	            dto.setFechaEmision(c.getFechaEmision());
-	        }
+        Comprobante c = p.getComprobante();
+        if (c != null) {
+            dto.setTipoComprobante(c.getTipoComprobante());
+            dto.setNumeroComprobante(c.getNumeroCompleto());
+            dto.setFechaEmision(c.getFechaEmision());
+            dto.setIdComprobante(c.getIdComprobante());
+        }
 	
 	        var lotes = p.getContrato().getLotes();
 	        if (lotes != null && !lotes.isEmpty()) {

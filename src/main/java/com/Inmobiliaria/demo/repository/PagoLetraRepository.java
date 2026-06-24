@@ -158,7 +158,7 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
            "       (prog IS NOT NULL AND prog.idPrograma = :idPrograma)) " +
            "AND   (:desde IS NULL OR p.fechaPago >= :desde) " +
            "AND   (:hasta IS NULL OR p.fechaPago <= :hasta) " +
-           "ORDER BY p.fechaPago DESC")
+            "ORDER BY p.fechaPago DESC, c.tipoComprobante, c.numeroCompleto")
     List<PagoLetras> findTodosConLotes(
             @Param("numeroComprobante") String numeroComprobante,
             @Param("manzana")          String manzana,

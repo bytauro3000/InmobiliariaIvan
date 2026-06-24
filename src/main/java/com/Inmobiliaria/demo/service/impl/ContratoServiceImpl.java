@@ -143,11 +143,12 @@ public class ContratoServiceImpl implements ContratoService {
                 && contratoGuardado.getInicial().compareTo(BigDecimal.ZERO) > 0) {
 
         	PagoInicialRequestDTO piReq = requestDTO.getPagoInicial();
+            LocalDate fechaPagoInicial = piReq.getFechaPago() != null ? piReq.getFechaPago() : LocalDate.now();
 
         	PagoInicial pago = new PagoInicial();
         	pago.setContrato(contratoGuardado);
         	pago.setImportePagado(piReq.getImportePagado());
-        	pago.setFechaPago(LocalDate.now());
+        	pago.setFechaPago(fechaPagoInicial);
         	pago.setMedioPago(piReq.getMedioPago());
         	pago.setNumeroOperacion(piReq.getNumeroOperacion());
         	pago.setObservaciones(piReq.getObservaciones());
@@ -163,7 +164,7 @@ public class ContratoServiceImpl implements ContratoService {
                     TipoOrigenComprobante.PAGO_INICIAL,
                     null, // id temporal
                     pagoGuardado.getImportePagado(),
-                    LocalDate.now(),
+                    fechaPagoInicial,
                     piReq.getNumeroComprobantePersonalizado()
                 );
 

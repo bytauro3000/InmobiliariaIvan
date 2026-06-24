@@ -20,7 +20,7 @@ public interface PagoInscripcionComprobanteRepository
            "LEFT JOIN FETCH co.lotes cl " +
            "LEFT JOIN FETCH cl.lote l " +
            "LEFT JOIN FETCH l.programa prog " +
-           "ORDER BY p.fechaPago DESC")
+            "ORDER BY p.fechaPago DESC, c.tipoComprobante, c.numeroCompleto")
     List<PagoInscripcionComprobante> findAllConDetalle();
 
     @Query("SELECT p FROM PagoInscripcionComprobante p " +
@@ -63,7 +63,7 @@ public interface PagoInscripcionComprobanteRepository
            "       (prog IS NOT NULL AND prog.idPrograma = :idPrograma)) " +
            "AND   (:desde IS NULL OR p.fechaPago >= :desde) " +
            "AND   (:hasta IS NULL OR p.fechaPago <= :hasta) " +
-           "ORDER BY p.fechaPago DESC")
+            "ORDER BY p.fechaPago DESC, c.tipoComprobante, c.numeroCompleto")
     List<PagoInscripcionComprobante> findTodos(
             @Param("numeroComprobante") String numeroComprobante,
             @Param("manzana")          String manzana,

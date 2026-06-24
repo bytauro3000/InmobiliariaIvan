@@ -93,5 +93,10 @@
     "name": "whatsapp.device-id",
     "type": "java.lang.String",
     "description": "A description for 'whatsapp.device-id'"
+  },
+  {
+    "name": "app.pago.pin",
+    "type": "java.lang.String",
+    "description": "A description for 'app.pago.pin'"
   }
 ]}

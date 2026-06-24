@@ -112,8 +112,8 @@ public interface PagoMoraRepository extends JpaRepository<PagoMora, Integer> {
            "AND   (:idPrograma IS NULL OR " +
            "       (prog IS NOT NULL AND prog.idPrograma = :idPrograma)) " +
            "AND   (:desde IS NULL OR pm.fechaPago >= :desde) " +
-           "AND   (:hasta IS NULL OR pm.fechaPago <= :hasta) " +
-           "ORDER BY pm.fechaPago DESC")
+            "AND   (:hasta IS NULL OR pm.fechaPago <= :hasta) " +
+            "ORDER BY pm.fechaPago DESC, c.tipoComprobante, c.numeroCompleto")
     List<PagoMora> findTodos(
             @Param("numeroComprobante") String numeroComprobante,
             @Param("manzana")          String manzana,

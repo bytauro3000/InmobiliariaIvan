@@ -352,7 +352,9 @@ public class ComprobanteServiceImpl implements ComprobanteService {
                                            String motivoNotaCredito,
                                            String anuladoPor) {
         TipoComprobante tipo = TipoComprobante.NOTA_CREDITO;
-        String serie = serieDefecto(tipo);
+        // BB01 para comprobantes SUNAT (B-series), RN01 para internos (recibos)
+        String origSerie = comprobanteOriginal.getSerie();
+        String serie = (origSerie != null && origSerie.startsWith("B")) ? "BB01" : "RN01";
 
         SerieComprobante contador = serieComprobanteRepository
                 .findByTipoComprobanteAndSerieForUpdate(tipo, serie)

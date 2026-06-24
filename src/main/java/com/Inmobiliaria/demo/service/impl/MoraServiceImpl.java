@@ -224,7 +224,8 @@ public class MoraServiceImpl implements MoraService {
         PagoMora pago = new PagoMora();
         pago.setMora(mora);
         pago.setImportePagado(request.getMontoPagado());
-        pago.setFechaPago(LocalDate.now());
+        LocalDate fechaPagoMora = request.getFechaPago() != null ? request.getFechaPago() : LocalDate.now();
+        pago.setFechaPago(fechaPagoMora);
         pago.setMedioPago(request.getMedioPago());
         pago.setNumeroOperacion(request.getNumeroOperacion());
         pago.setObservaciones(request.getObservaciones());
@@ -239,7 +240,7 @@ public class MoraServiceImpl implements MoraService {
                 TipoOrigenComprobante.PAGO_MORA,
                 null, // id temporal
                 request.getMontoPagado(),
-                LocalDate.now(),
+                fechaPagoMora,
                 request.getNumeroComprobantePersonalizado()
             );
 
@@ -352,6 +353,15 @@ public class MoraServiceImpl implements MoraService {
         pago.setFechaAnulacion(LocalDateTime.now());
         pago.setAnuladoPor(anuladoPor);
         pagoMoraRepository.save(pago);
+
+        // Crear NC interna para comprobantes no SUNAT
+        Comprobante orig = pago.getComprobante();
+        if (orig != null && orig.getSerie() != null && !orig.getSerie().startsWith("B")) {
+            Comprobante nc = comprobanteService.generarNotaCredito(
+                    orig, "01", motivo, anuladoPor);
+            orig.setIdNotaCreditoAnulacion(nc.getIdComprobante());
+            comprobanteRepository.save(orig);
+        }
 
         // Si todos los pagos de la mora están anulados → mora vuelve a PENDIENTE
         MoraLetra mora = pago.getMora();

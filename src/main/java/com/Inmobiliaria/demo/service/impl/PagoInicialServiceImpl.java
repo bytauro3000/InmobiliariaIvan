@@ -1,11 +1,14 @@
 package com.Inmobiliaria.demo.service.impl;
 
 import com.Inmobiliaria.demo.dto.PagoInicialResponseDTO;
+import com.Inmobiliaria.demo.entity.Comprobante;
 import com.Inmobiliaria.demo.entity.PagoInicial;
 import com.Inmobiliaria.demo.entity.Voucher;
 import com.Inmobiliaria.demo.exception.NegocioException;
+import com.Inmobiliaria.demo.repository.ComprobanteRepository;
 import com.Inmobiliaria.demo.repository.PagoInicialRepository;
 import com.Inmobiliaria.demo.repository.VoucherRepository;
+import com.Inmobiliaria.demo.service.ComprobanteService;
 import com.Inmobiliaria.demo.service.PagoInicialService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,8 +24,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PagoInicialServiceImpl implements PagoInicialService {
 
-    private final PagoInicialRepository pagoInicialRepository;
-    private final VoucherRepository     voucherRepository;
+    private final PagoInicialRepository  pagoInicialRepository;
+    private final VoucherRepository      voucherRepository;
+    private final ComprobanteService     comprobanteService;
+    private final ComprobanteRepository  comprobanteRepository;
 
     // ── Obtener por contrato ──────────────────────────────────────────────────
 
@@ -64,6 +69,15 @@ public class PagoInicialServiceImpl implements PagoInicialService {
         pago.setFechaAnulacion(LocalDateTime.now());
         pago.setAnuladoPor(anuladoPor);
         pagoInicialRepository.save(pago);
+
+        // Crear NC interna para comprobantes no SUNAT
+        Comprobante orig = pago.getComprobante();
+        if (orig != null && orig.getSerie() != null && !orig.getSerie().startsWith("B")) {
+            Comprobante nc = comprobanteService.generarNotaCredito(
+                    orig, "01", motivo, anuladoPor);
+            orig.setIdNotaCreditoAnulacion(nc.getIdComprobante());
+            comprobanteRepository.save(orig);
+        }
 
         return mapToDTO(pago);
     }

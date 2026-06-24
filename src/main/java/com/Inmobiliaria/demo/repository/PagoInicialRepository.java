@@ -122,8 +122,8 @@ public interface PagoInicialRepository extends JpaRepository<PagoInicial, Intege
            "AND   (:idPrograma IS NULL OR " +
            "       (prog IS NOT NULL AND prog.idPrograma = :idPrograma)) " +
            "AND   (:desde IS NULL OR p.fechaPago >= :desde) " +
-           "AND   (:hasta IS NULL OR p.fechaPago <= :hasta) " +
-           "ORDER BY p.fechaPago DESC")
+            "AND   (:hasta IS NULL OR p.fechaPago <= :hasta) " +
+            "ORDER BY p.fechaPago DESC, c.tipoComprobante, c.numeroCompleto")
     List<PagoInicial> findTodos(
             @Param("numeroComprobante") String numeroComprobante,
             @Param("manzana")          String manzana,

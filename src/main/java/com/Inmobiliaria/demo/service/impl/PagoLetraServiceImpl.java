@@ -15,6 +15,7 @@ import com.Inmobiliaria.demo.service.ComprobanteService;
 import com.Inmobiliaria.demo.service.PagoLetraService;
 import com.Inmobiliaria.demo.service.SunatEnvioService;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -39,6 +40,9 @@ import java.util.stream.Collectors;
 public class PagoLetraServiceImpl implements PagoLetraService {
 
     private static final Logger log = LoggerFactory.getLogger(PagoLetraServiceImpl.class);
+
+    @Value("${app.pago.pin}")
+    private String pagoPin;
 
     private final PagoLetraRepository   pagoLetraRepository;
     private final LetraCambioRepository letraCambioRepository;
@@ -69,30 +73,36 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         catch (NumberFormatException e) { return 0; }
     }
 
-    private void validarOrdenDePago(Integer idContrato, String numeroLetraStr) {
+    private void validarOrdenDePago(Integer idContrato, String numeroLetraStr, String pin) {
         int numLetraAPagar = extraerNumeroLetra(numeroLetraStr);
         Optional<Integer> maxPagadoOpt = pagoLetraRepository.findMaxNumeroLetraPagadoByContrato(idContrato);
-        if (maxPagadoOpt.isEmpty() || maxPagadoOpt.get() == null) return;
+        if (maxPagadoOpt.isEmpty() || maxPagadoOpt.get() == null) return; // primer pago, cualquier letra
         int maxPagado = maxPagadoOpt.get();
-        if (numLetraAPagar > maxPagado + 1) {
-            throw new NegocioException(
-                "No puede pagar la letra N° " + numLetraAPagar +
-                " porque el pago siguiente debe ser la letra N° " + (maxPagado + 1) + "."
-            );
-        }
+
+        if (numLetraAPagar == maxPagado + 1) return; // orden correcto
+
+        // Fuera de orden (anterior o saltando): verificar PIN
+        if (pin != null && pin.equals(pagoPin)) return;
+
+        // Admin también puede saltarse la validación
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMINISTRADOR"))) return;
+
+        throw new NegocioException(
+            "FUERA_DE_ORDEN:Debe pagar la letra N° " + (maxPagado + 1) + "."
+        );
     }
 
- // DESPUÉS (corregido)
-    private void validarOrdenDePagoMultiple(Integer idContrato, List<String> numerosLetra) {
+    private void validarOrdenDePagoMultiple(Integer idContrato, List<String> numerosLetra, String pin) {
         if (numerosLetra == null || numerosLetra.isEmpty()) return;
         List<Integer> nums = numerosLetra.stream()
             .map(this::extraerNumeroLetra).sorted().collect(Collectors.toList());
 
         Optional<Integer> maxPagadoOpt = pagoLetraRepository.findMaxNumeroLetraPagadoByContrato(idContrato);
 
-        // ← CORRECCIÓN: si no hay ningún pago en BD, cualquier letra es válida como primera
         if (maxPagadoOpt.isEmpty() || maxPagadoOpt.get() == null) {
-            // Solo verificar que las letras del lote sean consecutivas entre sí
+            // Primer pago: solo validar consecutividad entre sí
             for (int i = 1; i < nums.size(); i++) {
                 if (nums.get(i) != nums.get(i - 1) + 1) {
                     throw new NegocioException(
@@ -105,21 +115,30 @@ public class PagoLetraServiceImpl implements PagoLetraService {
 
         int maxPagado = maxPagadoOpt.get();
         int primerNum = nums.get(0);
-        if (primerNum > maxPagado + 1) {
-            throw new NegocioException(
-                "No puede pagar la letra N° " + primerNum +
-                " porque el pago siguiente debe ser la letra N° " + (maxPagado + 1) + ".");
-        }
-        for (int i = 1; i < nums.size(); i++) {
-            if (nums.get(i) != nums.get(i - 1) + 1) {
-                throw new NegocioException(
-                    "Las letras seleccionadas no son consecutivas: N° " +
-                    nums.get(i - 1) + " y N° " + nums.get(i) + ".");
+
+        // Si es el siguiente exacto, permitir
+        if (primerNum == maxPagado + 1) {
+            for (int i = 1; i < nums.size(); i++) {
+                if (nums.get(i) != nums.get(i - 1) + 1) {
+                    throw new NegocioException(
+                        "Las letras seleccionadas no son consecutivas: N° " +
+                        nums.get(i - 1) + " y N° " + nums.get(i) + ".");
+                }
             }
+            return;
         }
+
+        // Fuera de orden: verificar PIN o admin
+        if (pin != null && pin.equals(pagoPin)) return;
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMINISTRADOR"))) return;
+
+        throw new NegocioException(
+            "FUERA_DE_ORDEN:Debe pagar la letra N° " + (maxPagado + 1) + ".");
     }
 
-   
+
     private LocalDate resolverFechaReferenciaMora(int numLetraActual, Integer idContrato, LocalDate fechaOperacion) {
         if (fechaOperacion == null) {
             // Esto no debería ocurrir: el DTO tiene @JsonFormat y el frontend
@@ -301,6 +320,9 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         dto.setMotivoAnulacion(pago.getMotivoAnulacion());
         dto.setFechaAnulacion(pago.getFechaAnulacion());
         dto.setAnuladoPor(pago.getAnuladoPor());
+        if (pago.getComprobante() != null) {
+            dto.setIdNotaCredito(pago.getComprobante().getIdNotaCreditoAnulacion());
+        }
 
         // Contexto admin (manzana / lote / programa)
         // El nombre del cliente se asigna externamente en listarTodos.
@@ -510,13 +532,13 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         Integer idContrato = letra.getContrato().getIdContrato();
 
         if (letra.getEstadoLetra() != EstadoLetra.PARCIAL) {
-            validarOrdenDePago(idContrato, letra.getNumeroLetra());
+            validarOrdenDePago(idContrato, letra.getNumeroLetra(), request.getPin());
         }
 
         // ── Fechas ───────────────────────────────────────────────────────────
-        // fechaPago = hoy (registro del pago)
+        // fechaPago = fecha del día del pago (del request o hoy como fallback)
         // fechaOperacion = fecha del voucher (solo referencial, nullable)
-        LocalDate fechaPago = LocalDate.now();
+        LocalDate fechaPago = request.getFechaPago() != null ? request.getFechaPago() : LocalDate.now();
         LocalDate fechaOperacion = request.getFechaOperacion();
 
         // ── Construir el pago ────────────────────────────────────────────────
@@ -655,7 +677,9 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             letrasDelLote.add(lc);
             numerosLetraRequest.add(lc.getNumeroLetra());
         }
-        validarOrdenDePagoMultiple(idContrato, numerosLetraRequest);
+        String pin = request.getPagos() != null && !request.getPagos().isEmpty()
+                ? request.getPagos().get(0).getPin() : null;
+        validarOrdenDePagoMultiple(idContrato, numerosLetraRequest, pin);
 
         LetraCambio letraGratis = null;
         if (request.getIdLetraGratis() != null) {
@@ -683,8 +707,8 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         }
 
         PagoLetraRequestDTO primerPago = request.getPagos().get(0);
-        // fechaPago = hoy (registro del pago)
-        LocalDate fechaPago = LocalDate.now();
+        // fechaPago = fecha del día del pago (del request o hoy como fallback)
+        LocalDate fechaPago = primerPago.getFechaPago() != null ? primerPago.getFechaPago() : LocalDate.now();
 
         Comprobante comprobanteCompartido = null;
         if (primerPago.getTipoComprobante() != null) {

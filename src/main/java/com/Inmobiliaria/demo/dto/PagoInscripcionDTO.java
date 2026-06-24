@@ -36,6 +36,7 @@ public class PagoInscripcionDTO {
     private TipoComprobante tipoComprobante;
     private String          numeroComprobante;
     private LocalDate       fechaEmision;
+    private Long            idComprobante;
 
     // ── Ubicación del lote ────────────────────────────────────────────────────
     private Integer         idPrograma;

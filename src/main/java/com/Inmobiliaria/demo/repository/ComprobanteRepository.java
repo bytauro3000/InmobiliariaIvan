@@ -75,4 +75,6 @@ public interface ComprobanteRepository extends JpaRepository<Comprobante, Long> 
     Integer findMaxNumeroByTipoAndSerie(
             @Param("tipo") TipoComprobante tipo,
             @Param("serie") String serie);
+
+    Optional<Comprobante> findByComprobanteReferenciaIdComprobante(Long idComprobante);
 }
