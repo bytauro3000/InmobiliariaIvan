@@ -4,6 +4,7 @@ import com.Inmobiliaria.demo.entity.Comprobante;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
 import com.Inmobiliaria.demo.enums.TipoOrigenComprobante;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -77,4 +78,11 @@ public interface ComprobanteRepository extends JpaRepository<Comprobante, Long> 
             @Param("serie") String serie);
 
     Optional<Comprobante> findByComprobanteReferenciaIdComprobante(Long idComprobante);
+
+    // ─── Marcar email enviado sin reescribir toda la entidad ─────────────────
+    // Evita el dirty-checking de Hibernate que volvería a escribir fechaEmision
+    // con posible offset de timezone si el campo se leyó con desfase UTC→Lima
+    @Modifying
+    @Query("UPDATE Comprobante c SET c.emailEnviado = true WHERE c.idComprobante = :id")
+    void marcarEmailEnviado(@Param("id") Long id);
 }

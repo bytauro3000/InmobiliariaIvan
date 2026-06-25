@@ -119,13 +119,11 @@ public class ComprobanteEmailScheduler {
                                     contrato.getIdContrato(), entry.getKey());
                             grupos_sin_email++;
                             // Marcar el comprobante como enviado para no reintentar indefinidamente
+                            // FIX: usar UPDATE directo para no reescribir fechaEmision via dirty-checking
                             grupo.stream()
                                  .map(PagoLetras::getComprobante)
                                  .filter(Objects::nonNull)
-                                 .forEach(comp -> {
-                                     comp.setEmailEnviado(true);
-                                     comprobanteRepository.save(comp);
-                                 });
+                                 .forEach(comp -> comprobanteRepository.marcarEmailEnviado(comp.getIdComprobante()));
                             continue;
                         }
 
@@ -143,13 +141,11 @@ public class ComprobanteEmailScheduler {
                         emailService.enviarComprobanteATodos(grupo, emailsDestino);
 
                         // Marcar el comprobante como enviado (fuente de verdad unificada)
+                        // FIX: usar UPDATE directo para no reescribir fechaEmision via dirty-checking
                         grupo.stream()
                              .map(PagoLetras::getComprobante)
                              .filter(Objects::nonNull)
-                             .forEach(comp -> {
-                                 comp.setEmailEnviado(true);
-                                 comprobanteRepository.save(comp);
-                             });
+                             .forEach(comp -> comprobanteRepository.marcarEmailEnviado(comp.getIdComprobante()));
                         grupos_enviados++;
 
                     } catch (Exception e) {

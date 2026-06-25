@@ -40,6 +40,17 @@ public interface PagoInscripcionComprobanteRepository
            "WHERE p.idPagoInscripcionComprobante = :id")
     Optional<PagoInscripcionComprobante> findByIdConLotes(Integer id);
 
+    @Query("SELECT p FROM PagoInscripcionComprobante p " +
+           "JOIN FETCH p.comprobante c " +
+           "JOIN FETCH p.contrato co " +
+           "LEFT JOIN FETCH co.clientes cc " +
+           "LEFT JOIN FETCH cc.cliente cli " +
+           "WHERE p.fechaPago >= :desde AND p.fechaPago <= :hasta " +
+           "ORDER BY p.fechaPago ASC")
+    List<PagoInscripcionComprobante> findByFechaPagoBetween(
+            @Param("desde") LocalDate desde,
+            @Param("hasta") LocalDate hasta);
+
     // ── ADMIN: Listado general con filtros opcionales ─────────────────────────
 
     @Query("SELECT DISTINCT p FROM PagoInscripcionComprobante p " +

@@ -1,16 +1,18 @@
 package com.Inmobiliaria.demo.service.impl;
 
-import com.Inmobiliaria.demo.client.InscripcionClient;
 import com.Inmobiliaria.demo.dto.ResumenIngresoItemDTO;
 import com.Inmobiliaria.demo.dto.ResumenIngresosRangoDTO;
+import com.Inmobiliaria.demo.entity.Comprobante;
 import com.Inmobiliaria.demo.entity.Contrato;
 import com.Inmobiliaria.demo.entity.ContratoCliente;
 import com.Inmobiliaria.demo.entity.PagoInicial;
+import com.Inmobiliaria.demo.entity.PagoInscripcionComprobante;
 import com.Inmobiliaria.demo.entity.PagoLetras;
 import com.Inmobiliaria.demo.entity.PagoMora;
 import com.Inmobiliaria.demo.enums.MedioPago;
 import com.Inmobiliaria.demo.repository.ContratoRepository;
 import com.Inmobiliaria.demo.repository.PagoInicialRepository;
+import com.Inmobiliaria.demo.repository.PagoInscripcionComprobanteRepository;
 import com.Inmobiliaria.demo.repository.PagoLetraRepository;
 import com.Inmobiliaria.demo.repository.PagoMoraRepository;
 import com.Inmobiliaria.demo.service.ReporteIngresosService;
@@ -34,11 +36,11 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class ReporteIngresosServiceImpl implements ReporteIngresosService {
 
-    private final PagoLetraRepository   pagoLetraRepository;
-    private final PagoMoraRepository    pagoMoraRepository;
-    private final PagoInicialRepository pagoInicialRepository;
-    private final ContratoRepository    contratoRepository;
-    private final InscripcionClient     inscripcionClient;
+    private final PagoLetraRepository                pagoLetraRepository;
+    private final PagoMoraRepository                pagoMoraRepository;
+    private final PagoInicialRepository              pagoInicialRepository;
+    private final PagoInscripcionComprobanteRepository pagoInscripcionComprobanteRepository;
+    private final ContratoRepository                 contratoRepository;
 
     // ─────────────────────────────────────────────────────────────────────────
     // MÉTODO PRINCIPAL
@@ -131,7 +133,7 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
                     .build());
         }
 
-        // ④ ── Inscripciones de Servicios Básicos (microservicio externo) ──────
+        // ④ ── Inscripciones de Servicios Básicos (tabla local) ──────
         List<ResumenIngresoItemDTO> itemsInscripciones = obtenerItemsInscripcionesPorRango(desde, hasta);
         detalle.addAll(itemsInscripciones);
 
@@ -196,86 +198,28 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
 
         List<ResumenIngresoItemDTO> items = new ArrayList<>();
 
-        try {
-            // Llamada Feign: GET /api/inscripciones/ingresos-rango?desde=...&hasta=...
-            List<Map<String, Object>> respuesta =
-                    inscripcionClient.obtenerIngresosPorRango(desde.toString(), hasta.toString());
+        List<PagoInscripcionComprobante> pagos = pagoInscripcionComprobanteRepository
+                .findByFechaPagoBetween(desde, hasta);
 
-            if (respuesta == null) return items;
+        for (PagoInscripcionComprobante p : pagos) {
+            Comprobante comp = p.getComprobante();
+            Contrato contrato = p.getContrato();
 
-            // ── Pre-paso: recolectar idContrato únicos para batch query ─────────
-            Set<Integer> idContratosUnicos = new HashSet<>();
-            for (Map<String, Object> abono : respuesta) {
-                if (abono.get("idContrato") != null) {
-                    idContratosUnicos.add(Integer.valueOf(abono.get("idContrato").toString()));
-                }
-            }
-
-            // ── Batch query: traer todos los contratos con sus clientes en UNA sola SQL
-            Map<Integer, Contrato> contratosPorId = new HashMap<>();
-            if (!idContratosUnicos.isEmpty()) {
-                List<Contrato> contratos = contratoRepository.findAllByIdConClientes(idContratosUnicos);
-                for (Contrato c : contratos) {
-                    contratosPorId.put(c.getIdContrato(), c);
-                }
-            }
-
-            for (Map<String, Object> abono : respuesta) {
-                BigDecimal monto = abono.get("montoPagado") != null
-                        ? new BigDecimal(abono.get("montoPagado").toString())
-                        : BigDecimal.ZERO;
-
-                LocalDate fechaPago = abono.get("fechaPago") != null
-                        ? LocalDate.parse(abono.get("fechaPago").toString())
-                        : null;
-
-                MedioPago medioPago = null;
-                if (abono.get("medioPago") != null) {
-                    try {
-                        medioPago = MedioPago.valueOf(abono.get("medioPago").toString());
-                    } catch (IllegalArgumentException ignored) {
-                        // Si el valor no coincide con el enum, se deja null
-                    }
-                }
-
-                Integer idPago = abono.get("idAbono") != null
-                        ? Integer.valueOf(abono.get("idAbono").toString()) : null;
-
-                Integer idContrato = abono.get("idContrato") != null
-                        ? Integer.valueOf(abono.get("idContrato").toString()) : null;
-
-                String tipoServicio = abono.get("tipoServicio") != null
-                        ? abono.get("tipoServicio").toString() : null;
-
-                // ── Resolver nombre del cliente cruzando con el monolito ─────
-                String nombreCliente = null;
-                if (idContrato != null) {
-                    Contrato contrato = contratosPorId.get(idContrato);
-                    if (contrato != null) {
-                        nombreCliente = resolverNombreCliente(contrato.getClientes());
-                    }
-                }
-
-                items.add(ResumenIngresoItemDTO.builder()
-                        .tipoIngreso("INSCRIPCION_SERVICIO")
-                        .tipoComprobante(null)   // El microservicio no emite comprobante centralizado
-                        .idPago(idPago)
-                        .numeroComprobante(null) // El microservicio no emite comprobante centralizado
-                        .fechaPago(fechaPago)
-                        .importePagado(monto)
-                        .medioPago(medioPago)
-                        .numeroOperacion(abono.get("numeroOperacion") != null
-                                ? abono.get("numeroOperacion").toString() : null)
-                        .referencia(tipoServicio)
-                        .idContrato(idContrato)
-                        .nombreCliente(nombreCliente)
-                        .observaciones(abono.get("observaciones") != null
-                                ? abono.get("observaciones").toString() : null)
-                        .build());
-            }
-        } catch (Exception e) {
-            log.warn("No se pudo obtener inscripciones de servicios para el rango [{} - {}]: {}",
-                    desde, hasta, e.getMessage());
+            items.add(ResumenIngresoItemDTO.builder()
+                    .tipoIngreso("INSCRIPCION_SERVICIO")
+                    .tipoComprobante(comp != null ? comp.getTipoComprobante().name() : null)
+                    .idPago(p.getIdPagoInscripcionComprobante())
+                    .numeroComprobante(comp != null ? comp.getNumeroCompleto() : null)
+                    .fechaPago(p.getFechaPago())
+                    .importePagado(p.getImportePagado())
+                    .medioPago(p.getMedioPago())
+                    .numeroOperacion(p.getNumeroOperacion())
+                    .referencia(p.getTipoServicio())
+                    .idContrato(contrato != null ? contrato.getIdContrato() : null)
+                    .nombreCliente(resolverNombreCliente(
+                            contrato != null ? contrato.getClientes() : null))
+                    .observaciones(p.getObservaciones())
+                    .build());
         }
 
         return items;
