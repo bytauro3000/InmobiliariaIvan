@@ -1,6 +1,7 @@
 package com.Inmobiliaria.demo.dto;
 
 import com.Inmobiliaria.demo.enums.MedioPago;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,6 +21,7 @@ public class ResumenIngresoItemDTO {
     private String tipoComprobante;
     private Integer idPago;
     private String numeroComprobante;
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate fechaPago;
     private BigDecimal importePagado;
     private MedioPago medioPago;
