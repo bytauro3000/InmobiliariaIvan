@@ -172,6 +172,7 @@ public class ContratoServiceImpl implements ContratoService {
                 if (piReq.getTipoComprobante() == TipoComprobante.BOLETA) {
                     Cliente cliente = contratoGuardado.getClientes().iterator().next().getCliente();
                     String descripcion = "Pago inicial de contrato";
+                    compInicial.setDescripcion(descripcion);
                     sunatEnvioService.enviarBoleta(cliente, contratoGuardado, compInicial,
                             pagoGuardado.getImportePagado(), descripcion);
                 }

@@ -248,6 +248,7 @@ public class MoraServiceImpl implements MoraService {
             if (request.getTipoComprobante() == TipoComprobante.BOLETA) {
                 Cliente cliente = mora.getLetra().getContrato().getClientes().iterator().next().getCliente();
                 String descripcion = "Pago de mora";
+                comprobante.setDescripcion(descripcion);
                 sunatRespuesta = sunatEnvioService.enviarBoleta(cliente, mora.getLetra().getContrato(),
                         comprobante, request.getMontoPagado(), descripcion);
             }

@@ -590,6 +590,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
                 }
                 
                 String descripcion = "LETRA " + numeroLetra + " POR LA COMPRA DE UN LOTE DE TERRENO RUSTICO PROGRAMA DE VIV. " + nombrePrograma.toUpperCase();
+                comprobante.setDescripcion(descripcion);
                 sunatRespuesta = sunatEnvioService.enviarBoleta(
                         cliente, letra.getContrato(), comprobante,
                         request.getImportePagado(), descripcion);
@@ -828,6 +829,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
                 }
             }
             String descripcion = letrasStr + " POR LA COMPRA DE UN LOTE DE TERRENO RUSTICO PROGRAMA DE VIV. " + nombrePrograma.toUpperCase();
+            comprobanteCompartido.setDescripcion(descripcion);
 
             sunatRespuestaMulti = sunatEnvioService.enviarBoleta(
                     cliente, letraEjemplo.getContrato(),

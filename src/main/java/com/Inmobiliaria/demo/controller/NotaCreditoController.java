@@ -78,7 +78,10 @@ public class NotaCreditoController {
 
         Cliente cliente = extractCliente(pago);
         Contrato contrato = extractContrato(pago);
-        String descripcion = "NOTA DE CREDITO - " + desMotivo + " - " + comprobanteOriginal.getNumeroCompleto();
+        String descripcionOriginal = comprobanteOriginal.getDescripcion();
+        String descripcion = (descripcionOriginal != null && !descripcionOriginal.isBlank())
+                ? descripcionOriginal
+                : "NOTA DE CREDITO - " + desMotivo + " - " + comprobanteOriginal.getNumeroCompleto();
 
         Comprobante notaCredito = comprobanteService.generarNotaCredito(
                 comprobanteOriginal, codMotivo, desMotivo, anuladoPor);

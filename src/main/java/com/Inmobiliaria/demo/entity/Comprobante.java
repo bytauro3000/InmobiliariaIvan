@@ -82,4 +82,7 @@ public class Comprobante {
 
     @Column(name = "fecha_anulacion_sunat")
     private LocalDateTime fechaAnulacionSunat;
+
+    @Column(name = "descripcion", length = 500)
+    private String descripcion;
 }
