@@ -88,6 +88,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      */
     private boolean esRutaPublica(String path) {
         return path.contains("/api/auth/login")
+                || path.contains("/api/auth/refresh")
+                || path.contains("/api/auth/logout")
                 || path.contains("/api/public/ping")
                 || path.equals("/favicon.ico")
                 || path.equals("/favicon.png")

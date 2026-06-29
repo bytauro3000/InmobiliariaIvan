@@ -1,6 +1,6 @@
 package com.Inmobiliaria.demo.entity;
 
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -28,13 +28,11 @@ public class Separacion {
     @Column(name = "monto", nullable = false)
     private Double monto;
 
-    @Temporal(TemporalType.DATE)
     @Column(name = "fecha_separacion", nullable = false)
-    private Date fechaSeparacion;
+    private LocalDate fechaSeparacion;
 
-    @Temporal(TemporalType.DATE)
     @Column(name = "fecha_limite", nullable = false)
-    private Date fechaLimite;
+    private LocalDate fechaLimite;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", length = 20)

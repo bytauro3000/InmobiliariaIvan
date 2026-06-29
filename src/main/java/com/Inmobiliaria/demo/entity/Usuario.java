@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import com.Inmobiliaria.demo.enums.EstadoUsuario;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "usuario")
@@ -45,9 +45,8 @@ public class Usuario {
     private EstadoUsuario estado = EstadoUsuario.activo;
 
     @CreationTimestamp
-    @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "fechaRegistro", nullable = false, updatable = false)
-    private Date fechaRegistro;
+    private LocalDateTime fechaRegistro;
 
     @ManyToOne
     @JoinColumn(name = "idRolUsuario", nullable = false)

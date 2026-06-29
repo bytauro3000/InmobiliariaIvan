@@ -1,6 +1,6 @@
 package com.Inmobiliaria.demo.entity;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -70,7 +70,7 @@ public class Cliente {
 
     @Column(name = "fechaRegistro", nullable = false)
     @CreationTimestamp
-    private Date fechaRegistro;
+    private LocalDateTime fechaRegistro;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "genero", length = 20, nullable = false)

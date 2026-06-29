@@ -3,7 +3,7 @@ package com.Inmobiliaria.demo.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.Date;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "recibo_separacion")
@@ -29,7 +29,6 @@ public class ReciboSeparacion {
     @JoinColumn(name = "id_usuario", nullable = false)
     private Usuario usuario;
 
-    @Temporal(TemporalType.DATE)
     @Column(name = "fecha_emision", nullable = false)
-    private Date fechaEmision;
+    private LocalDate fechaEmision;
 }

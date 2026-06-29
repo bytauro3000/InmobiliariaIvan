@@ -1,6 +1,6 @@
 package com.Inmobiliaria.demo.dto;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 import com.Inmobiliaria.demo.enums.EstadoCivil;
 import com.Inmobiliaria.demo.enums.EstadoCliente;
@@ -29,5 +29,5 @@ public class ClienteResponseDTO {
     private TipoCliente tipoCliente;
     private String nacionalidad;
     private EstadoCliente estado;
-    private Date fechaRegistro;
+    private LocalDateTime fechaRegistro;
 }

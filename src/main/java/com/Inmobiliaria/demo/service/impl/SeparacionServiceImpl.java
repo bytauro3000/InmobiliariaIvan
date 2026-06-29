@@ -1,6 +1,6 @@
 package com.Inmobiliaria.demo.service.impl;
 
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -62,7 +62,7 @@ public class SeparacionServiceImpl implements SeparacionService {
             separacion.setIdSeparacion(null);
             separacion.setEstado(EstadoSeparacion.EN_PROCESO);
             if (separacion.getFechaSeparacion() == null) {
-                separacion.setFechaSeparacion(new Date());
+                separacion.setFechaSeparacion(LocalDate.now());
             }
 
             // 2. Extraer SETS para salvar la cabecera sola primero

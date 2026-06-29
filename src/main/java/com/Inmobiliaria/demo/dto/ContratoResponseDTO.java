@@ -1,7 +1,7 @@
 package com.Inmobiliaria.demo.dto;
 
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.List;
 
 import com.Inmobiliaria.demo.enums.TipoContrato;
@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ContratoResponseDTO {
     private Integer idContrato;
-    private Date fechaContrato;
+    private LocalDate fechaContrato;
     private TipoContrato tipoContrato;
     private EstadoContrato estadoContrato;
     private BigDecimal montoTotal;

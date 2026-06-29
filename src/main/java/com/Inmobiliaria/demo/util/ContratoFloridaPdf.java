@@ -26,7 +26,6 @@ import java.text.DecimalFormatSymbols;
 import java.util.Locale;
 import java.util.List;
 import java.util.Map;
-import java.util.Date;
 import java.util.LinkedHashMap;
 import java.time.LocalDate;
 import java.math.BigDecimal;
@@ -75,20 +74,9 @@ public class ContratoFloridaPdf {
 		}
 
 
-		// --- CONVERSIÓN DE FECHA DEL CONTRATO SEGURA (Solución al Error 403) ---
-		Date fechaUtil = contrato.getFechaContrato();
-		LocalDate fechaRegistro;
-
-		if (fechaUtil != null) {
-			// Usamos Calendar para extraer los datos sin importar si es java.util.Date o java.sql.Date
-			java.util.Calendar cal = java.util.Calendar.getInstance();
-			cal.setTime(fechaUtil);
-			fechaRegistro = LocalDate.of(
-					cal.get(java.util.Calendar.YEAR),
-					cal.get(java.util.Calendar.MONTH) + 1,
-					cal.get(java.util.Calendar.DAY_OF_MONTH)
-					);
-		} else {
+		// --- FECHA DEL CONTRATO ---
+		LocalDate fechaRegistro = contrato.getFechaContrato();
+		if (fechaRegistro == null) {
 			fechaRegistro = LocalDate.now(); // Respaldo por si la base de datos devuelve nulo
 		}
 

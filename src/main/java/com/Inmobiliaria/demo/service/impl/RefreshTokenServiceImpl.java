@@ -1,6 +1,5 @@
 package com.Inmobiliaria.demo.service.impl;
 
-import com.Inmobiliaria.demo.dto.RefreshTokenRequest;
 import com.Inmobiliaria.demo.dto.LoginResponse;
 import com.Inmobiliaria.demo.entity.RefreshToken;
 import com.Inmobiliaria.demo.entity.Usuario;
@@ -48,9 +47,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 
     @Override
     @Transactional
-    public LoginResponse refreshAccessToken(RefreshTokenRequest request) {
-        String requestToken = request.getRefreshToken();
-
+    public LoginResponse refreshAccessToken(String requestToken) {
         Optional<RefreshToken> optionalToken = refreshTokenRepository.findByToken(requestToken);
 
         if (optionalToken.isEmpty()) {

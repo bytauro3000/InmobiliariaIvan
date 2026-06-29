@@ -1,6 +1,6 @@
 package com.Inmobiliaria.demo.dto;
 
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.List;
 import com.Inmobiliaria.demo.enums.EstadoSeparacion;
 import lombok.*;
@@ -11,8 +11,8 @@ import lombok.*;
 public class SeparacionResumenDTO {
     private Integer idSeparacion;
     private Double monto;
-    private Date fechaSepara;
-    private Date fechaLimite;
+    private LocalDate fechaSepara;
+    private LocalDate fechaLimite;
     private EstadoSeparacion estadoSeparacion;
     private String nomVendedor;
     

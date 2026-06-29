@@ -1,7 +1,7 @@
 package com.Inmobiliaria.demo.entity;
 
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDate;
 
 import com.Inmobiliaria.demo.enums.Genero;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -42,8 +42,7 @@ public class Vendedor {
     private String direccion;
 
     @Column(name = "fecha_nacimiento")
-    @Temporal(TemporalType.DATE)
-    private Date fechaNacimiento;
+    private LocalDate fechaNacimiento;
     
     @Enumerated(EnumType.STRING)
     @Column(name = "genero", length = 10, nullable = false)

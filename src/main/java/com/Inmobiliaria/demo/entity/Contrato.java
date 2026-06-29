@@ -1,12 +1,11 @@
 package com.Inmobiliaria.demo.entity;
 
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 
 import org.hibernate.annotations.BatchSize;
-import org.springframework.format.annotation.DateTimeFormat;
 import com.Inmobiliaria.demo.enums.TipoContrato;
 import com.Inmobiliaria.demo.enums.EstadoContrato;
 import com.Inmobiliaria.demo.enums.Moneda;
@@ -46,10 +45,8 @@ public class Contrato {
     @Column(name = "estado_contrato", nullable = false)
     private EstadoContrato estadoContrato = EstadoContrato.ACTIVO;
 
-    @Temporal(TemporalType.DATE)
-    @DateTimeFormat(pattern = "yyyy-MM-dd")
     @Column(name = "fecha_contrato", nullable = false)
-    private Date fechaContrato;
+    private LocalDate fechaContrato;
 
     @Column(name = "monto_total", precision = 12, scale = 2, nullable = false)
     private BigDecimal montoTotal;

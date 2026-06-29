@@ -118,7 +118,7 @@ public class ContratoServiceImpl implements ContratoService {
 
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         LocalDate localDate = LocalDate.parse(requestDTO.getFechaContrato(), dateFormatter);
-        contrato.setFechaContrato(java.sql.Date.valueOf(localDate));
+        contrato.setFechaContrato(localDate);
 
         Vendedor vendedor = null;
         if (requestDTO.getIdSeparacion() != null) {
@@ -280,7 +280,7 @@ public class ContratoServiceImpl implements ContratoService {
 
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         LocalDate localDate = LocalDate.parse(requestDTO.getFechaContrato(), dateFormatter);
-        contrato.setFechaContrato(java.sql.Date.valueOf(localDate));
+        contrato.setFechaContrato(localDate);
         contrato.setMontoTotal(nuevoMonto);
         contrato.setInicial(nuevoInicial);
         contrato.setSaldo(nuevoSaldo);
