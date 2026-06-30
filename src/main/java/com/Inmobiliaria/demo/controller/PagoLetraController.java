@@ -140,11 +140,20 @@ public class PagoLetraController {
             }
         }
 
-        // Obtener vouchers adjuntos al pago
+        // Si el comprobante está compartido por varios pagos (pago múltiple),
+        // usar el generador combinado para mostrar todas las letras
+        if (pago.getComprobante() != null) {
+            List<PagoLetras> todosPagos = pagoLetraRepository
+                    .findByComprobanteNumeroCompleto(pago.getComprobante().getNumeroCompleto());
+            if (todosPagos.size() > 1) {
+                return generarPdfMultiple(todosPagos, rolUsuario);
+            }
+        }
+
+        // Pago individual (único con ese comprobante o sin comprobante)
         List<Voucher> vouchers = voucherRepository
                 .findByTipoOrigenAndReferenciaId("PAGO_LETRA", idPago);
 
-        // Si es boleta electrónica con hash, usar el nuevo PDF con QR SUNAT
         if (esBoletaElectronica(pago)) {
             return generarRespuestaBoleta(pago.getComprobante(), pago.getLetra());
         }
@@ -170,28 +179,30 @@ public class PagoLetraController {
                     "No se encontraron pagos con el comprobante: " + numeroComprobante);
         }
 
-        PagoLetras primero = pagos.get(0);
-
-        // Si es boleta electrónica con hash, usar el nuevo PDF con QR SUNAT
-        if (esBoletaElectronica(primero)) {
-            return generarRespuestaBoleta(primero.getComprobante(), primero.getLetra());
-        }
-
-        String rolUsuarioMultiple = "SECRETARIA";
-        Authentication authMultiple = SecurityContextHolder.getContext().getAuthentication();
-        if (authMultiple != null && authMultiple.getName() != null) {
-            var usuarioOpt = usuarioRepository.findByCorreo(authMultiple.getName());
+        String rolUsuario = "SECRETARIA";
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getName() != null) {
+            var usuarioOpt = usuarioRepository.findByCorreo(auth.getName());
             if (usuarioOpt.isPresent()) {
-                rolUsuarioMultiple = usuarioOpt.get().getRol().getRolUsuario();
+                rolUsuario = usuarioOpt.get().getRol().getRolUsuario();
             }
         }
 
-        // Obtener todos los vouchers de todos los pagos del comprobante.
-        // OJO: al registrar un pago múltiple, el mismo voucher se guarda una vez
-        // por cada letra del lote (mismo url, distinto referenciaId) para que cada
-        // pago individual pueda mostrarlo. Si no deduplicamos aquí por url, el
-        // comprobante combinado terminaría mostrando la misma imagen N veces
-        // (una por cada letra pagada).
+        return generarPdfMultiple(pagos, rolUsuario);
+    }
+
+    /**
+     * Genera el PDF combinado para múltiples pagos que comparten un mismo
+     * comprobante. Usa el generador de PDF múltiple para recibos internos y
+     * construye la descripción combinada para boletas electrónicas.
+     */
+    private ResponseEntity<byte[]> generarPdfMultiple(
+            List<PagoLetras> pagos, String rolUsuario) {
+
+        PagoLetras primero = pagos.get(0);
+        Comprobante comp = primero.getComprobante();
+
+        // Obtener todos los vouchers deduplicados por URL
         List<Voucher> vouchers = new ArrayList<>();
         java.util.Set<String> urlsVistas = new java.util.HashSet<>();
         for (PagoLetras p : pagos) {
@@ -203,12 +214,61 @@ public class PagoLetraController {
             }
         }
 
-        byte[] pdf = ComprobantePagoLetraPdf.generarMultiple(pagos, rolUsuarioMultiple, vouchers);
+        // Boleta electrónica con hash SUNAT: construir descripción combinada
+        if (comp != null && comp.getTipoComprobante() == TipoComprobante.BOLETA
+                && comp.getHashCdr() != null && !comp.getHashCdr().isBlank()) {
+            String descripcion = construirDescripcionCombinada(pagos);
+            return generarRespuestaBoleta(comp, pagos.get(0).getLetra(), descripcion);
+        }
+
+        byte[] pdf = ComprobantePagoLetraPdf.generarMultiple(pagos, rolUsuario, vouchers);
+        String filename = comp != null ? comp.getNumeroCompleto() : "comprobante-multiple";
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "inline; filename=comprobante-multiple-" + numeroComprobante + ".pdf")
+                        "inline; filename=comprobante-" + filename + ".pdf")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
+    }
+
+    /**
+     * Construye una descripción combinada para múltiples letras,
+     * ej: "LETRA 72 Y 73 POR LA COMPRA DE UN LOTE DE TERRENO RUSTICO..."
+     */
+    private String construirDescripcionCombinada(List<PagoLetras> pagos) {
+        List<String> numeros = pagos.stream()
+                .map(p -> {
+                    String n = p.getLetra().getNumeroLetra();
+                    if (n != null && n.contains("/")) {
+                        n = n.substring(0, n.indexOf("/"));
+                    }
+                    return n;
+                })
+                .filter(java.util.Objects::nonNull)
+                .sorted((a, b) -> Integer.compare(Integer.parseInt(a), Integer.parseInt(b)))
+                .collect(java.util.stream.Collectors.toList());
+
+        String letrasStr;
+        if (numeros.size() == 1) {
+            letrasStr = numeros.get(0);
+        } else {
+            String ultimo = numeros.get(numeros.size() - 1);
+            String anteriores = String.join(", ", numeros.subList(0, numeros.size() - 1));
+            letrasStr = anteriores + " Y " + ultimo;
+        }
+
+        LetraCambio letraRef = pagos.get(0).getLetra();
+        var contrato = letraRef.getContrato();
+        String nombrePrograma = "";
+        if (contrato.getLotes() != null && !contrato.getLotes().isEmpty()) {
+            var lote = contrato.getLotes().iterator().next().getLote();
+            if (lote != null && lote.getPrograma() != null) {
+                nombrePrograma = lote.getPrograma().getNombrePrograma();
+            }
+        }
+
+        return "LETRA " + letrasStr
+            + " POR LA COMPRA DE UN LOTE DE TERRENO RUSTICO PROGRAMA DE VIV. "
+            + (nombrePrograma != null ? nombrePrograma.toUpperCase() : "");
     }
 
     // ── Helpers de boleta electrónica ─────────────────────────────────────────
@@ -223,14 +283,11 @@ public class PagoLetraController {
     private ResponseEntity<byte[]> generarRespuestaBoleta(
             Comprobante comp,
             LetraCambio letra) {
-
         var contrato = letra.getContrato();
-
         String numeroLetra = letra.getNumeroLetra();
         if (numeroLetra != null && numeroLetra.contains("/")) {
             numeroLetra = numeroLetra.substring(0, numeroLetra.indexOf("/"));
         }
-
         String nombrePrograma = "";
         if (contrato.getLotes() != null && !contrato.getLotes().isEmpty()) {
             var lote = contrato.getLotes().iterator().next().getLote();
@@ -242,6 +299,15 @@ public class PagoLetraController {
             + " POR LA COMPRA DE UN LOTE DE TERRENO RUSTICO PROGRAMA DE VIV. "
             + (nombrePrograma != null ? nombrePrograma.toUpperCase() : "");
 
+        return generarRespuestaBoleta(comp, letra, descripcion);
+    }
+
+    private ResponseEntity<byte[]> generarRespuestaBoleta(
+            Comprobante comp,
+            LetraCambio letra,
+            String descripcion) {
+
+        var contrato = letra.getContrato();
         String clienteNombre = "";
         String clienteDoc = "";
         String direccionCliente = "";
