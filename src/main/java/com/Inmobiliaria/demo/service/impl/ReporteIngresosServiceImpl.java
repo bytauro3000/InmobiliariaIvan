@@ -75,6 +75,7 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
                                     ? p.getLetra().getContrato().getClientes() : null))
                     .observaciones(p.getObservaciones())
                     .anulado(Boolean.TRUE.equals(p.getAnulado()))
+                    .fechaOperacion(p.getFechaOperacion())
                     .build());
         }
 

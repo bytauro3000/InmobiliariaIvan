@@ -23,6 +23,7 @@ public class ResumenIngresoItemDTO {
     private String numeroComprobante;
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate fechaPago;
+    private LocalDate fechaOperacion;
     private BigDecimal importePagado;
     private MedioPago medioPago;
     private String numeroOperacion;
