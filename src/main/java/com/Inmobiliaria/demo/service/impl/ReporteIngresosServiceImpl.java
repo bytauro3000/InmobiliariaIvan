@@ -74,6 +74,7 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
                             p.getLetra() != null && p.getLetra().getContrato() != null
                                     ? p.getLetra().getContrato().getClientes() : null))
                     .observaciones(p.getObservaciones())
+                    .anulado(Boolean.TRUE.equals(p.getAnulado()))
                     .build());
         }
 
@@ -105,6 +106,7 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
                     .idContrato(idContrato)
                     .nombreCliente(resolverNombreCliente(clientesContrato))
                     .observaciones(p.getObservaciones())
+                    .anulado(Boolean.TRUE.equals(p.getAnulado()))
                     .build());
         }
 
@@ -130,6 +132,7 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
                     .nombreCliente(resolverNombreCliente(
                             p.getContrato() != null ? p.getContrato().getClientes() : null))
                     .observaciones(p.getObservaciones())
+                    .anulado(Boolean.TRUE.equals(p.getAnulado()))
                     .build());
         }
 
@@ -164,16 +167,19 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
         long cantidadIniciales    = pagoInicialRepository.countByFechaPagoBetween(desde, hasta);
 
         BigDecimal totalInscripciones = itemsInscripciones.stream()
+                .filter(i -> !Boolean.TRUE.equals(i.getAnulado()))
                 .map(ResumenIngresoItemDTO::getImportePagado)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        long cantidadInscripciones = itemsInscripciones.size();
+        long cantidadInscripciones = itemsInscripciones.stream()
+                .filter(i -> !Boolean.TRUE.equals(i.getAnulado()))
+                .count();
 
         BigDecimal totalGeneral = totalLetras
                 .add(totalMoras)
                 .add(totalIniciales)
                 .add(totalInscripciones);
 
-        long cantidadTotal = cantidadLetras + cantidadMoras + cantidadIniciales + cantidadInscripciones;
+        long cantidadTotal = detalle.size();
 
         return ResumenIngresosRangoDTO.builder()
                 .fechaDesde(desde)
@@ -219,6 +225,7 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
                     .nombreCliente(resolverNombreCliente(
                             contrato != null ? contrato.getClientes() : null))
                     .observaciones(p.getObservaciones())
+                    .anulado(Boolean.TRUE.equals(p.getAnulado()))
                     .build());
         }
 

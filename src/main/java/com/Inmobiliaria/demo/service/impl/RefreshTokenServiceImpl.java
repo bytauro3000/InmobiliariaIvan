@@ -77,6 +77,13 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     }
 
     @Override
+    public Integer findUsuarioIdByToken(String token) {
+        return refreshTokenRepository.findByToken(token)
+            .map(rt -> rt.getUsuario().getId())
+            .orElse(null);
+    }
+
+    @Override
     @Transactional
     public void revokeRefreshToken(String token) {
         refreshTokenRepository.findByToken(token).ifPresent(rt -> {

@@ -6,6 +6,7 @@ import com.Inmobiliaria.demo.entity.RefreshToken;
 import com.Inmobiliaria.demo.entity.Usuario;
 import com.Inmobiliaria.demo.security.JwtUtil;
 import com.Inmobiliaria.demo.service.RefreshTokenService;
+import com.Inmobiliaria.demo.service.SesionActivaService;
 import com.Inmobiliaria.demo.service.UsuarioService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,6 +28,7 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final UsuarioService usuarioService;
     private final RefreshTokenService refreshTokenService;
+    private final SesionActivaService sesionActivaService;
 
     @Value("${jwt.cookie-secure:true}")
     private boolean cookieSecure;
@@ -36,6 +38,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> authenticateUser(@RequestBody LoginRequest loginRequest,
+                                                          HttpServletRequest request,
                                                           HttpServletResponse response) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getCorreo(), loginRequest.getContrasena())
@@ -48,6 +51,11 @@ public class AuthController {
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(usuario.getId());
         agregarCookieRefreshToken(response, refreshToken.getToken());
 
+        // Registrar sesión activa
+        String ip = obtenerIpCliente(request);
+        String userAgent = request.getHeader("User-Agent");
+        sesionActivaService.registrarLogin(usuario, ip, userAgent);
+
         // El refresh token NO se devuelve en el body, solo en la cookie HttpOnly
         return ResponseEntity.ok(new LoginResponse(token));
     }
@@ -57,6 +65,12 @@ public class AuthController {
                                                             HttpServletResponse response) {
         if (refreshToken == null || refreshToken.isBlank()) {
             return ResponseEntity.status(401).build();
+        }
+
+        // Actualizar última actividad de la sesión antes de rotar el token
+        Integer usuarioId = refreshTokenService.findUsuarioIdByToken(refreshToken);
+        if (usuarioId != null) {
+            sesionActivaService.actualizarRefresh(usuarioId);
         }
 
         LoginResponse loginResponse = refreshTokenService.refreshAccessToken(refreshToken);
@@ -70,6 +84,10 @@ public class AuthController {
     public ResponseEntity<Void> logout(@CookieValue(name = "refresh_token", required = false) String refreshToken,
                                        HttpServletResponse response) {
         if (refreshToken != null && !refreshToken.isBlank()) {
+            Integer usuarioId = refreshTokenService.findUsuarioIdByToken(refreshToken);
+            if (usuarioId != null) {
+                sesionActivaService.desactivarSesion(usuarioId);
+            }
             refreshTokenService.revokeRefreshToken(refreshToken);
         }
         eliminarCookieRefreshToken(response);
@@ -89,9 +107,17 @@ public class AuthController {
         cookie.setHttpOnly(true);
         cookie.setSecure(cookieSecure);
         cookie.setPath("/api/auth");
-        cookie.setMaxAge(7 * 24 * 60 * 60); // 7 días
+        cookie.setMaxAge(24 * 60 * 60); // 1 día
         cookie.setAttribute("SameSite", cookieSameSite);
         response.addCookie(cookie);
+    }
+
+    private String obtenerIpCliente(HttpServletRequest request) {
+        String xff = request.getHeader("X-Forwarded-For");
+        if (xff != null && !xff.isBlank()) {
+            return xff.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 
     private void eliminarCookieRefreshToken(HttpServletResponse response) {

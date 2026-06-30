@@ -34,4 +34,5 @@ public class ResumenIngresoItemDTO {
     private String nombreCliente;
 
     private String observaciones;
+    private Boolean anulado;
 }

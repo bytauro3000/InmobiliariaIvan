@@ -70,6 +70,9 @@ public class SecurityConfig {
                 // ── Gestión de usuarios: solo ADMINISTRADOR ───────────────────────────
                 .requestMatchers("/api/usuarios/**")
                 .hasAuthority("ROLE_ADMINISTRADOR")
+                // ── Sesiones activas y reportes admin: solo ADMINISTRADOR ────────────
+                .requestMatchers("/api/admin/**")
+                .hasAuthority("ROLE_ADMINISTRADOR")
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
