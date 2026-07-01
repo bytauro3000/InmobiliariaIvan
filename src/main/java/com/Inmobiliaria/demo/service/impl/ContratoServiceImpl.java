@@ -32,6 +32,7 @@ import com.Inmobiliaria.demo.enums.TipoPropietario;
 import com.Inmobiliaria.demo.repository.ContratoRepository;
 import com.Inmobiliaria.demo.repository.LetraCambioRepository;
 import com.Inmobiliaria.demo.repository.PagoInicialRepository;
+import com.Inmobiliaria.demo.repository.PagoInscripcionComprobanteRepository;
 import com.Inmobiliaria.demo.repository.PagoLetraRepository;
 import com.Inmobiliaria.demo.entity.Voucher;
 import com.Inmobiliaria.demo.service.*;
@@ -59,6 +60,7 @@ public class ContratoServiceImpl implements ContratoService {
     private final LetraCambioRepository letraCambioRepository;
     private final PagoLetraRepository pagoLetraRepository;
     private final PagoInicialRepository pagoInicialRepository;
+    private final PagoInscripcionComprobanteRepository pagoInscripcionComprobanteRepository;
     private final ModelMapper modelMapper;
     private final ComprobanteService comprobanteService;
 
@@ -426,6 +428,19 @@ public class ContratoServiceImpl implements ContratoService {
             sep.setEstado(EstadoSeparacion.FINALIZADO);
             separacionService.actualizarSeparacion(sep);
         }
+
+        List<PagoInscripcionComprobante> inscripciones =
+                pagoInscripcionComprobanteRepository.findByContratoId(idContrato);
+
+        pagoInicialRepository.findByContratoIdContrato(idContrato).ifPresent(pagoInicial -> {
+            contrato.setPagoInicial(null);
+            pagoInicialRepository.delete(pagoInicial);
+        });
+
+        if (!inscripciones.isEmpty()) {
+            pagoInscripcionComprobanteRepository.deleteAll(inscripciones);
+        }
+
         contratoRepository.delete(contrato);
     }
 

@@ -82,4 +82,7 @@ public interface PagoInscripcionComprobanteRepository
             @Param("idPrograma")       Integer idPrograma,
             @Param("desde")            LocalDate desde,
             @Param("hasta")            LocalDate hasta);
+
+    @Query("SELECT p FROM PagoInscripcionComprobante p WHERE p.contrato.idContrato = :idContrato")
+    List<PagoInscripcionComprobante> findByContratoId(@Param("idContrato") Integer idContrato);
 }

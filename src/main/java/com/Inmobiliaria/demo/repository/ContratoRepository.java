@@ -43,6 +43,7 @@ public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
            "LEFT JOIN FETCH c.vendedor " +
            "LEFT JOIN FETCH c.comprobanteInicial " +
            "LEFT JOIN FETCH c.pagoInicial " +
+           "LEFT JOIN FETCH c.letrasCambio " +
            "WHERE c.idContrato = :id")
     Contrato findByIdConTodo(@Param("id") Integer id);
 
