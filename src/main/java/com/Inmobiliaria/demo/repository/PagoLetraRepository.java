@@ -60,7 +60,8 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
         "SELECT MAX(CAST(SUBSTRING_INDEX(lc.numero_letra, '/', 1) AS UNSIGNED)) " +
         "FROM pago_letra pl " +
         "JOIN letra_cambio lc ON pl.id_letra = lc.id_letra " +
-        "WHERE lc.id_contrato = :idContrato",
+        "WHERE lc.id_contrato = :idContrato " +
+        "AND (pl.anulado = false OR pl.anulado IS NULL)",
         nativeQuery = true)
     Optional<Integer> findMaxNumeroLetraPagadoByContrato(@Param("idContrato") Integer idContrato);
 
