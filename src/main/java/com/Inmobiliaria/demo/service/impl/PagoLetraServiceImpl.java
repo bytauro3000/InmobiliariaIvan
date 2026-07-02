@@ -99,43 +99,13 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         List<Integer> nums = numerosLetra.stream()
             .map(this::extraerNumeroLetra).sorted().collect(Collectors.toList());
 
-        Optional<Integer> maxPagadoOpt = pagoLetraRepository.findMaxNumeroLetraPagadoByContrato(idContrato);
-
-        if (maxPagadoOpt.isEmpty() || maxPagadoOpt.get() == null) {
-            // Primer pago: solo validar consecutividad entre sí
-            for (int i = 1; i < nums.size(); i++) {
-                if (nums.get(i) != nums.get(i - 1) + 1) {
-                    throw new NegocioException(
-                        "Las letras seleccionadas no son consecutivas: N° " +
-                        nums.get(i - 1) + " y N° " + nums.get(i) + ".");
-                }
+        for (int i = 1; i < nums.size(); i++) {
+            if (nums.get(i) != nums.get(i - 1) + 1) {
+                throw new NegocioException(
+                    "Las letras seleccionadas no son consecutivas: N° " +
+                    nums.get(i - 1) + " y N° " + nums.get(i) + ".");
             }
-            return;
         }
-
-        int maxPagado = maxPagadoOpt.get();
-        int primerNum = nums.get(0);
-
-        // Si es el siguiente exacto, permitir
-        if (primerNum == maxPagado + 1) {
-            for (int i = 1; i < nums.size(); i++) {
-                if (nums.get(i) != nums.get(i - 1) + 1) {
-                    throw new NegocioException(
-                        "Las letras seleccionadas no son consecutivas: N° " +
-                        nums.get(i - 1) + " y N° " + nums.get(i) + ".");
-                }
-            }
-            return;
-        }
-
-        // Fuera de orden: verificar PIN o admin
-        if (pin != null && pin.equals(pagoPin)) return;
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMINISTRADOR"))) return;
-
-        throw new NegocioException(
-            "FUERA_DE_ORDEN:Debe pagar la letra N° " + (maxPagado + 1) + ".");
     }
 
 
