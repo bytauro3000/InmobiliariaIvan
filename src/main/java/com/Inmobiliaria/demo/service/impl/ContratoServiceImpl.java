@@ -384,6 +384,52 @@ public class ContratoServiceImpl implements ContratoService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable
+    public List<ContratoListItemDTO> listarContratosResumen() {
+        List<Contrato> contratos = contratoRepository.findAllResumen();
+        if (contratos.isEmpty()) return List.of();
+
+        return contratos.stream()
+                .map(this::mapToContratoListItemDTO)
+                .collect(Collectors.toList());
+    }
+
+    private ContratoListItemDTO mapToContratoListItemDTO(Contrato contrato) {
+        ContratoListItemDTO dto = new ContratoListItemDTO();
+        dto.setIdContrato(contrato.getIdContrato());
+        dto.setFechaContrato(contrato.getFechaContrato());
+        dto.setTipoContrato(contrato.getTipoContrato());
+        dto.setEstadoContrato(contrato.getEstadoContrato());
+        dto.setMontoTotal(contrato.getMontoTotal());
+        dto.setInicial(contrato.getInicial());
+        dto.setSaldo(contrato.getSaldo());
+        dto.setCantidadLetras(contrato.getCantidadLetras());
+        dto.setMoneda(contrato.getMoneda());
+
+        dto.setClientes(contrato.getClientes().stream()
+                .map(cc -> {
+                    Cliente c = cc.getCliente();
+                    return new ContratoListItemDTO.ClienteSimpleDTO(
+                            c.getNombre(), c.getApellidos(), c.getNumDoc());
+                })
+                .collect(Collectors.toList()));
+
+        dto.setLotes(contrato.getLotes().stream()
+                .map(cl -> {
+                    Lote l = cl.getLote();
+                    return new ContratoListItemDTO.LoteSimpleDTO(
+                            l.getManzana(), l.getNumeroLote(),
+                            l.getPrograma() != null ? l.getPrograma().getNombrePrograma() : null);
+                })
+                .collect(Collectors.toList()));
+
+        dto.setTieneLetras(contrato.getLetrasCambio() != null && !contrato.getLetrasCambio().isEmpty());
+
+        return dto;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     @Cacheable(key = "#idContrato")
     public ContratoResponseDTO buscarPorId(Integer idContrato) {
         Contrato contrato = contratoRepository.findByIdConTodo(idContrato);
@@ -407,6 +453,15 @@ public class ContratoServiceImpl implements ContratoService {
         return contratoRepository.findByClienteNombreContaining(termino)
                 .stream()
                 .map(this::mapToContratoResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ContratoListItemDTO> buscarPorNombreClienteResumen(String termino) {
+        return contratoRepository.findByClienteNombreContaining(termino)
+                .stream()
+                .map(this::mapToContratoListItemDTO)
                 .collect(Collectors.toList());
     }
 

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import com.Inmobiliaria.demo.dto.ContratoRequestDTO;
 import com.Inmobiliaria.demo.dto.ContratoResponseDTO;
+import com.Inmobiliaria.demo.dto.ContratoListItemDTO;
 import com.Inmobiliaria.demo.dto.TransferenciaResponseDTO;
 import com.Inmobiliaria.demo.service.ContratoService;
 
@@ -47,6 +48,11 @@ public class ContratoController {
         return contratoService.listarContratos();
     }
 
+    @GetMapping("/listar-resumen")
+    public List<ContratoListItemDTO> listarContratosResumen() {
+        return contratoService.listarContratosResumen();
+    }
+
     // Buscar contrato por ID del contrato
     @GetMapping("/{id}")
     public ResponseEntity<ContratoResponseDTO> buscarContratoPorId(@PathVariable Integer id) {
@@ -71,6 +77,11 @@ public class ContratoController {
     @GetMapping("/buscar-por-cliente")
     public List<ContratoResponseDTO> buscarPorCliente(@RequestParam String termino) {
         return contratoService.buscarPorNombreCliente(termino);
+    }
+
+    @GetMapping("/buscar-por-cliente-resumen")
+    public List<ContratoListItemDTO> buscarPorClienteResumen(@RequestParam String termino) {
+        return contratoService.buscarPorNombreClienteResumen(termino);
     }
 
     @DeleteMapping("/eliminar/{id}")

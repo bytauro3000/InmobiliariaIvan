@@ -108,5 +108,10 @@
     "name": "jwt.cookie-same-site",
     "type": "java.lang.String",
     "description": "A description for 'jwt.cookie-same-site'"
+  },
+  {
+    "name": "spring.datasource.hikari.connection-timezone",
+    "type": "java.lang.String",
+    "description": "A description for 'spring.datasource.hikari.connection-timezone'"
   }
 ]}

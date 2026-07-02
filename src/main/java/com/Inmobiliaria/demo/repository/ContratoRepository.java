@@ -153,4 +153,13 @@ public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
            "LEFT JOIN FETCH cc.cliente " +
            "WHERE c.idContrato IN :ids")
     List<Contrato> findAllByIdConClientes(@Param("ids") Collection<Integer> ids);
+
+    @Query("SELECT DISTINCT c FROM Contrato c " +
+           "LEFT JOIN FETCH c.clientes cc " +
+           "LEFT JOIN FETCH cc.cliente " +
+           "LEFT JOIN FETCH c.lotes cl " +
+           "LEFT JOIN FETCH cl.lote l " +
+           "LEFT JOIN FETCH l.programa " +
+           "ORDER BY c.idContrato DESC")
+    List<Contrato> findAllResumen();
 }
