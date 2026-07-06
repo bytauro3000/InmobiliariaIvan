@@ -217,7 +217,10 @@ public class NotaCreditoController {
         Contrato contrato = extractContrato(pago);
         Moneda moneda = contrato.getMoneda() != null ? contrato.getMoneda() : Moneda.USD;
 
-        String descripcion = buildDescripcionAnulacion(orig, pago, contrato);
+        String descripcionOrig = orig.getDescripcion();
+        String descripcion = (descripcionOrig != null && !descripcionOrig.isBlank())
+                ? descripcionOrig
+                : buildDescripcionAnulacion(orig, pago, contrato);
 
         byte[] pdf = NotaCreditoElectronicaPdf.generar(
                 nc.getSerie(), nc.getNumero().toString(), nc.getFechaEmision().toString(),
@@ -267,7 +270,10 @@ public class NotaCreditoController {
         Contrato contrato = extractContrato(pago);
         Moneda moneda = contrato.getMoneda() != null ? contrato.getMoneda() : Moneda.USD;
 
-        String descripcion = buildDescripcionAnulacion(orig, pago, contrato);
+        String descripcionOrig = orig.getDescripcion();
+        String descripcion = (descripcionOrig != null && !descripcionOrig.isBlank())
+                ? descripcionOrig
+                : buildDescripcionAnulacion(orig, pago, contrato);
 
         byte[] pdf = NotaCreditoReciboPdf.generar(
                 nc.getSerie(), nc.getNumero().toString(), nc.getFechaEmision().toString(),
