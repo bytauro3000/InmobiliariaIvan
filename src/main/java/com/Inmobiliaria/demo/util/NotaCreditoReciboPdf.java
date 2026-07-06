@@ -177,7 +177,7 @@ public class NotaCreditoReciboPdf {
             BigDecimal montoDecimal = montoTotal != null ? montoTotal : BigDecimal.ZERO;
 
             tablaDetalle.addCell(new Cell().setPadding(3)
-                    .add(new Paragraph(detalleDescripcion).setFont(courier).setFontSize(9f)));
+                    .add(new Paragraph(detalleDescripcion).setFont(courier).setFontSize(7.5f)));
             tablaDetalle.addCell(new Cell().setPadding(3).setTextAlignment(TextAlignment.CENTER)
                     .add(new Paragraph("1").setFont(courier).setFontSize(9f)));
             tablaDetalle.addCell(new Cell().setPadding(3).setTextAlignment(TextAlignment.RIGHT)
@@ -197,7 +197,7 @@ public class NotaCreditoReciboPdf {
                     .setBorder(Border.NO_BORDER).setPadding(1)
                     .setVerticalAlignment(VerticalAlignment.MIDDLE);
             celdaSon.add(new Paragraph("SON: " + (montoLetras != null ? montoLetras : "-"))
-                    .setFont(courier).setFontSize(8f).setItalic());
+                    .setFont(courier).setFontSize(7f).setItalic());
             tablaFooter.addCell(celdaSon);
             tablaFooter.addCell(filaTotalImporte("Importe Total:", monedaSimbolo + " " + montoStr, courierBold));
 
@@ -235,7 +235,7 @@ public class NotaCreditoReciboPdf {
         return new Cell()
                 .setBorder(Border.NO_BORDER)
                 .setPadding(0.5f)
-                .add(new Paragraph(texto).setFont(bold).setFontSize(8.5f)
+                .add(new Paragraph(texto).setFont(bold).setFontSize(7.5f)
                         .setTextAlignment(TextAlignment.LEFT));
     }
 
@@ -243,7 +243,7 @@ public class NotaCreditoReciboPdf {
         return new Cell()
                 .setBorder(Border.NO_BORDER)
                 .setPadding(1.5f)
-                .add(new Paragraph(": " + (texto != null ? texto : "-")).setFont(normal).setFontSize(8.5f));
+                .add(new Paragraph(": " + (texto != null ? texto : "-")).setFont(normal).setFontSize(7.5f));
     }
 
     private static Cell filaTotalCompacta2(String label, String value, PdfFont normal) {

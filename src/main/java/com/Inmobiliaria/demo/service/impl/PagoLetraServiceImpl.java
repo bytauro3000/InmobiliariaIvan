@@ -370,55 +370,77 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         if (Boolean.TRUE.equals(pago.getAnulado()))
             throw new NegocioException("Este pago ya fue anulado.");
 
-        // 1. Anular el pago
-        pago.setAnulado(true);
-        pago.setMotivoAnulacion(motivo);
-        pago.setFechaAnulacion(LocalDateTime.now());
-        pago.setAnuladoPor(anuladoPor);
-        pagoLetraRepository.save(pago);
-
-        // 2. Restaurar la letra (saldo + estado)
-        LetraCambio letra = pago.getLetra();
-        BigDecimal totalPagado = pagoLetraRepository.sumImportePagadoActivoByLetra(letra.getIdLetra());
-        if (totalPagado == null) totalPagado = BigDecimal.ZERO;
-        BigDecimal nuevoSaldo = letra.getImporte().subtract(totalPagado);
-
-        long count = pagoLetraRepository.countActivosByLetraIdLetra(letra.getIdLetra());
-        if (count == 0) {
-            letra.setSaldoPendiente(letra.getImporte());
-            letra.setEstadoLetra(letra.getFechaVencimiento().isBefore(LocalDate.now())
-                ? EstadoLetra.VENCIDO : EstadoLetra.PENDIENTE);
+        Comprobante comprobante = pago.getComprobante();
+        List<PagoLetras> pagosAAnular;
+        if (comprobante != null) {
+            pagosAAnular = pagoLetraRepository
+                .findByComprobanteIdComprobante(comprobante.getIdComprobante())
+                .stream()
+                .filter(p -> !Boolean.TRUE.equals(p.getAnulado()))
+                .collect(Collectors.toList());
+            if (pagosAAnular.isEmpty()) {
+                pagosAAnular = List.of(pago);
+            }
         } else {
-            letra.setSaldoPendiente(nuevoSaldo);
-            letra.setEstadoLetra(nuevoSaldo.compareTo(BigDecimal.ZERO) == 0
-                ? EstadoLetra.PAGADO : EstadoLetra.PARCIAL);
+            pagosAAnular = List.of(pago);
         }
-        letraCambioRepository.save(letra);
 
-        // 3. Anular moras generadas por este pago
-        List<MoraLetra> moras = moraRepository.findByPagoLetraIdPago(idPago);
-        for (MoraLetra mora : moras) {
-            if (mora.getEstadoMora() == EstadoMora.ANULADO) continue;
+        Set<Contrato> contratosAfectados = new HashSet<>();
 
-            // Anular PagoMora asociados a esta mora
-            for (PagoMora pm : mora.getPagos()) {
-                if (Boolean.TRUE.equals(pm.getAnulado())) continue;
-                pm.setAnulado(true);
-                pm.setMotivoAnulacion(motivo);
-                pm.setFechaAnulacion(LocalDateTime.now());
-                pm.setAnuladoPor(anuladoPor);
-                pagoMoraRepository.save(pm);
+        for (PagoLetras pagoAA : pagosAAnular) {
+            // 1. Anular el pago
+            pagoAA.setAnulado(true);
+            pagoAA.setMotivoAnulacion(motivo);
+            pagoAA.setFechaAnulacion(LocalDateTime.now());
+            pagoAA.setAnuladoPor(anuladoPor);
+            pagoLetraRepository.save(pagoAA);
+
+            // 2. Restaurar la letra (saldo + estado)
+            LetraCambio letra = pagoAA.getLetra();
+            BigDecimal totalPagado = pagoLetraRepository.sumImportePagadoActivoByLetra(letra.getIdLetra());
+            if (totalPagado == null) totalPagado = BigDecimal.ZERO;
+            BigDecimal nuevoSaldo = letra.getImporte().subtract(totalPagado);
+
+            long count = pagoLetraRepository.countActivosByLetraIdLetra(letra.getIdLetra());
+            if (count == 0) {
+                letra.setSaldoPendiente(letra.getImporte());
+                letra.setEstadoLetra(letra.getFechaVencimiento().isBefore(LocalDate.now())
+                    ? EstadoLetra.VENCIDO : EstadoLetra.PENDIENTE);
+            } else {
+                letra.setSaldoPendiente(nuevoSaldo);
+                letra.setEstadoLetra(nuevoSaldo.compareTo(BigDecimal.ZERO) == 0
+                    ? EstadoLetra.PAGADO : EstadoLetra.PARCIAL);
+            }
+            letraCambioRepository.save(letra);
+
+            // 3. Anular moras generadas por este pago
+            List<MoraLetra> moras = moraRepository.findByPagoLetraIdPago(pagoAA.getIdPago());
+            for (MoraLetra mora : moras) {
+                if (mora.getEstadoMora() == EstadoMora.ANULADO) continue;
+
+                for (PagoMora pm : mora.getPagos()) {
+                    if (Boolean.TRUE.equals(pm.getAnulado())) continue;
+                    pm.setAnulado(true);
+                    pm.setMotivoAnulacion(motivo);
+                    pm.setFechaAnulacion(LocalDateTime.now());
+                    pm.setAnuladoPor(anuladoPor);
+                    pagoMoraRepository.save(pm);
+                }
+
+                mora.setEstadoMora(EstadoMora.ANULADO);
+                mora.setMotivoAnulacion(motivo);
+                mora.setFechaAnulacion(LocalDateTime.now());
+                mora.setAnuladoPor(anuladoPor);
+                moraRepository.save(mora);
             }
 
-            mora.setEstadoMora(EstadoMora.ANULADO);
-            mora.setMotivoAnulacion(motivo);
-            mora.setFechaAnulacion(LocalDateTime.now());
-            mora.setAnuladoPor(anuladoPor);
-            moraRepository.save(mora);
+            contratosAfectados.add(letra.getContrato());
         }
 
-        // 4. Recalcular estado del contrato
-        recalcularEstadoContrato(letra.getContrato());
+        // 4. Recalcular estado de cada contrato afectado
+        for (Contrato c : contratosAfectados) {
+            recalcularEstadoContrato(c);
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -782,6 +804,13 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             letraCambioRepository.save(letra);
 
             responses.add(mapToDTO(guardado));
+        }
+
+        // ── Asignar referenciaId al comprobante compartido ──────────────────
+        if (comprobanteCompartido != null && comprobanteCompartido.getReferenciaId() == null && !responses.isEmpty()) {
+            Integer idPrimerPago = responses.get(0).getIdPago();
+            comprobanteCompartido.setReferenciaId(idPrimerPago);
+            comprobanteRepository.save(comprobanteCompartido);
         }
 
         Map<String, Object> sunatRespuestaMulti = null;

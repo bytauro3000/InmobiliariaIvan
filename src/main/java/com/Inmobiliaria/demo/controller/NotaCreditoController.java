@@ -24,8 +24,11 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -81,7 +84,7 @@ public class NotaCreditoController {
         String descripcionOriginal = comprobanteOriginal.getDescripcion();
         String descripcion = (descripcionOriginal != null && !descripcionOriginal.isBlank())
                 ? descripcionOriginal
-                : "NOTA DE CREDITO - " + desMotivo + " - " + comprobanteOriginal.getNumeroCompleto();
+                : buildDescripcionAnulacion(comprobanteOriginal, pago, contrato);
 
         Comprobante notaCredito = comprobanteService.generarNotaCredito(
                 comprobanteOriginal, codMotivo, desMotivo, anuladoPor);
@@ -305,14 +308,16 @@ public class NotaCreditoController {
     // ─── Helper: descripción enriquecida con datos de letra y lote ────────
     private String buildDescripcionAnulacion(Comprobante orig, PagoBase pago, Contrato contrato) {
         StringBuilder sb = new StringBuilder();
-        sb.append("ANULACION - ").append(orig.getNumeroCompleto());
-
-        String letraNumero = "";
-        if (pago instanceof PagoLetras pl) {
-            String nl = pl.getLetra().getNumeroLetra();
-            if (nl != null) {
-                if (nl.contains("/")) nl = nl.substring(0, nl.indexOf("/"));
-                letraNumero = nl;
+        List<String> numerosLetras = new ArrayList<>();
+        if (pago instanceof PagoLetras) {
+            List<PagoLetras> pagosDelComprobante = pagoLetraRepository
+                .findByComprobanteIdComprobante(orig.getIdComprobante());
+            for (PagoLetras pl : pagosDelComprobante) {
+                String nl = pl.getLetra().getNumeroLetra();
+                if (nl != null) {
+                    if (nl.contains("/")) nl = nl.substring(0, nl.indexOf("/"));
+                    numerosLetras.add(nl);
+                }
             }
         }
 
@@ -327,9 +332,19 @@ public class NotaCreditoController {
             }
         }
 
-        if (!letraNumero.isEmpty() || !loteInfo.isEmpty()) {
-            sb.append("\n");
-            if (!letraNumero.isEmpty()) sb.append("LETRA N° ").append(letraNumero).append(" ");
+        if (!numerosLetras.isEmpty() || !loteInfo.isEmpty()) {
+            if (!numerosLetras.isEmpty()) {
+                if (numerosLetras.size() == 1) {
+                    sb.append("LETRA N° ").append(numerosLetras.get(0)).append(" ");
+                } else {
+                    sb.append("LETRAS N° ");
+                    for (int i = 0; i < numerosLetras.size(); i++) {
+                        if (i > 0) sb.append(" Y ");
+                        sb.append(numerosLetras.get(i));
+                    }
+                    sb.append(" ");
+                }
+            }
             sb.append(loteInfo);
         }
 

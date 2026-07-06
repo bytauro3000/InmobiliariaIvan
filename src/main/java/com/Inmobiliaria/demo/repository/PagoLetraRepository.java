@@ -37,6 +37,9 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
            "WHERE c.numeroCompleto = :numeroCompleto")
     long countByComprobanteNumeroCompleto(@Param("numeroCompleto") String numeroCompleto);
 
+    @Query("SELECT p FROM PagoLetras p WHERE p.comprobante.idComprobante = :idComprobante")
+    List<PagoLetras> findByComprobanteIdComprobante(@Param("idComprobante") Long idComprobante);
+
     // ── Consultas para scheduler y email ──────────────────────────────────────
 
     @Query("SELECT DISTINCT p FROM PagoLetras p " +
