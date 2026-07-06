@@ -24,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -39,6 +40,13 @@ public class MoraServiceImpl implements MoraService {
 
     private static final BigDecimal PORCENTAJE_MORA = new BigDecimal("0.05");
     private static final BigDecimal MONTO_DIARIO    = new BigDecimal("1.00");
+
+    static LocalDate aplicarGraciaDominical(LocalDate fechaVenc) {
+        if (fechaVenc == null) return null;
+        return fechaVenc.getDayOfWeek() == DayOfWeek.SUNDAY
+            ? fechaVenc.plusDays(1)
+            : fechaVenc;
+    }
 
     private final MoraRepository        moraRepository;
     private final PagoMoraRepository    pagoMoraRepository;
@@ -64,8 +72,13 @@ public class MoraServiceImpl implements MoraService {
             .orElseThrow(() -> new NegocioException("Letra no encontrada con id: " + idLetra));
 
         LocalDate fechaVenc = letra.getFechaVencimiento();
+        LocalDate fechaVencEfectiva = aplicarGraciaDominical(fechaVenc);
 
-        if (!fechaVenc.isBefore(fechaReferencia)) {
+        if (!fechaVencEfectiva.isBefore(fechaReferencia)) {
+            if (fechaVenc.isBefore(fechaReferencia)) {
+                return new CalculoMoraDTO(idLetra, letra.getNumeroLetra(), letra.getImporte(),
+                    fechaVenc, fechaReferencia, 0, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, false, null);
+            }
             throw new NegocioException(
                 "La letra N° " + letra.getNumeroLetra() +
                 " no está vencida. Vence el " + fechaVenc + ". No aplica mora."
@@ -93,10 +106,11 @@ public class MoraServiceImpl implements MoraService {
     @Transactional
     public MoraLetra generarMoraParaPago(LetraCambio letra, PagoLetras pagoLetra, LocalDate fechaReferencia) {
         LocalDate fechaVenc = letra.getFechaVencimiento();
+        LocalDate fechaVencEfectiva = aplicarGraciaDominical(fechaVenc);
 
-        // Si el pago se registra con fecha <= vencimiento, no corresponde mora.
+        // Si el pago se registra con fecha <= vencimiento efectivo, no corresponde mora.
         // Cancelamos cualquier mora PENDIENTE preexistente (pudo crearse por alerta).
-        if (!fechaReferencia.isAfter(fechaVenc)) {
+        if (!fechaReferencia.isAfter(fechaVencEfectiva)) {
             cancelarMoraExistenteSiHay(letra.getIdLetra());
             return null;
         }
@@ -387,8 +401,9 @@ public class MoraServiceImpl implements MoraService {
 
         LocalDate hoy = LocalDate.now();
         LocalDate fechaVenc = letra.getFechaVencimiento();
+        LocalDate fechaVencEfectiva = aplicarGraciaDominical(fechaVenc);
 
-        if (!fechaVenc.isBefore(hoy))
+        if (!fechaVencEfectiva.isBefore(hoy))
             throw new NegocioException("La letra N° " + letra.getNumeroLetra() + " no está vencida. No aplica mora.");
 
         if (moraRepository.existeMoraActivaParaLetra(idLetra)) {

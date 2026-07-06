@@ -111,13 +111,19 @@ public class PagoLetraServiceImpl implements PagoLetraService {
 
     private LocalDate resolverFechaReferenciaMora(int numLetraActual, Integer idContrato, LocalDate fechaOperacion) {
         if (fechaOperacion == null) {
-            // Esto no debería ocurrir: el DTO tiene @JsonFormat y el frontend
-            // siempre envía la fecha. Registramos el problema y usamos hoy como fallback.
             log.warn("resolverFechaReferenciaMora: fechaOperacion es null para letra {} del contrato {}. Usando LocalDate.now() como fallback.",
                 numLetraActual, idContrato);
             return LocalDate.now();
         }
         return fechaOperacion;
+    }
+
+    private static boolean esMedioBancario(MedioPago medio) {
+        return medio == MedioPago.DEPOSITO
+            || medio == MedioPago.TRANSFERENCIA
+            || medio == MedioPago.YAPE
+            || medio == MedioPago.PLIN
+            || medio == MedioPago.OTROS;
     }
 
     /**
@@ -511,6 +517,11 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         LocalDate fechaPago = request.getFechaPago() != null ? request.getFechaPago() : LocalDate.now();
         LocalDate fechaOperacion = request.getFechaOperacion();
 
+        if (esMedioBancario(request.getMedioPago()) && fechaOperacion == null) {
+            throw new NegocioException(
+                "Para pagos con " + request.getMedioPago() + " la fecha de operación es obligatoria.");
+        }
+
         // ── Construir el pago ────────────────────────────────────────────────
         PagoLetras pago = new PagoLetras();
         pago.setLetra(letra);
@@ -601,11 +612,13 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             //      generarMoraParaPago verifica internamente si fechaRef > fechaVenc.
             boolean letraEsVencida = letra.getEstadoLetra() == EstadoLetra.VENCIDO
                 || (letra.getFechaVencimiento() != null
-                    && letra.getFechaVencimiento().isBefore(fechaPago));
+                    && MoraServiceImpl.aplicarGraciaDominical(letra.getFechaVencimiento()).isBefore(fechaPago));
 
             if (letraEsVencida) {
                 int numLetra = extraerNumeroLetra(letra.getNumeroLetra());
-                LocalDate fechaRef = resolverFechaReferenciaMora(numLetra, idContrato, fechaPago);
+                LocalDate fechaRef = esMedioBancario(request.getMedioPago())
+                    ? fechaOperacion
+                    : resolverFechaReferenciaMora(numLetra, idContrato, fechaPago);
                 moraService.generarMoraParaPago(letra, pagoGuardado, fechaRef);
             }
             letra.setEstadoLetra(EstadoLetra.PAGADO);
@@ -706,6 +719,12 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             if (letraGratis != null && letra.getIdLetra().equals(letraGratis.getIdLetra()))
                 continue;
 
+            if (esMedioBancario(pagoReq.getMedioPago()) && pagoReq.getFechaOperacion() == null) {
+                throw new NegocioException(
+                    "Para la letra N° " + letra.getNumeroLetra() +
+                    ": la fecha de operación es obligatoria para pagos con " + pagoReq.getMedioPago() + ".");
+            }
+
             BigDecimal descuentoLetra = BigDecimal.ZERO;
             if (descuentoTotal.compareTo(BigDecimal.ZERO) > 0 && montoTotalBruto.compareTo(BigDecimal.ZERO) > 0) {
                 descuentoLetra = descuentoTotal
@@ -747,11 +766,13 @@ public class PagoLetraServiceImpl implements PagoLetraService {
                 //      fecha vencida aunque el scheduler no las haya marcado VENCIDO aún.
                 boolean letraEsVencida = letra.getEstadoLetra() == EstadoLetra.VENCIDO
                     || (letra.getFechaVencimiento() != null
-                        && letra.getFechaVencimiento().isBefore(fechaPago));
+                        && MoraServiceImpl.aplicarGraciaDominical(letra.getFechaVencimiento()).isBefore(fechaPago));
 
                 if (letraEsVencida) {
                     int numLetra = extraerNumeroLetra(letra.getNumeroLetra());
-                    LocalDate fechaRef = resolverFechaReferenciaMora(numLetra, idContrato, fechaPago);
+                    LocalDate fechaRef = esMedioBancario(pagoReq.getMedioPago())
+                        ? pagoReq.getFechaOperacion()
+                        : resolverFechaReferenciaMora(numLetra, idContrato, fechaPago);
                     moraService.generarMoraParaPago(letra, guardado, fechaRef);
                 }
                 letra.setEstadoLetra(EstadoLetra.PAGADO);
