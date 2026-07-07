@@ -53,9 +53,10 @@ public class PagoLetraServiceImpl implements PagoLetraService {
     private final MoraServiceImpl       moraService;
     private final PagoMoraRepository    pagoMoraRepository;
 
-    private final ComprobanteService    comprobanteService;
-    private final ComprobanteRepository comprobanteRepository;
-    private final SunatEnvioService     sunatEnvioService;
+    private final ComprobanteService           comprobanteService;
+    private final ComprobanteRepository        comprobanteRepository;
+    private final SunatEnvioService            sunatEnvioService;
+    private final NotificacionAdminEmailService notificacionAdminEmailService;
 
     // ─── LETRAS PAGADAS NECESARIAS PARA OBTENER UNA GRATIS ────────────────────
     private static final int LETRAS_PARA_GRATIS = 10;
@@ -447,6 +448,44 @@ public class PagoLetraServiceImpl implements PagoLetraService {
     // Vouchers
     // ═══════════════════════════════════════════════════════════════════════════
 
+    private void notificarAdminPagoLetra(PagoLetras pago) {
+        try {
+            var letra = pago.getLetra();
+            var contrato = letra.getContrato();
+            Moneda moneda = contrato.getMoneda() != null ? contrato.getMoneda() : Moneda.USD;
+
+            String clienteNombre = "-";
+            if (contrato.getClientes() != null && !contrato.getClientes().isEmpty()) {
+                var c = contrato.getClientes().iterator().next().getCliente();
+                clienteNombre = c.getNombre() + " " + c.getApellidos();
+            }
+
+            String numLetra = letra.getNumeroLetra();
+            if (numLetra != null && numLetra.contains("/")) {
+                numLetra = numLetra.substring(0, numLetra.indexOf("/"));
+            }
+
+            String detalle = "Pago de letra N\u00B0 " + numLetra;
+
+            String loteInfo = "";
+            if (contrato.getLotes() != null && !contrato.getLotes().isEmpty()) {
+                var lote = contrato.getLotes().iterator().next().getLote();
+                if (lote != null) {
+                    loteInfo = " Mz. " + lote.getManzana() + " Lt. " + lote.getNumeroLote();
+                    if (lote.getPrograma() != null) {
+                        loteInfo += " del Programa: " + lote.getPrograma().getNombrePrograma();
+                    }
+                }
+            }
+            detalle += loteInfo;
+
+            String medioPago = pago.getMedioPago() != null ? pago.getMedioPago().name() : "-";
+            notificacionAdminEmailService.notificarPagoLetra(detalle, clienteNombre, pago.getImportePagado(), moneda, medioPago);
+        } catch (Exception e) {
+            log.warn("No se pudo enviar notificacion admin para pago ID {}: {}", pago.getIdPago(), e.getMessage());
+        }
+    }
+
     private String subirImagen(MultipartFile file, Integer idContrato, Integer idLetra) throws IOException {
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
         String publicId = "letra-" + idLetra + "-" + timestamp;
@@ -651,6 +690,8 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         letraCambioRepository.save(letra);
         verificarYActualizarEstadoContrato(letra.getContrato());
 
+        notificarAdminPagoLetra(pagoGuardado);
+
         PagoLetraResponseDTO dto = mapToDTO(pagoGuardado);
         if (sunatRespuesta != null) {
             dto.setSunatAceptado(true);
@@ -803,6 +844,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             }
             letraCambioRepository.save(letra);
 
+            notificarAdminPagoLetra(guardado);
             responses.add(mapToDTO(guardado));
         }
 

@@ -3,6 +3,7 @@ package com.Inmobiliaria.demo.service.impl;
 import com.Inmobiliaria.demo.dto.*;
 import com.Inmobiliaria.demo.entity.*;
 import com.Inmobiliaria.demo.enums.EstadoMora;
+import com.Inmobiliaria.demo.enums.Moneda;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
 import com.Inmobiliaria.demo.enums.TipoOrigenComprobante;
 import com.Inmobiliaria.demo.exception.NegocioException;
@@ -17,6 +18,7 @@ import com.Inmobiliaria.demo.service.SunatEnvioService;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -34,6 +36,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MoraServiceImpl implements MoraService {
@@ -55,7 +58,8 @@ public class MoraServiceImpl implements MoraService {
     private final ComprobanteRepository comprobanteRepository;
     private final SunatEnvioService     sunatEnvioService;
     private final VoucherRepository     voucherRepository;
-    private final Cloudinary            cloudinary;
+    private final Cloudinary                   cloudinary;
+    private final NotificacionAdminEmailService notificacionAdminEmailService;
 
     // ─── Calcular mora (sin persistir) ────────────────────────────────────────
 
@@ -297,6 +301,8 @@ public class MoraServiceImpl implements MoraService {
         mora.setEstadoMora(EstadoMora.PAGADO);
         moraRepository.save(mora);
 
+        notificarAdminPagoMora(pagoGuardado);
+
         PagoMoraResponseDTO dto = mapPagoToDTO(pagoGuardado);
         if (sunatRespuesta != null) {
             dto.setSunatAceptado(true);
@@ -439,6 +445,47 @@ public class MoraServiceImpl implements MoraService {
                 mora.setEstadoMora(EstadoMora.ANULADO);
                 moraRepository.save(mora);
             });
+    }
+
+    // ─── Notificación al admin ─────────────────────────────────────────────────
+
+    private void notificarAdminPagoMora(PagoMora pago) {
+        try {
+            var mora = pago.getMora();
+            var letra = mora.getLetra();
+            var contrato = letra.getContrato();
+            Moneda moneda = contrato.getMoneda() != null ? contrato.getMoneda() : Moneda.USD;
+
+            String clienteNombre = "-";
+            if (contrato.getClientes() != null && !contrato.getClientes().isEmpty()) {
+                var c = contrato.getClientes().iterator().next().getCliente();
+                clienteNombre = c.getNombre() + " " + c.getApellidos();
+            }
+
+            String numLetra = letra.getNumeroLetra();
+            if (numLetra != null && numLetra.contains("/")) {
+                numLetra = numLetra.substring(0, numLetra.indexOf("/"));
+            }
+
+            String detalle = "Mora de letra N\u00B0 " + numLetra + " - " + mora.getDiasMora() + " d\u00EDas de atraso";
+
+            String loteInfo = "";
+            if (contrato.getLotes() != null && !contrato.getLotes().isEmpty()) {
+                var lote = contrato.getLotes().iterator().next().getLote();
+                if (lote != null) {
+                    loteInfo = " Mz. " + lote.getManzana() + " Lt. " + lote.getNumeroLote();
+                    if (lote.getPrograma() != null) {
+                        loteInfo += " del Programa: " + lote.getPrograma().getNombrePrograma();
+                    }
+                }
+            }
+            detalle += loteInfo;
+
+            String medioPago = pago.getMedioPago() != null ? pago.getMedioPago().name() : "-";
+            notificacionAdminEmailService.notificarPagoMora(detalle, clienteNombre, pago.getImportePagado(), moneda, medioPago);
+        } catch (Exception e) {
+            log.warn("No se pudo enviar notificacion admin para pago mora ID {}: {}", pago.getIdPagoMora(), e.getMessage());
+        }
     }
 
     // ─── Mappers ───────────────────────────────────────────────────────────────

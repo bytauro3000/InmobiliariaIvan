@@ -42,8 +42,10 @@ import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.multipart.MultipartFile;
 
+@Slf4j
 @Service
 @CacheConfig(cacheNames = "contratos")
 @RequiredArgsConstructor
@@ -64,9 +66,10 @@ public class ContratoServiceImpl implements ContratoService {
     private final ModelMapper modelMapper;
     private final ComprobanteService comprobanteService;
 
-    private final SunatEnvioService sunatEnvioService;
-    private final Cloudinary cloudinary;
+    private final SunatEnvioService            sunatEnvioService;
+    private final Cloudinary                   cloudinary;
     private final com.Inmobiliaria.demo.repository.VoucherRepository voucherRepository;
+    private final NotificacionAdminEmailService notificacionAdminEmailService;
 
     private void setearValoresPorDefecto(Contrato contrato) {
         if (contrato.getTipoContrato() == TipoContrato.CONTADO) {
@@ -187,6 +190,8 @@ public class ContratoServiceImpl implements ContratoService {
             // ── PASO 3: enlazar el pago (con comprobante) al contrato ────────
             contratoGuardado.setPagoInicial(pagoGuardado);
             contratoGuardado = contratoRepository.save(contratoGuardado);
+
+            notificarAdminPagoInicial(pagoGuardado);
         }
         // ── Fin registro pago inicial ──────────────────────────────────────────
 
@@ -736,5 +741,37 @@ public class ContratoServiceImpl implements ContratoService {
         }
 
         return dto;
+    }
+
+    private void notificarAdminPagoInicial(PagoInicial pago) {
+        try {
+            var contrato = pago.getContrato();
+            Moneda moneda = contrato.getMoneda() != null ? contrato.getMoneda() : Moneda.USD;
+
+            String clienteNombre = "-";
+            if (contrato.getClientes() != null && !contrato.getClientes().isEmpty()) {
+                var c = contrato.getClientes().iterator().next().getCliente();
+                clienteNombre = c.getNombre() + " " + c.getApellidos();
+            }
+
+            String detalle = "Pago inicial / cuota del contrato";
+
+            String loteInfo = "";
+            if (contrato.getLotes() != null && !contrato.getLotes().isEmpty()) {
+                var lote = contrato.getLotes().iterator().next().getLote();
+                if (lote != null) {
+                    loteInfo = " Mz. " + lote.getManzana() + " Lt. " + lote.getNumeroLote();
+                    if (lote.getPrograma() != null) {
+                        loteInfo += " del Programa: " + lote.getPrograma().getNombrePrograma();
+                    }
+                }
+            }
+            detalle += loteInfo;
+
+            String medioPago = pago.getMedioPago() != null ? pago.getMedioPago().name() : "-";
+            notificacionAdminEmailService.notificarPagoInicial(detalle, clienteNombre, pago.getImportePagado(), moneda, medioPago);
+        } catch (Exception e) {
+            log.warn("No se pudo enviar notificacion admin para pago inicial ID {}: {}", pago.getIdPagoInicial(), e.getMessage());
+        }
     }
 }
