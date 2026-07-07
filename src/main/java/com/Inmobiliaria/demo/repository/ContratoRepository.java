@@ -4,6 +4,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -59,6 +61,13 @@ public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
            "  com.Inmobiliaria.demo.enums.EstadoContrato.MORA) " +
            "ORDER BY c.idContrato DESC")
     List<Contrato> findFinanciadosActivosConLetras();
+
+    @Query("SELECT c.idContrato FROM Contrato c " +
+           "WHERE c.tipoContrato = com.Inmobiliaria.demo.enums.TipoContrato.FINANCIADO " +
+           "AND c.estadoContrato IN (" +
+           "  com.Inmobiliaria.demo.enums.EstadoContrato.ACTIVO, " +
+           "  com.Inmobiliaria.demo.enums.EstadoContrato.MORA)")
+    Page<Integer> findFinanciadosActivosId(Pageable pageable);
 
     // USAR ESTE PARA GUARDAR (Nuevos registros)
     @Query("SELECT COUNT(cl) > 0 FROM ContratoLote cl " +
