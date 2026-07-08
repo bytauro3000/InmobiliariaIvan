@@ -81,6 +81,19 @@ public interface PagoInicialRepository extends JpaRepository<PagoInicial, Intege
             @Param("hasta") LocalDate hasta);
 
     @Query(value =
+        "SELECT MONTH(fecha_pago) AS mes, YEAR(fecha_pago) AS anio, " +
+        "COALESCE(SUM(importe_pagado), 0) AS total " +
+        "FROM pago_inicial " +
+        "WHERE fecha_pago BETWEEN :desde AND :hasta " +
+        "AND (anulado = false OR anulado IS NULL) " +
+        "GROUP BY YEAR(fecha_pago), MONTH(fecha_pago) " +
+        "ORDER BY anio, mes",
+        nativeQuery = true)
+    List<Object[]> sumImportePagadoGroupedByMonth(
+            @Param("desde") LocalDate desde,
+            @Param("hasta") LocalDate hasta);
+
+    @Query(value =
         "SELECT COALESCE(SUM(importe_pagado), 0) " +
         "FROM pago_inicial " +
         "WHERE fecha_pago BETWEEN :desde AND :hasta " +

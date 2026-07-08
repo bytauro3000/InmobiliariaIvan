@@ -56,4 +56,9 @@ public interface InscripcionClient {
     List<Map<String, Object>> obtenerIngresosPorRango(
             @RequestParam("desde") String desde,
             @RequestParam("hasta") String hasta);
+
+    @GetMapping("/ingresos-por-mes")
+    List<Map<String, Object>> obtenerIngresosPorMes(
+            @RequestParam("desde") String desde,
+            @RequestParam("hasta") String hasta);
 }

@@ -2,6 +2,7 @@ package com.Inmobiliaria.demo.controller;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.Inmobiliaria.demo.client.InscripcionClient;
 import com.Inmobiliaria.demo.dto.IngresoDiarioDTO;
+import com.Inmobiliaria.demo.dto.IngresoMensualDTO;
 import com.Inmobiliaria.demo.service.ClienteService;
 import com.Inmobiliaria.demo.service.DashboardService;
 import com.Inmobiliaria.demo.service.LoteService;
@@ -140,6 +142,62 @@ public class DashboardController {
                 .cantidadInscripcionesServicios(cantidadInscripciones)
                 .totalGeneral(totalGeneral)
                 .build();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // ENDPOINT 3 — Ingresos mensuales (hasta 12 meses)
+    // GET /api/dashboard/ingresos-por-mes
+    // GET /api/dashboard/ingresos-por-mes?desde=2026-05-01&hasta=2026-07-01
+    // ─────────────────────────────────────────────────────────────────────────
+    @GetMapping("/ingresos-por-mes")
+    public List<IngresoMensualDTO> obtenerIngresosPorMes(
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate desde,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate hasta) {
+
+        if (desde == null) desde = LocalDate.of(2026, 5, 1);
+        if (hasta == null) hasta = LocalDate.now();
+
+        // Limitar a máximo 12 meses
+        LocalDate limite = hasta.minusMonths(11);
+        if (desde.isBefore(limite)) desde = limite;
+
+        // Obtener datos locales (letras, moras, iniciales)
+        List<IngresoMensualDTO> ingresos = dashboardService.getIngresosPorMes(desde, hasta);
+
+        // Inscripciones de servicios básicos (microservicio)
+        try {
+            List<Map<String, Object>> inscripcionesPorMes =
+                    inscripcionClient.obtenerIngresosPorMes(desde.toString(), hasta.toString());
+
+            if (inscripcionesPorMes != null) {
+                for (Map<String, Object> fila : inscripcionesPorMes) {
+                    int mes = Integer.parseInt(fila.get("mes").toString());
+                    int anio = Integer.parseInt(fila.get("anio").toString());
+                    BigDecimal total = new BigDecimal(fila.get("total").toString());
+
+                    for (IngresoMensualDTO dto : ingresos) {
+                        if (dto.getMes() == mes && dto.getAnio() == anio) {
+                            dto.setTotalInscripcionesServicios(total);
+                            dto.setTotalGeneral(
+                                dto.getTotalPagoLetras()
+                                    .add(dto.getTotalPagoMoras())
+                                    .add(dto.getTotalPagoIniciales())
+                                    .add(total)
+                            );
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("No se pudieron obtener ingresos mensuales de servicios básicos: {}", e.getMessage());
+        }
+
+        return ingresos;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
