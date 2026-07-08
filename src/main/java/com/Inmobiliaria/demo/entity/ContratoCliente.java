@@ -27,4 +27,7 @@ public class ContratoCliente {
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_propietario", nullable = false)
     private TipoPropietario tipoPropietario;
+
+    @Column(name = "orden", nullable = false)
+    private Integer orden = 0;
 }

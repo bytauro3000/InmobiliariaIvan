@@ -16,6 +16,8 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.Inmobiliaria.demo.dto.*;
 import com.Inmobiliaria.demo.dto.TransferenciaResponseDTO;
@@ -191,7 +193,13 @@ public class ContratoServiceImpl implements ContratoService {
             contratoGuardado.setPagoInicial(pagoGuardado);
             contratoGuardado = contratoRepository.save(contratoGuardado);
 
-            notificarAdminPagoInicial(pagoGuardado);
+            PagoInicial finalPagoInicial = pagoGuardado;
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    notificarAdminPagoInicial(finalPagoInicial);
+                }
+            });
         }
         // ── Fin registro pago inicial ──────────────────────────────────────────
 
@@ -213,6 +221,7 @@ public class ContratoServiceImpl implements ContratoService {
         }
 
         if (idsClientesAAsociar != null) {
+            int index = 0;
             for (Integer idCliente : idsClientesAAsociar) {
                 Cliente cliente = clienteService.buscarClientePorId(idCliente);
                 if (cliente != null) {
@@ -221,6 +230,7 @@ public class ContratoServiceImpl implements ContratoService {
                     cc.setContrato(contratoFinal);
                     cc.setCliente(cliente);
                     cc.setTipoPropietario(TipoPropietario.TITULAR);
+                    cc.setOrden(index++);
                     contratoClienteService.guardar(cc);
                 }
             }
@@ -312,12 +322,14 @@ public class ContratoServiceImpl implements ContratoService {
             requestDTO.getIdLotes().forEach(idLote -> registrarLoteEnContrato(contratoActualizado, idLote));
 
         if (requestDTO.getIdClientes() != null) {
+            int index = 0;
             for (Integer idCliente : requestDTO.getIdClientes()) {
                 Cliente cliente = clienteService.buscarClientePorId(idCliente);
                 ContratoCliente cc = new ContratoCliente();
                 cc.setId(new ContratoClienteId(contratoActualizado.getIdContrato(), idCliente));
                 cc.setContrato(contratoActualizado); cc.setCliente(cliente);
                 cc.setTipoPropietario(TipoPropietario.TITULAR);
+                cc.setOrden(index++);
                 contratoClienteService.guardar(cc);
             }
         }

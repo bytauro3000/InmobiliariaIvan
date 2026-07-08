@@ -4,12 +4,14 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.Inmobiliaria.demo.entity.LetraCambio;
+import jakarta.persistence.LockModeType;
 import jakarta.transaction.Transactional;
 
 @Repository
@@ -23,6 +25,10 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
     void deleteByContratoIdContrato(@Param("idContrato") Integer idContrato);
 
     Optional<LetraCambio> findFirstByContratoIdContratoOrderByNumeroLetraAsc(Integer idContrato);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT l FROM LetraCambio l WHERE l.idLetra = :idLetra")
+    Optional<LetraCambio> findByIdWithLock(@Param("idLetra") Integer idLetra);
 
     // ✅ Query 1: trae letras + contrato + clientes (solo UNA colección en JOIN FETCH)
     // Hibernate lanza MultipleBagFetchException si se hace JOIN FETCH de dos List a la vez.

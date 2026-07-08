@@ -21,6 +21,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -224,7 +226,7 @@ public class MoraServiceImpl implements MoraService {
     @Override
     @Transactional
     public PagoMoraResponseDTO pagarMora(PagoMoraRequestDTO request, List<MultipartFile> vouchers) throws IOException {
-        MoraLetra mora = moraRepository.findById(request.getIdMora())
+        MoraLetra mora = moraRepository.findByIdWithLock(request.getIdMora())
             .orElseThrow(() -> new NegocioException("Mora no encontrada con id: " + request.getIdMora()));
 
         if (mora.getEstadoMora() == EstadoMora.PAGADO)
@@ -301,7 +303,13 @@ public class MoraServiceImpl implements MoraService {
         mora.setEstadoMora(EstadoMora.PAGADO);
         moraRepository.save(mora);
 
-        notificarAdminPagoMora(pagoGuardado);
+        PagoMora finalPago = pagoGuardado;
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                notificarAdminPagoMora(finalPago);
+            }
+        });
 
         PagoMoraResponseDTO dto = mapPagoToDTO(pagoGuardado);
         if (sunatRespuesta != null) {

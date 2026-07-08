@@ -3,10 +3,12 @@ package com.Inmobiliaria.demo.repository;
 import com.Inmobiliaria.demo.entity.MoraLetra;
 import com.Inmobiliaria.demo.enums.EstadoMora;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 
@@ -55,4 +57,8 @@ public interface MoraRepository extends JpaRepository<MoraLetra, Integer> {
     // ── NUEVO: busca moras asociadas a un pago de letra específico ─────────
     // Usado en eliminarPago() para desvincular antes de borrar el pago
     List<MoraLetra> findByPagoLetraIdPago(Integer idPago);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT m FROM MoraLetra m WHERE m.idMora = :idMora")
+    Optional<MoraLetra> findByIdWithLock(@Param("idMora") Integer idMora);
 }

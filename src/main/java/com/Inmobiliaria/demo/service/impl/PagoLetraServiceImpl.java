@@ -22,6 +22,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.Authentication;
@@ -556,7 +558,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
     @CacheEvict(value = "contratos", allEntries = true)
     public PagoLetraResponseDTO registrarPago(PagoLetraRequestDTO request,
                                                List<MultipartFile> vouchers) throws IOException {
-        LetraCambio letra = letraCambioRepository.findById(request.getIdLetra())
+        LetraCambio letra = letraCambioRepository.findByIdWithLock(request.getIdLetra())
             .orElseThrow(() -> new NegocioException("Letra no encontrada con id: " + request.getIdLetra()));
 
         if (letra.getEstadoLetra() == EstadoLetra.PAGADO)
@@ -690,7 +692,13 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         letraCambioRepository.save(letra);
         verificarYActualizarEstadoContrato(letra.getContrato());
 
-        notificarAdminPagoLetra(pagoGuardado);
+        PagoLetras finalPago = pagoGuardado;
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                notificarAdminPagoLetra(finalPago);
+            }
+        });
 
         PagoLetraResponseDTO dto = mapToDTO(pagoGuardado);
         if (sunatRespuesta != null) {
@@ -712,14 +720,14 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             throw new NegocioException("La lista de pagos no puede estar vacía.");
 
         Integer idPrimeraLetra = request.getPagos().get(0).getIdLetra();
-        LetraCambio letraEjemplo = letraCambioRepository.findById(idPrimeraLetra)
+        LetraCambio letraEjemplo = letraCambioRepository.findByIdWithLock(idPrimeraLetra)
             .orElseThrow(() -> new NegocioException("Letra no encontrada: " + idPrimeraLetra));
         Integer idContrato = letraEjemplo.getContrato().getIdContrato();
 
         List<LetraCambio> letrasDelLote = new ArrayList<>();
         List<String> numerosLetraRequest = new ArrayList<>();
         for (PagoLetraRequestDTO req : request.getPagos()) {
-            LetraCambio lc = letraCambioRepository.findById(req.getIdLetra())
+            LetraCambio lc = letraCambioRepository.findByIdWithLock(req.getIdLetra())
                 .orElseThrow(() -> new NegocioException("Letra no encontrada: " + req.getIdLetra()));
             letrasDelLote.add(lc);
             numerosLetraRequest.add(lc.getNumeroLetra());
@@ -844,7 +852,13 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             }
             letraCambioRepository.save(letra);
 
-            notificarAdminPagoLetra(guardado);
+            PagoLetras finalGuardado = guardado;
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    notificarAdminPagoLetra(finalGuardado);
+                }
+            });
             responses.add(mapToDTO(guardado));
         }
 
