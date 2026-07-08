@@ -134,7 +134,7 @@ public class MoraController {
     // ── ADMIN: Anular mora ────────────────────────────────────────────────────
 
     @PatchMapping("/{idMora}/anular")
-    @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMINISTRADOR', 'ROLE_SOPORTE')")
     public ResponseEntity<MoraResponseDTO> anularMora(
             @PathVariable Integer idMora,
             @Valid @RequestBody AnulacionRequestDTO request,
@@ -146,7 +146,7 @@ public class MoraController {
     // ── ADMIN: Anular pago de mora ────────────────────────────────────────────
 
     @PatchMapping("/pago/{idPagoMora}/anular")
-    @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMINISTRADOR', 'ROLE_SOPORTE')")
     public ResponseEntity<PagoMoraResponseDTO> anularPagoMora(
             @PathVariable Integer idPagoMora,
             @Valid @RequestBody AnulacionRequestDTO request,
@@ -158,7 +158,7 @@ public class MoraController {
     // ── ADMIN: Eliminar pago de mora físicamente ──────────────────────────────
 
     @DeleteMapping("/pago/{idPagoMora}")
-    @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMINISTRADOR', 'ROLE_SOPORTE')")
     public ResponseEntity<Void> eliminarPagoMora(@PathVariable Integer idPagoMora) {
         moraService.eliminarPagoMora(idPagoMora);
         return ResponseEntity.noContent().build();
