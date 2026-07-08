@@ -20,4 +20,9 @@ public class IngresoMensualDTO {
     private BigDecimal totalPagoIniciales;
     private BigDecimal totalInscripcionesServicios;
     private BigDecimal totalGeneral;
+
+    private BigDecimal totalBoleta;
+    private BigDecimal totalRecibo;
+    private BigDecimal totalEfectivo;
+    private BigDecimal totalBancario;
 }

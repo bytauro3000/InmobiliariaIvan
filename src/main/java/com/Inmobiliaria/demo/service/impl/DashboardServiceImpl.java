@@ -69,40 +69,28 @@ public class DashboardServiceImpl implements DashboardService {
     public List<IngresoMensualDTO> getIngresosPorMes(LocalDate desde, LocalDate hasta) {
         Map<String, IngresoMensualDTO> mapa = new HashMap<>();
 
-        // Función helper para generar clave mes-año y obtener/acumular DTO
-        // Formato de Object[] de los repositorios: [mes (int), anio (int), total (BigDecimal)]
+        // ── Totales por fuente (letras, moras, iniciales) ────────────────
+        // Object[]: [mes (int), anio (int), total (BigDecimal)]
+        cargarTotalesPorFuente(mapa, pagoLetraRepository.sumImportePagadoGroupedByMonth(desde, hasta),
+            (dto, total) -> dto.setTotalPagoLetras(total));
+        cargarTotalesPorFuente(mapa, pagoMoraRepository.sumImportePagadoGroupedByMonth(desde, hasta),
+            (dto, total) -> dto.setTotalPagoMoras(total));
+        cargarTotalesPorFuente(mapa, pagoInicialRepository.sumImportePagadoGroupedByMonth(desde, hasta),
+            (dto, total) -> dto.setTotalPagoIniciales(total));
 
-        // 1. Pago letras
-        for (Object[] fila : pagoLetraRepository.sumImportePagadoGroupedByMonth(desde, hasta)) {
-            int mes = ((Number) fila[0]).intValue();
-            int anio = ((Number) fila[1]).intValue();
-            BigDecimal total = (BigDecimal) fila[2];
-            String clave = anio + "-" + mes;
-            IngresoMensualDTO dto = mapa.computeIfAbsent(clave, k -> crearVacio(mes, anio));
-            dto.setTotalPagoLetras(total);
-        }
+        // ── Desglose por tipo de comprobante ─────────────────────────────
+        // Object[]: [mes (int), anio (int), tipo (String: 'BOLETA'|'RECIBO'), total (BigDecimal)]
+        cargarDesglose(mapa, pagoLetraRepository.sumByMonthAndComprobanteType(desde, hasta));
+        cargarDesglose(mapa, pagoMoraRepository.sumByMonthAndComprobanteType(desde, hasta));
+        cargarDesglose(mapa, pagoInicialRepository.sumByMonthAndComprobanteType(desde, hasta));
 
-        // 2. Pago moras
-        for (Object[] fila : pagoMoraRepository.sumImportePagadoGroupedByMonth(desde, hasta)) {
-            int mes = ((Number) fila[0]).intValue();
-            int anio = ((Number) fila[1]).intValue();
-            BigDecimal total = (BigDecimal) fila[2];
-            String clave = anio + "-" + mes;
-            IngresoMensualDTO dto = mapa.computeIfAbsent(clave, k -> crearVacio(mes, anio));
-            dto.setTotalPagoMoras(total);
-        }
+        // ── Desglose por medio de pago ───────────────────────────────────
+        // Object[]: [mes (int), anio (int), tipo (String: 'EFECTIVO'|'BANCARIO'), total (BigDecimal)]
+        cargarDesgloseMedioPago(mapa, pagoLetraRepository.sumByMonthAndMedioPago(desde, hasta));
+        cargarDesgloseMedioPago(mapa, pagoMoraRepository.sumByMonthAndMedioPago(desde, hasta));
+        cargarDesgloseMedioPago(mapa, pagoInicialRepository.sumByMonthAndMedioPago(desde, hasta));
 
-        // 3. Pago iniciales
-        for (Object[] fila : pagoInicialRepository.sumImportePagadoGroupedByMonth(desde, hasta)) {
-            int mes = ((Number) fila[0]).intValue();
-            int anio = ((Number) fila[1]).intValue();
-            BigDecimal total = (BigDecimal) fila[2];
-            String clave = anio + "-" + mes;
-            IngresoMensualDTO dto = mapa.computeIfAbsent(clave, k -> crearVacio(mes, anio));
-            dto.setTotalPagoIniciales(total);
-        }
-
-        // Calcular totalGeneral y generar etiquetas
+        // ── Calcular totalGeneral y generar etiquetas ────────────────────
         String[] mesesEspanol = {"Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
             "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"};
 
@@ -123,6 +111,54 @@ public class DashboardServiceImpl implements DashboardService {
             .collect(Collectors.toList());
     }
 
+    @FunctionalInterface
+    private interface SetterTotal {
+        void set(IngresoMensualDTO dto, BigDecimal total);
+    }
+
+    private void cargarTotalesPorFuente(Map<String, IngresoMensualDTO> mapa,
+                                          List<Object[]> resultados, SetterTotal setter) {
+        for (Object[] fila : resultados) {
+            int mes = ((Number) fila[0]).intValue();
+            int anio = ((Number) fila[1]).intValue();
+            BigDecimal total = (BigDecimal) fila[2];
+            String clave = anio + "-" + mes;
+            setter.set(mapa.computeIfAbsent(clave, k -> crearVacio(mes, anio)), total);
+        }
+    }
+
+    private void cargarDesglose(Map<String, IngresoMensualDTO> mapa, List<Object[]> resultados) {
+        for (Object[] fila : resultados) {
+            int mes = ((Number) fila[0]).intValue();
+            int anio = ((Number) fila[1]).intValue();
+            String tipo = (String) fila[2];
+            BigDecimal total = (BigDecimal) fila[3];
+            String clave = anio + "-" + mes;
+            IngresoMensualDTO dto = mapa.computeIfAbsent(clave, k -> crearVacio(mes, anio));
+            if ("BOLETA".equals(tipo)) {
+                dto.setTotalBoleta(dto.getTotalBoleta().add(total));
+            } else {
+                dto.setTotalRecibo(dto.getTotalRecibo().add(total));
+            }
+        }
+    }
+
+    private void cargarDesgloseMedioPago(Map<String, IngresoMensualDTO> mapa, List<Object[]> resultados) {
+        for (Object[] fila : resultados) {
+            int mes = ((Number) fila[0]).intValue();
+            int anio = ((Number) fila[1]).intValue();
+            String tipo = (String) fila[2];
+            BigDecimal total = (BigDecimal) fila[3];
+            String clave = anio + "-" + mes;
+            IngresoMensualDTO dto = mapa.computeIfAbsent(clave, k -> crearVacio(mes, anio));
+            if ("EFECTIVO".equals(tipo)) {
+                dto.setTotalEfectivo(dto.getTotalEfectivo().add(total));
+            } else {
+                dto.setTotalBancario(dto.getTotalBancario().add(total));
+            }
+        }
+    }
+
     private IngresoMensualDTO crearVacio(int mes, int anio) {
         return IngresoMensualDTO.builder()
                 .mes(mes)
@@ -133,6 +169,10 @@ public class DashboardServiceImpl implements DashboardService {
                 .totalPagoIniciales(BigDecimal.ZERO)
                 .totalInscripcionesServicios(BigDecimal.ZERO)
                 .totalGeneral(BigDecimal.ZERO)
+                .totalBoleta(BigDecimal.ZERO)
+                .totalRecibo(BigDecimal.ZERO)
+                .totalEfectivo(BigDecimal.ZERO)
+                .totalBancario(BigDecimal.ZERO)
                 .build();
     }
 }

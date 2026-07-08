@@ -81,6 +81,37 @@ public interface PagoMoraRepository extends JpaRepository<PagoMora, Integer> {
             @Param("hasta") LocalDate hasta);
 
     @Query(value =
+        "SELECT MONTH(p.fecha_pago) AS mes, YEAR(p.fecha_pago) AS anio, " +
+        "CASE WHEN c.tipo_comprobante = 'BOLETA' THEN 'BOLETA' ELSE 'RECIBO' END AS tipo, " +
+        "COALESCE(SUM(p.importe_pagado), 0) AS total " +
+        "FROM pago_mora p " +
+        "LEFT JOIN comprobante c ON p.id_comprobante = c.id_comprobante " +
+        "WHERE p.fecha_pago BETWEEN :desde AND :hasta " +
+        "AND (p.anulado = false OR p.anulado IS NULL) " +
+        "GROUP BY YEAR(p.fecha_pago), MONTH(p.fecha_pago), " +
+        "CASE WHEN c.tipo_comprobante = 'BOLETA' THEN 'BOLETA' ELSE 'RECIBO' END " +
+        "ORDER BY anio, mes",
+        nativeQuery = true)
+    List<Object[]> sumByMonthAndComprobanteType(
+            @Param("desde") LocalDate desde,
+            @Param("hasta") LocalDate hasta);
+
+    @Query(value =
+        "SELECT MONTH(fecha_pago) AS mes, YEAR(fecha_pago) AS anio, " +
+        "CASE WHEN medio_pago = 'EFECTIVO' THEN 'EFECTIVO' ELSE 'BANCARIO' END AS tipo, " +
+        "COALESCE(SUM(importe_pagado), 0) AS total " +
+        "FROM pago_mora " +
+        "WHERE fecha_pago BETWEEN :desde AND :hasta " +
+        "AND (anulado = false OR anulado IS NULL) " +
+        "GROUP BY YEAR(fecha_pago), MONTH(fecha_pago), " +
+        "CASE WHEN medio_pago = 'EFECTIVO' THEN 'EFECTIVO' ELSE 'BANCARIO' END " +
+        "ORDER BY anio, mes",
+        nativeQuery = true)
+    List<Object[]> sumByMonthAndMedioPago(
+            @Param("desde") LocalDate desde,
+            @Param("hasta") LocalDate hasta);
+
+    @Query(value =
         "SELECT COALESCE(SUM(importe_pagado), 0) " +
         "FROM pago_mora " +
         "WHERE fecha_pago BETWEEN :desde AND :hasta " +
