@@ -81,7 +81,7 @@ public class Contrato {
 
     @OneToMany(mappedBy = "contrato", cascade = CascadeType.ALL, orphanRemoval = true)
     @BatchSize(size = 50)
-    @OrderBy("orden ASC, cliente.idCliente ASC")
+    @OrderBy("orden ASC")
     private Set<ContratoCliente> clientes;
 
     @OneToMany(mappedBy = "contrato", cascade = CascadeType.ALL, orphanRemoval = true)
