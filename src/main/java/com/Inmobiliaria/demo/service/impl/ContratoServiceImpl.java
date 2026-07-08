@@ -756,6 +756,7 @@ public class ContratoServiceImpl implements ContratoService {
     }
 
     private void notificarAdminPagoInicial(PagoInicial pago) {
+        if (!pago.getFechaPago().equals(LocalDate.now())) return;
         try {
             var contrato = pago.getContrato();
             Moneda moneda = contrato.getMoneda() != null ? contrato.getMoneda() : Moneda.USD;

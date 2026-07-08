@@ -451,6 +451,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
     // ═══════════════════════════════════════════════════════════════════════════
 
     private void notificarAdminPagoLetra(PagoLetras pago) {
+        if (!pago.getFechaPago().equals(LocalDate.now())) return;
         try {
             var letra = pago.getLetra();
             var contrato = letra.getContrato();

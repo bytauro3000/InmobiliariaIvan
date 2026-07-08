@@ -458,6 +458,7 @@ public class MoraServiceImpl implements MoraService {
     // ─── Notificación al admin ─────────────────────────────────────────────────
 
     private void notificarAdminPagoMora(PagoMora pago) {
+        if (!pago.getFechaPago().equals(LocalDate.now())) return;
         try {
             var mora = pago.getMora();
             var letra = mora.getLetra();

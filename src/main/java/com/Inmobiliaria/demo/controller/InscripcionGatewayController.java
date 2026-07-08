@@ -7,8 +7,10 @@ import com.Inmobiliaria.demo.entity.Contrato;
 import com.Inmobiliaria.demo.entity.Lote;
 import com.Inmobiliaria.demo.entity.PagoInscripcionComprobante;
 import com.Inmobiliaria.demo.entity.Voucher;
+import com.Inmobiliaria.demo.enums.Moneda;
 import com.Inmobiliaria.demo.enums.TipoOrigenComprobante;
 import com.Inmobiliaria.demo.exception.NegocioException;
+import com.Inmobiliaria.demo.service.impl.NotificacionAdminEmailService;
 import com.Inmobiliaria.demo.repository.ComprobanteRepository;
 import com.Inmobiliaria.demo.repository.ContratoRepository;
 import com.Inmobiliaria.demo.repository.PagoInscripcionComprobanteRepository;
@@ -21,6 +23,7 @@ import com.cloudinary.utils.ObjectUtils;
 import feign.FeignException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.CacheManager;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
@@ -47,6 +50,7 @@ import java.util.stream.Collectors;
 	@RestController
 	@RequestMapping("/api/gateway/inscripciones")
 	@RequiredArgsConstructor
+	@Slf4j
 	public class InscripcionGatewayController {
 	
     private final CacheManager                         cacheManager;
@@ -58,6 +62,7 @@ import java.util.stream.Collectors;
     private final InscripcionComprobanteServiceImpl    inscripcionComprobanteService;
     private final VoucherRepository                    voucherRepository;
     private final Cloudinary                           cloudinary;
+    private final NotificacionAdminEmailService         notificacionAdminEmailService;
 	
 	    // ── 1. Listar resumen contratos con servicios ────────────────────────────
 	
@@ -259,6 +264,24 @@ import java.util.stream.Collectors;
 	
 	        PagoInscripcionComprobante pagoGuardado =
 	                pagoInscripcionComprobanteRepository.save(pago);
+
+	        // ── Notificar al admin solo si el pago es de hoy ───────────────────────
+	        if (fechaPago.equals(LocalDate.now())) {
+	            try {
+	                Moneda moneda = contrato.getMoneda() != null ? contrato.getMoneda() : Moneda.USD;
+	                String clienteNombre = "-";
+	                if (contrato.getClientes() != null && !contrato.getClientes().isEmpty()) {
+	                    var c = contrato.getClientes().iterator().next().getCliente();
+	                    clienteNombre = c.getNombre() + " " + c.getApellidos();
+	                }
+	                String detalle = "Pago de servicio " + request.getTipoServicio().toUpperCase();
+	                String medioPago = request.getMedioPago() != null ? request.getMedioPago().name() : "-";
+	                notificacionAdminEmailService.notificarPagoServicio(
+	                    detalle, clienteNombre, request.getMontoPagado(), moneda, medioPago);
+	            } catch (Exception e) {
+	                log.warn("No se pudo enviar notificacion admin para pago de servicio: {}", e.getMessage());
+	            }
+	        }
 
             /* f) Enviar a SUNAT sincronamente — si rechaza, @Transactional revierte todo
             Cliente cliente = contrato.getClientes().iterator().next().getCliente();
