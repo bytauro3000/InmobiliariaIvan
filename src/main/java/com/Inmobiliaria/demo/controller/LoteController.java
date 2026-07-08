@@ -143,6 +143,9 @@ public class LoteController {
         lote.setColindanteSur(dto.getColindanteSur());
         lote.setColindanteEste(dto.getColindanteEste());
         lote.setColindanteOeste(dto.getColindanteOeste());
+        if (dto.getEstado() != null) {
+            lote.setEstado(dto.getEstado());
+        }
         if (dto.getIdPrograma() != null) {
             lote.setPrograma(programaRepository.findById(dto.getIdPrograma()).orElse(null));
         }

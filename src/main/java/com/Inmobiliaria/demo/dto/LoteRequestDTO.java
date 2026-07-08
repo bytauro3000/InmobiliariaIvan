@@ -1,5 +1,6 @@
 package com.Inmobiliaria.demo.dto;
 
+import com.Inmobiliaria.demo.enums.EstadoLote;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -30,4 +31,6 @@ public class LoteRequestDTO {
 
     @NotNull
     private Integer idPrograma;
+
+    private EstadoLote estado;
 }
