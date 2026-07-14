@@ -87,10 +87,11 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         // Fuera de orden (anterior o saltando): verificar PIN
         if (pin != null && pin.equals(pagoPin)) return;
 
-        // Admin también puede saltarse la validación
+        // Admin y Soporte pueden saltarse la validación
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMINISTRADOR"))) return;
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMINISTRADOR")
+                            || a.getAuthority().equals("ROLE_SOPORTE"))) return;
 
         throw new NegocioException(
             "FUERA_DE_ORDEN:Debe pagar la letra N° " + (maxPagado + 1) + "."
@@ -99,6 +100,12 @@ public class PagoLetraServiceImpl implements PagoLetraService {
 
     private void validarOrdenDePagoMultiple(Integer idContrato, List<String> numerosLetra, String pin) {
         if (numerosLetra == null || numerosLetra.isEmpty()) return;
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMINISTRADOR")
+                            || a.getAuthority().equals("ROLE_SOPORTE"))) return;
+
         List<Integer> nums = numerosLetra.stream()
             .map(this::extraerNumeroLetra).sorted().collect(Collectors.toList());
 
