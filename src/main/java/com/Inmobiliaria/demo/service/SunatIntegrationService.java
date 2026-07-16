@@ -13,10 +13,12 @@ public interface SunatIntegrationService {
                                      String descripcionDetalle);
 
     Map<String, Object> enviarNotaCredito(Cliente cliente, Contrato contrato,
-                                          Comprobante notaCredito,
-                                          Comprobante comprobanteOriginal,
-                                          BigDecimal monto,
-                                          String descripcionDetalle,
-                                          String codMotivo,
-                                          String desMotivo);
+                                           Comprobante notaCredito,
+                                           Comprobante comprobanteOriginal,
+                                           BigDecimal monto,
+                                           String descripcionDetalle,
+                                           String codMotivo,
+                                           String desMotivo);
+
+    Map<String, Object> consultarEstadoBoleta(String tipo, String serie, String numero, String ruc);
 }

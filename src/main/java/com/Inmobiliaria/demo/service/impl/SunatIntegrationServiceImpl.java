@@ -110,14 +110,31 @@ public class SunatIntegrationServiceImpl implements SunatIntegrationService {
                 log.debug("note: {}", sunat != null ? sunat.getNote() : "null");
                 
                 boolean isSuccess = sunat != null && Boolean.TRUE.equals(sunat.getSuccess());
+                boolean cdrPendiente = false;
+
+                // Si SUNAT aceptó pero no devolvió CDR, igual lo tratamos como aceptado
+                if (!isSuccess && sunat != null && sunat.getError() instanceof Map) {
+                    Map<?, ?> errorMap = (Map<?, ?>) sunat.getError();
+                    String errorCode = errorMap.get("code") != null ? errorMap.get("code").toString() : "";
+                    if ("CDR".equals(errorCode)) {
+                        isSuccess = true;
+                        cdrPendiente = true;
+                    }
+                }
+
                 result.put("estadoSunat", isSuccess ? "ACEPTADA" : "ERROR");
-                
+                result.put("cdrPendiente", cdrPendiente);
+
                 String mensaje = "Sin mensaje";
                 if (sunat != null) {
                     if (sunat.getDescription() != null && !sunat.getDescription().isEmpty()) {
                         mensaje = sunat.getDescription();
                     } else if (sunat.getError() != null) {
-                        mensaje = sunat.getError().toString();
+                        if (cdrPendiente) {
+                            mensaje = "Boleta aceptada por SUNAT, CDR pendiente de generación";
+                        } else {
+                            mensaje = sunat.getError().toString();
+                        }
                     } else if (sunat.getCdrResponse() != null) {
                         Object cdr = sunat.getCdrResponse();
                         if (cdr instanceof Map) {
@@ -133,7 +150,7 @@ public class SunatIntegrationServiceImpl implements SunatIntegrationService {
                 result.put("hash", body.getHash());
                 result.put("cdrZip", sunat != null ? sunat.getCdrZip() : null);
                 result.put("sunatResponse", sunat);
-                log.info("APIPERU resultado: success={}, mensaje={}", isSuccess, mensaje);
+                log.info("APIPERU resultado: success={}, cdrPendiente={}, mensaje={}", isSuccess, cdrPendiente, mensaje);
             } else {
                 result.put("estadoSunat", "ERROR");
                 result.put("mensaje", "Error HTTP: " + response.getStatusCode());
@@ -149,6 +166,57 @@ public class SunatIntegrationServiceImpl implements SunatIntegrationService {
             return error;
         } catch (Exception e) {
             log.error("Error al enviar boleta a APIPERU: {}", e.getMessage(), e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("estadoSunat", "ERROR");
+            error.put("mensaje", e.getMessage());
+            return error;
+        }
+    }
+
+    @Override
+    public Map<String, Object> consultarEstadoBoleta(String tipo, String serie, String numero, String ruc) {
+        String urlStr = apisperuBaseUrl + "/invoice/status?tipo=" + tipo
+                + "&serie=" + serie + "&numero=" + numero
+                + (ruc != null ? "&ruc=" + ruc : "");
+
+        log.info("Consultando estado boleta: {}", urlStr);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(companyToken);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<Map> response = restTemplate.exchange(urlStr, HttpMethod.GET, entity, Map.class);
+            Map<String, Object> result = new HashMap<>();
+            result.put("httpStatus", response.getStatusCode().value());
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                Map body = response.getBody();
+                result.put("success", body.get("success"));
+                result.put("code", body.get("code"));
+                result.put("message", body.get("message"));
+                result.put("cdrZip", body.get("cdrZip"));
+                result.put("cdrResponse", body.get("cdrResponse"));
+                result.put("error", body.get("error"));
+
+                boolean cdrDisponible = body.get("cdrZip") != null
+                        && body.get("cdrZip") instanceof String
+                        && !((String) body.get("cdrZip")).isBlank();
+
+                if (Boolean.TRUE.equals(body.get("success")) && cdrDisponible) {
+                    result.put("estadoSunat", "ACEPTADA");
+                    result.put("mensaje", "CDR disponible");
+                } else {
+                    result.put("estadoSunat", "CDR_PENDIENTE");
+                    result.put("mensaje", body.get("message"));
+                }
+            } else {
+                result.put("estadoSunat", "ERROR");
+                result.put("mensaje", "Error HTTP: " + response.getStatusCode());
+            }
+            return result;
+        } catch (Exception e) {
+            log.error("Error al consultar estado boleta: {}", e.getMessage(), e);
             Map<String, Object> error = new HashMap<>();
             error.put("estadoSunat", "ERROR");
             error.put("mensaje", e.getMessage());

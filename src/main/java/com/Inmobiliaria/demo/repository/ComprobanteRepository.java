@@ -79,6 +79,10 @@ public interface ComprobanteRepository extends JpaRepository<Comprobante, Long> 
 
     Optional<Comprobante> findByComprobanteReferenciaIdComprobante(Long idComprobante);
 
+    // ─── Comprobantes aceptados pero sin CDR ─────────────────────────────────
+
+    List<Comprobante> findByEstadoSunatAndCdrBase64IsNull(String estadoSunat);
+
     // ─── Marcar email enviado sin reescribir toda la entidad ─────────────────
     // Evita el dirty-checking de Hibernate que volvería a escribir fechaEmision
     // con posible offset de timezone si el campo se leyó con desfase UTC→Lima
