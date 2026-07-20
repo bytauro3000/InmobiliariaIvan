@@ -103,6 +103,16 @@ public class AuthController {
     }
 
     private void agregarCookieRefreshToken(HttpServletResponse response, String refreshToken) {
+        // Eliminar cookie vieja con path /api/auth (de deploy anterior)
+        Cookie oldCookie = new Cookie("refresh_token", null);
+        oldCookie.setHttpOnly(true);
+        oldCookie.setSecure(cookieSecure);
+        oldCookie.setPath("/api/auth");
+        oldCookie.setMaxAge(0);
+        oldCookie.setAttribute("SameSite", cookieSameSite);
+        response.addCookie(oldCookie);
+
+        // Setear cookie nueva con path /
         Cookie cookie = new Cookie("refresh_token", refreshToken);
         cookie.setHttpOnly(true);
         cookie.setSecure(cookieSecure);
@@ -121,6 +131,7 @@ public class AuthController {
     }
 
     private void eliminarCookieRefreshToken(HttpServletResponse response) {
+        // Eliminar cookie con path /
         Cookie cookie = new Cookie("refresh_token", null);
         cookie.setHttpOnly(true);
         cookie.setSecure(cookieSecure);
@@ -128,5 +139,14 @@ public class AuthController {
         cookie.setMaxAge(0);
         cookie.setAttribute("SameSite", cookieSameSite);
         response.addCookie(cookie);
+
+        // Eliminar cookie vieja con path /api/auth
+        Cookie oldCookie = new Cookie("refresh_token", null);
+        oldCookie.setHttpOnly(true);
+        oldCookie.setSecure(cookieSecure);
+        oldCookie.setPath("/api/auth");
+        oldCookie.setMaxAge(0);
+        oldCookie.setAttribute("SameSite", cookieSameSite);
+        response.addCookie(oldCookie);
     }
 }
