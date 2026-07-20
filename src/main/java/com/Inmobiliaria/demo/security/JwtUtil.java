@@ -25,6 +25,8 @@ public class JwtUtil {
         this.SECRET_KEY = secretKey;
     }
 
+    private static final long ACCESS_TOKEN_EXPIRATION_MS = 1000 * 60; // 1 minuto (prueba)
+
     // Único responsable de crear el token en el Login
     public String generateToken(Authentication authentication, Usuario usuario) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
@@ -38,7 +40,7 @@ public class JwtUtil {
                 .setClaims(claims)
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 30))
+                .setExpiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRATION_MS))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
@@ -54,7 +56,7 @@ public class JwtUtil {
                 .setClaims(claims)
                 .setSubject(usuario.getCorreo())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 30))
+                .setExpiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRATION_MS))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
