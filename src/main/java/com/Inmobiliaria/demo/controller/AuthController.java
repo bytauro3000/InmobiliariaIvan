@@ -106,8 +106,8 @@ public class AuthController {
         Cookie cookie = new Cookie("refresh_token", refreshToken);
         cookie.setHttpOnly(true);
         cookie.setSecure(cookieSecure);
-        cookie.setPath("/api/auth");
-        cookie.setMaxAge(24 * 60 * 60); // 1 día
+        cookie.setPath("/");
+        cookie.setMaxAge(7 * 24 * 60 * 60); // 7 días (coincide con refresh token en BD)
         cookie.setAttribute("SameSite", cookieSameSite);
         response.addCookie(cookie);
     }
@@ -124,7 +124,7 @@ public class AuthController {
         Cookie cookie = new Cookie("refresh_token", null);
         cookie.setHttpOnly(true);
         cookie.setSecure(cookieSecure);
-        cookie.setPath("/api/auth");
+        cookie.setPath("/");
         cookie.setMaxAge(0);
         cookie.setAttribute("SameSite", cookieSameSite);
         response.addCookie(cookie);

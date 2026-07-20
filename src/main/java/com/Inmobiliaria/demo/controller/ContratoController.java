@@ -3,6 +3,7 @@ package com.Inmobiliaria.demo.controller;
 import java.security.Principal;
 import java.util.List;
 import java.util.Map;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -49,8 +50,13 @@ public class ContratoController {
     }
 
     @GetMapping("/listar-resumen")
-    public List<ContratoListItemDTO> listarContratosResumen() {
-        return contratoService.listarContratosResumen();
+    public ResponseEntity<?> listarContratosResumen(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false, defaultValue = "50") Integer size) {
+        if (page != null) {
+            return ResponseEntity.ok(contratoService.listarContratosResumenPaginado(PageRequest.of(page, size)));
+        }
+        return ResponseEntity.ok(contratoService.listarContratosResumen());
     }
 
     // Buscar contrato por ID del contrato

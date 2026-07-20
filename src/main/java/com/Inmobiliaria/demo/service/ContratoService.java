@@ -4,6 +4,9 @@ import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import com.Inmobiliaria.demo.dto.TransferenciaResponseDTO;
 import com.Inmobiliaria.demo.dto.ContratoRequestDTO;
 import com.Inmobiliaria.demo.dto.ContratoResponseDTO;
@@ -16,6 +19,8 @@ public interface ContratoService {
     List<ContratoResponseDTO> listarContratos();
 
     List<ContratoListItemDTO> listarContratosResumen();
+
+    Page<ContratoListItemDTO> listarContratosResumenPaginado(Pageable pageable);
 
     void eliminarContrato(Integer idContrato);
 

@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
@@ -186,12 +187,12 @@ public class SunatIntegrationServiceImpl implements SunatIntegrationService {
         HttpEntity<Void> entity = new HttpEntity<>(headers);
 
         try {
-            ResponseEntity<Map> response = restTemplate.exchange(urlStr, HttpMethod.GET, entity, Map.class);
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(urlStr, HttpMethod.GET, entity, new ParameterizedTypeReference<Map<String, Object>>() {});
             Map<String, Object> result = new HashMap<>();
             result.put("httpStatus", response.getStatusCode().value());
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                Map body = response.getBody();
+                Map<String, Object> body = response.getBody();
                 result.put("success", body.get("success"));
                 result.put("code", body.get("code"));
                 result.put("message", body.get("message"));

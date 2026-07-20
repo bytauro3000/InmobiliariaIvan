@@ -14,6 +14,9 @@ import org.modelmapper.ModelMapper;
 import org.springframework.cache.annotation.CacheConfig;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -370,7 +373,6 @@ public class ContratoServiceImpl implements ContratoService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable
     public List<ContratoResponseDTO> listarContratos() {
         List<Contrato> contratos = contratoRepository.findAllConClientesYLotes();
         if (contratos.isEmpty()) return List.of();
@@ -401,7 +403,6 @@ public class ContratoServiceImpl implements ContratoService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable
     public List<ContratoListItemDTO> listarContratosResumen() {
         List<Contrato> contratos = contratoRepository.findAllResumen();
         if (contratos.isEmpty()) return List.of();
@@ -409,6 +410,16 @@ public class ContratoServiceImpl implements ContratoService {
         return contratos.stream()
                 .map(this::mapToContratoListItemDTO)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ContratoListItemDTO> listarContratosResumenPaginado(Pageable pageable) {
+        Page<Contrato> contratoPage = contratoRepository.findAllResumenPaginado(pageable);
+        List<ContratoListItemDTO> dtos = contratoPage.getContent().stream()
+                .map(this::mapToContratoListItemDTO)
+                .collect(Collectors.toList());
+        return new PageImpl<>(dtos, pageable, contratoPage.getTotalElements());
     }
 
     private ContratoListItemDTO mapToContratoListItemDTO(Contrato contrato) {

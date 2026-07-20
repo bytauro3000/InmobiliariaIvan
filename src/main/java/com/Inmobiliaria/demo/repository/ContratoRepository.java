@@ -171,4 +171,7 @@ public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
            "LEFT JOIN FETCH l.programa " +
            "ORDER BY c.idContrato DESC")
     List<Contrato> findAllResumen();
+
+    @Query("SELECT c FROM Contrato c ORDER BY c.idContrato DESC")
+    Page<Contrato> findAllResumenPaginado(Pageable pageable);
 }

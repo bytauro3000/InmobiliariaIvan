@@ -2,6 +2,8 @@ package com.Inmobiliaria.demo.service.impl;
 
 import java.util.List;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import com.Inmobiliaria.demo.entity.Cliente;
 import com.Inmobiliaria.demo.repository.ClienteRepository;
@@ -41,6 +43,11 @@ public class ClienteServiceImpl implements ClienteService {
     @Override
     public List<Cliente> listarClientes() {
     	return clienteRepository.findAllByOrderByIdClienteDesc();
+    }
+
+    @Override
+    public Page<Cliente> listarClientesPaginado(Pageable pageable) {
+        return clienteRepository.findAllPaginado(pageable);
     }
     
     @Override

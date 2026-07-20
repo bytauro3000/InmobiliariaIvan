@@ -3,6 +3,8 @@ package com.Inmobiliaria.demo.repository;
 import com.Inmobiliaria.demo.entity.Comprobante;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
 import com.Inmobiliaria.demo.enums.TipoOrigenComprobante;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -82,6 +84,8 @@ public interface ComprobanteRepository extends JpaRepository<Comprobante, Long> 
     // ─── Comprobantes aceptados pero sin CDR ─────────────────────────────────
 
     List<Comprobante> findByEstadoSunatAndCdrBase64IsNull(String estadoSunat);
+
+    Page<Comprobante> findByEstadoSunatAndCdrBase64IsNull(String estadoSunat, Pageable pageable);
 
     // ─── Marcar email enviado sin reescribir toda la entidad ─────────────────
     // Evita el dirty-checking de Hibernate que volvería a escribir fechaEmision

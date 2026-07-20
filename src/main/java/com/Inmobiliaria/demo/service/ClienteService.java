@@ -1,6 +1,8 @@
 package com.Inmobiliaria.demo.service;
 
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import com.Inmobiliaria.demo.entity.Cliente;
 
 public interface ClienteService {
@@ -16,4 +18,6 @@ public interface ClienteService {
 	// 🔹 Nuevos métodos para los filtros independientes
 	 List<Cliente> buscarPorNombresYApellidos(String filtro);
 	 List<Cliente> buscarPorDocumento(String filtro);
+
+	 Page<Cliente> listarClientesPaginado(Pageable pageable);
 }

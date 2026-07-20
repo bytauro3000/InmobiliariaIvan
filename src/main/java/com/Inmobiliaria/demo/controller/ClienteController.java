@@ -14,6 +14,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -32,10 +34,17 @@ public class ClienteController {
     private final ModelMapper modelMapper;
 
     @GetMapping("/listar")
-    public List<ClienteResponseDTO> listarClientes() {
-        return clienteService.listarClientes().stream()
+    public ResponseEntity<?> listarClientes(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false, defaultValue = "50") Integer size) {
+        if (page != null) {
+            Page<Cliente> clientePage = clienteService.listarClientesPaginado(PageRequest.of(page, size));
+            Page<ClienteResponseDTO> dtoPage = clientePage.map(this::toResponseDTOSimple);
+            return ResponseEntity.ok(dtoPage);
+        }
+        return ResponseEntity.ok(clienteService.listarClientes().stream()
                 .map(this::toResponseDTO)
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
     }
 
     @GetMapping("/buscar/{id}")
@@ -97,6 +106,25 @@ public class ClienteController {
     @DeleteMapping("/eliminar/{id}")
     public void eliminarCliente(@PathVariable Integer id) {
         clienteService.eliminarClienteById(id);
+    }
+
+    private ClienteResponseDTO toResponseDTOSimple(Cliente cliente) {
+        ClienteResponseDTO dto = new ClienteResponseDTO();
+        dto.setIdCliente(cliente.getIdCliente());
+        dto.setNombre(cliente.getNombre());
+        dto.setApellidos(cliente.getApellidos());
+        dto.setEstadoCivil(cliente.getEstadoCivil());
+        dto.setNumDoc(cliente.getNumDoc());
+        dto.setDireccion(cliente.getDireccion());
+        dto.setCelular(cliente.getCelular());
+        dto.setTelefono(cliente.getTelefono());
+        dto.setEmail(cliente.getEmail());
+        dto.setGenero(cliente.getGenero());
+        dto.setTipoCliente(cliente.getTipoCliente());
+        dto.setNacionalidad(cliente.getNacionalidad());
+        dto.setEstado(cliente.getEstado());
+        dto.setFechaRegistro(cliente.getFechaRegistro());
+        return dto;
     }
 
     private ClienteResponseDTO toResponseDTO(Cliente cliente) {

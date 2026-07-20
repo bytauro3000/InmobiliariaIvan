@@ -2,11 +2,8 @@ package com.Inmobiliaria.demo.service.impl;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.format.TextStyle;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 

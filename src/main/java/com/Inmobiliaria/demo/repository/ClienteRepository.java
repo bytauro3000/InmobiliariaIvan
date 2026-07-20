@@ -1,6 +1,8 @@
 package com.Inmobiliaria.demo.repository;
 
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -28,4 +30,8 @@ public interface ClienteRepository extends JpaRepository<Cliente, Integer> {
     
     @Query("SELECT c FROM Cliente c LEFT JOIN FETCH c.distrito ORDER BY c.idCliente DESC")
     List<Cliente> findAllByOrderByIdClienteDesc();
+
+    @Query(value = "SELECT c FROM Cliente c ORDER BY c.idCliente DESC",
+           countQuery = "SELECT count(c) FROM Cliente c")
+    Page<Cliente> findAllPaginado(Pageable pageable);
 }

@@ -9,8 +9,6 @@ import com.Inmobiliaria.demo.entity.PagoInicial;
 import com.Inmobiliaria.demo.entity.PagoInscripcionComprobante;
 import com.Inmobiliaria.demo.entity.PagoLetras;
 import com.Inmobiliaria.demo.entity.PagoMora;
-import com.Inmobiliaria.demo.enums.MedioPago;
-import com.Inmobiliaria.demo.repository.ContratoRepository;
 import com.Inmobiliaria.demo.repository.PagoInicialRepository;
 import com.Inmobiliaria.demo.repository.PagoInscripcionComprobanteRepository;
 import com.Inmobiliaria.demo.repository.PagoLetraRepository;
@@ -26,10 +24,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 @Slf4j
 @Service
@@ -40,7 +36,6 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
     private final PagoMoraRepository                pagoMoraRepository;
     private final PagoInicialRepository              pagoInicialRepository;
     private final PagoInscripcionComprobanteRepository pagoInscripcionComprobanteRepository;
-    private final ContratoRepository                 contratoRepository;
 
     // ─────────────────────────────────────────────────────────────────────────
     // MÉTODO PRINCIPAL
