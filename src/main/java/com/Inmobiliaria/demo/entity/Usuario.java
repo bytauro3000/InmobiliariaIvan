@@ -51,4 +51,8 @@ public class Usuario {
     @ManyToOne
     @JoinColumn(name = "idRolUsuario", nullable = false)
     private RolUsuario rol;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_distrito")
+    private Distrito distrito;
 }

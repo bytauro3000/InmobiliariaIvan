@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import com.Inmobiliaria.demo.dto.UsuarioListadoDTO;
 import com.Inmobiliaria.demo.dto.UsuarioRegistroDTO;
+import com.Inmobiliaria.demo.entity.Distrito;
 import com.Inmobiliaria.demo.entity.RolUsuario;
 import com.Inmobiliaria.demo.entity.Usuario;
 import com.Inmobiliaria.demo.enums.EstadoUsuario;
@@ -32,6 +33,7 @@ public class UsuarioServiceImpl implements UserDetailsService, UsuarioService {
     private final PasswordEncoder passwordEncoder;
     private final UsuarioRepository usuarioRepository;
     private final RolUsuarioRepository rolUsuarioRepository;
+
 
     @Override
     public UserDetails loadUserByUsername(String correo) throws UsernameNotFoundException {
@@ -87,6 +89,12 @@ public class UsuarioServiceImpl implements UserDetailsService, UsuarioService {
             .orElseThrow(() -> new NegocioException("Error: Rol no encontrado."));
         nuevoUsuario.setRol(rol);
 
+        if (dto.getIdDistrito() != null) {
+            Distrito distrito = new Distrito();
+            distrito.setIdDistrito(dto.getIdDistrito());
+            nuevoUsuario.setDistrito(distrito);
+        }
+
         return usuarioRepository.save(nuevoUsuario);
     }
 
@@ -105,6 +113,12 @@ public class UsuarioServiceImpl implements UserDetailsService, UsuarioService {
             dto.setDireccion(usuario.getDireccion());
             dto.setRol(usuario.getRol().getRolUsuario());
             dto.setEstado(usuario.getEstado().name());
+            if (usuario.getDistrito() != null) {
+                dto.setIdDistrito(usuario.getDistrito().getIdDistrito());
+                dto.setDistritoNombre(usuario.getDistrito().getNombre());
+                dto.setProvincia(usuario.getDistrito().getProvincia());
+                dto.setDepartamento(usuario.getDistrito().getDepartamento());
+            }
             return dto;
         }).collect(Collectors.toList());
     }
@@ -127,6 +141,19 @@ public class UsuarioServiceImpl implements UserDetailsService, UsuarioService {
         RolUsuario rol = rolUsuarioRepository.findById(dto.getIdRol())
             .orElseThrow(() -> new NegocioException("Rol no encontrado."));
         usuarioDB.setRol(rol);
+
+        if (dto.getIdDistrito() != null) {
+            Distrito distrito = new Distrito();
+            distrito.setIdDistrito(dto.getIdDistrito());
+            usuarioDB.setDistrito(distrito);
+        } else {
+            usuarioDB.setDistrito(null);
+        }
+
+        if (dto.getEstado() != null) {
+            usuarioDB.setEstado(dto.getEstado().equalsIgnoreCase("inactivo")
+                ? EstadoUsuario.inactivo : EstadoUsuario.activo);
+        }
 
         return usuarioRepository.save(usuarioDB);
     }

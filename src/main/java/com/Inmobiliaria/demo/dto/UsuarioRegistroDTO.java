@@ -30,4 +30,6 @@ public class UsuarioRegistroDTO {
     private Integer idRol;
 
     private String estado;
+
+    private Integer idDistrito;
 }

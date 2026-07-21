@@ -15,4 +15,8 @@ public class UsuarioListadoDTO {
     private String direccion;
     private String rol;
     private String estado;
+    private Integer idDistrito;
+    private String distritoNombre;
+    private String provincia;
+    private String departamento;
 }
