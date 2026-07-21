@@ -174,4 +174,10 @@ public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
 
     @Query("SELECT c FROM Contrato c ORDER BY c.idContrato DESC")
     Page<Contrato> findAllResumenPaginado(Pageable pageable);
+
+    @Query("SELECT cl.contrato.montoTotal FROM ContratoLote cl " +
+           "WHERE cl.lote.idLote = :idLote " +
+           "AND cl.contrato.estadoContrato = 'ACTIVO' " +
+           "ORDER BY cl.contrato.idContrato DESC")
+    java.util.Optional<java.math.BigDecimal> findPrecioVentaByLoteId(@Param("idLote") Integer idLote);
 }

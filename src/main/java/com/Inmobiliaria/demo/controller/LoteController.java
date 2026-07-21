@@ -19,6 +19,7 @@ import com.Inmobiliaria.demo.dto.LoteRequestDTO;
 import com.Inmobiliaria.demo.dto.LoteResponseDTO;
 import com.Inmobiliaria.demo.entity.Lote;
 import com.Inmobiliaria.demo.service.LoteService;
+import com.Inmobiliaria.demo.repository.ContratoRepository;
 import com.Inmobiliaria.demo.repository.ProgramaRepository;
 
 import jakarta.validation.Valid;
@@ -32,6 +33,7 @@ public class LoteController {
 
     private final LoteService loteService;
     private final ProgramaRepository programaRepository;
+    private final ContratoRepository contratoRepository;
     private final ModelMapper modelMapper;
 
     @GetMapping
@@ -106,6 +108,12 @@ public class LoteController {
                 .map(this::toResponseDTO)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(resultados);
+    }
+
+    @GetMapping("/precio-venta/{idLote}")
+    public ResponseEntity<java.math.BigDecimal> obtenerPrecioVenta(@PathVariable Integer idLote) {
+        java.util.Optional<java.math.BigDecimal> precio = contratoRepository.findPrecioVentaByLoteId(idLote);
+        return precio.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/validar-duplicado")
