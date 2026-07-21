@@ -3,6 +3,7 @@ import java.util.List;
 
 import com.Inmobiliaria.demo.dto.UsuarioListadoDTO;
 import com.Inmobiliaria.demo.dto.UsuarioRegistroDTO;
+import com.Inmobiliaria.demo.entity.RolUsuario;
 import com.Inmobiliaria.demo.entity.Usuario;
 
 public interface UsuarioService {
@@ -12,4 +13,5 @@ public interface UsuarioService {
 	public List<UsuarioListadoDTO> listarUsuarios();
 	public Usuario editarUsuario(Integer id, com.Inmobiliaria.demo.dto.UsuarioRegistroDTO dto);
     public Usuario cambiarEstadoUsuario(Integer id);
+    public List<RolUsuario> listarRoles();
 }

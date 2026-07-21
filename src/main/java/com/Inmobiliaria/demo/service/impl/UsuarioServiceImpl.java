@@ -60,6 +60,11 @@ public class UsuarioServiceImpl implements UserDetailsService, UsuarioService {
     }
 
     @Override
+    public List<RolUsuario> listarRoles() {
+        return rolUsuarioRepository.findAll();
+    }
+
+    @Override
     public Usuario registrarUsuario(UsuarioRegistroDTO dto) {
         Usuario nuevoUsuario = new Usuario();
         nuevoUsuario.setNombres(dto.getNombres());

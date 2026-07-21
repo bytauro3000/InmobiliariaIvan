@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.Inmobiliaria.demo.dto.UsuarioListadoDTO;
 import com.Inmobiliaria.demo.dto.UsuarioRegistroDTO;
+import com.Inmobiliaria.demo.entity.RolUsuario;
 import com.Inmobiliaria.demo.entity.Usuario;
 import com.Inmobiliaria.demo.service.UsuarioService;
 
@@ -69,6 +70,16 @@ public class UsuarioController {
             return new ResponseEntity<>(actualizado, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @GetMapping("/roles")
+    public ResponseEntity<List<RolUsuario>> listarRoles() {
+        try {
+            List<RolUsuario> roles = usuarioService.listarRoles();
+            return new ResponseEntity<>(roles, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }
