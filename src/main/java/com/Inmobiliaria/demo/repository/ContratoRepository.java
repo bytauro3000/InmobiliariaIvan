@@ -177,7 +177,24 @@ public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
 
     @Query("SELECT cl.contrato.montoTotal FROM ContratoLote cl " +
            "WHERE cl.lote.idLote = :idLote " +
-           "AND cl.contrato.estadoContrato = 'ACTIVO' " +
-           "ORDER BY cl.contrato.idContrato DESC")
+            "AND cl.contrato.estadoContrato NOT IN (" +
+            "  com.Inmobiliaria.demo.enums.EstadoContrato.RENUNCIA, " +
+            "  com.Inmobiliaria.demo.enums.EstadoContrato.TRANSFERIDO" +
+            ") " +
+            "ORDER BY cl.contrato.idContrato DESC")
     java.util.Optional<java.math.BigDecimal> findPrecioVentaByLoteId(@Param("idLote") Integer idLote);
+
+    @Query("SELECT cl.contrato FROM ContratoLote cl " +
+           "JOIN FETCH cl.contrato.clientes cc " +
+           "JOIN FETCH cc.cliente " +
+           "JOIN FETCH cl.contrato.lotes cl2 " +
+           "JOIN FETCH cl2.lote l2 " +
+           "JOIN FETCH l2.programa " +
+           "WHERE cl.lote.idLote = :idLote " +
+            "AND cl.contrato.estadoContrato NOT IN (" +
+            "  com.Inmobiliaria.demo.enums.EstadoContrato.RENUNCIA, " +
+            "  com.Inmobiliaria.demo.enums.EstadoContrato.TRANSFERIDO" +
+            ") " +
+            "ORDER BY cl.contrato.idContrato DESC")
+    java.util.Optional<Contrato> findContratoByLoteId(@Param("idLote") Integer idLote);
 }

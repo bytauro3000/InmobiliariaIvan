@@ -14,9 +14,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.Inmobiliaria.demo.dto.DetalleVentaDTO;
 import com.Inmobiliaria.demo.dto.LoteProgramaResponseDTO;
 import com.Inmobiliaria.demo.dto.LoteRequestDTO;
 import com.Inmobiliaria.demo.dto.LoteResponseDTO;
+import com.Inmobiliaria.demo.entity.Contrato;
 import com.Inmobiliaria.demo.entity.Lote;
 import com.Inmobiliaria.demo.service.LoteService;
 import com.Inmobiliaria.demo.repository.ContratoRepository;
@@ -114,6 +116,30 @@ public class LoteController {
     public ResponseEntity<java.math.BigDecimal> obtenerPrecioVenta(@PathVariable Integer idLote) {
         java.util.Optional<java.math.BigDecimal> precio = contratoRepository.findPrecioVentaByLoteId(idLote);
         return precio.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/detalle-venta/{idLote}")
+    public ResponseEntity<DetalleVentaDTO> obtenerDetalleVenta(@PathVariable Integer idLote) {
+        java.util.Optional<Contrato> optContrato = contratoRepository.findContratoByLoteId(idLote);
+        if (optContrato.isEmpty()) return ResponseEntity.notFound().build();
+
+        Contrato c = optContrato.get();
+        java.util.List<String> clientes = c.getClientes().stream()
+            .map(cc -> cc.getCliente().getNombre() + " " + cc.getCliente().getApellidos())
+            .collect(java.util.stream.Collectors.toList());
+
+        java.util.List<String> lotes = c.getLotes().stream()
+            .map(cl -> "Mz. " + cl.getLote().getManzana() + " - Lt. " + cl.getLote().getNumeroLote()
+                + " (" + cl.getLote().getPrograma().getNombrePrograma() + ")")
+            .collect(java.util.stream.Collectors.toList());
+
+        DetalleVentaDTO dto = new DetalleVentaDTO(
+            c.getMontoTotal(),
+            c.getCantidadLetras(),
+            clientes,
+            lotes
+        );
+        return ResponseEntity.ok(dto);
     }
 
     @GetMapping("/validar-duplicado")
