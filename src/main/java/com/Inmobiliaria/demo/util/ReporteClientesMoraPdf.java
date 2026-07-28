@@ -30,6 +30,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 
+import com.Inmobiliaria.demo.config.EmpresaContext;
+
 /**
  * Genera el PDF del reporte de clientes con pagos atrasados (EN MORA).
  *
@@ -45,11 +47,11 @@ public class ReporteClientesMoraPdf {
     private static final DecimalFormat     DF  = new DecimalFormat("#,##0.00",
             new DecimalFormatSymbols(Locale.US));
 
-    // ── Datos de la empresa (igual que los otros PDFs) ────────────────────────
-    private static final String EMPRESA   = "INMOBILIARIA CONSTRUCTORA \"IVAN\" E.I.R.L.";
-    private static final String DIRECCION = "Av. Alfredo Mendiola N 3623  3er. Piso Of. 301 - Urb. Panamericana Norte - Los Olivos - Lima";
-    private static final String TELEFONO  = "Cel.: +51 987-891-788";
-    private static final String RUC       = "R.U.C.: 20537853108";
+    // ── Datos de la empresa (dinámicos desde EmpresaContext) ──────────────────
+    private static String empresa() { return EmpresaContext.empresaService.obtenerActiva().getNombreLegal(); }
+    private static String direccion() { return EmpresaContext.empresaService.obtenerActiva().getDireccion(); }
+    private static String telefono() { return "Cel.: " + EmpresaContext.empresaService.obtenerActiva().getCelular(); }
+    private static String ruc() { return "R.U.C.: " + EmpresaContext.empresaService.obtenerActiva().getRuc(); }
 
     // ── Colores del reporte ───────────────────────────────────────────────────
     private static final DeviceRgb COLOR_AZUL_OSCURO = new DeviceRgb(30,  64,  110);
@@ -112,7 +114,7 @@ public class ReporteClientesMoraPdf {
 
             // ── PIE DEL DOCUMENTO ─────────────────────────────────────────────
             doc.add(separadorDelgado());
-            doc.add(new Paragraph("Generado por el Sistema de Gestión Inmobiliaria  |  " + EMPRESA)
+            doc.add(new Paragraph("Generado por el Sistema de Gestión Inmobiliaria  |  " + empresa())
                     .setFont(courier)
                     .setFontSize(7)
                     .setFontColor(ColorConstants.GRAY)
@@ -142,15 +144,15 @@ public class ReporteClientesMoraPdf {
         Cell izq = new Cell()
                 .setBorder(new SolidBorder(ColorConstants.BLACK, 1f))
                 .setPadding(6);
-        izq.add(new Paragraph(EMPRESA)
+        izq.add(new Paragraph(empresa())
                 .setFont(bold).setFontSize(10)
                 .setFontColor(COLOR_AZUL_OSCURO)
                 .setMarginBottom(2));
-        izq.add(new Paragraph(DIRECCION)
+        izq.add(new Paragraph(direccion())
                 .setFont(normal).setFontSize(7.5f)
                 .setFontColor(ColorConstants.DARK_GRAY)
                 .setMarginBottom(1));
-        izq.add(new Paragraph(TELEFONO + "          " + RUC)
+        izq.add(new Paragraph(telefono() + "          " + ruc())
                 .setFont(normal).setFontSize(7.5f)
                 .setFontColor(ColorConstants.DARK_GRAY));
         t.addCell(izq);

@@ -54,5 +54,10 @@ public class MensajeServiceImpl implements MensajeService{
 	public void marcarMensajesComoLeidos(Long remitenteId, Long destinatarioId) {
 		mensajeRepository.marcarComoLeidos(remitenteId, destinatarioId);
 	}
+
+	@Override
+	public long contarNoLeidos(Long userId) {
+		return mensajeRepository.countByDestinatarioIdAndEstado(userId, EstadoMensaje.ENVIADO);
+	}
 	
 }

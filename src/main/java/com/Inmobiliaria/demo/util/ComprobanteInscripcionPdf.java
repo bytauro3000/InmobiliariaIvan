@@ -47,6 +47,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
+import com.Inmobiliaria.demo.config.EmpresaContext;
+
 public class ComprobanteInscripcionPdf {
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -56,10 +58,12 @@ public class ComprobanteInscripcionPdf {
     private static final DeviceGray GRIS_OSCURO = new DeviceGray(0.15f);
     private static final DeviceGray GRIS_MEDIO  = new DeviceGray(0.45f);
 
-    private static final String EMPRESA   = "INMOBILIARIA CONSTRUCTORA \"IVAN\" E.I.R.L.";
-    private static final String DIRECCION = "Av. Alfredo Mendiola N 3623  3er. Piso Of. 301 - Urb. Panamericana Norte - Los Olivos - Lima";
-    private static final String TELEFONO  = "Cel.: +51 987-891-788";
-    private static final String RUC       = "R.U.C.: 20537853108";
+    private static String empresa() { return EmpresaContext.empresaService.obtenerActiva().getNombreLegal(); }
+    private static String direccion() { return EmpresaContext.empresaService.obtenerActiva().getDireccion(); }
+    private static String telefono() { return "Cel.: " + EmpresaContext.empresaService.obtenerActiva().getCelular(); }
+    private static String ruc() { return "R.U.C.: " + EmpresaContext.empresaService.obtenerActiva().getRuc(); }
+    private static String logoUrl() { return EmpresaContext.empresaService.obtenerActiva().getLogoSmallUrl(); }
+
     private static final String BASE_URL  = "https://inmobiliariaivan.onrender.com/api/gateway/inscripciones";
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -156,8 +160,7 @@ public class ComprobanteInscripcionPdf {
                     .setHorizontalAlignment(HorizontalAlignment.CENTER);
 
             // ── Logo ─────────────────────────────────────────────────────────
-            String logoUrl = "https://res.cloudinary.com/dlgqaifrk/image/upload/e_grayscale,w_200,h_200,c_fit,f_auto,q_auto/v1773725974/logogrande_rfvxhu.png";
-            Image logoImg = new Image(ImageDataFactory.create(new URL(logoUrl)))
+            Image logoImg = new Image(ImageDataFactory.create(new URL(logoUrl())))
                     .setWidth(70).setHeight(70)
                     .setHorizontalAlignment(HorizontalAlignment.CENTER);
 
@@ -183,13 +186,13 @@ public class ComprobanteInscripcionPdf {
                     .setBorderLeft(Border.NO_BORDER)
                     .setBorderRight(Border.NO_BORDER)
                     .setPadding(5).setTextAlignment(TextAlignment.CENTER);
-            celdaEmpresa.add(new Paragraph(EMPRESA)
+            celdaEmpresa.add(new Paragraph(empresa())
                     .setFont(courierBold).setFontSize(11f)
                     .setTextAlignment(TextAlignment.CENTER).setMarginBottom(2));
-            celdaEmpresa.add(new Paragraph(DIRECCION)
+            celdaEmpresa.add(new Paragraph(direccion())
                     .setFont(courier).setFontSize(8f)
                     .setTextAlignment(TextAlignment.CENTER).setMarginBottom(2));
-            celdaEmpresa.add(new Paragraph(TELEFONO + "          " + RUC)
+            celdaEmpresa.add(new Paragraph(telefono() + "          " + ruc())
                     .setFont(courier).setFontSize(8f)
                     .setTextAlignment(TextAlignment.CENTER).setMarginBottom(6));
             celdaEmpresa.add(new Paragraph(tituloPrincipal)

@@ -24,7 +24,7 @@ public abstract class PagoBase {
     @Column(name = "medio_pago", length = 20)
     private MedioPago medioPago;
 
-    @Column(name = "numero_operacion", length = 50)
+    @Column(name = "numero_operacion", length = 255)
     private String numeroOperacion;
 
     @Column(name = "observaciones", length = 255)

@@ -23,6 +23,8 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 
+import com.Inmobiliaria.demo.service.EmpresaService;
+import lombok.RequiredArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -33,19 +35,21 @@ import java.util.Map;
 
 @Service
 @Lazy
+@RequiredArgsConstructor
 public class SunatIntegrationServiceImpl implements SunatIntegrationService {
 
     private static final Logger log = LoggerFactory.getLogger(SunatIntegrationServiceImpl.class);
     private static final String LEYENDA_DEFAULT = "OPERACION INAFECTA - VENTA DE TERRENO";
 
-    private final RestTemplate restTemplate;
+    private final EmpresaService empresaService;
+    private final RestTemplate restTemplate = buildRestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    {
+    private static RestTemplate buildRestTemplate() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10_000);
         factory.setReadTimeout(30_000);
-        this.restTemplate = new RestTemplate(factory);
+        return new RestTemplate(factory);
     }
 
     @Value("${apisperu.base-url:https://facturacion.apisperu.com/api/v1}")
@@ -384,15 +388,15 @@ public class SunatIntegrationServiceImpl implements SunatIntegrationService {
                 .tipoMoneda(monedaCodigo)
                 .client(client)
                 .company(ApisperuCompany.builder()
-                        .ruc(Long.valueOf(rucEmisor))
-                        .razonSocial("INMOBILIARIA CONSTRUCTORA IVAN E.I.R.L.")
-                        .nombreComercial("INMOBILIARIA CONSTRUCTORA IVAN E.I.R.L.")
+                        .ruc(Long.valueOf(empresaService.obtenerActiva().getRuc()))
+                        .razonSocial(empresaService.obtenerActiva().getNombreLegal())
+                        .nombreComercial(empresaService.obtenerActiva().getNombreComercial())
                         .address(ApisperuAddress.builder()
-                                .direccion("AV. ALFREDO MENDIOLA 3623 INT. 3A")
-                                .ubigueo("150117")
-                                .distrito("LOS OLIVOS")
-                                .provincia("LIMA")
-                                .departamento("LIMA")
+                                .direccion(empresaService.obtenerActiva().getDireccion())
+                                .ubigueo(empresaService.obtenerActiva().getUbigeo())
+                                .distrito(empresaService.obtenerActiva().getDistrito())
+                                .provincia(empresaService.obtenerActiva().getProvincia())
+                                .departamento(empresaService.obtenerActiva().getDepartamento())
                                 .build())
                         .build())
                 .mtoOperGravadas(mtoOperGravadas)
@@ -470,15 +474,15 @@ public class SunatIntegrationServiceImpl implements SunatIntegrationService {
                 .tipoMoneda(monedaCodigo)
                 .client(client)
                 .company(ApisperuCompany.builder()
-                        .ruc(Long.valueOf(rucEmisor))
-                        .razonSocial("INMOBILIARIA CONSTRUCTORA IVAN E.I.R.L.")
-                        .nombreComercial("INMOBILIARIA CONSTRUCTORA IVAN E.I.R.L.")
+                        .ruc(Long.valueOf(empresaService.obtenerActiva().getRuc()))
+                        .razonSocial(empresaService.obtenerActiva().getNombreLegal())
+                        .nombreComercial(empresaService.obtenerActiva().getNombreComercial())
                         .address(ApisperuAddress.builder()
-                                .direccion("AV. ALFREDO MENDIOLA 3623 INT. 3A")
-                                .ubigueo("150117")
-                                .distrito("LOS OLIVOS")
-                                .provincia("LIMA")
-                                .departamento("LIMA")
+                                .direccion(empresaService.obtenerActiva().getDireccion())
+                                .ubigueo(empresaService.obtenerActiva().getUbigeo())
+                                .distrito(empresaService.obtenerActiva().getDistrito())
+                                .provincia(empresaService.obtenerActiva().getProvincia())
+                                .departamento(empresaService.obtenerActiva().getDepartamento())
                                 .build())
                         .build())
                 .mtoOperGravadas(mtoOperGravadas)

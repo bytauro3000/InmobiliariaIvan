@@ -1,6 +1,7 @@
 package com.Inmobiliaria.demo.service.impl;
 
 import com.Inmobiliaria.demo.enums.Moneda;
+import com.Inmobiliaria.demo.service.EmpresaService;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ import java.math.BigDecimal;
 public class NotificacionAdminEmailService {
 
     private final JavaMailSender mailSender;
+    private final EmpresaService empresaService;
 
     @Value("${notificacion.admin.email}")
     private String adminEmail;
@@ -44,12 +46,15 @@ public class NotificacionAdminEmailService {
 
             String medioLabel = medioPago != null ? medioPago : "-";
 
+            String logoUrl = empresaService.obtenerActiva().getLogoSmallUrl();
+            String nombreLegal = empresaService.obtenerActiva().getNombreLegal();
+
             String cuerpo = """
                 <html>
                 <body style="font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px;">
                 <div style="max-width: 500px; margin: 0 auto; background: white; border-radius: 8px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                     <div style="text-align: center; margin-bottom: 16px;">
-                        <img src="https://res.cloudinary.com/dlgqaifrk/image/upload/w_120,h_120,c_fit,f_auto,q_auto/v1773725974/logogrande_rfvxhu.png" alt="Logo" style="max-width: 80px; height: auto;">
+                        <img src="%s" alt="Logo" style="max-width: 80px; height: auto;">
                     </div>
                     <table style="width: 100%%; border-collapse: collapse;">
                         <tr><td style="padding: 8px 0; color: #666;">Importe</td><td style="padding: 8px 0; font-weight: bold; color: #2e7d32; font-size: 16px;">%s %s</td></tr>
@@ -58,11 +63,11 @@ public class NotificacionAdminEmailService {
                         <tr><td style="padding: 8px 0; color: #666;">Cliente</td><td style="padding: 8px 0; font-weight: bold;">%s</td></tr>
                     </table>
                     <hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;">
-                    <p style="color: #999; font-size: 12px;">Sistema de Gesti\u00f3n Inmobiliaria IVAN</p>
+                    <p style="color: #999; font-size: 12px;">Sistema de Gesti\u00f3n %s</p>
                 </div>
                 </body>
                 </html>
-                """.formatted(simbolo, String.format("%.2f", importe), detalle, medioLabel, clienteNombre);
+                """.formatted(logoUrl, simbolo, String.format("%.2f", importe), detalle, medioLabel, clienteNombre, nombreLegal);
 
             String[] destinatarios = adminEmail.split("[,;]");
             MimeMessage mensaje = mailSender.createMimeMessage();

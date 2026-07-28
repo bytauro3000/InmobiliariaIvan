@@ -36,7 +36,19 @@ import com.itextpdf.io.util.StreamUtil;
 import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.font.PdfFontFactory;
 
+import com.Inmobiliaria.demo.config.EmpresaContext;
+
 public class ContratoFloridaPdf {
+
+	private static String empresa() { return EmpresaContext.empresaService.obtenerActiva().getNombreLegal(); }
+	private static String ruc() { return EmpresaContext.empresaService.obtenerActiva().getRuc(); }
+	private static String representanteLegal() { return EmpresaContext.empresaService.obtenerActiva().getRepresentanteLegal(); }
+	private static String representanteDni() { return EmpresaContext.empresaService.obtenerActiva().getRepresentanteDni(); }
+	private static String partidaElectronica() { return EmpresaContext.empresaService.obtenerActiva().getPartidaElectronica(); }
+	private static String direccion() { return EmpresaContext.empresaService.obtenerActiva().getDireccion(); }
+	private static String clausulaMora() {
+		return "interés compensatorio y moratorio mensual que es del 5% del valor de la letra vencida o impagada más 1 dólar diario hasta la cancelación de la misma";
+	}
 
 	public static byte[] generarContratoFlorida(ContratoResponseDTO contrato, LetraCambio primeraLetraEntidad) {
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -224,15 +236,15 @@ public class ContratoFloridaPdf {
 		intro.add("Conste por el presente documento de Contrato privado de Compra-Venta de terreno rústico con Reserva de Propiedad que celebran de una parte ");
 
 		// Solo usamos arialBold para los fragmentos que requieren negrita
-		intro.add(new Text("“INMOBILIARIA CONSTRUCTORA IVAN E.I.R.L.” ").setFont(arialBold));
+		intro.add(new Text("\u201c" + empresa() + "\u201d ").setFont(arialBold));
 		intro.add("con ");
-		intro.add(new Text("RUC Nº 20537853108 ").setFont(arialBold));
-		intro.add("con domicilio Av. Alfredo Mendiola N°3623- Tercer Piso - Of. 301-A Urb. Panamericana Norte, Distrito de Los Olivos, Provincia y Departamento de Lima, debidamente representado por su ");
-		intro.add(new Text("Gerente General OLMEDO SILVA LOPEZ ").setFont(arialBold));
+		intro.add(new Text("RUC N\u00ba " + EmpresaContext.empresaService.obtenerActiva().getRuc() + " ").setFont(arialBold));
+		intro.add("con domicilio en " + direccion() + ", debidamente representado por su ");
+		intro.add(new Text(representanteLegal() + " ").setFont(arialBold));
 		intro.add("con ");
-		intro.add(new Text("DNI No.19404451 ").setFont(arialBold));
+		intro.add(new Text("DNI No." + representanteDni() + " ").setFont(arialBold));
 		intro.add("según consta del poder inscrito en la partida electrónica Nº ");
-		intro.add(new Text("12561792 ").setFont(arialBold));
+		intro.add(new Text(partidaElectronica() + " ").setFont(arialBold));
 		intro.add("del Registro de Personas Jurídicas, a quien en adelante se le denominará ");
 		intro.add(new Text("LA VENDEDORA").setFont(arialBold));
 		intro.add("; y de la otra parte ");
@@ -659,7 +671,7 @@ public class ContratoFloridaPdf {
 		quintaCuerpo.add("Las partes contratantes, de común acuerdo establecen de que en caso de incumplimiento del pago establecido en la cláusula tercera del presente contrato, en las fechas programadas estas generaran un ");
 
 		// Texto subrayado 1
-		Text sub1 = new Text("interés compensatorio y moratorio mensual que es del 5% del valor de la letra vencida o impagada más 1 dólar diario hasta la cancelación de la misma")
+		Text sub1 = new Text(clausulaMora())
 				.setUnderline();
 		quintaCuerpo.add(sub1);
 
@@ -1074,15 +1086,15 @@ public class ContratoFloridaPdf {
 		introPosesion.add("Conste por el presente documento de Contrato privado de Compra-Venta de terreno rústico con Reserva de Propiedad que celebran de una parte ");
 
 		// Bloque de LA VENDEDORA en Negrita
-		introPosesion.add(new Text("“INMOBILIARIA CONSTRUCTORA IVAN E.I.R.L.” ").setFont(arialBold));
+		introPosesion.add(new Text("\u201c" + empresa() + "\u201d ").setFont(arialBold));
 		introPosesion.add("con RUC No. ");
-		introPosesion.add(new Text("20537853108 ").setFont(arialBold));
-		introPosesion.add("con domicilio Av. Alfredo Mendiola N°3623-tercer piso – Ofc. 301 Urb. Panamericana Norte, Distrito de Los Olivos, Provincia y Departamento de Lima, debidamente representado por su ");
-		introPosesion.add(new Text("Gerente General OLMEDO SILVA LOPEZ ").setFont(arialBold));
+		introPosesion.add(new Text(EmpresaContext.empresaService.obtenerActiva().getRuc() + " ").setFont(arialBold));
+		introPosesion.add("con domicilio en " + direccion() + ", debidamente representado por su ");
+		introPosesion.add(new Text(representanteLegal() + " ").setFont(arialBold));
 		introPosesion.add("con ");
-		introPosesion.add(new Text("DNI No.19404451 ").setFont(arialBold));
+		introPosesion.add(new Text("DNI No." + representanteDni() + " ").setFont(arialBold));
 		introPosesion.add("según consta del poder inscrito en la partida electrónica No. ");
-		introPosesion.add(new Text("12561792 ").setFont(arialBold));
+		introPosesion.add(new Text(partidaElectronica() + " ").setFont(arialBold));
 		introPosesion.add("del Registro de Personas Jurídicas, a quien en adelante se le denominara ");
 		introPosesion.add(new Text("LA VENDEDORA; ").setFont(arialBold));
 
@@ -1528,7 +1540,7 @@ public class ContratoFloridaPdf {
 
 	    celdaV.add(pLineaV);
 	    celdaV.add(new Paragraph("“LA VENDEDORA”").setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
-	    celdaV.add(new Paragraph("DNI N°19404451").setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f));
+	    celdaV.add(new Paragraph("DNI N°" + representanteDni()).setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f));
 	    fila1.addCell(celdaV);
 
 	    // Añadimos la fila 1 al contenedor

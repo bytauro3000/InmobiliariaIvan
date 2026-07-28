@@ -4,8 +4,10 @@ import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.Inmobiliaria.demo.dto.MensajeDTO;
+import com.Inmobiliaria.demo.dto.UsuarioListadoDTO;
 import com.Inmobiliaria.demo.entity.Mensaje;
 import com.Inmobiliaria.demo.service.MensajeService;
+import com.Inmobiliaria.demo.service.UsuarioService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -14,8 +16,14 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class MensajeRestController {
 
-   
+    
     private final MensajeService mensajeService;
+    private final UsuarioService usuarioService;
+
+    @GetMapping("/usuarios")
+    public ResponseEntity<List<UsuarioListadoDTO>> listarUsuariosChat() {
+        return ResponseEntity.ok(usuarioService.listarUsuarios());
+    }
 
     // ✅ Endpoint para obtener el historial de chat entre dos personas
     @GetMapping("/historial/{id1}/{id2}")
@@ -26,6 +34,12 @@ public class MensajeRestController {
         mensajeService.marcarMensajesComoLeidos(id2, id1);
         
         return ResponseEntity.ok(historial);
+    }
+
+    @GetMapping("/no-leidos/{userId}")
+    public ResponseEntity<Long> obtenerNoLeidos(@PathVariable Long userId) {
+        long count = mensajeService.contarNoLeidos(userId);
+        return ResponseEntity.ok(count);
     }
 
     // ✅ Endpoint opcional por si decides enviar mensajes por HTTP en lugar de WebSocket

@@ -12,10 +12,9 @@ public interface MensajeService {
 	
 	List<Mensaje> obtenerConversacion(Long remitenteId, Long destinatarioId);
 	
-	
-	//METODO MENSAJE LEIDO
 	void marcarMensajesComoLeidos(Long remitenteId, Long destinatarioId);
-	
+
+	long contarNoLeidos(Long userId);
 	
 }
  

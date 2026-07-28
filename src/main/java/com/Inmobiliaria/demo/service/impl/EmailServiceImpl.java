@@ -8,6 +8,7 @@ import com.Inmobiliaria.demo.enums.TipoComprobante;
 import com.Inmobiliaria.demo.service.EmailService;
 import com.Inmobiliaria.demo.util.BoletaElectronicaPdf;
 import com.Inmobiliaria.demo.util.ComprobantePagoLetraPdf;
+import com.Inmobiliaria.demo.service.EmpresaService;
 import com.Inmobiliaria.demo.util.NumeroALetras;
 import java.math.BigDecimal;
 import java.util.List;
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Service;
 public class EmailServiceImpl implements EmailService {
 
     private final JavaMailSender mailSender;
+    private final EmpresaService empresaService;
 
     @Override
     public void enviarComprobante(PagoLetras pago, String destinatario) {
@@ -47,7 +49,7 @@ public class EmailServiceImpl implements EmailService {
             MimeMessageHelper helper = new MimeMessageHelper(mensaje, true, "UTF-8");
 
             helper.setTo(destinatario);
-            helper.setSubject("Comprobante de Pago - Inmobiliaria Constructora IVAN E.I.R.L.");
+            helper.setSubject("Comprobante de Pago - " + empresaService.obtenerActiva().getNombreLegal());
             helper.setText(construirCuerpo(pago), true);
             helper.addAttachment(nombreArchivo, new ByteArrayResource(pdf), "application/pdf");
 
@@ -93,7 +95,7 @@ public class EmailServiceImpl implements EmailService {
                     MimeMessage mensaje = mailSender.createMimeMessage();
                     MimeMessageHelper helper = new MimeMessageHelper(mensaje, true, "UTF-8");
                     helper.setTo(destinatario);
-                    helper.setSubject("Comprobante de Pago - Inmobiliaria Constructora IVAN E.I.R.L.");
+                    helper.setSubject("Comprobante de Pago - " + empresaService.obtenerActiva().getNombreLegal());
                     helper.setText(cuerpo, true);
                     helper.addAttachment(nombreArchivo, new ByteArrayResource(pdf), "application/pdf");
                     mailSender.send(mensaje);

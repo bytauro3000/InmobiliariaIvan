@@ -1,9 +1,10 @@
 package com.Inmobiliaria.demo.service.impl;
 
 import com.Inmobiliaria.demo.dto.EnviarWhatsappRequest;
+import com.Inmobiliaria.demo.service.EmpresaService;
 import com.Inmobiliaria.demo.service.WhatsappService;
 import com.fasterxml.jackson.databind.JsonNode;
-
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,13 +21,14 @@ import java.util.*;
 
 @Service
 @Lazy
+@RequiredArgsConstructor
 public class WhatsappServiceImpl implements WhatsappService {
 
     private static final Logger log = LoggerFactory.getLogger(WhatsappServiceImpl.class);
     private static final DecimalFormat DF = new DecimalFormat("#,##0.00", new DecimalFormatSymbols(Locale.US));
 
-    private final RestTemplate restTemplate;
-  
+    private final EmpresaService empresaService;
+    private final RestTemplate restTemplate = buildRestTemplate();
 
     private String token;
     private String deviceId;
@@ -43,11 +45,11 @@ public class WhatsappServiceImpl implements WhatsappService {
     @Value("${whatsapp.device-id:InmobiliariaIVAN}")
     private String defaultDeviceId;
 
-    public WhatsappServiceImpl() {
+    private static RestTemplate buildRestTemplate() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10_000);
         factory.setReadTimeout(20_000);
-        this.restTemplate = new RestTemplate(factory);
+        return new RestTemplate(factory);
     }
 
     @PostConstruct
@@ -182,12 +184,13 @@ public class WhatsappServiceImpl implements WhatsappService {
             String clienteNombre = request.getNombreClientes();
             int cantidad = request.getCantidadLetrasAtrasadas();
 
+            String nombreLegal = empresaService.obtenerActiva().getNombreLegal();
             String mensaje = String.format(
-                "Hola %s, soy de INMOBILIARIA CONSTRUCTORA \"IVAN\" E.I.R.L. " +
+                "Hola %s, soy de %s. " +
                 "Le recordamos que tiene %d letra(s) vencida(s) por un total de %s %s. " +
                 "Le recomendamos pasar a regularizar su situación a la brevedad para evitar que sigan generándose más intereses y mora. " +
                 "Agradecemos su atención y quedamos atentos.",
-                clienteNombre, cantidad, simbolo, totalStr
+                clienteNombre, nombreLegal, cantidad, simbolo, totalStr
             );
 
             String phoneJid = request.getCelular().startsWith("51")

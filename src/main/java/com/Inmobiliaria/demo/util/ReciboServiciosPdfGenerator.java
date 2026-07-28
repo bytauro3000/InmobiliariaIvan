@@ -17,11 +17,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.text.DecimalFormat;
 
+import com.Inmobiliaria.demo.config.EmpresaContext;
+
 public class ReciboServiciosPdfGenerator {
 
-    private static final String EMPRESA_NOMBRE = "INMOBILIARIA CONSTRUCTORA IVAN E.I.R.L";
-    private static final String EMPRESA_DIRECCION = "Av. Alfredo Mendiola Nº 3623 - 3er. Piso Of. 301 - Urb. Panamericana Norte, Los Olivos - Lima";
-    private static final String EMPRESA_TELEFONO = "Telf.: (01) 413-8679";
+    private static String empresaNombre() { return EmpresaContext.empresaService.obtenerActiva().getNombreLegal(); }
+    private static String empresaDireccion() { return EmpresaContext.empresaService.obtenerActiva().getDireccion(); }
+    private static String empresaTelefono() { return "Telf.: " + EmpresaContext.empresaService.obtenerActiva().getTelefono(); }
     private static final DecimalFormat df = new DecimalFormat("#,##0.00");
 
     // Clase interna para agrupar las fuentes
@@ -66,7 +68,7 @@ public class ReciboServiciosPdfGenerator {
         document.setMargins(20, 20, 20, 20);
 
         // Encabezado
-        Paragraph empresa = new Paragraph(EMPRESA_NOMBRE)
+        Paragraph empresa = new Paragraph(empresaNombre())
                 .setFont(fuentes.bold)
                 .setFontSize(14)
                 .setTextAlignment(TextAlignment.CENTER);
@@ -79,13 +81,13 @@ public class ReciboServiciosPdfGenerator {
                 .setMarginTop(2);
         document.add(servicio);
 
-        Paragraph direccion = new Paragraph(EMPRESA_DIRECCION)
+        Paragraph direccion = new Paragraph(empresaDireccion())
                 .setFont(fuentes.normal)
                 .setFontSize(8)
                 .setTextAlignment(TextAlignment.CENTER);
         document.add(direccion);
 
-        Paragraph telefono = new Paragraph(EMPRESA_TELEFONO)
+        Paragraph telefono = new Paragraph(empresaTelefono())
                 .setFont(fuentes.normal)
                 .setFontSize(8)
                 .setTextAlignment(TextAlignment.CENTER)
@@ -173,7 +175,7 @@ public class ReciboServiciosPdfGenerator {
         document.setMargins(20, 20, 20, 20);
 
         // Encabezado
-        Paragraph empresa = new Paragraph(EMPRESA_NOMBRE)
+        Paragraph empresa = new Paragraph(empresaNombre())
                 .setFont(fuentes.bold)
                 .setFontSize(14)
                 .setTextAlignment(TextAlignment.CENTER);
@@ -186,13 +188,13 @@ public class ReciboServiciosPdfGenerator {
                 .setMarginTop(2);
         document.add(servicio);
 
-        Paragraph direccion = new Paragraph(EMPRESA_DIRECCION)
+        Paragraph direccion = new Paragraph(empresaDireccion())
                 .setFont(fuentes.normal)
                 .setFontSize(8)
                 .setTextAlignment(TextAlignment.CENTER);
         document.add(direccion);
 
-        Paragraph telefono = new Paragraph(EMPRESA_TELEFONO)
+        Paragraph telefono = new Paragraph(empresaTelefono())
                 .setFont(fuentes.normal)
                 .setFontSize(8)
                 .setTextAlignment(TextAlignment.CENTER)

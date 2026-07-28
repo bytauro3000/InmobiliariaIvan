@@ -2,6 +2,7 @@ package com.Inmobiliaria.demo.scheduler;
 
 import com.Inmobiliaria.demo.entity.Comprobante;
 import com.Inmobiliaria.demo.repository.ComprobanteRepository;
+import com.Inmobiliaria.demo.service.EmpresaService;
 import com.Inmobiliaria.demo.service.SunatIntegrationService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -22,6 +23,7 @@ public class CdrPendienteScheduler {
     private static final Logger log = LoggerFactory.getLogger(CdrPendienteScheduler.class);
     private final ComprobanteRepository comprobanteRepository;
     private final SunatIntegrationService sunatIntegrationService;
+    private final EmpresaService empresaService;
 
     @Scheduled(fixedRate = 3_600_000, zone = "America/Lima")
     @Transactional
@@ -43,7 +45,7 @@ public class CdrPendienteScheduler {
                 try {
                     String serie = comp.getSerie();
                     String numero = String.valueOf(comp.getNumero());
-                    String ruc = "20537853108";
+                    String ruc = empresaService.obtenerActiva().getRuc();
                     String tipo = "03";
 
                     if (comp.getTipoComprobante().name().contains("FACTURA")) {

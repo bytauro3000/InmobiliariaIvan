@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import com.Inmobiliaria.demo.entity.Mensaje;
+import com.Inmobiliaria.demo.enums.EstadoMensaje;
 
 import jakarta.transaction.Transactional;
 
@@ -20,11 +21,9 @@ public interface MensajeRepository extends JpaRepository<Mensaje, Long>{
 	List<Mensaje> findByRemitenteIdAndDestinatarioIdOrRemitenteIdAndDestinatarioIdOrderByFechaAsc(
 	        Long remitenteId1, Long destinatarioId1,
 	        Long remitenteId2, Long destinatarioId2);
-	
-	
-	
-	//PARA MARCAR ESTADO MENSAJE LEIDO CUANDO EL DESTINATARIO ABRE EL MENSAJE
-	
+
+	long countByDestinatarioIdAndEstado(Long destinatarioId, EstadoMensaje estado);
+
 	@Transactional
 	@Modifying
 	@Query("UPDATE Mensaje m SET m.estado = 'LEIDO' " +

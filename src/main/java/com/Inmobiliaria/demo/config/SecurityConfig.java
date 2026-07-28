@@ -32,6 +32,7 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/auth/**",
                     "/api/public/**",
+                    "/chat-ws/**",
                     // Comprobantes de pago: acceso abierto para QR y descarga directa
                     // desde el frontend (window.open) sin token
                     "/api/pagos/*/comprobante-pdf",
@@ -65,7 +66,9 @@ public class SecurityConfig {
                     "/api/reporte-mora/**",
                     "/api/reporte-ingresos/**",
                     "/api/comprobantes/**",
-                    "/api/nota-credito/**"
+                    "/api/nota-credito/**",
+                    "/api/agendas/**",
+                    "/api/empresa/**"
                 ).hasAnyAuthority("ROLE_SECRETARIA", "ROLE_ADMINISTRADOR", "ROLE_SOPORTE", "ROLE_VENDEDOR")
                 // ── Gestión de usuarios: solo ADMINISTRADOR ───────────────────────────
                 .requestMatchers("/api/usuarios/**")

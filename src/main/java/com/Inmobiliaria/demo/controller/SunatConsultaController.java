@@ -4,6 +4,7 @@ import com.Inmobiliaria.demo.entity.Comprobante;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
 import com.Inmobiliaria.demo.enums.TipoOrigenComprobante;
 import com.Inmobiliaria.demo.repository.ComprobanteRepository;
+import com.Inmobiliaria.demo.service.EmpresaService;
 import com.Inmobiliaria.demo.service.SunatIntegrationService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -22,6 +23,7 @@ public class SunatConsultaController {
     private static final Logger log = LoggerFactory.getLogger(SunatConsultaController.class);
     private final SunatIntegrationService sunatIntegrationService;
     private final ComprobanteRepository comprobanteRepository;
+    private final EmpresaService empresaService;
 
     @GetMapping("/consultar")
     public ResponseEntity<Map<String, Object>> consultarBoleta(
@@ -46,7 +48,7 @@ public class SunatConsultaController {
 
         try {
             // Consultar estado actual en Apisperu
-            String ruc = "20537853108";
+            String ruc = empresaService.obtenerActiva().getRuc();
             Map<String, Object> estado = sunatIntegrationService.consultarEstadoBoleta("03", serie, String.valueOf(numero), ruc);
 
             String estadoSunat = (String) estado.getOrDefault("estadoSunat", "ERROR");

@@ -34,6 +34,8 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
+import com.Inmobiliaria.demo.config.EmpresaContext;
+
 public class NotaCreditoReciboPdf {
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -42,12 +44,11 @@ public class NotaCreditoReciboPdf {
     private static final DeviceGray GRIS_MEDIO  = new DeviceGray(0.45f);
     private static final DeviceRgb  AZUL_MARINO = new DeviceRgb(0, 32, 96);
 
-    private static final String EMPRESA   = "INMOBILIARIA CONSTRUCTORA \"IVAN\" E.I.R.L.";
-    private static final String DIRECCION = "Av. Alfredo Mendiola N 3623  3er. Piso Of. 301 - Urb. Panamericana Norte - Los Olivos - Lima";
-    private static final String TELEFONO  = "Cel.: +51 987-891-788";
-    private static final String RUC       = "R.U.C.: 20537853108";
-
-    private static final String LOGO_URL = "https://res.cloudinary.com/dlgqaifrk/image/upload/w_200,h_200,c_fit,f_auto,q_auto/v1773725974/logogrande_rfvxhu.png";
+    private static String empresa() { return EmpresaContext.empresaService.obtenerActiva().getNombreLegal(); }
+    private static String direccion() { return EmpresaContext.empresaService.obtenerActiva().getDireccion(); }
+    private static String telefono() { return "Cel.: " + EmpresaContext.empresaService.obtenerActiva().getCelular(); }
+    private static String ruc() { return "R.U.C.: " + EmpresaContext.empresaService.obtenerActiva().getRuc(); }
+    private static String logoUrl() { return EmpresaContext.empresaService.obtenerActiva().getLogoSmallUrl(); }
 
     public static byte[] generar(
             String serie, String correlativo, String fechaEmision,
@@ -86,7 +87,7 @@ public class NotaCreditoReciboPdf {
                 } catch (Exception ignored) {}
             }
 
-            Image logoImg = new Image(ImageDataFactory.create(new URL(LOGO_URL)))
+            Image logoImg = new Image(ImageDataFactory.create(new URL(logoUrl())))
                     .setWidth(50).setHeight(50)
                     .setAutoScale(true)
                     .setHorizontalAlignment(HorizontalAlignment.CENTER);
@@ -111,13 +112,13 @@ public class NotaCreditoReciboPdf {
                     .setBorderLeft(Border.NO_BORDER)
                     .setBorderRight(new SolidBorder(ColorConstants.BLACK, 1f))
                     .setPadding(4).setTextAlignment(TextAlignment.CENTER);
-            celdaEmpresa.add(new Paragraph(EMPRESA)
+            celdaEmpresa.add(new Paragraph(empresa())
                     .setFont(courierBold).setFontSize(10f)
                     .setTextAlignment(TextAlignment.CENTER).setMarginBottom(1));
-            celdaEmpresa.add(new Paragraph(DIRECCION)
+            celdaEmpresa.add(new Paragraph(direccion())
                     .setFont(courier).setFontSize(7.5f)
                     .setTextAlignment(TextAlignment.CENTER).setMarginBottom(1));
-            celdaEmpresa.add(new Paragraph(TELEFONO + "          " + RUC)
+            celdaEmpresa.add(new Paragraph(telefono() + "          " + ruc())
                     .setFont(courier).setFontSize(7.5f)
                     .setTextAlignment(TextAlignment.CENTER).setMarginBottom(4));
             celdaEmpresa.add(new Paragraph("NOTA DE CRÉDITO - RECIBO")

@@ -49,6 +49,9 @@ import java.util.Locale;
 import java.time.format.DateTimeFormatter;
 import java.util.stream.Collectors;
 
+import com.Inmobiliaria.demo.config.EmpresaContext;
+import com.Inmobiliaria.demo.entity.Empresa;
+
 public class ComprobantePagoLetraPdf {
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -57,11 +60,11 @@ public class ComprobantePagoLetraPdf {
     private static final DeviceGray GRIS_OSCURO = new DeviceGray(0.15f);
     private static final DeviceGray GRIS_MEDIO  = new DeviceGray(0.45f);
 
-    private static final String EMPRESA   = "INMOBILIARIA CONSTRUCTORA \"IVAN\" E.I.R.L.";
-    private static final String DIRECCION = "Av. Alfredo Mendiola N 3623  3er. Piso Of. 301 - Urb. Panamericana Norte - Los Olivos - Lima";
-    private static final String TELEFONO  = "Cel.: +51 987-891-788";
-    private static final String RUC       = "R.U.C.: 20537853108";
-    private static final String BASE_URL  = "https://inmobiliariaivan.onrender.com/api/pagos";
+    private static String empresa() { return EmpresaContext.empresaService.obtenerActiva().getNombreLegal(); }
+    private static String direccion() { return EmpresaContext.empresaService.obtenerActiva().getDireccion(); }
+    private static String telefono() { return "Cel.: " + EmpresaContext.empresaService.obtenerActiva().getCelular(); }
+    private static String ruc() { return "R.U.C.: " + EmpresaContext.empresaService.obtenerActiva().getRuc(); }
+    private static String logoUrl() { return EmpresaContext.empresaService.obtenerActiva().getLogoSmallUrl(); }
 
     // ─────────────────────────────────────────────────────────────────────────
     // MÉTODO AUXILIAR: construye "NOMBRE APELLIDO (DNI: 12345678)" por cliente
@@ -325,14 +328,13 @@ public class ComprobantePagoLetraPdf {
                     + "  -  Contrato N\u00b0 " + contrato.getIdContrato() + "  -  " + loteInfo;
 
             // QR
-            String urlQr = BASE_URL + "/" + pago.getIdPago() + "/comprobante-pdf";
+            String urlQr = "https://inmobiliariaivan.onrender.com/api/pagos/" + pago.getIdPago() + "/comprobante-pdf";
             BarcodeQRCode qrCode = new BarcodeQRCode(urlQr);
             Image qrImage = new Image(qrCode.createFormXObject(pdf))
                     .setWidth(52).setHeight(52)
                     .setHorizontalAlignment(HorizontalAlignment.CENTER);
 
-            String logoUrl = "https://res.cloudinary.com/dlgqaifrk/image/upload/e_grayscale,w_200,h_200,c_fit,f_auto,q_auto/v1773725974/logogrande_rfvxhu.png";
-            Image logoImg = new Image(ImageDataFactory.create(new URL(logoUrl)))
+            Image logoImg = new Image(ImageDataFactory.create(new URL(logoUrl())))
                     .setWidth(70).setHeight(70)
                     .setHorizontalAlignment(HorizontalAlignment.CENTER);
 
@@ -357,13 +359,13 @@ public class ComprobantePagoLetraPdf {
                     .setBorderLeft(Border.NO_BORDER)
                     .setBorderRight(Border.NO_BORDER)
                     .setPadding(5).setTextAlignment(TextAlignment.CENTER);
-            celdaEmpresa.add(new Paragraph(EMPRESA)
+            celdaEmpresa.add(new Paragraph(empresa())
                     .setFont(courierBold).setFontSize(11f)
                     .setTextAlignment(TextAlignment.CENTER).setMarginBottom(2));
-            celdaEmpresa.add(new Paragraph(DIRECCION)
+            celdaEmpresa.add(new Paragraph(direccion())
                     .setFont(courier).setFontSize(8f)
                     .setTextAlignment(TextAlignment.CENTER).setMarginBottom(2));
-            celdaEmpresa.add(new Paragraph(TELEFONO + "          " + RUC)
+            celdaEmpresa.add(new Paragraph(telefono() + "          " + ruc())
                     .setFont(courier).setFontSize(8f)
                     .setTextAlignment(TextAlignment.CENTER).setMarginBottom(6));
             celdaEmpresa.add(new Paragraph(tituloPrincipal)
@@ -647,14 +649,13 @@ public class ComprobantePagoLetraPdf {
             Document doc   = new Document(pdf, PageSize.A5.rotate());
             doc.setMargins(margenTop, 18, margenV, 52);
 
-            String urlQr = BASE_URL + "/comprobante-multiple/" + numComp;
+            String urlQr = "https://inmobiliariaivan.onrender.com/api/pagos/comprobante-multiple/" + numComp;
             BarcodeQRCode qrCode = new BarcodeQRCode(urlQr);
             Image qrImage = new Image(qrCode.createFormXObject(pdf))
                     .setWidth(52).setHeight(52)
                     .setHorizontalAlignment(HorizontalAlignment.CENTER);
 
-            String logoUrl = "https://res.cloudinary.com/dlgqaifrk/image/upload/e_grayscale,w_200,h_200,c_fit,f_auto,q_auto/v1773725974/logogrande_rfvxhu.png";
-            Image logoImg  = new Image(ImageDataFactory.create(new URL(logoUrl)))
+            Image logoImg  = new Image(ImageDataFactory.create(new URL(logoUrl())))
                     .setWidth(70).setHeight(70).setHorizontalAlignment(HorizontalAlignment.CENTER);
 
             // ── ENCABEZADO ──
@@ -675,13 +676,13 @@ public class ComprobantePagoLetraPdf {
                     .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 1f))
                     .setBorderLeft(Border.NO_BORDER).setBorderRight(Border.NO_BORDER)
                     .setPadding(5).setTextAlignment(TextAlignment.CENTER);
-            celdaEmpresa.add(new Paragraph(EMPRESA)
+            celdaEmpresa.add(new Paragraph(empresa())
                     .setFont(courierBold).setFontSize(11f)
                     .setTextAlignment(TextAlignment.CENTER).setMarginBottom(2));
-            celdaEmpresa.add(new Paragraph(DIRECCION)
+            celdaEmpresa.add(new Paragraph(direccion())
                     .setFont(courier).setFontSize(8f)
                     .setTextAlignment(TextAlignment.CENTER).setMarginBottom(2));
-            celdaEmpresa.add(new Paragraph(TELEFONO + "          " + RUC)
+            celdaEmpresa.add(new Paragraph(telefono() + "          " + ruc())
                     .setFont(courier).setFontSize(8f)
                     .setTextAlignment(TextAlignment.CENTER).setMarginBottom(6));
             celdaEmpresa.add(new Paragraph(tituloPrincipal)
