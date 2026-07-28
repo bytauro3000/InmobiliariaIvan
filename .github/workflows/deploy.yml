@@ -37,5 +37,8 @@ jobs:
           # ✅ Se usan las variables de tus secretos para formar la ruta completa
           tags: "${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO }}:latest"
 
-      - name: Notificar a Render para actualizar
+      - name: Notificar a Render (Ivan)
         run: curl -f "${{ secrets.RENDER_DEPLOY_HOOK }}"
+
+      - name: Notificar a Render (Merruic)
+        run: curl -f "${{ secrets.RENDER_DEPLOY_HOOK_MERRUIC }}"
