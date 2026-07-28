@@ -76,6 +76,10 @@ public class ArchivoController {
             String url = resultado.get("secure_url") != null
                     ? resultado.get("secure_url").toString()
                     : null;
+
+            if (url != null && url.contains("/upload/")) {
+                url = url.replace("/upload/", "/upload/f_auto,q_auto/");
+            }
             
             Map<String, String> respuesta = new HashMap<>();
             respuesta.put("url", url);
