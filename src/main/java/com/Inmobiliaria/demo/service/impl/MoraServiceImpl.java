@@ -39,6 +39,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import com.Inmobiliaria.demo.entity.Empresa;
+import com.Inmobiliaria.demo.enums.TipoCalculoMora;
 import com.Inmobiliaria.demo.service.EmpresaService;
 
 @Slf4j
@@ -53,7 +54,17 @@ public class MoraServiceImpl implements MoraService {
     }
 
     private BigDecimal montoDiario() {
-        return empresaService.obtenerActiva().getMoraMontoDiario();
+        BigDecimal val = empresaService.obtenerActiva().getMoraMontoDiario();
+        return val != null ? val : BigDecimal.ZERO;
+    }
+
+    private BigDecimal tasaDiaria() {
+        BigDecimal val = empresaService.obtenerActiva().getMoraTasaDiaria();
+        return val != null ? val : BigDecimal.ZERO;
+    }
+
+    private TipoCalculoMora tipoCalculoMora() {
+        return empresaService.obtenerActiva().getTipoCalculoMora();
     }
 
     static LocalDate aplicarGraciaDominical(LocalDate fechaVenc) {
@@ -102,9 +113,18 @@ public class MoraServiceImpl implements MoraService {
         }
 
         long dias = ChronoUnit.DAYS.between(fechaVenc, fechaReferencia);
-        BigDecimal montoPct  = letra.getImporte().multiply(porcentajeMora()).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal montoDiar = montoDiario().multiply(BigDecimal.valueOf(dias)).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal total = montoPct.add(montoDiar);
+        BigDecimal montoPct;
+        BigDecimal montoDiar;
+        BigDecimal total;
+        if (tipoCalculoMora() == TipoCalculoMora.INTERES_DIARIO) {
+            montoPct  = BigDecimal.ZERO;
+            montoDiar = letra.getImporte().multiply(tasaDiaria()).multiply(BigDecimal.valueOf(dias)).setScale(2, RoundingMode.HALF_UP);
+            total = montoDiar;
+        } else {
+            montoPct  = letra.getImporte().multiply(porcentajeMora()).setScale(2, RoundingMode.HALF_UP);
+            montoDiar = montoDiario().multiply(BigDecimal.valueOf(dias)).setScale(2, RoundingMode.HALF_UP);
+            total = montoPct.add(montoDiar);
+        }
 
         boolean tienePrevia = moraRepository.existeMoraActivaParaLetra(idLetra);
         Integer idMoraPrevia = null;
@@ -133,11 +153,18 @@ public class MoraServiceImpl implements MoraService {
 
         // ── Recalcular días/montos con la fecha real del pago ─────────────────
         long dias = ChronoUnit.DAYS.between(fechaVenc, fechaReferencia);
-        BigDecimal montoPct  = letra.getImporte()
-            .multiply(porcentajeMora()).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal montoDiar = montoDiario()
-            .multiply(BigDecimal.valueOf(dias)).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal total = montoPct.add(montoDiar);
+        BigDecimal montoPct;
+        BigDecimal montoDiar;
+        BigDecimal total;
+        if (tipoCalculoMora() == TipoCalculoMora.INTERES_DIARIO) {
+            montoPct  = BigDecimal.ZERO;
+            montoDiar = letra.getImporte().multiply(tasaDiaria()).multiply(BigDecimal.valueOf(dias)).setScale(2, RoundingMode.HALF_UP);
+            total = montoDiar;
+        } else {
+            montoPct  = letra.getImporte().multiply(porcentajeMora()).setScale(2, RoundingMode.HALF_UP);
+            montoDiar = montoDiario().multiply(BigDecimal.valueOf(dias)).setScale(2, RoundingMode.HALF_UP);
+            total = montoPct.add(montoDiar);
+        }
 
         // ── Buscar mora existente en cualquier estado activo ──────────────────
         boolean yaExiste = moraRepository.existeMoraActivaParaLetra(letra.getIdLetra());
@@ -149,11 +176,18 @@ public class MoraServiceImpl implements MoraService {
                 MoraLetra mora = moraPagada.get();
                 long diasCorrectos = ChronoUnit.DAYS.between(fechaVenc, fechaReferencia);
                 if (mora.getDiasMora() != (int) diasCorrectos) {
-                    BigDecimal montoDiarCorr = montoDiario()
-                        .multiply(BigDecimal.valueOf(diasCorrectos)).setScale(2, RoundingMode.HALF_UP);
+                    BigDecimal montoDiarCorr;
+                    BigDecimal totalCorr;
+                    if (tipoCalculoMora() == TipoCalculoMora.INTERES_DIARIO) {
+                        montoDiarCorr = letra.getImporte().multiply(tasaDiaria()).multiply(BigDecimal.valueOf(diasCorrectos)).setScale(2, RoundingMode.HALF_UP);
+                        totalCorr = montoDiarCorr;
+                    } else {
+                        montoDiarCorr = montoDiario().multiply(BigDecimal.valueOf(diasCorrectos)).setScale(2, RoundingMode.HALF_UP);
+                        totalCorr = mora.getMontoPorcentaje().add(montoDiarCorr);
+                    }
                     mora.setDiasMora((int) diasCorrectos);
                     mora.setMontoDiario(montoDiarCorr);
-                    mora.setMontoMoraTotal(mora.getMontoPorcentaje().add(montoDiarCorr));
+                    mora.setMontoMoraTotal(totalCorr);
                     mora.setFechaGeneracion(fechaReferencia);
                     mora.setPagoLetra(pagoLetra);
                     moraRepository.save(mora);
@@ -437,8 +471,18 @@ public class MoraServiceImpl implements MoraService {
         }
 
         long dias = ChronoUnit.DAYS.between(fechaVenc, hoy);
-        BigDecimal montoPct  = letra.getImporte().multiply(porcentajeMora()).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal montoDiar = montoDiario().multiply(BigDecimal.valueOf(dias)).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal montoPct;
+        BigDecimal montoDiar;
+        BigDecimal total;
+        if (tipoCalculoMora() == TipoCalculoMora.INTERES_DIARIO) {
+            montoPct  = BigDecimal.ZERO;
+            montoDiar = letra.getImporte().multiply(tasaDiaria()).multiply(BigDecimal.valueOf(dias)).setScale(2, RoundingMode.HALF_UP);
+            total = montoDiar;
+        } else {
+            montoPct  = letra.getImporte().multiply(porcentajeMora()).setScale(2, RoundingMode.HALF_UP);
+            montoDiar = montoDiario().multiply(BigDecimal.valueOf(dias)).setScale(2, RoundingMode.HALF_UP);
+            total = montoPct.add(montoDiar);
+        }
 
         MoraLetra mora = new MoraLetra();
         mora.setLetra(letra);
@@ -447,7 +491,7 @@ public class MoraServiceImpl implements MoraService {
         mora.setPorcentajeAplicado(porcentajeMora());
         mora.setMontoPorcentaje(montoPct);
         mora.setMontoDiario(montoDiar);
-        mora.setMontoMoraTotal(montoPct.add(montoDiar));
+        mora.setMontoMoraTotal(total);
         mora.setFechaGeneracion(hoy);
         mora.setFechaVencimientoLetra(fechaVenc);
         mora.setEstadoMora(EstadoMora.PENDIENTE);
