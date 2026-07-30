@@ -63,7 +63,7 @@ public class LoteServiceImpl implements LoteService {
 	}
 
 	@Override
-	@Cacheable(key = "#idPrograma")
+	@Cacheable(key = "'prog_dto_' + #idPrograma")
 	public List<LoteProgramaResponseDTO> listarLotesPorPrograma(Integer idPrograma) {
 		// Filtrar lotes disponibles por programa
 		List<Lote> lotes = loteRepository.findByProgramaIdProgramaAndEstadoEqualsOrderByManzanaAscNumeroLoteAsc(
@@ -106,7 +106,7 @@ public class LoteServiceImpl implements LoteService {
 	}
 
 	@Override
-	@Cacheable(key = "#id")
+	@Cacheable(key = "'lote_' + #id")
 	public Lote obtenerLotePorId(Integer id) {
 		return loteRepository.findById(id).orElse(null);
 	}
