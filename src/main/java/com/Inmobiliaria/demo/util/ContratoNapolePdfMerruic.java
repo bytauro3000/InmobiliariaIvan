@@ -66,24 +66,19 @@ public class ContratoNapolePdfMerruic {
 		Document document = new Document(pdf);
 		document.setMargins(122, 85, 57, 85);
 
-		PdfFont arialBold;
-		PdfFont arialBoldItalic;
-		PdfFont arialItalic;
+		PdfFont arialNarrow;      // Arial Narrow regular (texto, SIN cursiva)
+		PdfFont arialNarrowBold;  // Arial Narrow negrita (énfasis, SIN cursiva)
 
 		try {
-			byte[] bBytes = StreamUtil.inputStreamToArray(
-					ContratoNapolePdfMerruic.class.getClassLoader().getResourceAsStream("fonts/ARIALBD.TTF"));
-			arialBold = PdfFontFactory.createFont(bBytes, PdfEncodings.WINANSI);
+			byte[] nBytes = StreamUtil.inputStreamToArray(
+					ContratoNapolePdfMerruic.class.getClassLoader().getResourceAsStream("fonts/ARIALN.TTF"));
+			arialNarrow = PdfFontFactory.createFont(nBytes, PdfEncodings.WINANSI);
 
-			byte[] biBytes = StreamUtil.inputStreamToArray(
-					ContratoNapolePdfMerruic.class.getClassLoader().getResourceAsStream("fonts/ARIALBI.TTF"));
-			arialBoldItalic = PdfFontFactory.createFont(biBytes, PdfEncodings.WINANSI);
-
-			byte[] iBytes = StreamUtil.inputStreamToArray(
-					ContratoNapolePdfMerruic.class.getClassLoader().getResourceAsStream("fonts/ARIALI.TTF"));
-			arialItalic = PdfFontFactory.createFont(iBytes, PdfEncodings.WINANSI);
+			byte[] nbBytes = StreamUtil.inputStreamToArray(
+					ContratoNapolePdfMerruic.class.getClassLoader().getResourceAsStream("fonts/ARIALNB.TTF"));
+			arialNarrowBold = PdfFontFactory.createFont(nbBytes, PdfEncodings.WINANSI);
 		} catch (Exception e) {
-			throw new RuntimeException("Error cargando las fuentes Arial desde resources/fonts/", e);
+			throw new RuntimeException("Error cargando las fuentes Arial Narrow desde resources/fonts/", e);
 		}
 
 		// ── FECHA DEL CONTRATO ──────────────────────────────────────────────
@@ -105,7 +100,7 @@ public class ContratoNapolePdfMerruic {
 		String domicilioComprador = domicilioCalle + ", Distrito de " + nombreDistrito;
 
 		// Bloque de compradores
-		Paragraph bloqueCompradores = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setFontSize(10);
+		Paragraph bloqueCompradores = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setFontSize(12);
 		for (int i = 0; i < numClientes; i++) {
 			ClienteResponseDTO c = clientes.get(i);
 			boolean esFemenino = (c.getGenero() != null && c.getGenero().equals(Genero.Femenino));
@@ -113,9 +108,9 @@ public class ContratoNapolePdfMerruic {
 			String identif = esFemenino ? "identificada" : "identificado";
 
 			bloqueCompradores.add(prefijo);
-			bloqueCompradores.add(new Text(c.getNombre().toUpperCase() + " " + c.getApellidos().toUpperCase()).setBold());
+			bloqueCompradores.add(new Text(c.getNombre().toUpperCase() + " " + c.getApellidos().toUpperCase()).setFont(arialNarrowBold));
 			bloqueCompradores.add(" " + identif + " con ");
-			bloqueCompradores.add(new Text(etiquetaDocumento(c) + c.getNumDoc()).setBold());
+			bloqueCompradores.add(new Text(etiquetaDocumento(c) + c.getNumDoc()).setFont(arialNarrowBold));
 
 			if (numClientes > 1 && i < numClientes - 1) {
 				bloqueCompradores.add(i == numClientes - 2 ? " y " : ", ");
@@ -141,34 +136,34 @@ public class ContratoNapolePdfMerruic {
 
 		// ── ENCABEZADO ─────────────────────────────────────────────────────
 		document.add(new Paragraph("PROGRAMA NAPOLE")
-				.setFont(arialBoldItalic).setFontSize(18)
+				.setFont(arialNarrowBold).setFontSize(12)
 				.setTextAlignment(TextAlignment.CENTER)
 				.setFixedLeading(16).setMarginBottom(0));
 
 		document.add(new Paragraph("CONTRATO PRIVADO DE COMPRA Y VENTA DE TERRENO RÚSTICO EN FUTURA HABILITACIÓN URBANA")
-				.setFont(arialBoldItalic).setFontSize(11).setUnderline()
+				.setFont(arialNarrowBold).setFontSize(12).setUnderline()
 				.setTextAlignment(TextAlignment.CENTER)
 				.setFixedLeading(12).setMarginBottom(15));
 
 		// ── INTRODUCCIÓN ──────────────────────────────────────────────────
 		Paragraph intro = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(12).setMultipliedLeading(1.5f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.5f);
 
 		intro.add("Conste por este documento, que celebran de una parte la empresa ");
-		intro.add(new Text("\u201c" + empresa() + "\u201d ").setFont(arialBold));
+		intro.add(new Text("\u201c" + empresa() + "\u201d ").setFont(arialNarrowBold));
 		intro.add("con ");
-		intro.add(new Text("RUC Nº " + ruc()).setFont(arialBold));
+		intro.add(new Text("RUC Nº " + ruc()).setFont(arialNarrowBold));
 		intro.add(", inscrita en la partida electrónica N° ");
-		intro.add(new Text(partidaElectronica()).setFont(arialBold));
+		intro.add(new Text(partidaElectronica()).setFont(arialNarrowBold));
 		intro.add(" del registro de personas jurídicas de Lima – Sunarp, con domicilio en ");
-		intro.add(new Text(direccion() + ", Distrito de " + distrito() + ", Provincia y Departamento de " + departamento()).setFont(arialBold));
+		intro.add(new Text(direccion() + ", Distrito de " + distrito() + ", Provincia y Departamento de " + departamento()).setFont(arialNarrowBold));
 		intro.add(", representado por su titular gerente don ");
-		intro.add(new Text(representanteLegal()).setFont(arialBold));
+		intro.add(new Text(representanteLegal()).setFont(arialNarrowBold));
 		intro.add(", identificado con ");
-		intro.add(new Text("DNI N° " + representanteDni()).setFont(arialBold));
+		intro.add(new Text("DNI N° " + representanteDni()).setFont(arialNarrowBold));
 		intro.add(", a quien en adelante se le denominará ");
-		intro.add(new Text("LA VENDEDORA").setFont(arialBold));
+		intro.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		intro.add(" y de la otra parte ");
 
 		for (com.itextpdf.layout.element.IElement el : bloqueCompradores.getChildren()) {
@@ -177,51 +172,53 @@ public class ContratoNapolePdfMerruic {
 
 		intro.add(" con domicilio en " + domicilioComprador);
 		intro.add(", a quien en lo sucesivo se le llamará ");
-		intro.add(new Text(etiquetaComprador).setFont(arialBold).setUnderline());
+		intro.add(new Text(etiquetaComprador).setFont(arialNarrowBold).setUnderline());
 		intro.add(", bajo los términos y condiciones siguientes:");
 
 		document.add(intro);
 
 		// ── PRIMERA: ANTECEDENTES ──────────────────────────────────────────
-		document.add(new Paragraph().add(new Text("PRIMERA: ANTECEDENTES:").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11).setMarginTop(10));
+		document.add(new Paragraph().add(new Text("ANTECEDENTES:").setFont(arialNarrowBold).setUnderline())
+				.setFontSize(12).setMarginTop(10));
 
 		Paragraph primeraCuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
-		primeraCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		primeraCuerpo.add(new Text("PRIMERA: ").setFont(arialNarrowBold));
+		primeraCuerpo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		primeraCuerpo.add(" ostenta a su cargo la posesión física, continua, pública y pacífica de un terreno de 17,999.94 m2, PARCELA AGRICOLA N° 10 U.C. 11444, ZONA PARCELACION GALLINAZO PUENTE PIEDRA equivalente a un área física de 21,623.49 m2, cuya inscripción registral consta en la partida electrónica N°");
-		primeraCuerpo.add(new Text("49014934").setFont(arialBoldItalic));
+		primeraCuerpo.add(new Text("49014934").setFont(arialNarrowBold));
 		primeraCuerpo.add(" del registro de propiedad inmuebles de Lima-SUNARP. CON CODIGO DE contribuyente Nº");
-		primeraCuerpo.add(new Text("175516").setFont(arialBoldItalic));
+		primeraCuerpo.add(new Text("175516").setFont(arialNarrowBold));
 		primeraCuerpo.add(", Distrito de Puente Piedra, Provincia y Departamento de Lima. ");
-		primeraCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		primeraCuerpo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		primeraCuerpo.add(" con fecha 24/02/2023 celebraron el CONTRATO PRIVADO DE COMPRA Y VENTA DE TERRENO RÚSTICO a fin que la empresa en mención realice la lotización del 50.42% de acciones y derechos que equivale a un área de 17,999.94m2 de terreno, la misma que encuentra dentro del área de mayor extensión a que hace referencia esta cláusula, en ese sentido, la empresa, sobre el referido terreno viene desarrollando el PROGRAMA DE VIVIENDA ");
-		primeraCuerpo.add(new Text("\u201cNAPOLE\u201d").setFont(arialBoldItalic));
+		primeraCuerpo.add(new Text("\u201cNAPOLE\u201d").setFont(arialNarrowBold));
 		primeraCuerpo.add(" la misma que se distribuye en lotes y manzanas con sus respectivas áreas conforme al plano de lotización.");
 
 		document.add(primeraCuerpo);
 
 		// ── SEGUNDA: OBJETO DEL CONTRATO ───────────────────────────────────
 		verificarEspacioYSalto(document, pdf, 0.4f);
-		document.add(new Paragraph().add(new Text("SEGUNDA: OBJETO DEL CONTRATO:").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11).setMarginTop(15));
+		document.add(new Paragraph().add(new Text("OBJETO DEL CONTRATO:").setFont(arialNarrowBold).setUnderline())
+				.setFontSize(12).setMarginTop(15));
 
 		Paragraph segundaIntro = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
+		segundaIntro.add(new Text("SEGUNDA: ").setFont(arialNarrowBold));
 		segundaIntro.add("Por medio del presente documento ");
-		segundaIntro.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		segundaIntro.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		segundaIntro.add(" da en venta real y enajenación perpetua a favor de ");
-		segundaIntro.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+		segundaIntro.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 		segundaIntro.add(" el lote de terreno rústico ubicado en el PROGRAMA DE VIVIENDA NAPOLE, Manzana ");
-		segundaIntro.add(new Text("\u201c" + lote.getManzana() + "\u201d").setFont(arialBoldItalic));
+		segundaIntro.add(new Text("\u201c" + lote.getManzana() + "\u201d").setFont(arialNarrowBold));
 		segundaIntro.add(", Lote ");
-		segundaIntro.add(new Text("\u201c" + lote.getNumeroLote() + "\u201d").setFont(arialBoldItalic));
+		segundaIntro.add(new Text("\u201c" + lote.getNumeroLote() + "\u201d").setFont(arialNarrowBold));
 		segundaIntro.add(", con un área de ");
-		segundaIntro.add(new Text(lote.getArea() + " m2").setFont(arialBoldItalic));
+		segundaIntro.add(new Text(lote.getArea() + " m2").setFont(arialNarrowBold));
 		segundaIntro.add(", situado en el Distrito de Puente Piedra, Provincia y Departamento de Lima, encerrado dentro de los siguientes linderos y medidas perimétricas:");
 
 		document.add(segundaIntro);
@@ -231,28 +228,28 @@ public class ContratoNapolePdfMerruic {
 				.setBorder(Border.NO_BORDER)
 				.setMarginLeft(20);
 
-		agregarFilaLinderos(tablaLinderos, "Por el frente", lote.getColindanteNorte(), "Con    " + lote.getAncho1() + "  m.l.", arialItalic);
-		agregarFilaLinderos(tablaLinderos, "Por la derecha", lote.getColindanteEste(), "Con  " + lote.getLargo1() + "  m.l.", arialItalic);
-		agregarFilaLinderos(tablaLinderos, "Por la Izquierda", lote.getColindanteOeste(), "Con    " + lote.getLargo2() + "  m.l.", arialItalic);
-		agregarFilaLinderos(tablaLinderos, "Por el fondo", lote.getColindanteSur(), "Con    " + lote.getAncho2() + "  m.l.", arialItalic);
+		agregarFilaLinderos(tablaLinderos, "Por el frente", lote.getColindanteNorte(), "Con    " + lote.getAncho1() + "  m.l.", arialNarrow);
+		agregarFilaLinderos(tablaLinderos, "Por la derecha", lote.getColindanteEste(), "Con  " + lote.getLargo1() + "  m.l.", arialNarrow);
+		agregarFilaLinderos(tablaLinderos, "Por la Izquierda", lote.getColindanteOeste(), "Con    " + lote.getLargo2() + "  m.l.", arialNarrow);
+		agregarFilaLinderos(tablaLinderos, "Por el fondo", lote.getColindanteSur(), "Con    " + lote.getAncho2() + "  m.l.", arialNarrow);
 
 		document.add(tablaLinderos);
 
 		Paragraph segundaFinal = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f)
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f)
 				.setMarginTop(10);
 
 		segundaFinal.add("La transferencia del lote de terreno rústico antes citado se realiza ");
-		segundaFinal.add(new Text("\u201cad-corpus\u201d").setFont(arialBoldItalic));
+		segundaFinal.add(new Text("\u201cad-corpus\u201d").setFont(arialNarrowBold));
 		segundaFinal.add(", comprendida además del área señalada del terreno rústico, sus entradas, salidas, aires, usos, costumbres, servidumbres y todo cuanto de hecho y por derecho correspondan al referido lote de terreno.");
 
 		document.add(segundaFinal);
 
 		// ── TERCERA: PRECIO Y FORMA DE PAGO ────────────────────────────────
 		verificarEspacioYSalto(document, pdf, 0.4f);
-		document.add(new Paragraph().add(new Text("TERCERO: PRECIO Y FORMA DE PAGO:").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11).setMarginTop(15));
+		document.add(new Paragraph().add(new Text("PRECIO Y FORMA DE PAGO:").setFont(arialNarrowBold).setUnderline())
+				.setFontSize(12).setMarginTop(15));
 
 		DecimalFormat df = new DecimalFormat("#,##0.00", new DecimalFormatSymbols(Locale.US));
 		Moneda monedaContrato = contrato.getMoneda() != null ? contrato.getMoneda() : Moneda.USD;
@@ -263,11 +260,12 @@ public class ContratoNapolePdfMerruic {
 
 		Paragraph terceraCuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
+		terceraCuerpo.add(new Text("TERCERO: ").setFont(arialNarrowBold));
 		terceraCuerpo.add("Las partes de mutuo acuerdo establecen que, el precio del terreno rústico materia de venta asciende a la suma de ");
-		terceraCuerpo.add(new Text(prefMoneda + " " + df.format(contrato.getMontoTotal())).setFont(arialBoldItalic));
-		terceraCuerpo.add(new Text(" (" + montoTotalLetras + ")").setFont(arialBoldItalic));
+		terceraCuerpo.add(new Text(prefMoneda + " " + df.format(contrato.getMontoTotal())).setFont(arialNarrowBold));
+		terceraCuerpo.add(new Text(" (" + montoTotalLetras + ")").setFont(arialNarrowBold));
 
 		boolean esFinanciado = contrato.getTipoContrato() == TipoContrato.FINANCIADO
 				|| (contrato.getLetras() != null && !contrato.getLetras().isEmpty());
@@ -275,9 +273,9 @@ public class ContratoNapolePdfMerruic {
 		if (!esFinanciado) {
 			// ── CONTADO: pago mediante depósito bancario ──
 			terceraCuerpo.add(" importe que se paga mediante depósito bancario a la cuenta ");
-			terceraCuerpo.add(new Text("191-1041663-1-57").setFont(arialBoldItalic));
+			terceraCuerpo.add(new Text("191-1041663-1-57").setFont(arialNarrowBold));
 			terceraCuerpo.add(" ");
-			terceraCuerpo.add(new Text("BANCO DE CRÉDITO DEL PERÚ").setFont(arialBoldItalic));
+			terceraCuerpo.add(new Text("BANCO DE CRÉDITO DEL PERÚ").setFont(arialNarrowBold));
 			terceraCuerpo.add(" perteneciente a la empresa.");
 			document.add(terceraCuerpo);
 		} else {
@@ -289,30 +287,30 @@ public class ContratoNapolePdfMerruic {
 			LetraResponseDTO primeraLetra = listaLetras.get(0);
 
 			terceraCuerpo.add(", importe que, ");
-			terceraCuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+			terceraCuerpo.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 			terceraCuerpo.add(" " + verboSeObliga + " cancelar de la siguiente forma:");
 			document.add(terceraCuerpo);
 
 			// 3.1 Cuota inicial
 			Paragraph inicialPara = new Paragraph()
-					.setFont(arialItalic).setFontSize(11)
+					.setFont(arialNarrow).setFontSize(12)
 					.setMarginLeft(40).setMarginTop(10);
 			inicialPara.add("Cuota inicial de ");
 			BigDecimal inicial = contrato.getInicial() != null ? contrato.getInicial() : BigDecimal.ZERO;
-			inicialPara.add(new Text(prefMoneda + " " + df.format(inicial)).setFont(arialBoldItalic));
+			inicialPara.add(new Text(prefMoneda + " " + df.format(inicial)).setFont(arialNarrowBold));
 			inicialPara.add(" cuyo importe se paga a la suscripción de este documento, sin más constancia que la firma y huella de las partes puestas al final de este contrato.");
 			document.add(inicialPara);
 
 			// 3.2 Saldo + armadas
 			Paragraph saldoPara = new Paragraph()
 					.setTextAlignment(TextAlignment.JUSTIFIED)
-					.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f)
+					.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f)
 					.setMarginLeft(40).setMarginTop(10);
 
 			saldoPara.add("El saldo de ");
-			saldoPara.add(new Text(prefMoneda + " " + df.format(contrato.getSaldo())).setFont(arialBoldItalic));
+			saldoPara.add(new Text(prefMoneda + " " + df.format(contrato.getSaldo())).setFont(arialNarrowBold));
 			saldoPara.add(" será cancelado en ");
-			saldoPara.add(new Text(totalLetras + "").setFont(arialBoldItalic));
+			saldoPara.add(new Text(totalLetras + "").setFont(arialNarrowBold));
 			saldoPara.add(" ARMADAS mensuales y consecutivas, a razón de ");
 
 			Map<BigDecimal, Integer> gruposMonto = new LinkedHashMap<>();
@@ -323,17 +321,17 @@ public class ContratoNapolePdfMerruic {
 
 			if (gruposMonto.size() == 1) {
 				BigDecimal montoUnico = gruposMonto.keySet().iterator().next();
-				saldoPara.add(new Text("1").setFont(arialBoldItalic));
+				saldoPara.add(new Text("1").setFont(arialNarrowBold));
 				saldoPara.add(" ARMADA de ");
-				saldoPara.add(new Text(prefMonedaSinPunto + " " + df.format(montoUnico)).setFont(arialBoldItalic));
+				saldoPara.add(new Text(prefMonedaSinPunto + " " + df.format(montoUnico)).setFont(arialNarrowBold));
 			} else {
 				int indexGrupo = 0;
 				for (Map.Entry<BigDecimal, Integer> entry : gruposMonto.entrySet()) {
 					BigDecimal monto = entry.getKey();
 					Integer cantidad = entry.getValue();
-					saldoPara.add(new Text(cantidad + "").setFont(arialBoldItalic));
+					saldoPara.add(new Text(cantidad + "").setFont(arialNarrowBold));
 					saldoPara.add(cantidad == 1 ? " ARMADA de " : " ARMADAS de ");
-					saldoPara.add(new Text(prefMonedaSinPunto + " " + df.format(monto)).setFont(arialBoldItalic));
+					saldoPara.add(new Text(prefMonedaSinPunto + " " + df.format(monto)).setFont(arialNarrowBold));
 					if (indexGrupo < gruposMonto.size() - 2) {
 						saldoPara.add(", ");
 					} else if (indexGrupo == gruposMonto.size() - 2) {
@@ -344,17 +342,17 @@ public class ContratoNapolePdfMerruic {
 			}
 
 			saldoPara.add(" con fecha de vencimiento de la primera letra es ");
-			saldoPara.add(new Text(primeraLetra.getFechaVencimiento().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))).setFont(arialBoldItalic));
+			saldoPara.add(new Text(primeraLetra.getFechaVencimiento().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))).setFont(arialNarrowBold));
 			saldoPara.add(".");
 			document.add(saldoPara);
 
 			// 3.3 Lugar de pago
 			Paragraph lugarPago = new Paragraph()
 					.setTextAlignment(TextAlignment.JUSTIFIED)
-					.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f)
+					.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f)
 					.setMarginLeft(40).setMarginTop(10);
 			lugarPago.add("El lugar de pago de todas las armadas se hará mediante depósito o efectivo en el domicilio de ");
-			lugarPago.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+			lugarPago.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 			lugarPago.add(" señalado en el introito del presente acto jurídico.");
 			document.add(lugarPago);
 		}
@@ -362,61 +360,62 @@ public class ContratoNapolePdfMerruic {
 		if (esFinanciado) {
 			// ── CUARTO: TÍTULO VALOR (solo financiado) ────────────────────────
 			verificarEspacioYSalto(document, pdf, 0.4f);
-			document.add(new Paragraph().add(new Text("CUARTO: TÍTULO VALOR:").setFont(arialBoldItalic).setUnderline())
-					.setFontSize(11).setMarginTop(15));
+			document.add(new Paragraph().add(new Text("TÍTULO VALOR:").setFont(arialNarrowBold).setUnderline())
+					.setFontSize(12).setMarginTop(15));
 
 			Paragraph cuartoCuerpo = new Paragraph()
 					.setTextAlignment(TextAlignment.JUSTIFIED)
-					.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+					.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
+			cuartoCuerpo.add(new Text("CUARTO: ").setFont(arialNarrowBold));
 			cuartoCuerpo.add("A fin de dar fiel cumplimiento a sus obligaciones pecuniarias establecido en la cláusula anterior, ");
-			cuartoCuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+			cuartoCuerpo.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 			cuartoCuerpo.add(" " + verboGira + " a favor de ");
-			cuartoCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+			cuartoCuerpo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 			cuartoCuerpo.add(" ");
-			cuartoCuerpo.add(new Text(contrato.getCantidadLetras() + " LETRAS DE CAMBIO").setFont(arialBoldItalic));
+			cuartoCuerpo.add(new Text(contrato.getCantidadLetras() + " LETRAS DE CAMBIO").setFont(arialNarrowBold));
 			cuartoCuerpo.add(", dichos títulos valores serán cancelados en las fechas de vencimiento establecido en los respectivos cambiales, más el pago de un interés del ");
-			cuartoCuerpo.add(new Text("1% diario").setFont(arialBoldItalic));
+			cuartoCuerpo.add(new Text("1% diario").setFont(arialNarrowBold));
 			cuartoCuerpo.add(" del valor de la letra caso de incurrir en retraso.");
 			document.add(cuartoCuerpo);
 
-			agregarEquivalencia(document, arialBoldItalic, arialItalic, "QUINTO:");
+			agregarEquivalencia(document, arialNarrowBold, arialNarrow, "QUINTO:");
 		} else {
 			// ── CUARTO: EQUIVALENCIA (contado) ──────────────────────────────
 			verificarEspacioYSalto(document, pdf, 0.4f);
-			document.add(new Paragraph().add(new Text("CUARTO: EQUIVALENCIA:").setFont(arialBoldItalic).setUnderline())
-					.setFontSize(11).setMarginTop(15));
+			document.add(new Paragraph().add(new Text("CUARTO: EQUIVALENCIA:").setFont(arialNarrowBold).setUnderline())
+					.setFontSize(12).setMarginTop(15));
 
 			Paragraph cuartoCuerpo = new Paragraph()
 					.setTextAlignment(TextAlignment.JUSTIFIED)
-					.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+					.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
 			cuartoCuerpo.add("Los contratantes declaran que entre el lote vendido y el precio pactado existe justa equivalencia y que si hubiera alguna diferencia del área del lote de terreno vendido se pagará el reintegro o devolución al precio actualizado. Asimismo, las partes acuerdan que, el precio pactado en este contrato es solamente por la venta del terreno rústico en el que no están incluidos los trámites de aprobación de proyectos, desarrollo urbano; obras de habilitación urbana, los impuestos de ley y afines.");
 			document.add(cuartoCuerpo);
 		}
 
 		if (esFinanciado) {
-			agregarClausulaResolutoria(document, arialBoldItalic, arialItalic, etiquetaComprador, numClientes);
-			agregarReservaPropiedad(document, arialBoldItalic, arialItalic, etiquetaComprador);
-			agregarGravamen(document, arialBoldItalic, arialItalic, "DÉCIMO PRIMERO:");
-			agregarEscrituraFinanciado(document, arialBoldItalic, arialItalic, etiquetaComprador, "DÉCIMO SEGUNDO:");
-			agregarHabilitacionFinanciado(document, arialBoldItalic, arialItalic, etiquetaComprador);
-			agregarGastosTributos(document, arialBoldItalic, arialItalic, etiquetaComprador, "DÉCIMO SEXTO:");
-			agregarRenuncia(document, arialBoldItalic, arialItalic, etiquetaComprador);
-			agregarClausulaPenal(document, arialBoldItalic, arialItalic, etiquetaComprador);
-			agregarEntrega(document, arialBoldItalic, arialItalic, etiquetaComprador, "DÉCIMO NOVENO:");
-			agregarDomicilio(document, arialBoldItalic, arialItalic, "VIGÉSIMO:");
-			agregarCompetencia(document, arialBoldItalic, arialItalic, "VIGÉSIMO PRIMERO:");
-			agregarSupletoria(document, arialBoldItalic, arialItalic, "VIGÉSIMO SEGUNDO:");
+			agregarClausulaResolutoria(document, arialNarrowBold, arialNarrow, etiquetaComprador, numClientes);
+			agregarReservaPropiedad(document, arialNarrowBold, arialNarrow, etiquetaComprador);
+			agregarGravamen(document, arialNarrowBold, arialNarrow, "DÉCIMO PRIMERO:");
+			agregarEscrituraFinanciado(document, arialNarrowBold, arialNarrow, etiquetaComprador, "DÉCIMO SEGUNDO:");
+			agregarHabilitacionFinanciado(document, arialNarrowBold, arialNarrow, etiquetaComprador);
+			agregarGastosTributos(document, arialNarrowBold, arialNarrow, etiquetaComprador, "DÉCIMO SEXTO:");
+			agregarRenuncia(document, arialNarrowBold, arialNarrow, etiquetaComprador);
+			agregarClausulaPenal(document, arialNarrowBold, arialNarrow, etiquetaComprador);
+			agregarEntrega(document, arialNarrowBold, arialNarrow, etiquetaComprador, "DÉCIMO NOVENO:");
+			agregarDomicilio(document, arialNarrowBold, arialNarrow, "VIGÉSIMO:");
+			agregarCompetencia(document, arialNarrowBold, arialNarrow, "VIGÉSIMO PRIMERO:");
+			agregarSupletoria(document, arialNarrowBold, arialNarrow, "VIGÉSIMO SEGUNDO:");
 		} else {
-			agregarGravamen(document, arialBoldItalic, arialItalic, "QUINTO:");
-			agregarEscrituraContado(document, arialBoldItalic, arialItalic, etiquetaComprador);
-			agregarHabilitacionContado(document, arialBoldItalic, arialItalic, etiquetaComprador);
-			agregarGastosTributos(document, arialBoldItalic, arialItalic, etiquetaComprador, "NOVENO:");
-			agregarEntrega(document, arialBoldItalic, arialItalic, etiquetaComprador, "DÉCIMO:");
-			agregarDomicilio(document, arialBoldItalic, arialItalic, "DÉCIMO PRIMERO:");
-			agregarCompetencia(document, arialBoldItalic, arialItalic, "DÉCIMO SEGUNDO:");
-			agregarSupletoria(document, arialBoldItalic, arialItalic, "DÉCIMO TERCERO:");
+			agregarGravamen(document, arialNarrowBold, arialNarrow, "QUINTO:");
+			agregarEscrituraContado(document, arialNarrowBold, arialNarrow, etiquetaComprador);
+			agregarHabilitacionContado(document, arialNarrowBold, arialNarrow, etiquetaComprador);
+			agregarGastosTributos(document, arialNarrowBold, arialNarrow, etiquetaComprador, "NOVENO:");
+			agregarEntrega(document, arialNarrowBold, arialNarrow, etiquetaComprador, "DÉCIMO:");
+			agregarDomicilio(document, arialNarrowBold, arialNarrow, "DÉCIMO PRIMERO:");
+			agregarCompetencia(document, arialNarrowBold, arialNarrow, "DÉCIMO SEGUNDO:");
+			agregarSupletoria(document, arialNarrowBold, arialNarrow, "DÉCIMO TERCERO:");
 		}
 
 		// ── CIERRE Y FIRMAS ────────────────────────────────────────────────
@@ -426,12 +425,12 @@ public class ContratoNapolePdfMerruic {
 				.setMarginTop(20f));
 
 		document.add(new Paragraph()
-				.add(new Text("Carabayllo, " + diaNum + "/" + mesNum + "/" + anioNum + ".").setFont(arialItalic))
-				.setFontSize(11)
+				.add(new Text("Carabayllo, " + diaNum + "/" + mesNum + "/" + anioNum + ".").setFont(arialNarrow))
+				.setFontSize(12)
 				.setTextAlignment(TextAlignment.RIGHT)
 				.setMarginTop(15));
 
-		agregarBloqueFirmas(document, clientes, arialBoldItalic, etiquetaComprador);
+		agregarBloqueFirmas(document, clientes, arialNarrowBold, etiquetaComprador);
 
 		document.close();
 		return out.toByteArray();
@@ -441,221 +440,221 @@ public class ContratoNapolePdfMerruic {
 	 * CLÁUSULAS COMPARTIDAS (Contado y Financiado)
 	 * ======================================================================== */
 
-	private static void agregarEquivalencia(Document document, PdfFont arialBoldItalic, PdfFont arialItalic, String titulo) {
+	private static void agregarEquivalencia(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String titulo) {
 		verificarEspacioYSalto(document, null, 0.4f);
-		document.add(new Paragraph().add(new Text(titulo + " EQUIVALENCIA:").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11).setMarginTop(15));
+		document.add(new Paragraph().add(new Text(titulo + " EQUIVALENCIA:").setFont(arialNarrowBold).setUnderline())
+				.setFontSize(12).setMarginTop(15));
 
 		Paragraph cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
 		cuerpo.add("Los contratantes declaran que entre el lote vendido y el precio pactado existe justa equivalencia y que si hubiera alguna diferencia del área del lote de terreno vendido se pagará el reintegro o devolución al precio actualizado. Asimismo, las partes acuerdan que, el precio pactado en este contrato es solamente por la venta del terreno rústico en el que no están incluidos los trámites de aprobación de proyectos, desarrollo urbano; obras de habilitación urbana, los impuestos de ley y afines.");
 		document.add(cuerpo);
 	}
 
-	private static void agregarGravamen(Document document, PdfFont arialBoldItalic, PdfFont arialItalic, String titulo) {
+	private static void agregarGravamen(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String titulo) {
 		verificarEspacioYSalto(document, null, 0.4f);
-		document.add(new Paragraph().add(new Text(titulo + " GRAVAMEN:").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11).setMarginTop(15));
+		document.add(new Paragraph().add(new Text(titulo + " GRAVAMEN:").setFont(arialNarrowBold).setUnderline())
+				.setFontSize(12).setMarginTop(15));
 
 		Paragraph cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
-		cuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		cuerpo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		cuerpo.add(" declara que, sobre el bien que enajena no pesa ningún gravamen, hipoteca, medida judicial o extrajudicial, y en general, ningún acto o contrato que prive, limite o restrinja el derecho de propiedad, posesión o uso del bien, obligándose no obstante a la evicción o saneamiento de Ley.");
 		document.add(cuerpo);
 	}
 
-	private static void agregarEscrituraContado(Document document, PdfFont arialBoldItalic, PdfFont arialItalic, String etiquetaComprador) {
+	private static void agregarEscrituraContado(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String etiquetaComprador) {
 		verificarEspacioYSalto(document, null, 0.4f);
-		document.add(new Paragraph().add(new Text("SEXTO: ESCRITURA PÚBLICA:").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11).setMarginTop(15));
+		document.add(new Paragraph().add(new Text("SEXTO: ESCRITURA PÚBLICA:").setFont(arialNarrowBold).setUnderline())
+				.setFontSize(12).setMarginTop(15));
 
 		Paragraph cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
-		cuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		cuerpo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		cuerpo.add(" se obliga a perfeccionar la transferencia del lote de terreno vendido a favor de ");
-		cuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+		cuerpo.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 		cuerpo.add(" cuando el predio de mayor extensión haya sido inscrito en los registros públicos y que el lote de terreno materia de venta sea independizado.");
 		document.add(cuerpo);
 	}
 
-	private static void agregarEscrituraFinanciado(Document document, PdfFont arialBoldItalic, PdfFont arialItalic, String etiquetaComprador, String titulo) {
+	private static void agregarEscrituraFinanciado(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String etiquetaComprador, String titulo) {
 		verificarEspacioYSalto(document, null, 0.4f);
-		document.add(new Paragraph().add(new Text(titulo + " ESCRITURA PÚBLICA:").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11).setMarginTop(15));
+		document.add(new Paragraph().add(new Text(titulo + " ESCRITURA PÚBLICA:").setFont(arialNarrowBold).setUnderline())
+				.setFontSize(12).setMarginTop(15));
 
 		Paragraph cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
-		cuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		cuerpo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		cuerpo.add(" se obliga a perfeccionar la transferencia del lote de terreno vendido a favor de ");
-		cuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+		cuerpo.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 		cuerpo.add(" cuando este haya cancelado el precio total del terreno y una vez culminado los trámites de habilitación urbana e inscripción registral del lote de terreno debidamente independizado.");
 		document.add(cuerpo);
 	}
 
-	private static void agregarHabilitacionContado(Document document, PdfFont arialBoldItalic, PdfFont arialItalic, String etiquetaComprador) {
+	private static void agregarHabilitacionContado(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String etiquetaComprador) {
 		verificarEspacioYSalto(document, null, 0.4f);
-		document.add(new Paragraph().add(new Text("SÉTIMO: HABILITACIÓN URBANA:").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11).setMarginTop(15));
+		document.add(new Paragraph().add(new Text("SÉTIMO: HABILITACIÓN URBANA:").setFont(arialNarrowBold).setUnderline())
+				.setFontSize(12).setMarginTop(15));
 
 		Paragraph cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
 		cuerpo.add("Para la tramitación del cambio de uso, elaboración del proyecto de Habilitación Urbana e Independización del lote de terreno materia de venta, las partes acuerdan conceder a ");
-		cuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		cuerpo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		cuerpo.add(" la representación exclusiva en la elaboración de los mismos. Luego de cancelar el precio íntegro del lote de terreno, ");
-		cuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+		cuerpo.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 		cuerpo.add(" se obliga a cubrir en la proporción que le corresponde los gastos de habilitación urbana e independización de lotes que conforman el programa, para este fin ");
-		cuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		cuerpo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		cuerpo.add(" comunicará por carta simple y/o notarial el costo individual a cobrar en cada caso lo que será materia de un contrato anexo al presente documento.");
 		document.add(cuerpo);
 
 		verificarEspacioYSalto(document, null, 0.4f);
-		document.add(new Paragraph().add(new Text("OCTAVO:").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11).setMarginTop(15));
+		document.add(new Paragraph().add(new Text("OCTAVO:").setFont(arialNarrowBold).setUnderline())
+				.setFontSize(12).setMarginTop(15));
 
 		Paragraph octavo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
 		octavo.add("Se acuerda que, los trámites del proyecto de habilitación urbana y ejecución de la misma correrá a cuenta de los clientes que conforman el programa de vivienda, obligándose ");
-		octavo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		octavo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		octavo.add(" prestar el apoyo necesario en la emisión de documentos que resulten necesarios para cumplir dicho fin, siendo que, la independización del lote de terreno materia de venta será a cuenta de ");
-		octavo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		octavo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		octavo.add(".");
 		document.add(octavo);
 	}
 
-	private static void agregarHabilitacionFinanciado(Document document, PdfFont arialBoldItalic, PdfFont arialItalic, String etiquetaComprador) {
+	private static void agregarHabilitacionFinanciado(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String etiquetaComprador) {
 		verificarEspacioYSalto(document, null, 0.4f);
-		document.add(new Paragraph().add(new Text("DÉCIMO TERCERO: HABILITACIÓN URBANA:").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11).setMarginTop(15));
+		document.add(new Paragraph().add(new Text("DÉCIMO TERCERO: HABILITACIÓN URBANA:").setFont(arialNarrowBold).setUnderline())
+				.setFontSize(12).setMarginTop(15));
 
 		Paragraph cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
 		cuerpo.add("Para la tramitación del cambio de uso, elaboración del proyecto de Habilitación Urbana e Independización del lote de terreno materia de venta, las partes acuerdan conceder a ");
-		cuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		cuerpo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		cuerpo.add(" la representación exclusiva en la elaboración de los mismos. Luego de cancelar el precio íntegro del lote de terreno, ");
-		cuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+		cuerpo.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 		cuerpo.add(" se obliga a cubrir en la proporción que le corresponde los gastos de habilitación urbana e independización de lotes que conforman el programa, para este fin ");
-		cuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		cuerpo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		cuerpo.add(" comunicará por carta simple y/o notarial el costo individual a cobrar en cada caso lo que será materia de un contrato anexo al presente documento.");
 		document.add(cuerpo);
 
 		cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
 		cuerpo.add("Asimismo, las partes convienen que, el Proyecto de Habilitación Urbana en las que se incluyen instalación de agua potable y desagüe, electrificación, construcción de pistas y veredas, será elaborado exclusivamente por ");
-		cuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		cuerpo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		cuerpo.add(". Los costos del proyecto, la ejecución de las obras, así como los aranceles y otros conceptos sean estos anexos o conexos que cobren las entidades respectivas serán asumidos única y exclusivamente por ");
-		cuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+		cuerpo.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 		cuerpo.add(" en la proporción que le corresponda.");
 		document.add(cuerpo);
 
 		verificarEspacioYSalto(document, null, 0.4f);
-		document.add(new Paragraph().add(new Text("DÉCIMO CUARTO:").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11).setMarginTop(15));
+		document.add(new Paragraph().add(new Text("DÉCIMO CUARTO:").setFont(arialNarrowBold).setUnderline())
+				.setFontSize(12).setMarginTop(15));
 
 		Paragraph c14 = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
-		c14.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
+		c14.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		c14.add(" se obliga a cuenta y costo realizar la limpieza de calles y pistas del programa de vivienda donde se halla el lote de terreno materia de venta.");
 		document.add(c14);
 
 		verificarEspacioYSalto(document, null, 0.4f);
-		document.add(new Paragraph().add(new Text("DÉCIMO QUINTO:").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11).setMarginTop(15));
+		document.add(new Paragraph().add(new Text("DÉCIMO QUINTO:").setFont(arialNarrowBold).setUnderline())
+				.setFontSize(12).setMarginTop(15));
 
 		Paragraph c15 = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 		c15.add("Se acuerda que, los trámites del proyecto de habilitación urbana y ejecución de la misma correrá a cuenta de los clientes que conforman el programa de vivienda, obligándose ");
-		c15.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		c15.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		c15.add(" prestar el apoyo necesario en la emisión de documentos que resulten necesarios para cumplir dicho fin, siendo que, la independización del lote de terreno materia de venta será a cuenta de ");
-		c15.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		c15.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		c15.add(".");
 		document.add(c15);
 	}
 
-	private static void agregarGastosTributos(Document document, PdfFont arialBoldItalic, PdfFont arialItalic, String etiquetaComprador, String titulo) {
+	private static void agregarGastosTributos(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String etiquetaComprador, String titulo) {
 		verificarEspacioYSalto(document, null, 0.4f);
-		document.add(new Paragraph().add(new Text(titulo + " GASTOS Y TRIBUTOS:").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11).setMarginTop(15));
+		document.add(new Paragraph().add(new Text(titulo + " GASTOS Y TRIBUTOS:").setFont(arialNarrowBold).setUnderline())
+				.setFontSize(12).setMarginTop(15));
 
 		Paragraph cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
 		cuerpo.add("Las partes acuerdan que, todos los gastos y tributos que originen la celebración, formalización y ejecución del presente contrato serán asumidos íntegramente por ");
-		cuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+		cuerpo.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 		cuerpo.add(".");
 		document.add(cuerpo);
 	}
 
-	private static void agregarEntrega(Document document, PdfFont arialBoldItalic, PdfFont arialItalic, String etiquetaComprador, String titulo) {
+	private static void agregarEntrega(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String etiquetaComprador, String titulo) {
 		verificarEspacioYSalto(document, null, 0.4f);
-		document.add(new Paragraph().add(new Text(titulo + " ENTREGA DEL TERRENO:").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11).setMarginTop(15));
+		document.add(new Paragraph().add(new Text(titulo + " ENTREGA DEL TERRENO:").setFont(arialNarrowBold).setUnderline())
+				.setFontSize(12).setMarginTop(15));
 
 		Paragraph cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
-		cuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		cuerpo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		cuerpo.add(" hace entrega física del lote de terreno vendido a favor de ");
-		cuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+		cuerpo.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 		cuerpo.add(" en ese acto, con la sola suscripción de este contrato, en efecto, queda expresamente convenido que, ");
-		cuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+		cuerpo.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 		cuerpo.add(" al entrar en posesión del terreno materia de venta, se hará responsable absoluto a partir de la fecha el pago de impuestos ante la municipalidad distrital correspondiente, haciéndose cargo también de la defensa de su posesión frente a terceros por los medios permitidos por ley, respetando estrictamente sus linderos, medidas perimétricas y los derechos de posesión y de propiedad de sus vecinos, en caso de realizar construcción alguna, obligándose efectuar dicha construcción dentro del marco del reglamento nacional de construcciones y afines.");
 		document.add(cuerpo);
 	}
 
-	private static void agregarDomicilio(Document document, PdfFont arialBoldItalic, PdfFont arialItalic, String titulo) {
+	private static void agregarDomicilio(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String titulo) {
 		verificarEspacioYSalto(document, null, 0.4f);
-		document.add(new Paragraph().add(new Text(titulo + " DOMICILIO:").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11).setMarginTop(15));
+		document.add(new Paragraph().add(new Text(titulo + " DOMICILIO:").setFont(arialNarrowBold).setUnderline())
+				.setFontSize(12).setMarginTop(15));
 
 		Paragraph cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
 		cuerpo.add("Para la validez de todas las comunicaciones y notificaciones a las partes, para las acciones legales que deriven del presente contrato, ambas partes señalan como sus respectivos domicilios los indicados en la introducción de este documento. El cambio de domicilio de cualquiera de las partes surtirá efecto después de cinco días útiles de efectuada la comunicación mediante carta notarial.");
 		document.add(cuerpo);
 	}
 
-	private static void agregarCompetencia(Document document, PdfFont arialBoldItalic, PdfFont arialItalic, String titulo) {
+	private static void agregarCompetencia(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String titulo) {
 		verificarEspacioYSalto(document, null, 0.4f);
-		document.add(new Paragraph().add(new Text(titulo + " COMPETENCIA TERRITORIAL:").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11).setMarginTop(15));
+		document.add(new Paragraph().add(new Text(titulo + " COMPETENCIA TERRITORIAL:").setFont(arialNarrowBold).setUnderline())
+				.setFontSize(12).setMarginTop(15));
 
 		Paragraph cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
 		cuerpo.add("Las partes dejan expresa constancia que, para todas las acciones legales que deriven del presente contrato se someten exclusivamente a los Jueces y Salas de la Corte Superior de Justicia de Lima Norte, renunciando así al fuero de sus respectivos domicilios.");
 		document.add(cuerpo);
 	}
 
-	private static void agregarSupletoria(Document document, PdfFont arialBoldItalic, PdfFont arialItalic, String titulo) {
+	private static void agregarSupletoria(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String titulo) {
 		verificarEspacioYSalto(document, null, 0.4f);
-		document.add(new Paragraph().add(new Text(titulo + " APLICACIÓN SUPLETORIA DE LA LEY:").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11).setMarginTop(15));
+		document.add(new Paragraph().add(new Text(titulo + " APLICACIÓN SUPLETORIA DE LA LEY:").setFont(arialNarrowBold).setUnderline())
+				.setFontSize(12).setMarginTop(15));
 
 		Paragraph cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
 		cuerpo.add("En todo lo no previsto por las partes en el presente contrato, ambas se someten a lo establecido por las normas del código civil y demás del sistema jurídico que resulten aplicables.");
 		document.add(cuerpo);
@@ -665,114 +664,114 @@ public class ContratoNapolePdfMerruic {
 	 * CLÁUSULAS EXCLUSIVAS DEL CONTRATO FINANCIADO
 	 * ======================================================================== */
 
-	private static void agregarClausulaResolutoria(Document document, PdfFont arialBoldItalic, PdfFont arialItalic, String etiquetaComprador, int numClientes) {
+	private static void agregarClausulaResolutoria(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String etiquetaComprador, int numClientes) {
 		verificarEspacioYSalto(document, null, 0.4f);
-		document.add(new Paragraph().add(new Text("SEXTO: CLÁUSULA RESOLUTORIA:").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11).setMarginTop(15));
+		document.add(new Paragraph().add(new Text("SEXTO: CLÁUSULA RESOLUTORIA:").setFont(arialNarrowBold).setUnderline())
+				.setFontSize(12).setMarginTop(15));
 
 		Paragraph cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
 		cuerpo.add("Los contratantes acuerdan como causal de resolución del presente contrato las siguientes:");
 		document.add(cuerpo);
 
 		cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f)
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f)
 				.setMarginLeft(20).setMarginTop(8);
 		cuerpo.add("El incumplimiento de pago de tres cuotas pactadas consecutivas o alternadas por parte de ");
-		cuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+		cuerpo.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 		cuerpo.add(" según estipulado en el artículo 1561 del Código Civil concordante con el artículo 1428 del mismo cuerpo legal, en este caso, ");
-		cuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		cuerpo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		cuerpo.add(" conforme lo establece el artículo 1429 del Código Civil podrá requerir mediante carta notarial a fin que ");
-		cuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+		cuerpo.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 		cuerpo.add(" satisfaga su prestación dentro de un plazo no menor de quince días, bajo apercibimiento de que, en caso contrario, el contrato queda resuelto. Si la prestación no se cumple dentro del plazo concedido, el contrato quedará resuelto de pleno derecho, sin responsabilidad y sin necesidad de declaración judicial alguna, dicha resolución se aplicará aun cuando ");
-		cuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+		cuerpo.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 		cuerpo.add(" haya pagado el 85% del precio total del inmueble materia de transferencia.");
 		document.add(cuerpo);
 
 		verificarEspacioYSalto(document, null, 0.4f);
-		document.add(new Paragraph().add(new Text("SÉTIMO:").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11).setMarginTop(15));
+		document.add(new Paragraph().add(new Text("SÉTIMO:").setFont(arialNarrowBold).setUnderline())
+				.setFontSize(12).setMarginTop(15));
 
 		cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 		cuerpo.add("De darse la resolución de la presente compra venta pactado en la cláusula anterior, se conviene expresamente que, ");
-		cuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+		cuerpo.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 		cuerpo.add(" realizará la entrega física del lote de terreno totalmente desocupado y libre de interferencias, a favor de ");
-		cuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		cuerpo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		cuerpo.add(" dentro del plazo perentorio de DIEZ días calendarios. Estableciéndose, asimismo, que por acuerdo de las partes todas las obras y/o mejoras de cualquier naturaleza que ");
-		cuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+		cuerpo.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 		cuerpo.add(" hubiese introducido en el referido lote de terreno, quedará en beneficio de ");
-		cuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		cuerpo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		cuerpo.add(" sin obligación de reembolso de ninguna clase por parte de ésta ni al pago de mejoras por acuerdo libre de ambas partes.");
 		document.add(cuerpo);
 
 		verificarEspacioYSalto(document, null, 0.4f);
-		document.add(new Paragraph().add(new Text("OCTAVO:").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11).setMarginTop(15));
+		document.add(new Paragraph().add(new Text("OCTAVO:").setFont(arialNarrowBold).setUnderline())
+				.setFontSize(12).setMarginTop(15));
 
 		cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 		cuerpo.add("Los contratantes convienen libremente que, en los casos previstos en la cláusula sexta, es decir; en caso de resolución del contrato por incumplimiento de ");
-		cuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+		cuerpo.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 		cuerpo.add(" dará lugar a que ");
-		cuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		cuerpo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		cuerpo.add(" realice la devolución del dinero aportado, siendo que, dicha devolución se realizará previa liquidación, teniendo ");
-		cuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		cuerpo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		cuerpo.add(" la facultad absoluta de retener el ");
-		cuerpo.add(new Text("25%").setFont(arialBoldItalic));
+		cuerpo.add(new Text("25%").setFont(arialNarrowBold));
 		cuerpo.add(" del valor total del terreno como indemnización por daños y perjuicios conforme lo establece el artículo 1563 del Código Civil, en consecuencia, la devolución del dinero se realizará cuando el lote de terreno materia de resolución sea vendido y según el número de letras giradas a favor de ");
-		cuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		cuerpo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		cuerpo.add(" según lo establecido en la cláusula cuarta.");
 		document.add(cuerpo);
 
 		verificarEspacioYSalto(document, null, 0.4f);
-		document.add(new Paragraph().add(new Text("NOVENO:").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11).setMarginTop(15));
+		document.add(new Paragraph().add(new Text("NOVENO:").setFont(arialNarrowBold).setUnderline())
+				.setFontSize(12).setMarginTop(15));
 
 		cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 		cuerpo.add("En caso ");
-		cuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+		cuerpo.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 		cuerpo.add(" haya pagado más del 85% del precio total del terreno materia de venta, ");
-		cuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		cuerpo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		cuerpo.add(" perderá el derecho a resolver el contrato por causal de falta de pago, sin embargo, podrá dar por vencido el plazo de cancelación de todas las armadas y/o letras de cambio que estuvieren pendientes o por vencer, pudiendo exigir a ");
-		cuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+		cuerpo.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 		cuerpo.add(" el inmediato pago del saldo del precio de compraventa del terreno.");
 		document.add(cuerpo);
 	}
 
-	private static void agregarReservaPropiedad(Document document, PdfFont arialBoldItalic, PdfFont arialItalic, String etiquetaComprador) {
+	private static void agregarReservaPropiedad(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String etiquetaComprador) {
 		verificarEspacioYSalto(document, null, 0.4f);
-		document.add(new Paragraph().add(new Text("DÉCIMO: PACTO DE RESERVA DE PROPIEDAD:").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11).setMarginTop(15));
+		document.add(new Paragraph().add(new Text("DÉCIMO: PACTO DE RESERVA DE PROPIEDAD:").setFont(arialNarrowBold).setUnderline())
+				.setFontSize(12).setMarginTop(15));
 
 		Paragraph cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
 		cuerpo.add("Las partes acuerdan incorporar en el presente contrato el pacto de reserva de propiedad a favor de ");
-		cuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		cuerpo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		cuerpo.add(", en efecto, ésta conservará la propiedad del lote de terreno materia del presente contrato hasta que se haya pagado el precio íntegro del terreno materia de venta.");
 		document.add(cuerpo);
 	}
 
-	private static void agregarRenuncia(Document document, PdfFont arialBoldItalic, PdfFont arialItalic, String etiquetaComprador) {
+	private static void agregarRenuncia(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String etiquetaComprador) {
 		verificarEspacioYSalto(document, null, 0.4f);
-		document.add(new Paragraph().add(new Text("DÉCIMO SÉTIMO: RENUNCIA:").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11).setMarginTop(15));
+		document.add(new Paragraph().add(new Text("DÉCIMO SÉTIMO: RENUNCIA:").setFont(arialNarrowBold).setUnderline())
+				.setFontSize(12).setMarginTop(15));
 
 		Paragraph cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
 		cuerpo.add("Por tratarse de un contrato de compraventa con pago por armadas las partes convienen que, ");
-		cuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+		cuerpo.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 		cuerpo.add(" puede solicitar la renuncia, justificando la razón o circunstancias, debiendo cumplir las siguientes condiciones:");
 		document.add(cuerpo);
 
@@ -783,49 +782,49 @@ public class ContratoNapolePdfMerruic {
 		com.itextpdf.layout.element.ListItem item1 = new com.itextpdf.layout.element.ListItem();
 		Paragraph p1 = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setMultipliedLeading(1.0f);
 		p1.add("La renuncia debe ser presentada por escrito, siendo necesario para que se produzca sus efectos de aprobación por parte de ");
-		p1.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
-		p1.setFont(arialItalic).setFontSize(11);
+		p1.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
+		p1.setFont(arialNarrow).setFontSize(12);
 		item1.add(p1);
 		lista.add(item1);
 
 		com.itextpdf.layout.element.ListItem item2 = new com.itextpdf.layout.element.ListItem();
 		Paragraph p2 = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setMultipliedLeading(1.0f);
 		p2.add("De ser aprobada la renuncia, ");
-		p2.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		p2.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		p2.add(" deberá retener el ");
-		p2.add(new Text("25%").setFont(arialBoldItalic));
+		p2.add(new Text("25%").setFont(arialNarrowBold));
 		p2.add(" del valor total del terreno como indemnización por daños y perjuicios conforme lo establece el artículo 1563 del Código Civil, siendo que, la devolución del dinero se realizará cuando el lote de terreno materia de resolución sea vendido y conforme lo aportado.");
-		p2.setFont(arialItalic).setFontSize(11);
+		p2.setFont(arialNarrow).setFontSize(12);
 		item2.add(p2);
 		lista.add(item2);
 
 		com.itextpdf.layout.element.ListItem item3 = new com.itextpdf.layout.element.ListItem();
 		Paragraph p3 = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setMultipliedLeading(1.0f);
 		p3.add("En caso de existir mejora alguna dentro de la propiedad materia de renuncia, estos quedarán en beneficio de ");
-		p3.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		p3.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		p3.add(" sin obligación de reembolso alguno.");
-		p3.setFont(arialItalic).setFontSize(11);
+		p3.setFont(arialNarrow).setFontSize(12);
 		item3.add(p3);
 		lista.add(item3);
 
 		document.add(lista);
 	}
 
-	private static void agregarClausulaPenal(Document document, PdfFont arialBoldItalic, PdfFont arialItalic, String etiquetaComprador) {
+	private static void agregarClausulaPenal(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String etiquetaComprador) {
 		verificarEspacioYSalto(document, null, 0.4f);
-		document.add(new Paragraph().add(new Text("DÉCIMO OCTAVO: CLÁUSULA PENAL:").setFont(arialBoldItalic).setUnderline())
-				.setFontSize(11).setMarginTop(15));
+		document.add(new Paragraph().add(new Text("DÉCIMO OCTAVO: CLÁUSULA PENAL:").setFont(arialNarrowBold).setUnderline())
+				.setFontSize(12).setMarginTop(15));
 
 		Paragraph cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
 		cuerpo.add("De conformidad con lo establecido en los artículos 1341, 1342, 1343, 1344 y siguientes del Código Civil, queda establecido que si ");
-		cuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
+		cuerpo.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 		cuerpo.add(" no pagase oportunamente una o más letras consecutivas o alternadas, es decir; incurra en retraso, deberá solventar adicionalmente una penalidad determinada en función del ");
-		cuerpo.add(new Text("1% diario").setFont(arialBoldItalic));
+		cuerpo.add(new Text("1% diario").setFont(arialNarrowBold));
 		cuerpo.add(" del valor de la letra por cada armada y/o letra de cambio, sin perjuicio del pago de los intereses y moras respectivos que continuarán devengándose con la tasa original de los derechos que asistan legalmente a ");
-		cuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		cuerpo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		cuerpo.add(".");
 		document.add(cuerpo);
 	}
@@ -838,12 +837,12 @@ public class ContratoNapolePdfMerruic {
 		float leadingCompacto = 11f;
 
 		tabla.addCell(new Cell()
-				.add(new Paragraph(etiqueta).setFont(font).setFontSize(11)
+				.add(new Paragraph(etiqueta).setFont(font).setFontSize(12)
 						.setFixedLeading(leadingCompacto).setMarginBottom(0))
 				.setBorder(Border.NO_BORDER).setPadding(0f));
 
 		tabla.addCell(new Cell()
-				.add(new Paragraph(colindante).setFont(font).setFontSize(11)
+				.add(new Paragraph(colindante).setFont(font).setFontSize(12)
 						.setFixedLeading(leadingCompacto).setMarginBottom(0))
 				.setBorder(Border.NO_BORDER).setPadding(0f));
 
@@ -853,11 +852,11 @@ public class ContratoNapolePdfMerruic {
 				.useAllAvailableWidth()
 				.setBorder(Border.NO_BORDER);
 
-		subTablaMedida.addCell(new Cell().add(new Paragraph("Con").setFont(font).setFontSize(11).setFixedLeading(leadingCompacto))
+		subTablaMedida.addCell(new Cell().add(new Paragraph("Con").setFont(font).setFontSize(12).setFixedLeading(leadingCompacto))
 				.setBorder(Border.NO_BORDER).setPadding(0));
-		subTablaMedida.addCell(new Cell().add(new Paragraph(numero).setFont(font).setFontSize(11).setFixedLeading(leadingCompacto).setTextAlignment(TextAlignment.RIGHT))
+		subTablaMedida.addCell(new Cell().add(new Paragraph(numero).setFont(font).setFontSize(12).setFixedLeading(leadingCompacto).setTextAlignment(TextAlignment.RIGHT))
 				.setBorder(Border.NO_BORDER).setPadding(0));
-		subTablaMedida.addCell(new Cell().add(new Paragraph("m.l.").setFont(font).setFontSize(11).setFixedLeading(leadingCompacto))
+		subTablaMedida.addCell(new Cell().add(new Paragraph("m.l.").setFont(font).setFontSize(12).setFixedLeading(leadingCompacto))
 				.setBorder(Border.NO_BORDER).setPaddingLeft(5f).setPaddingTop(0).setPaddingBottom(0));
 
 		tabla.addCell(new Cell()
@@ -877,7 +876,7 @@ public class ContratoNapolePdfMerruic {
 		return "DNI N°";
 	}
 
-	private static void agregarBloqueFirmas(Document document, List<ClienteResponseDTO> clientes, PdfFont arialBoldItalic, String etiquetaComprador) {
+	private static void agregarBloqueFirmas(Document document, List<ClienteResponseDTO> clientes, PdfFont arialNarrowBold, String etiquetaComprador) {
 		Table contenedorPrincipal = new Table(1)
 				.useAllAvailableWidth()
 				.setBorder(Border.NO_BORDER)
@@ -896,11 +895,11 @@ public class ContratoNapolePdfMerruic {
 				.setHorizontalAlignment(HorizontalAlignment.CENTER);
 
 		celdaC1.add(pLineaC1);
-		celdaC1.add(new Paragraph(c1.getNombre().toUpperCase() + " " + c1.getApellidos().toUpperCase()).setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
-		celdaC1.add(new Paragraph(etiquetaDocumento(c1) + c1.getNumDoc()).setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
+		celdaC1.add(new Paragraph(c1.getNombre().toUpperCase() + " " + c1.getApellidos().toUpperCase()).setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
+		celdaC1.add(new Paragraph(etiquetaDocumento(c1) + c1.getNumDoc()).setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
 
 		if (clientes.size() == 1) {
-			celdaC1.add(new Paragraph("\u201c" + etiquetaComprador + "\u201d").setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f));
+			celdaC1.add(new Paragraph("\u201c" + etiquetaComprador + "\u201d").setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f));
 		}
 		fila1.addCell(celdaC1);
 		fila1.addCell(new Cell().setBorder(Border.NO_BORDER));
@@ -911,8 +910,8 @@ public class ContratoNapolePdfMerruic {
 				.setHorizontalAlignment(HorizontalAlignment.CENTER);
 
 		celdaV.add(pLineaV);
-		celdaV.add(new Paragraph("\u201cLA VENDEDORA\u201d").setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
-		celdaV.add(new Paragraph("DNI N°" + representanteDni()).setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f));
+		celdaV.add(new Paragraph("\u201cLA VENDEDORA\u201d").setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
+		celdaV.add(new Paragraph("DNI N°" + representanteDni()).setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f));
 		fila1.addCell(celdaV);
 
 		contenedorPrincipal.addCell(new Cell().add(fila1).setBorder(Border.NO_BORDER));
@@ -931,11 +930,11 @@ public class ContratoNapolePdfMerruic {
 						.setHorizontalAlignment(HorizontalAlignment.CENTER);
 
 				celdaExtra.add(pLineaExtra);
-				celdaExtra.add(new Paragraph(ci.getNombre().toUpperCase() + " " + ci.getApellidos().toUpperCase()).setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
-				celdaExtra.add(new Paragraph(etiquetaDocumento(ci) + ci.getNumDoc()).setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
+				celdaExtra.add(new Paragraph(ci.getNombre().toUpperCase() + " " + ci.getApellidos().toUpperCase()).setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
+				celdaExtra.add(new Paragraph(etiquetaDocumento(ci) + ci.getNumDoc()).setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
 
 				if (i == clientes.size() - 1) {
-					celdaExtra.add(new Paragraph("\u201c" + etiquetaComprador + "\u201d").setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f));
+					celdaExtra.add(new Paragraph("\u201c" + etiquetaComprador + "\u201d").setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f));
 				}
 
 				tablaExtra.addCell(celdaExtra);
