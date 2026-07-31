@@ -34,7 +34,10 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
         Usuario usuario = usuarioRepository.findById(usuarioId)
             .orElseThrow(() -> new NegocioException("Usuario no encontrado"));
 
-        refreshTokenRepository.deleteByUsuario(usuario);
+        // Limpiar solo tokens expirados o revocados.
+        // NO se borran los tokens válidos de otras sesiones/dispositivos,
+        // así el refresh no falla con "Refresh token no encontrado" por rotación concurrente.
+        refreshTokenRepository.deleteExpiredOrRevoked(usuario, new Date());
 
         RefreshToken refreshToken = new RefreshToken();
         refreshToken.setToken(UUID.randomUUID().toString());
