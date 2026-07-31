@@ -43,6 +43,7 @@ import com.Inmobiliaria.demo.entity.Voucher;
 import com.Inmobiliaria.demo.service.*;
 import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.util.ContratoFloridaPdf;
+import com.Inmobiliaria.demo.util.ContratoNapolePdfMerruic;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 
@@ -535,6 +536,16 @@ public class ContratoServiceImpl implements ContratoService {
         ContratoResponseDTO dto = this.mapToContratoResponseDTO(contrato);
         LetraCambio primeraLetra = letraCambioRepository
                 .findFirstByContratoIdContratoOrderByNumeroLetraAsc(idContrato).orElse(null);
+
+        String nombrePrograma = (dto.getLotes() != null && !dto.getLotes().isEmpty())
+                ? dto.getLotes().get(0).getNombrePrograma()
+                : "";
+        String nombreProgUp = (nombrePrograma != null) ? nombrePrograma.toUpperCase() : "";
+
+        if (nombreProgUp.contains("NAPOLE")) {
+            return ContratoNapolePdfMerruic.generarContratoNapole(dto, primeraLetra);
+        }
+        // LA FLORIDA DE TORRE BLANCA (cualquiera de sus etapas) y demás programas
         return ContratoFloridaPdf.generarContratoFlorida(dto, primeraLetra);
     }
 
