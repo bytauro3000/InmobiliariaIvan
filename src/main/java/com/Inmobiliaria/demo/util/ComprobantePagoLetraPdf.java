@@ -256,6 +256,20 @@ public class ComprobantePagoLetraPdf {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Cuenta las páginas de un PDF en memoria (para el ajuste dinámico del múltiple)
+    // ─────────────────────────────────────────────────────────────────────────
+    private static int contarPaginas(byte[] pdfBytes) {
+        try {
+            PdfDocument pdf = new PdfDocument(new PdfReader(new ByteArrayInputStream(pdfBytes)));
+            int n = pdf.getNumberOfPages();
+            pdf.close();
+            return n;
+        } catch (Exception e) {
+            return Integer.MAX_VALUE;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // COMPROBANTE INDIVIDUAL
     // ─────────────────────────────────────────────────────────────────────────
     public static byte[] generar(PagoLetras pago, String rolUsuario) {
@@ -619,220 +633,251 @@ public class ComprobantePagoLetraPdf {
         }
 
         int numLetras   = pagos.size();
-        float padCuerpo    = numLetras >= 10 ? 3f : numLetras >= 5 ? 4f : 6f;
-        float fsCuerpo     = 9.5f;
-        float marginTopRec = numLetras >= 10 ? 2f : numLetras >= 5 ? 3f : 4f;
-        float padRecibo    = numLetras >= 10 ? 4f : numLetras >= 5 ? 5f : 7f;
 
-        int charsL1   = 56;
-        int charsCont = 79;
-        int charsFechas = fechasVencStr.length();
-        int lineasExtra = 0;
-        if (charsFechas > charsL1) {
-            lineasExtra = (int)Math.ceil((float)(charsFechas - charsL1) / charsCont);
-        }
-        float lineH    = fsCuerpo * 1.6f;
-        float cuerpoH  = (4f * lineH) + (padCuerpo * 2f) + (3f * 3f) + (lineasExtra * lineH);
-        float totalH   = 115f + marginTopRec + 28f + cuerpoH + 72f;
-        float libre    = 420f - totalH;
-        float margenSim = Math.min(30f, Math.max(8f, libre / 2f));
-        float margenTop = margenSim;
-        float margenV   = margenSim;
+        // Páginas esperadas: 1 (comprobante) + reverso de vouchers (3 por página)
+        int paginasVouchers = (vouchers == null || vouchers.isEmpty())
+                ? 0 : (int) Math.ceil(vouchers.size() / 3.0);
+        int maxPaginas = 1 + paginasVouchers;
 
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        // El logo se descarga una sola vez y se reutiliza en cada intento
+        byte[] logoBytes = null;
         try {
-            PdfFont courier     = cargarFuente("fonts/COUR.TTF");
-            PdfFont courierBold = cargarFuente("fonts/COURBD.TTF");
-            PdfFont arial       = cargarFuente("fonts/ARIAL.TTF");
+            logoBytes = StreamUtil.inputStreamToArray(new URL(logoUrl()).openStream());
+        } catch (Exception ignored) { }
 
-            PdfDocument pdf = new PdfDocument(new PdfWriter(out));
-            Document doc   = new Document(pdf, PageSize.A5.rotate());
-            doc.setMargins(margenTop, 18, margenV, 52);
+        // Ajuste dinámico: si el contenido desborda a una 2.ª página, se reduce la
+        // escala de fuentes/márgenes y se regenera hasta que todo quepa en una página.
+        byte[] resultado = null;
+        float escala = 1.0f;
+        for (int intento = 0; intento < 9; intento++) {
+            float padCuerpo    = Math.max(1f, (numLetras >= 10 ? 3f : numLetras >= 5 ? 4f : 6f) * escala);
+            float fsCuerpo     = Math.max(6.5f, 9.5f * escala);
+            float marginTopRec = Math.max(1f, (numLetras >= 10 ? 2f : numLetras >= 5 ? 3f : 4f) * escala);
+            float padRecibo    = Math.max(2f, (numLetras >= 10 ? 4f : numLetras >= 5 ? 5f : 7f) * escala);
 
-            String urlQr = "https://inmobiliariaivan.onrender.com/api/pagos/comprobante-multiple/" + numComp;
-            BarcodeQRCode qrCode = new BarcodeQRCode(urlQr);
-            Image qrImage = new Image(qrCode.createFormXObject(pdf))
-                    .setWidth(52).setHeight(52)
-                    .setHorizontalAlignment(HorizontalAlignment.CENTER);
+            // Estimación conservadora de líneas envueltas para ajustar los márgenes
+            int charsPorLinea  = (int) (89f * fsCuerpo / 9.5f);
+            int lineasImporte  = Math.max(1, (int) Math.ceil(importeTexto.length() / (double) charsPorLinea));
+            int lineasConcepto = Math.max(1, (int) Math.ceil(concepto.length() / (double) charsPorLinea));
+            int lineasFechas   = Math.max(1, (int) Math.ceil(fechasVencStr.length() / (double) charsPorLinea));
 
-            Image logoImg  = new Image(ImageDataFactory.create(new URL(logoUrl())))
-                    .setWidth(70).setHeight(70).setHorizontalAlignment(HorizontalAlignment.CENTER);
+            float lineH    = fsCuerpo * 1.6f;
+            float cuerpoH  = ((lineasImporte + lineasConcepto + 1 + lineasFechas) * lineH)
+                    + (padCuerpo * 2f) + (3f * 3f);
+            float totalH   = (115f * escala) + marginTopRec + (28f * escala) + cuerpoH + (72f * escala);
+            float libre    = 420f - totalH;
+            float margenSim = Math.min(30f * escala, Math.max(4f, libre / 2f));
+            float margenTop = margenSim;
+            float margenV   = margenSim;
 
-            // ── ENCABEZADO ──
-            Table encabezado = new Table(UnitValue.createPercentArray(new float[]{0.18f, 1, 0.22f}))
-                    .setWidth(UnitValue.createPercentValue(100));
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            try {
+                PdfFont courier     = cargarFuente("fonts/COUR.TTF");
+                PdfFont courierBold = cargarFuente("fonts/COURBD.TTF");
+                PdfFont arial       = cargarFuente("fonts/ARIAL.TTF");
 
-            Cell celdaLogo = new Cell()
-                    .setBorderTop(new SolidBorder(ColorConstants.BLACK, 1f))
-                    .setBorderLeft(new SolidBorder(ColorConstants.BLACK, 1f))
-                    .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 1f))
-                    .setBorderRight(Border.NO_BORDER).setPadding(8)
-                    .setVerticalAlignment(VerticalAlignment.MIDDLE).setTextAlignment(TextAlignment.CENTER);
-            celdaLogo.add(logoImg);
-            encabezado.addCell(celdaLogo);
+                PdfDocument pdf = new PdfDocument(new PdfWriter(out));
+                Document doc   = new Document(pdf, PageSize.A5.rotate());
+                doc.setMargins(margenTop, 18, margenV, 52);
 
-            Cell celdaEmpresa = new Cell()
-                    .setBorderTop(new SolidBorder(ColorConstants.BLACK, 1f))
-                    .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 1f))
-                    .setBorderLeft(Border.NO_BORDER).setBorderRight(Border.NO_BORDER)
-                    .setPadding(5).setTextAlignment(TextAlignment.CENTER);
-            celdaEmpresa.add(new Paragraph(empresa())
-                    .setFont(courierBold).setFontSize(11f)
-                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(2));
-            celdaEmpresa.add(new Paragraph(direccion())
-                    .setFont(courier).setFontSize(8f)
-                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(2));
-            celdaEmpresa.add(new Paragraph(telefono() + "          " + ruc())
-                    .setFont(courier).setFontSize(8f)
-                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(6));
-            celdaEmpresa.add(new Paragraph(tituloPrincipal)
-                    .setFont(courierBold).setFontSize(16)
-                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(1));
-            celdaEmpresa.add(new Paragraph("N\u00b0 " + numComp)
-                    .setFont(courierBold).setFontSize(9f)
-                    .setFontColor(GRIS_OSCURO)
-                    .setTextAlignment(TextAlignment.CENTER)
-                    .setMarginTop(0).setMarginBottom(2));
-            encabezado.addCell(celdaEmpresa);
+                String urlQr = "https://inmobiliariaivan.onrender.com/api/pagos/comprobante-multiple/" + numComp;
+                BarcodeQRCode qrCode = new BarcodeQRCode(urlQr);
+                Image qrImage = new Image(qrCode.createFormXObject(pdf))
+                        .setWidth(52).setHeight(52)
+                        .setHorizontalAlignment(HorizontalAlignment.CENTER);
 
-            Cell celdaQr = new Cell()
-                    .setBorderTop(new SolidBorder(ColorConstants.BLACK, 1f))
-                    .setBorderRight(new SolidBorder(ColorConstants.BLACK, 1f))
-                    .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 1f))
-                    .setBorderLeft(Border.NO_BORDER).setPadding(6)
-                    .setTextAlignment(TextAlignment.CENTER)
-                    .setVerticalAlignment(VerticalAlignment.MIDDLE);
-            celdaQr.add(qrImage);
-            celdaQr.add(new Paragraph("Escanea tu\ncomprobante")
-                    .setFont(arial).setFontSize(7f).setFontColor(GRIS_MEDIO)
-                    .setTextAlignment(TextAlignment.CENTER).setMarginTop(2).setMarginBottom(0));
-            encabezado.addCell(celdaQr);
-            doc.add(encabezado);
+                Image logoImg;
+                if (logoBytes != null) {
+                    logoImg = new Image(ImageDataFactory.create(logoBytes))
+                            .setWidth(70).setHeight(70)
+                            .setHorizontalAlignment(HorizontalAlignment.CENTER);
+                } else {
+                    logoImg = new Image(ImageDataFactory.create(new URL(logoUrl())))
+                            .setWidth(70).setHeight(70)
+                            .setHorizontalAlignment(HorizontalAlignment.CENTER);
+                }
 
-            // ── FILA: Recibi de + Monto total ──
-            float fuenteCliente = clientes.length() > 120 ? 7.5f
-                                : clientes.length() > 100 ? 8.5f
-                                : clientes.length() > 80  ? 9f : 10f;
-            Table filaRecibo = new Table(UnitValue.createPercentArray(new float[]{1, 0.28f}))
-                    .setWidth(UnitValue.createPercentValue(100)).setMarginTop(marginTopRec);
-            filaRecibo.addCell(construirCeldaClientes(contrato, courier, courierBold, fuenteCliente, padRecibo));
-            filaRecibo.addCell(new Cell()
-                    .setBorderTop(new SolidBorder(ColorConstants.BLACK, 1.5f))
-                    .setBorderLeft(new SolidBorder(ColorConstants.BLACK, 1.5f))
-                    .setBorderRight(new SolidBorder(ColorConstants.BLACK, 1.5f))
-                    .setBorderBottom(Border.NO_BORDER)
-                    .setPadding(4)
-                    .setTextAlignment(TextAlignment.CENTER).setVerticalAlignment(VerticalAlignment.MIDDLE)
-                    .add(new Paragraph(simboloMoneda + " " + DF.format(totalImporte))
-                            .setFont(courierBold).setFontSize(15).setTextAlignment(TextAlignment.CENTER)));
-            doc.add(filaRecibo);
+                // ── ENCABEZADO ──
+                Table encabezado = new Table(UnitValue.createPercentArray(new float[]{0.18f, 1, 0.22f}))
+                        .setWidth(UnitValue.createPercentValue(100));
 
-            // ── CUERPO ──
-            Table cuerpo = new Table(UnitValue.createPercentArray(new float[]{1}))
-                    .setWidth(UnitValue.createPercentValue(100));
-            Cell celdaCuerpo = new Cell()
-                    .setBorderTop(new SolidBorder(ColorConstants.BLACK, 1.5f))
-                    .setBorderLeft(new SolidBorder(ColorConstants.BLACK, 0.8f))
-                    .setBorderRight(new SolidBorder(ColorConstants.BLACK, 0.8f))
-                    .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.8f))
-                    .setPaddingLeft(8).setPaddingRight(8).setPaddingTop(padCuerpo).setPaddingBottom(padCuerpo);
-            celdaCuerpo.add(lineaDato("La cantidad de: ", importeTexto, courier, courierBold, fsCuerpo));
-            celdaCuerpo.add(separadorLinea());
-            celdaCuerpo.add(lineaDato("Por concepto de: ", concepto, courier, courierBold, fsCuerpo));
-            celdaCuerpo.add(separadorLinea());
-            celdaCuerpo.add(lineaDato("Medio de pago: ", medioPago + numOp + fechaOpStr, courier, courierBold, fsCuerpo));
-            celdaCuerpo.add(separadorLinea());
-            celdaCuerpo.add(lineaDato("Fechas de vencimiento: ", fechasVencStr, courier, courierBold, fsCuerpo));
-            celdaCuerpo.add(separadorLinea());
-            cuerpo.addCell(celdaCuerpo);
-            doc.add(cuerpo);
+                Cell celdaLogo = new Cell()
+                        .setBorderTop(new SolidBorder(ColorConstants.BLACK, 1f))
+                        .setBorderLeft(new SolidBorder(ColorConstants.BLACK, 1f))
+                        .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 1f))
+                        .setBorderRight(Border.NO_BORDER).setPadding(8)
+                        .setVerticalAlignment(VerticalAlignment.MIDDLE).setTextAlignment(TextAlignment.CENTER);
+                celdaLogo.add(logoImg);
+                encabezado.addCell(celdaLogo);
 
-            // ── PIE ──
-            Table pie = new Table(UnitValue.createPercentArray(new float[]{1f, 0.8f, 1f}))
-                    .setWidth(UnitValue.createPercentValue(100));
+                Cell celdaEmpresa = new Cell()
+                        .setBorderTop(new SolidBorder(ColorConstants.BLACK, 1f))
+                        .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 1f))
+                        .setBorderLeft(Border.NO_BORDER).setBorderRight(Border.NO_BORDER)
+                        .setPadding(5).setTextAlignment(TextAlignment.CENTER);
+                celdaEmpresa.add(new Paragraph(empresa())
+                        .setFont(courierBold).setFontSize(Math.max(7f, 11f * escala))
+                        .setTextAlignment(TextAlignment.CENTER).setMarginBottom(2));
+                celdaEmpresa.add(new Paragraph(direccion())
+                        .setFont(courier).setFontSize(Math.max(6f, 8f * escala))
+                        .setTextAlignment(TextAlignment.CENTER).setMarginBottom(2));
+                celdaEmpresa.add(new Paragraph(telefono() + "          " + ruc())
+                        .setFont(courier).setFontSize(Math.max(6f, 8f * escala))
+                        .setTextAlignment(TextAlignment.CENTER).setMarginBottom(6));
+                celdaEmpresa.add(new Paragraph(tituloPrincipal)
+                        .setFont(courierBold).setFontSize(Math.max(9f, 16f * escala))
+                        .setTextAlignment(TextAlignment.CENTER).setMarginBottom(1));
+                celdaEmpresa.add(new Paragraph("N\u00b0 " + numComp)
+                        .setFont(courierBold).setFontSize(Math.max(6f, 9f * escala))
+                        .setFontColor(GRIS_OSCURO)
+                        .setTextAlignment(TextAlignment.CENTER)
+                        .setMarginTop(0).setMarginBottom(2));
+                encabezado.addCell(celdaEmpresa);
 
-            Cell celdaNombre = new Cell()
-                    .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f)).setPadding(8)
-                    .setVerticalAlignment(VerticalAlignment.BOTTOM);
-            celdaNombre.add(new Paragraph(usuarioRegistro)
-                    .setFont(courierBold).setFontSize(9f)
-                    .setTextAlignment(TextAlignment.CENTER).setMarginTop(4).setMarginBottom(1));
-            celdaNombre.add(new Paragraph(rolUsuario != null ? rolUsuario.toUpperCase() : "SECRETARIA")
-                    .setFont(courier).setFontSize(9f)
-                    .setTextAlignment(TextAlignment.CENTER));
-            pie.addCell(celdaNombre);
+                Cell celdaQr = new Cell()
+                        .setBorderTop(new SolidBorder(ColorConstants.BLACK, 1f))
+                        .setBorderRight(new SolidBorder(ColorConstants.BLACK, 1f))
+                        .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 1f))
+                        .setBorderLeft(Border.NO_BORDER).setPadding(6)
+                        .setTextAlignment(TextAlignment.CENTER)
+                        .setVerticalAlignment(VerticalAlignment.MIDDLE);
+                celdaQr.add(qrImage);
+                celdaQr.add(new Paragraph("Escanea tu\ncomprobante")
+                        .setFont(arial).setFontSize(Math.max(5f, 7f * escala)).setFontColor(GRIS_MEDIO)
+                        .setTextAlignment(TextAlignment.CENTER).setMarginTop(2).setMarginBottom(0));
+                encabezado.addCell(celdaQr);
+                doc.add(encabezado);
 
-            String[] pf = fechaPagoStr.split("/");
-            String dia  = pf.length > 0 ? pf[0] : "--";
-            String mes  = pf.length > 1 ? pf[1] : "--";
-            String anio = pf.length > 2 ? pf[2] : "----";
+                // ── FILA: Recibi de + Monto total ──
+                float fuenteCliente = Math.max(6f,
+                        (clientes.length() > 120 ? 7.5f
+                        : clientes.length() > 100 ? 8.5f
+                        : clientes.length() > 80  ? 9f : 10f) * escala);
+                Table filaRecibo = new Table(UnitValue.createPercentArray(new float[]{1, 0.28f}))
+                        .setWidth(UnitValue.createPercentValue(100)).setMarginTop(marginTopRec);
+                filaRecibo.addCell(construirCeldaClientes(contrato, courier, courierBold, fuenteCliente, padRecibo));
+                filaRecibo.addCell(new Cell()
+                        .setBorderTop(new SolidBorder(ColorConstants.BLACK, 1.5f))
+                        .setBorderLeft(new SolidBorder(ColorConstants.BLACK, 1.5f))
+                        .setBorderRight(new SolidBorder(ColorConstants.BLACK, 1.5f))
+                        .setBorderBottom(Border.NO_BORDER)
+                        .setPadding(4)
+                        .setTextAlignment(TextAlignment.CENTER).setVerticalAlignment(VerticalAlignment.MIDDLE)
+                        .add(new Paragraph(simboloMoneda + " " + DF.format(totalImporte))
+                                .setFont(courierBold).setFontSize(Math.max(9f, 15f * escala)).setTextAlignment(TextAlignment.CENTER)));
+                doc.add(filaRecibo);
 
-            Cell celdaFecha = new Cell()
-                    .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f))
-                    .setPaddingTop(8).setPaddingBottom(8).setPaddingLeft(8).setPaddingRight(8)
-                    .setTextAlignment(TextAlignment.CENTER)
-                    .setVerticalAlignment(VerticalAlignment.MIDDLE);
-            celdaFecha.add(new Paragraph("Fecha de Pago")
-                    .setFont(courierBold).setFontSize(10f)
-                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(3));
-            Table lineaSep = new Table(UnitValue.createPercentArray(new float[]{1}))
-                    .setWidth(UnitValue.createPercentValue(100))
-                    .setMarginLeft(-8).setMarginRight(-8).setMarginBottom(4);
-            lineaSep.addCell(new Cell()
-                    .setBorder(Border.NO_BORDER)
-                    .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.8f))
-                    .setPadding(0).setHeight(1));
-            celdaFecha.add(lineaSep);
-            celdaFecha.add(new Paragraph("DIA    MES    A\u00d1O")
-                    .setFont(courierBold).setFontSize(9f)
-                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(3));
-            Table tablaFecha = new Table(UnitValue.createPercentArray(new float[]{1, 1, 1}))
-                    .setWidth(UnitValue.createPercentValue(100));
-            tablaFecha.addCell(celdaFechaBox(dia, courierBold));
-            tablaFecha.addCell(celdaFechaBox(mes, courierBold));
-            tablaFecha.addCell(celdaFechaBox(anio, courierBold));
-            celdaFecha.add(tablaFecha);
-            pie.addCell(celdaFecha);
+                // ── CUERPO ──
+                Table cuerpo = new Table(UnitValue.createPercentArray(new float[]{1}))
+                        .setWidth(UnitValue.createPercentValue(100));
+                Cell celdaCuerpo = new Cell()
+                        .setBorderTop(new SolidBorder(ColorConstants.BLACK, 1.5f))
+                        .setBorderLeft(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                        .setBorderRight(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                        .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                        .setPaddingLeft(8).setPaddingRight(8).setPaddingTop(padCuerpo).setPaddingBottom(padCuerpo);
+                celdaCuerpo.add(lineaDato("La cantidad de: ", importeTexto, courier, courierBold, fsCuerpo));
+                celdaCuerpo.add(separadorLinea());
+                celdaCuerpo.add(lineaDato("Por concepto de: ", concepto, courier, courierBold, fsCuerpo));
+                celdaCuerpo.add(separadorLinea());
+                celdaCuerpo.add(lineaDato("Medio de pago: ", medioPago + numOp + fechaOpStr, courier, courierBold, fsCuerpo));
+                celdaCuerpo.add(separadorLinea());
+                celdaCuerpo.add(lineaDato("Fechas de vencimiento: ", fechasVencStr, courier, courierBold, fsCuerpo));
+                celdaCuerpo.add(separadorLinea());
+                cuerpo.addCell(celdaCuerpo);
+                doc.add(cuerpo);
 
-            Cell celdaFirma = new Cell()
-                    .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f)).setPadding(5)
-                    .setTextAlignment(TextAlignment.CENTER)
-                    .setVerticalAlignment(VerticalAlignment.BOTTOM);
-            celdaFirma.add(new Paragraph(" ").setFont(courier).setFontSize(10).setMarginBottom(2));
-            Table lineaFirma = new Table(UnitValue.createPercentArray(new float[]{1}))
-                    .setWidth(UnitValue.createPercentValue(85))
-                    .setHorizontalAlignment(HorizontalAlignment.CENTER).setMarginBottom(3);
-            lineaFirma.addCell(new Cell()
-                    .setBorder(Border.NO_BORDER)
-                    .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.8f))
-                    .setPadding(0).setHeight(1));
-            celdaFirma.add(lineaFirma);
-            celdaFirma.add(new Paragraph("GERENTE GENERAL")
-                    .setFont(courierBold).setFontSize(8f)
-                    .setTextAlignment(TextAlignment.CENTER));
-            pie.addCell(celdaFirma);
+                // ── PIE ──
+                Table pie = new Table(UnitValue.createPercentArray(new float[]{1f, 0.8f, 1f}))
+                        .setWidth(UnitValue.createPercentValue(100));
 
-            doc.add(pie);
+                Cell celdaNombre = new Cell()
+                        .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f)).setPadding(8)
+                        .setVerticalAlignment(VerticalAlignment.BOTTOM);
+                celdaNombre.add(new Paragraph(usuarioRegistro)
+                        .setFont(courierBold).setFontSize(Math.max(6f, 9f * escala))
+                        .setTextAlignment(TextAlignment.CENTER).setMarginTop(4).setMarginBottom(1));
+                celdaNombre.add(new Paragraph(rolUsuario != null ? rolUsuario.toUpperCase() : "SECRETARIA")
+                        .setFont(courier).setFontSize(Math.max(6f, 9f * escala))
+                        .setTextAlignment(TextAlignment.CENTER));
+                pie.addCell(celdaNombre);
 
-            // ── LÍNEA GRIS IZQUIERDA ──
-            PdfPage page = pdf.getFirstPage();
-            PdfCanvas canvas = new PdfCanvas(page);
-            canvas.setStrokeColor(new DeviceGray(0.55f))
-                  .setLineWidth(1.2f)
-                  .moveTo(0, 210f)
-                  .lineTo(28, 210f)
-                  .stroke();
-            canvas.release();
+                String[] pf = fechaPagoStr.split("/");
+                String dia  = pf.length > 0 ? pf[0] : "--";
+                String mes  = pf.length > 1 ? pf[1] : "--";
+                String anio = pf.length > 2 ? pf[2] : "----";
 
-            // ── REVERSO: vouchers adjuntos ──
-            agregarPaginaReverso(doc, pdf, vouchers, courierBold);
+                Cell celdaFecha = new Cell()
+                        .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                        .setPaddingTop(8).setPaddingBottom(8).setPaddingLeft(8).setPaddingRight(8)
+                        .setTextAlignment(TextAlignment.CENTER)
+                        .setVerticalAlignment(VerticalAlignment.MIDDLE);
+                celdaFecha.add(new Paragraph("Fecha de Pago")
+                        .setFont(courierBold).setFontSize(Math.max(6f, 10f * escala))
+                        .setTextAlignment(TextAlignment.CENTER).setMarginBottom(3));
+                Table lineaSep = new Table(UnitValue.createPercentArray(new float[]{1}))
+                        .setWidth(UnitValue.createPercentValue(100))
+                        .setMarginLeft(-8).setMarginRight(-8).setMarginBottom(4);
+                lineaSep.addCell(new Cell()
+                        .setBorder(Border.NO_BORDER)
+                        .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                        .setPadding(0).setHeight(1));
+                celdaFecha.add(lineaSep);
+                celdaFecha.add(new Paragraph("DIA    MES    A\u00d1O")
+                        .setFont(courierBold).setFontSize(Math.max(6f, 9f * escala))
+                        .setTextAlignment(TextAlignment.CENTER).setMarginBottom(3));
+                Table tablaFecha = new Table(UnitValue.createPercentArray(new float[]{1, 1, 1}))
+                        .setWidth(UnitValue.createPercentValue(100));
+                tablaFecha.addCell(celdaFechaBox(dia, courierBold));
+                tablaFecha.addCell(celdaFechaBox(mes, courierBold));
+                tablaFecha.addCell(celdaFechaBox(anio, courierBold));
+                celdaFecha.add(tablaFecha);
+                pie.addCell(celdaFecha);
 
-            doc.close();
+                Cell celdaFirma = new Cell()
+                        .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f)).setPadding(5)
+                        .setTextAlignment(TextAlignment.CENTER)
+                        .setVerticalAlignment(VerticalAlignment.BOTTOM);
+                celdaFirma.add(new Paragraph(" ").setFont(courier).setFontSize(10).setMarginBottom(2));
+                Table lineaFirma = new Table(UnitValue.createPercentArray(new float[]{1}))
+                        .setWidth(UnitValue.createPercentValue(85))
+                        .setHorizontalAlignment(HorizontalAlignment.CENTER).setMarginBottom(3);
+                lineaFirma.addCell(new Cell()
+                        .setBorder(Border.NO_BORDER)
+                        .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                        .setPadding(0).setHeight(1));
+                celdaFirma.add(lineaFirma);
+                celdaFirma.add(new Paragraph("GERENTE GENERAL")
+                        .setFont(courierBold).setFontSize(Math.max(6f, 8f * escala))
+                        .setTextAlignment(TextAlignment.CENTER));
+                pie.addCell(celdaFirma);
 
-        } catch (Exception e) {
-            throw new RuntimeException("Error generando comprobante múltiple: " + e.getMessage(), e);
+                doc.add(pie);
+
+                // ── LÍNEA GRIS IZQUIERDA ──
+                PdfPage page = pdf.getFirstPage();
+                PdfCanvas canvas = new PdfCanvas(page);
+                canvas.setStrokeColor(new DeviceGray(0.55f))
+                      .setLineWidth(1.2f)
+                      .moveTo(0, 210f)
+                      .lineTo(28, 210f)
+                      .stroke();
+                canvas.release();
+
+                // ── REVERSO: vouchers adjuntos ──
+                agregarPaginaReverso(doc, pdf, vouchers, courierBold);
+
+                doc.close();
+
+                resultado = eliminarPaginasEnBlanco(out.toByteArray());
+                if (contarPaginas(resultado) <= maxPaginas) break;
+            } catch (Exception e) {
+                if (resultado != null) return resultado;
+                throw new RuntimeException("Error generando comprobante múltiple: " + e.getMessage(), e);
+            }
+            escala = Math.max(0.6f, escala - 0.05f);
         }
-        return eliminarPaginasEnBlanco(out.toByteArray());
+        return resultado;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
