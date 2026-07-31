@@ -25,7 +25,7 @@ public class JwtUtil {
         this.SECRET_KEY = secretKey;
     }
 
-    private static final long ACCESS_TOKEN_EXPIRATION_MS = 1000 * 60; // 1 minuto (pruebas)
+    private static final long ACCESS_TOKEN_EXPIRATION_MS = 1000 * 60 * 30; // 30 minutos
 
     // Único responsable de crear el token en el Login
     public String generateToken(Authentication authentication, Usuario usuario) {
