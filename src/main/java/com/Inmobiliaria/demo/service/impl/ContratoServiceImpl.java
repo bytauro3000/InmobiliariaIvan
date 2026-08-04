@@ -1,6 +1,7 @@
 package com.Inmobiliaria.demo.service.impl;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +40,7 @@ import com.Inmobiliaria.demo.repository.LetraCambioRepository;
 import com.Inmobiliaria.demo.repository.PagoInicialRepository;
 import com.Inmobiliaria.demo.repository.PagoInscripcionComprobanteRepository;
 import com.Inmobiliaria.demo.repository.PagoLetraRepository;
+import com.Inmobiliaria.demo.repository.MoraRepository;
 import com.Inmobiliaria.demo.entity.Voucher;
 import com.Inmobiliaria.demo.service.*;
 import com.Inmobiliaria.demo.exception.NegocioException;
@@ -76,6 +78,7 @@ public class ContratoServiceImpl implements ContratoService {
     private final Cloudinary                   cloudinary;
     private final com.Inmobiliaria.demo.repository.VoucherRepository voucherRepository;
     private final NotificacionAdminEmailService notificacionAdminEmailService;
+    private final MoraRepository                 moraRepository;
 
     private void setearValoresPorDefecto(Contrato contrato) {
         if (contrato.getTipoContrato() == TipoContrato.CONTADO) {
@@ -529,6 +532,47 @@ public class ContratoServiceImpl implements ContratoService {
         Contrato contrato = contratoRepository.findByIdConTodo(idContrato);
         if (contrato == null) throw new NegocioException("No se encontro el contrato con ID: " + idContrato);
 
+        // ── 1. Reunir pagos, moras y comprobantes del contrato ──────────────────
+        PagoInicial pagoInicial = contrato.getPagoInicial();
+
+        List<LetraCambio> letras = contrato.getLetrasCambio() != null
+                ? contrato.getLetrasCambio() : List.of();
+
+        List<PagoLetras> pagosLetras = new ArrayList<>();
+        for (LetraCambio letra : letras) {
+            if (letra.getPagos() != null) pagosLetras.addAll(letra.getPagos());
+        }
+
+        List<MoraLetra> moras = new ArrayList<>();
+        for (LetraCambio letra : letras) {
+            moras.addAll(moraRepository.findByLetraIdLetra(letra.getIdLetra()));
+        }
+
+        List<PagoMora> pagosMora = new ArrayList<>();
+        for (MoraLetra mora : moras) {
+            if (mora.getPagos() != null) pagosMora.addAll(mora.getPagos());
+        }
+
+        List<Comprobante> comprobantes = new ArrayList<>();
+        if (pagoInicial != null) agregarComprobante(comprobantes, pagoInicial.getComprobante());
+        for (PagoLetras p : pagosLetras) agregarComprobante(comprobantes, p.getComprobante());
+        for (PagoMora pm : pagosMora) agregarComprobante(comprobantes, pm.getComprobante());
+
+        // ── 2. Bloquear si hay comprobantes electrónicos emitidos a SUNAT ───────
+        List<Comprobante> comprobantesSunat = comprobantes.stream()
+                .filter(this::esComprobanteSunat)
+                .toList();
+        if (!comprobantesSunat.isEmpty()) {
+            String numeros = comprobantesSunat.stream()
+                    .map(c -> c.getNumeroCompleto() != null ? c.getNumeroCompleto() : "?")
+                    .distinct()
+                    .collect(Collectors.joining(", "));
+            throw new NegocioException(
+                "No se puede eliminar el contrato: tiene comprobantes electrónicos emitidos a SUNAT ("
+                + numeros + "). Anúlelos primero con nota de crédito.");
+        }
+
+        // ── 3. Liberar lotes y separación ───────────────────────────────────────
         if (contrato.getLotes() != null && !contrato.getLotes().isEmpty()) {
             for (ContratoLote contratoLote : contrato.getLotes()) {
                 Lote lote = contratoLote.getLote();
@@ -544,16 +588,47 @@ public class ContratoServiceImpl implements ContratoService {
         List<PagoInscripcionComprobante> inscripciones =
                 pagoInscripcionComprobanteRepository.findByContratoId(idContrato);
 
-        pagoInicialRepository.findByContratoIdContrato(idContrato).ifPresent(pagoInicial -> {
+        // ── 4. Eliminar moras (desbloquea la FK mora_letra → pago_letra) ────────
+        for (MoraLetra mora : moras) {
+            mora.setPagoLetra(null);
+            moraRepository.delete(mora);
+        }
+
+        // ── 5. Eliminar pago inicial e inscripciones ────────────────────────────
+        if (pagoInicial != null) {
             contrato.setPagoInicial(null);
             pagoInicialRepository.delete(pagoInicial);
-        });
+        }
 
         if (!inscripciones.isEmpty()) {
             pagoInscripcionComprobanteRepository.deleteAll(inscripciones);
         }
 
+        // ── 6. Eliminar el contrato (cascada: letras → pagos) ───────────────────
         contratoRepository.delete(contrato);
+
+        // ── 7. Eliminar comprobantes internos (recibos, no SUNAT) ───────────────
+        for (Comprobante comp : comprobantes) {
+            if (esComprobanteSunat(comp)) continue;
+            try {
+                comprobanteService.eliminarComprobante(comp.getIdComprobante());
+            } catch (Exception e) {
+                log.warn("No se pudo eliminar el comprobante {} (referenciado por otra entidad): {}",
+                        comp.getNumeroCompleto(), e.getMessage());
+            }
+        }
+    }
+
+    private boolean esComprobanteSunat(Comprobante comp) {
+        return comp != null && comp.getHashCdr() != null && !comp.getHashCdr().isBlank();
+    }
+
+    private void agregarComprobante(List<Comprobante> lista, Comprobante comp) {
+        if (comp == null) return;
+        for (Comprobante existente : lista) {
+            if (existente.getIdComprobante().equals(comp.getIdComprobante())) return;
+        }
+        lista.add(comp);
     }
 
     @Override
