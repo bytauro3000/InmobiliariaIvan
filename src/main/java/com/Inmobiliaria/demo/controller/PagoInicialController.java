@@ -2,12 +2,16 @@ package com.Inmobiliaria.demo.controller;
 
 import com.Inmobiliaria.demo.dto.AnulacionRequestDTO;
 import com.Inmobiliaria.demo.dto.PagoInicialResponseDTO;
+import com.Inmobiliaria.demo.entity.Comprobante;
 import com.Inmobiliaria.demo.entity.PagoInicial;
 import com.Inmobiliaria.demo.entity.Voucher;
+import com.Inmobiliaria.demo.enums.TipoComprobante;
 import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.repository.VoucherRepository;
 import com.Inmobiliaria.demo.service.PagoInicialService;
+import com.Inmobiliaria.demo.util.BoletaElectronicaPdf;
 import com.Inmobiliaria.demo.util.ComprobantePagoInicialPdf;
+import com.Inmobiliaria.demo.util.NumeroALetras;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -64,11 +68,51 @@ public class PagoInicialController {
                         .orElse("SECRETARIA");
             }
 
-            // Vouchers adjuntos (informativo interno, no van a SUNAT)
+            // Vouchers adjuntos (solo control interno, no van a SUNAT)
             List<Voucher> vouchers = voucherRepository
                     .findByTipoOrigenAndReferenciaId("PAGO_INICIAL", pago.getIdPagoInicial());
 
-            byte[] pdf = ComprobantePagoInicialPdf.generar(pago, rolUsuario, vouchers);
+            byte[] pdf;
+            Comprobante comp = pago.getComprobante();
+            boolean esBoletaElectronica = comp != null
+                    && comp.getTipoComprobante() == TipoComprobante.BOLETA
+                    && comp.getHashCdr() != null
+                    && !comp.getHashCdr().isBlank();
+
+            if (esBoletaElectronica) {
+                // Estructura de BOLETA (igual que pago de letras) + reverso de vouchers interno
+                var contrato = pago.getContrato();
+                String clienteNombre = "";
+                String clienteDoc = "";
+                String direccionCliente = "-";
+                if (contrato.getClientes() != null && !contrato.getClientes().isEmpty()) {
+                    var c = contrato.getClientes().iterator().next().getCliente();
+                    clienteNombre = (c.getNombre() + " " + c.getApellidos()).trim().toUpperCase();
+                    clienteDoc = c.getNumDoc() != null ? c.getNumDoc() : "";
+                    direccionCliente = c.getDireccion() != null ? c.getDireccion().toUpperCase() : "-";
+                }
+
+                String moneda = contrato.getMoneda() != null ? contrato.getMoneda().name() : "USD";
+                String montoStr = String.format("%.2f", comp.getMonto());
+
+                pdf = BoletaElectronicaPdf.generarBoletaSimple(
+                        comp.getSerie(),
+                        comp.getNumero().toString(),
+                        comp.getFechaEmision().toString(),
+                        moneda,
+                        montoStr,
+                        clienteNombre,
+                        clienteDoc,
+                        direccionCliente,
+                        "Pago inicial de contrato",
+                        NumeroALetras.convertir(comp.getMonto(), contrato.getMoneda()),
+                        comp.getMonto(),
+                        comp.getHashCdr(),
+                        vouchers);
+            } else {
+                // Estructura de RECIBO + reverso de vouchers
+                pdf = ComprobantePagoInicialPdf.generar(pago, rolUsuario, vouchers);
+            }
 
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
