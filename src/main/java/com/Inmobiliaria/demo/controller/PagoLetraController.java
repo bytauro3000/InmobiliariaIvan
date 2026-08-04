@@ -32,6 +32,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -155,7 +156,7 @@ public class PagoLetraController {
                 .findByTipoOrigenAndReferenciaId("PAGO_LETRA", idPago);
 
         if (esBoletaElectronica(pago)) {
-            return generarRespuestaBoleta(pago.getComprobante(), pago.getLetra());
+            return generarRespuestaBoleta(pago.getComprobante(), pago.getLetra(), vouchers);
         }
 
         byte[] pdf = ComprobantePagoLetraPdf.generar(pago, rolUsuario, vouchers);
@@ -218,7 +219,7 @@ public class PagoLetraController {
         if (comp != null && comp.getTipoComprobante() == TipoComprobante.BOLETA
                 && comp.getHashCdr() != null && !comp.getHashCdr().isBlank()) {
             String descripcion = construirDescripcionCombinada(pagos);
-            return generarRespuestaBoleta(comp, pagos.get(0).getLetra(), descripcion);
+            return generarRespuestaBoleta(comp, pagos.get(0).getLetra(), descripcion, vouchers);
         }
 
         byte[] pdf = ComprobantePagoLetraPdf.generarMultiple(pagos, rolUsuario, vouchers);
@@ -283,6 +284,17 @@ public class PagoLetraController {
     private ResponseEntity<byte[]> generarRespuestaBoleta(
             Comprobante comp,
             LetraCambio letra) {
+        return generarRespuestaBoleta(comp, letra, descripcionParaBoleta(comp, letra));
+    }
+
+    private ResponseEntity<byte[]> generarRespuestaBoleta(
+            Comprobante comp,
+            LetraCambio letra,
+            List<Voucher> vouchers) {
+        return generarRespuestaBoleta(comp, letra, descripcionParaBoleta(comp, letra), vouchers);
+    }
+
+    private String descripcionParaBoleta(Comprobante comp, LetraCambio letra) {
         var contrato = letra.getContrato();
         String numeroLetra = letra.getNumeroLetra();
         if (numeroLetra != null && numeroLetra.contains("/")) {
@@ -295,17 +307,23 @@ public class PagoLetraController {
                 nombrePrograma = lote.getPrograma().getNombrePrograma();
             }
         }
-        String descripcion = "LETRA " + numeroLetra
+        return "LETRA " + numeroLetra
             + " POR LA COMPRA DE UN LOTE DE TERRENO RUSTICO PROGRAMA DE VIV. "
             + (nombrePrograma != null ? nombrePrograma.toUpperCase() : "");
-
-        return generarRespuestaBoleta(comp, letra, descripcion);
     }
 
     private ResponseEntity<byte[]> generarRespuestaBoleta(
             Comprobante comp,
             LetraCambio letra,
             String descripcion) {
+        return generarRespuestaBoleta(comp, letra, descripcion, Collections.emptyList());
+    }
+
+    private ResponseEntity<byte[]> generarRespuestaBoleta(
+            Comprobante comp,
+            LetraCambio letra,
+            String descripcion,
+            List<Voucher> vouchers) {
 
         var contrato = letra.getContrato();
         String clienteNombre = "";
@@ -333,7 +351,8 @@ public class PagoLetraController {
             descripcion,
             NumeroALetras.convertir(comp.getMonto(), contrato.getMoneda()),
             comp.getMonto(),
-            comp.getHashCdr()
+            comp.getHashCdr(),
+            vouchers
         );
 
         return ResponseEntity.ok()
