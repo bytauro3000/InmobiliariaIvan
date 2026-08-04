@@ -179,13 +179,41 @@ public class ContratoServiceImpl implements ContratoService {
                     piReq.getNumeroComprobantePersonalizado()
                 );
 
-                // Si es BOLETA, enviar a APIPERU ANTES de guardar en BD
-                if (piReq.getTipoComprobante() == TipoComprobante.BOLETA) {
-                    Cliente cliente = contratoGuardado.getClientes().iterator().next().getCliente();
+                // Si es BOLETA con serie B (B001), enviar a APIPERU ANTES de guardar en BD
+                // Serie E (EB01) se registra localmente como RECIBO (igual que pago de letras)
+                if (piReq.getTipoComprobante() == TipoComprobante.BOLETA
+                        && compInicial.getSerie() != null
+                        && compInicial.getSerie().startsWith("B")) {
+
+                    // El cliente todavía NO está asociado al contrato (se asocia más abajo),
+                    // así que se obtiene del request / de la separación.
+                    Cliente cliente = null;
+                    if (requestDTO.getIdSeparacion() != null) {
+                        Separacion sep = separacionService.buscarPorId(requestDTO.getIdSeparacion());
+                        if (sep != null && sep.getClientes() != null && !sep.getClientes().isEmpty()) {
+                            cliente = sep.getClientes().iterator().next().getCliente();
+                        }
+                    } else if (requestDTO.getIdClientes() != null && !requestDTO.getIdClientes().isEmpty()) {
+                        cliente = clienteService.buscarClientePorId(requestDTO.getIdClientes().get(0));
+                    }
+                    if (cliente == null) {
+                        throw new NegocioException(
+                                "No se pudo determinar el cliente para emitir la boleta de la inicial.");
+                    }
+
                     String descripcion = "Pago inicial de contrato";
                     compInicial.setDescripcion(descripcion);
-                    sunatEnvioService.enviarBoleta(cliente, contratoGuardado, compInicial,
+                    Map<String, Object> sunatRespuesta = sunatEnvioService.enviarBoleta(
+                            cliente, contratoGuardado, compInicial,
                             pagoGuardado.getImportePagado(), descripcion);
+
+                    // Si SUNAT aceptó, guardar hash y CDR en el comprobante
+                    if (sunatRespuesta != null && "ACEPTADA".equals(sunatRespuesta.get("estadoSunat"))) {
+                        String hash = (String) sunatRespuesta.get("hash");
+                        String cdrZip = (String) sunatRespuesta.get("cdrZip");
+                        if (hash != null && !hash.isBlank()) compInicial.setHashCdr(hash);
+                        if (cdrZip != null && !cdrZip.isBlank()) compInicial.setCdrBase64(cdrZip);
+                    }
                 }
 
                 pagoGuardado.setComprobante(compInicial);

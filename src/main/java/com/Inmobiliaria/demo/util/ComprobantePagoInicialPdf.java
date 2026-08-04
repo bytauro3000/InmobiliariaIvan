@@ -4,10 +4,12 @@ import com.Inmobiliaria.demo.entity.Contrato;
 import com.Inmobiliaria.demo.entity.ContratoCliente;
 import com.Inmobiliaria.demo.entity.ContratoLote;
 import com.Inmobiliaria.demo.entity.PagoInicial;
+import com.Inmobiliaria.demo.entity.Voucher;
 import com.Inmobiliaria.demo.enums.Moneda;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
 import com.itextpdf.barcodes.BarcodeQRCode;
 import com.itextpdf.io.font.PdfEncodings;
+import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.io.util.StreamUtil;
 import com.itextpdf.kernel.colors.ColorConstants;
 import com.itextpdf.kernel.colors.DeviceGray;
@@ -16,25 +18,34 @@ import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfPage;
+import com.itextpdf.kernel.pdf.PdfReader;
+import com.itextpdf.kernel.pdf.PdfViewerPreferences;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.borders.SolidBorder;
+import com.itextpdf.layout.element.AreaBreak;
 import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Image;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.element.Text;
+import com.itextpdf.layout.properties.AreaBreakType;
 import com.itextpdf.layout.properties.HorizontalAlignment;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import com.itextpdf.layout.properties.VerticalAlignment;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.net.URL;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 
 import com.Inmobiliaria.demo.config.EmpresaContext;
@@ -61,6 +72,10 @@ public class ComprobantePagoInicialPdf {
     private static final String BASE_URL  = "https://inmobiliariaivan.onrender.com/api/contratos";
 
     public static byte[] generar(PagoInicial pago, String rolUsuario) {
+        return generar(pago, rolUsuario, Collections.emptyList());
+    }
+
+    public static byte[] generar(PagoInicial pago, String rolUsuario, List<Voucher> vouchers) {
 
         // Cálculo dinámico de márgenes — A5 landscape 595x420 pts
         float fs      = 9.5f;
@@ -141,8 +156,7 @@ public class ComprobantePagoInicialPdf {
                     .setHorizontalAlignment(HorizontalAlignment.CENTER);
 
             // ── Logo ─────────────────────────────────────────────────────────
-            Image logoImg = new Image(
-                    com.itextpdf.io.image.ImageDataFactory.create(new java.net.URL(logoUrl())))
+            Image logoImg = new Image(ImageDataFactory.create(new URL(logoUrl())))
                     .setWidth(70).setHeight(70)
                     .setHorizontalAlignment(HorizontalAlignment.CENTER);
 
@@ -325,16 +339,146 @@ public class ComprobantePagoInicialPdf {
                   .stroke();
             canvas.release();
 
+            // ── REVERSO: vouchers adjuntos (informativo, no va a SUNAT) ──
+            agregarPaginaReverso(doc, pdf, vouchers, courierBold);
+
             doc.close();
 
         } catch (Exception e) {
             throw new RuntimeException("Error generando comprobante pago inicial PDF: " + e.getMessage(), e);
         }
 
-        return out.toByteArray();
+        return eliminarPaginasEnBlanco(out.toByteArray());
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // PÁGINA REVERSO: vouchers adjuntos
+    // Siempre 3 por página en fila, mismo tamaño fijo.
+    // Si hay menos de 3 en la última página, se centran con celdas vacías.
+    // ─────────────────────────────────────────────────────────────────────────
+    private static void agregarPaginaReverso(Document doc, PdfDocument pdf,
+                                              List<Voucher> vouchers, PdfFont courierBold) {
+        if (vouchers == null || vouchers.isEmpty()) return;
+
+        pdf.getCatalog().setViewerPreferences(
+            new PdfViewerPreferences()
+                .setDuplex(PdfViewerPreferences.PdfViewerPreferencesConstants.DUPLEX_FLIP_LONG_EDGE)
+        );
+
+        doc.setTopMargin(8f);
+        doc.setBottomMargin(8f);
+        doc.setLeftMargin(10f);
+        doc.setRightMargin(10f);
+
+        // Tamaño fijo siempre igual — el mismo que se ve bien con 3 vouchers
+        final int    COLS    = 3;
+        final float  IMG_W   = 172f;
+        final float  IMG_H   = 280f;
+        final float  CELL_H  = 290f;
+
+        int total = vouchers.size();
+        int idx   = 0;
+
+        while (idx < total) {
+            List<Voucher> grupo = vouchers.subList(idx, Math.min(idx + COLS, total));
+            int n = grupo.size();
+
+            doc.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
+
+            doc.add(new Paragraph("COMPROBANTES DE PAGO ADJUNTOS")
+                    .setFont(courierBold).setFontSize(10f)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginBottom(4).setMarginTop(0));
+
+            Table lineaTitulo = new Table(UnitValue.createPercentArray(new float[]{1}))
+                    .setWidth(UnitValue.createPercentValue(100)).setMarginBottom(6);
+            lineaTitulo.addCell(new Cell()
+                    .setBorder(Border.NO_BORDER)
+                    .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                    .setPadding(0).setHeight(1));
+            doc.add(lineaTitulo);
+
+            // Siempre 3 columnas — las vacías centran los vouchers cuando hay menos de 3
+            float[] colWidths = new float[COLS];
+            Arrays.fill(colWidths, 1f);
+            Table grid = new Table(UnitValue.createPercentArray(colWidths))
+                    .setWidth(UnitValue.createPercentValue(100));
+
+            // Celdas vacías a la izquierda para centrar cuando hay 1 o 2 vouchers
+            int vaciosIzq = (COLS - n) / 2;
+            for (int i = 0; i < vaciosIzq; i++) {
+                grid.addCell(new Cell().setBorder(Border.NO_BORDER).setHeight(CELL_H));
+            }
+
+            for (Voucher v : grupo) {
+                Cell cell = new Cell()
+                        .setBorder(Border.NO_BORDER)
+                        .setPadding(4)
+                        .setHeight(CELL_H)
+                        .setTextAlignment(TextAlignment.CENTER)
+                        .setVerticalAlignment(VerticalAlignment.MIDDLE);
+                try {
+                    Image img = new Image(ImageDataFactory.create(new URL(v.getUrl())))
+                            .setWidth(IMG_W)
+                            .setHeight(IMG_H)
+                            .setAutoScale(false)
+                            .setHorizontalAlignment(HorizontalAlignment.CENTER);
+                    cell.add(img);
+                } catch (Exception e) {
+                    cell.add(new Paragraph("[ Imagen no\ndisponible ]")
+                            .setFont(courierBold).setFontSize(7f)
+                            .setFontColor(GRIS_MEDIO)
+                            .setTextAlignment(TextAlignment.CENTER));
+                }
+                grid.addCell(cell);
+            }
+
+            // Celdas vacías a la derecha
+            int vaciosDer = COLS - n - vaciosIzq;
+            for (int i = 0; i < vaciosDer; i++) {
+                grid.addCell(new Cell().setBorder(Border.NO_BORDER).setHeight(CELL_H));
+            }
+
+            doc.add(grid);
+
+            idx += COLS;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Elimina páginas en blanco al final del PDF (iText a veces genera una extra)
+    // ─────────────────────────────────────────────────────────────────────────
+    private static byte[] eliminarPaginasEnBlanco(byte[] pdfBytes) {
+        try {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            PdfDocument pdfDoc = new PdfDocument(
+                    new PdfReader(new ByteArrayInputStream(pdfBytes)),
+                    new PdfWriter(out));
+            int n = pdfDoc.getNumberOfPages();
+            for (int i = n; i >= 1; i--) {
+                PdfPage page = pdfDoc.getPage(i);
+                boolean esBlanco = true;
+                for (int j = 0; j < page.getContentStreamCount(); j++) {
+                    byte[] content = page.getContentStream(j).getBytes();
+                    if (content != null && content.length > 10) {
+                        esBlanco = false;
+                        break;
+                    }
+                }
+                if (esBlanco) {
+                    pdfDoc.removePage(i);
+                } else {
+                    break; // Solo eliminar las del final
+                }
+            }
+            pdfDoc.close();
+            return out.toByteArray();
+        } catch (Exception e) {
+            return pdfBytes; // Si falla, devolver el original
+        }
+    }
 
     private static String construirTextoClientes(Contrato contrato) {
         if (contrato.getClientes() == null || contrato.getClientes().isEmpty()) return "-";

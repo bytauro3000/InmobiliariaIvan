@@ -3,7 +3,9 @@ package com.Inmobiliaria.demo.controller;
 import com.Inmobiliaria.demo.dto.AnulacionRequestDTO;
 import com.Inmobiliaria.demo.dto.PagoInicialResponseDTO;
 import com.Inmobiliaria.demo.entity.PagoInicial;
+import com.Inmobiliaria.demo.entity.Voucher;
 import com.Inmobiliaria.demo.exception.NegocioException;
+import com.Inmobiliaria.demo.repository.VoucherRepository;
 import com.Inmobiliaria.demo.service.PagoInicialService;
 import com.Inmobiliaria.demo.util.ComprobantePagoInicialPdf;
 import jakarta.validation.Valid;
@@ -32,6 +34,7 @@ public class PagoInicialController {
     private static final Logger log = LoggerFactory.getLogger(PagoInicialController.class);
 
     private final PagoInicialService pagoInicialService;
+    private final VoucherRepository  voucherRepository;
 
     // ── Lectura por contrato ──────────────────────────────────────────────────
 
@@ -61,7 +64,11 @@ public class PagoInicialController {
                         .orElse("SECRETARIA");
             }
 
-            byte[] pdf = ComprobantePagoInicialPdf.generar(pago, rolUsuario);
+            // Vouchers adjuntos (informativo interno, no van a SUNAT)
+            List<Voucher> vouchers = voucherRepository
+                    .findByTipoOrigenAndReferenciaId("PAGO_INICIAL", pago.getIdPagoInicial());
+
+            byte[] pdf = ComprobantePagoInicialPdf.generar(pago, rolUsuario, vouchers);
 
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
