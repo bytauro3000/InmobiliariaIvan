@@ -1,5 +1,6 @@
 package com.Inmobiliaria.demo.service.impl;
 
+import java.util.Comparator;
 import java.util.List;
 import org.springframework.cache.annotation.CacheConfig;
 import org.springframework.cache.annotation.CacheEvict;
@@ -44,8 +45,9 @@ public class LoteServiceImpl implements LoteService {
 	@Override
 	@Cacheable(key = "'prog_' + #idPrograma")
 	public List<Lote> listarLotesPorProgramaGestion(Integer idPrograma) {
-		// Llama al método que ya tienes en el Repository que no filtra por estado
-		return loteRepository.findByProgramaIdProgramaOrderByManzanaAscNumeroLoteAsc(idPrograma);
+		// Orden natural: manzana primero y luego número de lote
+		return loteRepository.findByProgramaIdProgramaOrderByManzanaAscNumeroLoteAsc(idPrograma)
+				.stream().sorted(ORDEN_MANZANA_LOTE).toList();
 	}
 
 	@Override
@@ -56,10 +58,37 @@ public class LoteServiceImpl implements LoteService {
 		if ((manzana == null || manzana.isEmpty()) && (numeroLote == null || numeroLote.isEmpty())) {
 			return listarLotesPorProgramaGestion(idPrograma);
 		}
-		// Si hay texto, filtramos
+		// Si hay texto, filtramos (con orden natural manzana → lote)
 		return loteRepository
 				.findByProgramaIdProgramaAndManzanaContainingAndNumeroLoteContainingOrderByManzanaAscNumeroLoteAsc(
-						idPrograma, manzana, numeroLote);
+						idPrograma, manzana, numeroLote)
+				.stream().sorted(ORDEN_MANZANA_LOTE).toList();
+	}
+
+	// Orden natural: "1","2","10" o "A","B","C" (no lexicográfico, que pondría "10" antes de "2")
+	private static final Comparator<Lote> ORDEN_MANZANA_LOTE =
+			Comparator.comparing(Lote::getManzana, LoteServiceImpl::compararNatural)
+					.thenComparing(Lote::getNumeroLote, LoteServiceImpl::compararNatural);
+
+	private static int compararNatural(String a, String b) {
+		if (a == null && b == null) return 0;
+		if (a == null) return -1;
+		if (b == null) return 1;
+		try {
+			int na = Integer.parseInt(a.trim());
+			try {
+				return Integer.compare(na, Integer.parseInt(b.trim()));
+			} catch (NumberFormatException e) {
+				return -1; // numérico antes que no numérico
+			}
+		} catch (NumberFormatException e) {
+			try {
+				Integer.parseInt(b.trim());
+				return 1;
+			} catch (NumberFormatException e2) {
+				return a.compareToIgnoreCase(b);
+			}
+		}
 	}
 
 	@Override
