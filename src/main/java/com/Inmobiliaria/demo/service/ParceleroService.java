@@ -9,6 +9,7 @@ public interface ParceleroService {
 
     List<Parcelero> listarParceleros();
     Optional<Parcelero> obtenerParceleroPorId(Integer id);
+    Parcelero buscarPorDni(String dni);
     Parcelero guardarParcelero(Parcelero parcelero);
     Parcelero actualizarParcelero(Integer id, Parcelero parcelero);
     void eliminarParcelero(Integer id);

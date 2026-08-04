@@ -35,6 +35,14 @@ public class ParceleroController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    // BUSCAR POR NÚMERO DE DOCUMENTO (DNI) — igual que clientes
+    @GetMapping("/buscar/numDoc/{numDoc}")
+    public ResponseEntity<Parcelero> obtenerPorNumDoc(@PathVariable String numDoc) {
+        Parcelero parcelero = parceleroService.buscarPorDni(numDoc);
+        if (parcelero == null) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(parcelero);
+    }
+
     // CREAR NUEVO
     @PostMapping
     public ResponseEntity<Parcelero> crear(@RequestBody Parcelero parcelero) {
