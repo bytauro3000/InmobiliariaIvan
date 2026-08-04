@@ -74,19 +74,21 @@ public class LoteServiceImpl implements LoteService {
 		if (a == null && b == null) return 0;
 		if (a == null) return -1;
 		if (b == null) return 1;
+		String at = a.trim();
+		String bt = b.trim();
 		try {
-			int na = Integer.parseInt(a.trim());
+			int na = Integer.parseInt(at);
 			try {
-				return Integer.compare(na, Integer.parseInt(b.trim()));
+				return Integer.compare(na, Integer.parseInt(bt));
 			} catch (NumberFormatException e) {
 				return -1; // numérico antes que no numérico
 			}
 		} catch (NumberFormatException e) {
 			try {
-				Integer.parseInt(b.trim());
+				Integer.parseInt(bt);
 				return 1;
 			} catch (NumberFormatException e2) {
-				return a.compareToIgnoreCase(b);
+				return at.compareToIgnoreCase(bt);
 			}
 		}
 	}
