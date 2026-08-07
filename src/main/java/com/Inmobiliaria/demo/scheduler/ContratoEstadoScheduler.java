@@ -31,6 +31,7 @@ public class ContratoEstadoScheduler {
     private final AtomicBoolean ejecutando = new AtomicBoolean(false);
 
     @EventListener(ApplicationReadyEvent.class)
+    @Transactional
     public void ejecutarAlArrancar() {
         log.info(">>> Scheduler EstadoContrato: ejecución inicial al arrancar el servidor...");
         actualizarEstadosContratos();
@@ -124,6 +125,7 @@ public class ContratoEstadoScheduler {
         return false;
     }
 
+    @Transactional
     public void ejecutarManualmente() {
         log.info(">>> Scheduler ejecutado MANUALMENTE.");
         actualizarEstadosContratos();
