@@ -238,7 +238,7 @@ public class ContratoFloridaPdf {
 		// Solo usamos arialBold para los fragmentos que requieren negrita
 		intro.add(new Text("\u201c" + empresa() + "\u201d ").setFont(arialBold));
 		intro.add("con ");
-		intro.add(new Text("RUC N\u00ba " + EmpresaContext.empresaService.obtenerActiva().getRuc() + " ").setFont(arialBold));
+		intro.add(new Text("RUC N\u00ba " + ruc() + " ").setFont(arialBold));
 		intro.add("con domicilio en " + direccion() + ", debidamente representado por su ");
 		intro.add(new Text(representanteLegal() + " ").setFont(arialBold));
 		intro.add("con ");
@@ -1088,7 +1088,7 @@ public class ContratoFloridaPdf {
 		// Bloque de LA VENDEDORA en Negrita
 		introPosesion.add(new Text("\u201c" + empresa() + "\u201d ").setFont(arialBold));
 		introPosesion.add("con RUC No. ");
-		introPosesion.add(new Text(EmpresaContext.empresaService.obtenerActiva().getRuc() + " ").setFont(arialBold));
+		introPosesion.add(new Text(ruc() + " ").setFont(arialBold));
 		introPosesion.add("con domicilio en " + direccion() + ", debidamente representado por su ");
 		introPosesion.add(new Text(representanteLegal() + " ").setFont(arialBold));
 		introPosesion.add("con ");
@@ -1221,7 +1221,7 @@ public class ContratoFloridaPdf {
 						.setFontSize(11).setMarginTop(10).setMarginBottom(2));
 			}
 
-			float[] colWidthsLinderos = {120f, 200f, 100f}; 
+			float[] colWidthsLinderos = {110f, 185f, 90f}; 
 			Table tablaPosesionLinderos = new Table(colWidthsLinderos)
 					.setMarginLeft(20).setMarginTop(2).setMarginBottom(5)
 					.setBorder(com.itextpdf.layout.borders.Border.NO_BORDER);
@@ -1456,9 +1456,13 @@ public class ContratoFloridaPdf {
 	            .setPadding(0f)); // 🔹 Eliminamos todo el padding de la celda
 
 	    // Celda 2
+	    Paragraph pColindante = new Paragraph(colindante).setFont(font).setFontSize(11)
+	                .setFixedLeading(leadingCompacto).setMarginBottom(0); // 🔹 Ajuste aquí
+	    // Permite partir palabras largas para que la celda no exceda el ancho de su columna
+	    pColindante.setProperty(com.itextpdf.layout.properties.Property.OVERFLOW_WRAP,
+	            com.itextpdf.layout.properties.OverflowWrapPropertyValue.ANYWHERE);
 	    tabla.addCell(new Cell()
-	            .add(new Paragraph(colindante).setFont(font).setFontSize(11)
-	                .setFixedLeading(leadingCompacto).setMarginBottom(0)) // 🔹 Ajuste aquí
+	            .add(pColindante)
 	            .setBorder(Border.NO_BORDER)
 	            .setPadding(0f));
 
