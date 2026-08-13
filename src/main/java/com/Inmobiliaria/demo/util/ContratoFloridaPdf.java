@@ -6,6 +6,7 @@ import com.Inmobiliaria.demo.entity.LetraCambio;
 import com.Inmobiliaria.demo.enums.Genero;
 import com.Inmobiliaria.demo.enums.TipoCliente;
 import com.Inmobiliaria.demo.enums.Moneda;
+import com.Inmobiliaria.demo.enums.MedioPago;
 import com.Inmobiliaria.demo.dto.ClienteResponseDTO;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
@@ -518,8 +519,42 @@ public class ContratoFloridaPdf {
 		    document.add(terceraCuerpo);
 
 		    // --- 3.1 CUOTA INICIAL ---
-		    String textoInicial = (contrato.getInicial().doubleValue() > 0) ? prefMoneda + df.format(contrato.getInicial()) : "Sin Cuota inicial.";
-		    document.add(new Paragraph("3.1 " + textoInicial).setFont(arialItalic).setFontSize(11).setMarginLeft(40).setMarginTop(10));
+		    if (contrato.getInicial() == null || contrato.getInicial().doubleValue() <= 0) {
+		        document.add(new Paragraph("3.1 Sin Cuota inicial.")
+		                .setFont(arialItalic).setFontSize(11).setMarginLeft(40).setMarginTop(10));
+		    } else {
+		        Paragraph subclausula31 = new Paragraph()
+		                .setTextAlignment(TextAlignment.JUSTIFIED)
+		                .setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f)
+		                .setMarginLeft(40).setMarginTop(10);
+
+		        subclausula31.add("3.1 ");
+		        subclausula31.add(new Text(prefMoneda + df.format(contrato.getInicial())).setFont(arialBoldItalic));
+		        subclausula31.add(new Text(" (" + NumeroALetras.convertir(contrato.getInicial(), monedaContrato) + ")").setFont(arialBoldItalic));
+		        subclausula31.add(" de Cuota inicial, monto que es cancelado ");
+
+		        MedioPago medioPagoInicial = contrato.getPagoInicial() != null
+		                ? contrato.getPagoInicial().getMedioPago() : null;
+
+		        if (medioPagoInicial == null || medioPagoInicial == MedioPago.EFECTIVO) {
+		            // Efectivo: se cancela a la suscripción del contrato
+		            subclausula31.add("a la suscripción del presente contrato a ");
+		        } else {
+		            // Depósito/transferencia/yape/plin/tarjeta/otros: se cancela después con operación bancaria
+		            subclausula31.add("después del presente contrato, mediante "
+		                    + descripcionMedioPago(medioPagoInicial));
+		            String numOp = contrato.getPagoInicial() != null
+		                    ? contrato.getPagoInicial().getNumeroOperacion() : null;
+		            if (numOp != null && !numOp.isBlank() && !"0".equals(numOp.trim())) {
+		                subclausula31.add(" con número de operación " + numOp.trim());
+		            }
+		            subclausula31.add(" a ");
+		        }
+
+		        subclausula31.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
+		        subclausula31.add(".");
+		        document.add(subclausula31);
+		    }
 
 		 // --- 3.2 SALDO Y AGRUPACIÓN DINÁMICA CORREGIDO ---
 		    Paragraph subclausula32 = new Paragraph()
@@ -1502,6 +1537,20 @@ public class ContratoFloridaPdf {
 	private static String etiquetaDocumento(ClienteResponseDTO c) {
 		if (c.getTipoCliente() == TipoCliente.CE) return "C.E. N°";
 		return "DNI N°";
+	}
+
+	// Descripción legible del medio de pago para la cláusula 3.1
+	private static String descripcionMedioPago(MedioPago medioPago) {
+		if (medioPago == null) return "otro medio de pago bancario";
+		return switch (medioPago) {
+			case DEPOSITO      -> "depósito bancario";
+			case TRANSFERENCIA -> "transferencia bancaria";
+			case YAPE          -> "YAPE";
+			case PLIN          -> "PLIN";
+			case TARJETA       -> "tarjeta";
+			// EFECTIVO no llega aquí (se trata como "a la suscripción"); el default cubre OTROS y cualquier otro
+			default            -> "otro medio de pago bancario";
+		};
 	}
 
 
