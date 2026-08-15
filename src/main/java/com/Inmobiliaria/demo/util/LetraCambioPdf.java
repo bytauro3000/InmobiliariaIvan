@@ -35,9 +35,10 @@ public class LetraCambioPdf {
     // ── Tamaño de fuente (igual que el frontend: doc.setFontSize(10)) ─────────
     private static final float FONT_SIZE = 10f;
 
-    // ── Desplazamiento global del contenido en el eje Y (hacia arriba) ────────
-    // Se resta a la coordenada Y final de todos los textos para subir el
-    // contenido completo. Unidad: puntos PDF (1 pt = 1/72 in ≈ 0.353 mm).
+    // ── Desplazamiento global del contenido en el eje Y (hacia ARRIBA) ────────
+    // En PDF el origen Y está abajo y crece hacia arriba; para subir el contenido
+    // hacia el borde superior se SUMA a la coordenada Y final de todos los textos.
+    // Unidad: puntos PDF (1 pt = 1/72 in ≈ 0.353 mm).
     private static final float CONTENT_Y_SHIFT_PT = 3f;
 
     // ── Formateador de fechas: LocalDate → "dd/MM/yyyy" ───────────────────────
@@ -216,7 +217,7 @@ public class LetraCambioPdf {
         if (texto == null || texto.isBlank()) return;
 
         float xPt = toPoints(xMm);
-        float yPt = toPoints(PAGE_HEIGHT_MM - yMm) - CONTENT_Y_SHIFT_PT;
+        float yPt = toPoints(PAGE_HEIGHT_MM - yMm) + CONTENT_Y_SHIFT_PT;
 
         canvas.beginText()
               .setFontAndSize(font, fontSize)
