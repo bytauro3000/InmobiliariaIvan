@@ -4,11 +4,13 @@ import com.Inmobiliaria.demo.entity.Cliente;
 import com.Inmobiliaria.demo.entity.Comprobante;
 import com.Inmobiliaria.demo.entity.Contrato;
 import com.Inmobiliaria.demo.exception.NegocioException;
+import com.Inmobiliaria.demo.service.SunatApiSunatClient;
 import com.Inmobiliaria.demo.service.SunatEnvioService;
 import com.Inmobiliaria.demo.service.SunatIntegrationService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -20,15 +22,28 @@ public class SunatEnvioServiceImpl implements SunatEnvioService {
 
     private static final Logger log = LoggerFactory.getLogger(SunatEnvioServiceImpl.class);
 
+    /** Proveedor de facturacion: apisperu (default) o apisunat. Se lee de env (SUNAT_PROVIDER). */
+    @Value("${sunat.provider:apisperu}")
+    private String sunatProvider;
+
     private final SunatIntegrationService sunatIntegrationService;
+    private final SunatApiSunatClient sunatApiSunatClient;
 
     @Override
     public Map<String, Object> enviarBoleta(Cliente cliente, Contrato contrato,
                                             Comprobante comprobante, BigDecimal monto,
                                             String descripcionDetalle) {
-        log.info("Enviando comprobante {} a SUNAT...", comprobante.getNumeroCompleto());
-        Map<String, Object> respuesta = sunatIntegrationService.enviarBoleta(
-                cliente, contrato, comprobante, monto, descripcionDetalle);
+        log.info("Enviando comprobante {} a SUNAT (proveedor={})...",
+                comprobante.getNumeroCompleto(), sunatProvider);
+
+        Map<String, Object> respuesta;
+        if ("apisunat".equalsIgnoreCase(sunatProvider)) {
+            respuesta = sunatApiSunatClient.enviarBoleta(
+                    cliente, contrato, comprobante, monto, descripcionDetalle);
+        } else {
+            respuesta = sunatIntegrationService.enviarBoleta(
+                    cliente, contrato, comprobante, monto, descripcionDetalle);
+        }
 
         String estado = respuesta != null ? (String) respuesta.get("estadoSunat") : "ERROR";
         if ("ERROR".equals(estado)) {
