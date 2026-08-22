@@ -69,9 +69,16 @@ public class SunatEnvioServiceImpl implements SunatEnvioService {
         log.info("Enviando nota de credito {} a SUNAT (anula {})...",
                 notaCredito.getNumeroCompleto(), comprobanteOriginal.getNumeroCompleto());
 
-        Map<String, Object> respuesta = sunatIntegrationService.enviarNotaCredito(
-                cliente, contrato, notaCredito, comprobanteOriginal, monto,
-                descripcionDetalle, codMotivo, desMotivo);
+        Map<String, Object> respuesta;
+        if ("apisunat".equalsIgnoreCase(sunatProvider)) {
+            respuesta = sunatApiSunatClient.enviarNotaCredito(
+                    cliente, contrato, notaCredito, comprobanteOriginal, monto,
+                    descripcionDetalle, codMotivo, desMotivo);
+        } else {
+            respuesta = sunatIntegrationService.enviarNotaCredito(
+                    cliente, contrato, notaCredito, comprobanteOriginal, monto,
+                    descripcionDetalle, codMotivo, desMotivo);
+        }
 
         String estado = respuesta != null ? (String) respuesta.get("estadoSunat") : "ERROR";
         if ("ERROR".equals(estado)) {

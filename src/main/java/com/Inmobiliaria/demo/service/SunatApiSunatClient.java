@@ -2,6 +2,7 @@ package com.Inmobiliaria.demo.service;
 
 import com.Inmobiliaria.demo.dto.apisunat.ApiSunatBoletaRequest;
 import com.Inmobiliaria.demo.dto.apisunat.ApiSunatBoletaResponse;
+import com.Inmobiliaria.demo.dto.apisunat.ApiSunatCreditNoteRequest;
 import com.Inmobiliaria.demo.entity.Cliente;
 import com.Inmobiliaria.demo.entity.Comprobante;
 import com.Inmobiliaria.demo.entity.Contrato;
@@ -93,6 +94,91 @@ public class SunatApiSunatClient {
             result.put("mensaje", e.getMessage());
             return result;
         }
+    }
+
+    /**
+     * Registra una nota de crédito en la API SUNAT propia (que luego la envia a SUNAT).
+     * Solo aplica a notas de crédito contra boletas (doc_afectado_tipo = 03).
+     * Devuelve un Map con estadoSunat = ENVIADO | ACEPTADA | ERROR y el mensaje.
+     */
+    public Map<String, Object> enviarNotaCredito(Cliente cliente, Contrato contrato,
+                                                 Comprobante notaCredito,
+                                                 Comprobante comprobanteOriginal,
+                                                 BigDecimal monto,
+                                                 String descripcionDetalle,
+                                                 String codMotivo,
+                                                 String desMotivo) {
+        ApiSunatCreditNoteRequest request = buildCreditNoteRequest(
+                cliente, contrato, notaCredito, comprobanteOriginal, monto, descripcionDetalle, codMotivo, desMotivo);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("X-Api-Key", apiKey);
+        headers.set("X-Api-Secret", apiSecret);
+        HttpEntity<ApiSunatCreditNoteRequest> entity = new HttpEntity<>(request, headers);
+
+        String url = baseUrl + "/notas-credito";
+        log.info("Enviando nota de credito {} a API SUNAT (anula {}): {}",
+                notaCredito.getNumeroCompleto(), comprobanteOriginal.getNumeroCompleto(), url);
+
+        try {
+            ResponseEntity<ApiSunatBoletaResponse> response =
+                    restTemplate.postForEntity(url, entity, ApiSunatBoletaResponse.class);
+            return parseSuccess(response);
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            log.error("API SUNAT respondio error: status={}, body={}",
+                    e.getStatusCode().value(), e.getResponseBodyAsString());
+            return error(e.getResponseBodyAsString());
+        } catch (Exception e) {
+            log.error("Error al enviar nota de credito a API SUNAT: {}", e.getMessage(), e);
+            Map<String, Object> result = new HashMap<>();
+            result.put("estadoSunat", "ERROR");
+            result.put("mensaje", e.getMessage());
+            return result;
+        }
+    }
+
+    private ApiSunatCreditNoteRequest buildCreditNoteRequest(Cliente cliente, Contrato contrato,
+                                                             Comprobante notaCredito,
+                                                             Comprobante comprobanteOriginal,
+                                                             BigDecimal monto,
+                                                             String descripcionDetalle,
+                                                             String codMotivo,
+                                                             String desMotivo) {
+        String moneda = contrato.getMoneda() != null ? contrato.getMoneda().name() : "PEN";
+        String fecha = notaCredito.getFechaEmision() instanceof LocalDate
+                ? notaCredito.getFechaEmision().format(FECHA_FMT)
+                : String.valueOf(notaCredito.getFechaEmision());
+
+        ApiSunatCreditNoteRequest.Cliente clienteApi = ApiSunatCreditNoteRequest.Cliente.builder()
+                .tipoDoc(mapTipoDocumento(cliente.getTipoCliente()))
+                .numDoc(cliente.getNumDoc())
+                .razonSocial(buildRazonSocial(cliente))
+                .direccion(cliente.getDireccion())
+                .build();
+
+        ApiSunatCreditNoteRequest.Item item = ApiSunatCreditNoteRequest.Item.builder()
+                .descripcion(descripcionDetalle)
+                .unidad("NIU")
+                .cantidad(BigDecimal.ONE)
+                .precioUnitario(monto)
+                .tipAfeIgv("30") // inafecto — venta de terreno
+                .build();
+
+        return ApiSunatCreditNoteRequest.builder()
+                .serie(notaCredito.getSerie())
+                .correlativo(notaCredito.getNumero())
+                .fechaEmision(fecha)
+                .tipoMoneda(moneda)
+                .enviarAutomatico(Boolean.TRUE)
+                .cliente(clienteApi)
+                .docAfectadoTipo("03") // boleta — las NC de MERRUIC siempre son contra boletas
+                .docAfectadoSerie(comprobanteOriginal.getSerie())
+                .docAfectadoCorrelativo(String.valueOf(comprobanteOriginal.getNumero()))
+                .codMotivo(codMotivo)
+                .desMotivo(desMotivo)
+                .items(Collections.singletonList(item))
+                .build();
     }
 
     private Map<String, Object> parseSuccess(ResponseEntity<ApiSunatBoletaResponse> response) {
