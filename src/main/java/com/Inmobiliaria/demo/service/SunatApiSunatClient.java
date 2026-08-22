@@ -64,6 +64,11 @@ public class SunatApiSunatClient {
     /**
      * Registra una boleta en la API SUNAT propia (que luego la envia a SUNAT).
      * Devuelve un Map con estadoSunat = ENVIADO | ACEPTADA | ERROR y el mensaje.
+     *
+     * api-sunat crea la boleta de forma asincrona: el POST responde "enviado"
+     * sin hash, y SUNAT la procesa en segundo plano. Para que el monolito pueda
+     * guardar el hash del CDR (y asi generar el PDF de boleta electronica y no
+     * el de recibo), se consulta GET /boletas/{id} hasta que SUNAT responda.
      */
     public Map<String, Object> enviarBoleta(Cliente cliente, Contrato contrato,
                                             Comprobante comprobante, BigDecimal monto,
@@ -82,7 +87,13 @@ public class SunatApiSunatClient {
         try {
             ResponseEntity<ApiSunatBoletaResponse> response =
                     restTemplate.postForEntity(url, entity, ApiSunatBoletaResponse.class);
-            return parseSuccess(response);
+            Map<String, Object> result = parseSuccess(response);
+
+            Integer apiSunatId = (Integer) result.get("apiSunatId");
+            if (apiSunatId != null && "ENVIADO".equals(result.get("estadoSunat"))) {
+                result.putAll(esperarAceptacionYSacarHash(apiSunatId));
+            }
+            return result;
         } catch (HttpClientErrorException | HttpServerErrorException e) {
             log.error("API SUNAT respondio error: status={}, body={}",
                     e.getStatusCode().value(), e.getResponseBodyAsString());
@@ -94,6 +105,67 @@ public class SunatApiSunatClient {
             result.put("mensaje", e.getMessage());
             return result;
         }
+    }
+
+    /**
+     * Consulta el estado de la boleta creada hasta que SUNAT la procese
+     * (aceptado/rechazado) y extrae el hash del CDR si existe.
+     * Timeout total ~25s (5 intentos x 5s). No lanza: devuelve lo que haya.
+     */
+    private Map<String, Object> esperarAceptacionYSacarHash(Integer apiSunatId) {
+        Map<String, Object> extra = new HashMap<>();
+        String url = baseUrl + "/boletas/" + apiSunatId;
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Api-Key", apiKey);
+        headers.set("X-Api-Secret", apiSecret);
+
+        int maxIntentos = 5;
+        int sleepMs = 5000;
+
+        for (int i = 1; i <= maxIntentos; i++) {
+            try {
+                Thread.sleep(sleepMs);
+                ResponseEntity<ApiSunatBoletaResponse> resp =
+                        restTemplate.getForEntity(url, ApiSunatBoletaResponse.class, headers);
+                ApiSunatBoletaResponse body = resp.getBody();
+                ApiSunatBoletaResponse.Sunat sunat = body != null && body.getDatos() != null
+                        ? body.getDatos().getSunat() : null;
+
+                if (sunat == null) {
+                    continue;
+                }
+                String estado = sunat.getEstado();
+
+                if ("aceptado".equalsIgnoreCase(estado)) {
+                    extra.put("estadoSunat", "ACEPTADA");
+                    if (sunat.getHashCpe() != null && !sunat.getHashCpe().isBlank()) {
+                        extra.put("hash", sunat.getHashCpe());
+                    }
+                    if (sunat.getDescripcion() != null) {
+                        extra.put("mensaje", sunat.getDescripcion());
+                    }
+                    log.info("API SUNAT boleta {} procesada: aceptada con hash", apiSunatId);
+                    break;
+                }
+
+                if ("rechazado".equalsIgnoreCase(estado)) {
+                    extra.put("estadoSunat", "ERROR");
+                    extra.put("mensaje", sunat.getDescripcion() != null
+                            ? sunat.getDescripcion()
+                            : "Boleta rechazada por SUNAT");
+                    log.warn("API SUNAT boleta {} rechazada: {}", apiSunatId, sunat.getDescripcion());
+                    break;
+                }
+
+                // "enviado" o "pendiente": reintentar
+            } catch (HttpClientErrorException | HttpServerErrorException e) {
+                log.warn("API SUNAT consulta boleta {} error (intento {}): {}", apiSunatId, i, e.getResponseBodyAsString());
+            } catch (Exception e) {
+                log.warn("API SUNAT consulta boleta {} error (intento {}): {}", apiSunatId, i, e.getMessage());
+            }
+        }
+
+        return extra;
     }
 
     /**
@@ -215,6 +287,13 @@ public class SunatApiSunatClient {
         result.put("numeroCompleto", numero);
         if (datos != null) {
             result.put("apiSunatId", datos.getId());
+        }
+
+        // Exponer el hash del CDR (y el CDR si la plataforma lo devuelve) para que
+        // el monolito pueda guardarlo en comprobante.hash_cdr y así generar el PDF
+        // de boleta electrónica (formato SUNAT) en vez del recibo interno.
+        if (sunat != null && sunat.getHashCpe() != null && !sunat.getHashCpe().isBlank()) {
+            result.put("hash", sunat.getHashCpe());
         }
 
         log.info("API SUNAT resultado: estado={}, numero={}, mensaje={}", estado, numero, mensaje);

@@ -29,5 +29,8 @@ public class ApiSunatBoletaResponse {
         private String estado;
         private String codigo;
         private String descripcion;
+
+        @JsonProperty("hash_cpe")
+        private String hashCpe;
     }
 }
