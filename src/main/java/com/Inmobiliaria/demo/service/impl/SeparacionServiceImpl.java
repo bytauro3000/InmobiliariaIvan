@@ -144,36 +144,50 @@ public class SeparacionServiceImpl implements SeparacionService {
     @Override
     @Transactional(readOnly = true)
     public List<SeparacionResumenDTO> listarResumen() {
-        List<Separacion> separaciones = separacionRepository.findAll();
+        return separacionRepository.findAll().stream()
+                .map(this::toResumenDTO)
+                .collect(Collectors.toList());
+    }
 
-        return separaciones.stream().map(s -> {
-            SeparacionResumenDTO dto = new SeparacionResumenDTO();
-            dto.setIdSeparacion(s.getIdSeparacion());
-            dto.setMonto(s.getMonto());
-            dto.setFechaSepara(s.getFechaSeparacion());
-            dto.setFechaLimite(s.getFechaLimite());
-            dto.setEstadoSeparacion(s.getEstado());
-            
-            dto.setNomVendedor(s.getVendedor() != null ? 
-                s.getVendedor().getNombre() + " " + s.getVendedor().getApellidos() : "Sin Vendedor");
+    @Override
+    @Transactional(readOnly = true)
+    public List<SeparacionResumenDTO> listarResumenPorVendedor(Integer idVendedor) {
+        if (idVendedor == null) {
+            return List.of();
+        }
+        return separacionRepository.findAll().stream()
+                .filter(s -> s.getVendedor() != null && idVendedor.equals(s.getVendedor().getIdVendedor()))
+                .map(this::toResumenDTO)
+                .collect(Collectors.toList());
+    }
 
-            if (s.getClientes() != null) {
-                dto.setClientes(s.getClientes().stream()
-                    .map(sc -> new SeparacionResumenDTO.ClienteDetalleDTO(
-                        sc.getCliente().getNombre() + " " + sc.getCliente().getApellidos(),
-                        sc.getCliente().getNumDoc()))
-                    .collect(Collectors.toList()));
-            }
+    private SeparacionResumenDTO toResumenDTO(Separacion s) {
+        SeparacionResumenDTO dto = new SeparacionResumenDTO();
+        dto.setIdSeparacion(s.getIdSeparacion());
+        dto.setMonto(s.getMonto());
+        dto.setFechaSepara(s.getFechaSeparacion());
+        dto.setFechaLimite(s.getFechaLimite());
+        dto.setEstadoSeparacion(s.getEstado());
 
-            if (s.getLotes() != null) {
-                dto.setLotes(s.getLotes().stream()
-                    .map(sl -> new SeparacionResumenDTO.LoteDetalleDTO(
-                        sl.getLote().getManzana(),
-                        sl.getLote().getNumeroLote()))
-                    .collect(Collectors.toList()));
-            }
+        dto.setNomVendedor(s.getVendedor() != null ?
+            s.getVendedor().getNombre() + " " + s.getVendedor().getApellidos() : "Sin Vendedor");
 
-            return dto;
-        }).collect(Collectors.toList());
+        if (s.getClientes() != null) {
+            dto.setClientes(s.getClientes().stream()
+                .map(sc -> new SeparacionResumenDTO.ClienteDetalleDTO(
+                    sc.getCliente().getNombre() + " " + sc.getCliente().getApellidos(),
+                    sc.getCliente().getNumDoc()))
+                .collect(Collectors.toList()));
+        }
+
+        if (s.getLotes() != null) {
+            dto.setLotes(s.getLotes().stream()
+                .map(sl -> new SeparacionResumenDTO.LoteDetalleDTO(
+                    sl.getLote().getManzana(),
+                    sl.getLote().getNumeroLote()))
+                .collect(Collectors.toList()));
+        }
+
+        return dto;
     }
 }

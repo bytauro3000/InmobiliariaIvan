@@ -1,6 +1,8 @@
 package com.Inmobiliaria.demo.security;
 
 import com.Inmobiliaria.demo.entity.Usuario;
+import com.Inmobiliaria.demo.entity.Vendedor;
+import com.Inmobiliaria.demo.repository.VendedorRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -20,9 +22,12 @@ import java.util.function.Function;
 public class JwtUtil {
 
     private final String SECRET_KEY;
+    private final VendedorRepository vendedorRepository;
 
-    public JwtUtil(@Value("${jwt.secret-key}") String secretKey) {
+    public JwtUtil(@Value("${jwt.secret-key}") String secretKey,
+                   VendedorRepository vendedorRepository) {
         this.SECRET_KEY = secretKey;
+        this.vendedorRepository = vendedorRepository;
     }
 
     private static final long ACCESS_TOKEN_EXPIRATION_MS = 1000 * 60 * 30; // 30 minutos
@@ -35,6 +40,9 @@ public class JwtUtil {
         claims.put("nombre", usuario.getNombres());     
         claims.put("apellidos", usuario.getApellidos()); 
         claims.put("id", usuario.getId());
+        // Si el usuario tiene un vendedor asociado, se expone idVendedor en el token
+        // para que el frontend filtre (p. ej. "mis separaciones") sin consultas extra.
+        vendedorRepository.findByIdUsuario(usuario.getId()).ifPresent(v -> claims.put("idVendedor", v.getIdVendedor()));
 
         return Jwts.builder()
                 .setClaims(claims)
@@ -51,6 +59,7 @@ public class JwtUtil {
         claims.put("nombre", usuario.getNombres());
         claims.put("apellidos", usuario.getApellidos());
         claims.put("id", usuario.getId());
+        vendedorRepository.findByIdUsuario(usuario.getId()).ifPresent(v -> claims.put("idVendedor", v.getIdVendedor()));
 
         return Jwts.builder()
                 .setClaims(claims)

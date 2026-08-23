@@ -12,4 +12,5 @@ public interface VendedorService {
 	  Vendedor guardarVendedor(Vendedor vendedor);
 	  Vendedor actualizarVendedor(Integer id, Vendedor vendedor);
 	  void eliminarVendedor(Integer id);
+	  Optional<Vendedor> obtenerVendedorPorIdUsuario(Integer idUsuario);
 }

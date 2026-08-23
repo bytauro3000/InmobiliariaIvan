@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.Inmobiliaria.demo.entity.Vendedor;
+import com.Inmobiliaria.demo.service.UsuarioService;
 import com.Inmobiliaria.demo.service.VendedorService;
 
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,25 @@ public class VendedorController {
 
    
     private final VendedorService vendedorService;
+    private final UsuarioService usuarioService;
+
+    // OBTENER EL VENDEDOR DEL USUARIO LOGUEADO
+    // Devuelve el vendedor asociado a la cuenta (por vendedor.id_usuario).
+    // Si el usuario no tiene vendedor asociado responde 404.
+    @GetMapping("/mi-perfil")
+    public ResponseEntity<Vendedor> miPerfil(java.security.Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return vendedorService.obtenerVendedorPorIdUsuario(obtenerIdUsuario(principal))
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    private Integer obtenerIdUsuario(java.security.Principal principal) {
+        // El subject del JWT es el correo; se resuelve el id vía el usuarioService
+        return usuarioService.buscarByUsuario(principal.getName()).getId();
+    }
 
     // LISTAR TODOS
     @GetMapping

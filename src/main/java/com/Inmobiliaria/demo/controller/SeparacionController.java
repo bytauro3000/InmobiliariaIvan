@@ -9,7 +9,10 @@ import org.springframework.web.bind.annotation.*;
 import com.Inmobiliaria.demo.dto.SeparacionDTO;
 import com.Inmobiliaria.demo.dto.SeparacionResumenDTO;
 import com.Inmobiliaria.demo.entity.Separacion;
+import com.Inmobiliaria.demo.entity.Vendedor;
 import com.Inmobiliaria.demo.service.SeparacionService;
+import com.Inmobiliaria.demo.service.UsuarioService;
+import com.Inmobiliaria.demo.service.VendedorService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -20,6 +23,8 @@ public class SeparacionController {
 
     
     private final SeparacionService separacionService;
+    private final VendedorService vendedorService;
+    private final UsuarioService usuarioService;
 
     // Búsqueda para autocompletado: el Repositorio ahora usa DISTINCT para evitar duplicados
     @GetMapping(value = "/buscar", produces = MediaType.APPLICATION_JSON_VALUE) 
@@ -95,5 +100,24 @@ public class SeparacionController {
     @GetMapping(value = "/resumen", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<SeparacionResumenDTO>> obtenerResumen() {
         return ResponseEntity.ok(separacionService.listarResumen());
+    }
+
+    // Separaciones del vendedor logueado (solo las suyas).
+    // Resuelve el vendedor a partir de la cuenta del usuario (vendedor.id_usuario).
+    @GetMapping(value = "/mias", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> obtenerMias(java.security.Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        Integer idVendedor = vendedorService.obtenerVendedorPorIdUsuario(
+                usuarioService.buscarByUsuario(principal.getName()).getId())
+                .map(Vendedor::getIdVendedor)
+                .orElse(null);
+
+        if (idVendedor == null) {
+            return ResponseEntity.status(403).body(Map.of("mensaje",
+                "Tu cuenta no está asociada a un vendedor. Contacta al administrador."));
+        }
+        return ResponseEntity.ok(separacionService.listarResumenPorVendedor(idVendedor));
     }
 }

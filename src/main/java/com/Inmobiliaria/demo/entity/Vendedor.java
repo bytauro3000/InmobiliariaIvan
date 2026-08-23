@@ -55,4 +55,11 @@ public class Vendedor {
     @JoinColumn(name = "id_distrito")
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Distrito distrito;
+
+    // Cuenta de usuario asociada (opcional). Solo los vendedores que necesitan
+    // entrar al sistema tienen cuenta; los demás quedan con null (históricos).
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_usuario")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "contrasena"})
+    private Usuario usuario;
 }

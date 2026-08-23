@@ -56,6 +56,11 @@ public class VendedorServiceImpl implements VendedorService{
     public void eliminarVendedor(Integer id) {
         vendedorRepository.deleteById(id);
     }
+
+    @Override
+    public Optional<Vendedor> obtenerVendedorPorIdUsuario(Integer idUsuario) {
+        return vendedorRepository.findByIdUsuario(idUsuario);
+    }
     
    
 

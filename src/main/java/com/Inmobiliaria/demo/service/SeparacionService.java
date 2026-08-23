@@ -16,4 +16,6 @@ public interface SeparacionService {
     void eliminarSeparacion(Integer id);
     Separacion actualizarSeparacion(Separacion reg);
     List<SeparacionResumenDTO> listarResumen();
+
+    List<SeparacionResumenDTO> listarResumenPorVendedor(Integer idVendedor);
 }
