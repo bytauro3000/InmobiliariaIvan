@@ -79,6 +79,7 @@ public class ContratoServiceImpl implements ContratoService {
     private final com.Inmobiliaria.demo.repository.VoucherRepository voucherRepository;
     private final NotificacionAdminEmailService notificacionAdminEmailService;
     private final MoraRepository                 moraRepository;
+    private final EmpresaService                 empresaService;
 
     private void setearValoresPorDefecto(Contrato contrato) {
         if (contrato.getTipoContrato() == TipoContrato.CONTADO) {
@@ -645,7 +646,15 @@ public class ContratoServiceImpl implements ContratoService {
                 : "";
         String nombreProgUp = (nombrePrograma != null) ? nombrePrograma.toUpperCase() : "";
 
-        if (nombreProgUp.contains("NAPOLE")) {
+        // Plantilla NAPOLE (MERRUIC). Uso normal: programas cuyo nombre contiene "NAPOLE".
+        // EXCEPCIÓN TEMPORAL: el programa de pruebas "PROGRAMA PRUEBAS" (solo MERRUIC)
+        // también usa la plantilla Napole para validar el contrato. Se debe quitar
+        // cuando ya no se necesite la prueba.
+        String rucActivo = empresaService.obtenerActiva().getRuc();
+        boolean esMerruic = "20552273223".equals(rucActivo);
+        boolean esPruebasTemporal = esMerruic && nombreProgUp.contains("PRUEBAS");
+
+        if (nombreProgUp.contains("NAPOLE") || esPruebasTemporal) {
             return ContratoNapolePdfMerruic.generarContratoNapole(dto, primeraLetra);
         }
         // LA FLORIDA DE TORRE BLANCA (cualquiera de sus etapas) y demás programas
