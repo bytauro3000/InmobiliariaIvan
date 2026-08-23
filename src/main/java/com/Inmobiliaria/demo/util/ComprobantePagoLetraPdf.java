@@ -7,8 +7,10 @@ import com.Inmobiliaria.demo.entity.PagoLetras;
 import com.Inmobiliaria.demo.entity.Voucher;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
 import com.Inmobiliaria.demo.enums.Moneda;
+import com.Inmobiliaria.demo.service.LogoCacheService;
 import com.itextpdf.barcodes.BarcodeQRCode;
 import com.itextpdf.io.font.PdfEncodings;
+import com.itextpdf.io.image.ImageData;
 import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.io.util.StreamUtil;
 import com.itextpdf.kernel.colors.ColorConstants;
@@ -348,7 +350,10 @@ public class ComprobantePagoLetraPdf {
                     .setWidth(52).setHeight(52)
                     .setHorizontalAlignment(HorizontalAlignment.CENTER);
 
-            Image logoImg = new Image(ImageDataFactory.create(new URL(logoUrl())))
+            ImageData logoData = LogoCacheService.logo();
+            Image logoImg = (logoData != null
+                    ? new Image(logoData)
+                    : new Image(ImageDataFactory.create(new URL(logoUrl()))))
                     .setWidth(70).setHeight(70)
                     .setHorizontalAlignment(HorizontalAlignment.CENTER);
 
@@ -639,11 +644,19 @@ public class ComprobantePagoLetraPdf {
                 ? 0 : (int) Math.ceil(vouchers.size() / 3.0);
         int maxPaginas = 1 + paginasVouchers;
 
-        // El logo se descarga una sola vez y se reutiliza en cada intento
+        // El logo se toma del cache (descarga única) y se reutiliza en cada intento
         byte[] logoBytes = null;
         try {
-            logoBytes = StreamUtil.inputStreamToArray(new URL(logoUrl()).openStream());
+            ImageData cachedLogo = LogoCacheService.logo();
+            if (cachedLogo != null) {
+                logoBytes = cachedLogo.getData();
+            }
         } catch (Exception ignored) { }
+        if (logoBytes == null) {
+            try {
+                logoBytes = StreamUtil.inputStreamToArray(new URL(logoUrl()).openStream());
+            } catch (Exception ignored) { }
+        }
 
         // Ajuste dinámico: si el contenido desborda a una 2.ª página, se reduce la
         // escala de fuentes/márgenes y se regenera hasta que todo quepa en una página.

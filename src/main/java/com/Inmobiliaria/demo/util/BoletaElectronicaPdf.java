@@ -2,8 +2,10 @@ package com.Inmobiliaria.demo.util;
 
 import com.Inmobiliaria.demo.dto.apisperu.*;
 import com.Inmobiliaria.demo.entity.Voucher;
+import com.Inmobiliaria.demo.service.LogoCacheService;
 import com.itextpdf.barcodes.BarcodeQRCode;
 import com.itextpdf.io.font.PdfEncodings;
+import com.itextpdf.io.image.ImageData;
 import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.io.util.StreamUtil;
 import com.itextpdf.kernel.colors.ColorConstants;
@@ -133,7 +135,10 @@ public class BoletaElectronicaPdf {
                     .setAutoScale(true)
                     .setHorizontalAlignment(HorizontalAlignment.CENTER);
 
-            Image logoImg = new Image(ImageDataFactory.create(new URL(logoUrl())))
+            ImageData logoData = LogoCacheService.logo();
+            Image logoImg = (logoData != null
+                    ? new Image(logoData)
+                    : new Image(ImageDataFactory.create(new URL(logoUrl()))))
                     .setWidth(50).setHeight(50)
                     .setAutoScale(true)
                     .setHorizontalAlignment(HorizontalAlignment.CENTER);
@@ -408,7 +413,10 @@ public class BoletaElectronicaPdf {
                     .setAutoScale(true)
                     .setHorizontalAlignment(HorizontalAlignment.CENTER);
 
-            Image logoImg = new Image(ImageDataFactory.create(new URL(logoUrl())))
+            ImageData logoData = LogoCacheService.logo();
+            Image logoImg = (logoData != null
+                    ? new Image(logoData)
+                    : new Image(ImageDataFactory.create(new URL(logoUrl()))))
                     .setWidth(50).setHeight(50)
                     .setAutoScale(true)
                     .setHorizontalAlignment(HorizontalAlignment.CENTER);

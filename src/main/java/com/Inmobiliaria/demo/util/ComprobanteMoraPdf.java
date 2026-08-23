@@ -7,8 +7,10 @@ import com.Inmobiliaria.demo.entity.LetraCambio;
 import com.Inmobiliaria.demo.entity.MoraLetra;
 import com.Inmobiliaria.demo.entity.PagoMora;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
+import com.Inmobiliaria.demo.service.LogoCacheService;
 import com.itextpdf.barcodes.BarcodeQRCode;
 import com.itextpdf.io.font.PdfEncodings;
+import com.itextpdf.io.image.ImageData;
 import com.itextpdf.io.util.StreamUtil;
 import com.itextpdf.kernel.colors.ColorConstants;
 import com.itextpdf.kernel.colors.DeviceGray;
@@ -154,8 +156,11 @@ public class ComprobanteMoraPdf {
                     .setHorizontalAlignment(HorizontalAlignment.CENTER);
 
             // ── Logo ─────────────────────────────────────────────────────────
-            Image logoImg = new Image(
-                    com.itextpdf.io.image.ImageDataFactory.create(new java.net.URL(logoUrl())))
+            ImageData logoData = LogoCacheService.logo();
+            Image logoImg = (logoData != null
+                    ? new Image(logoData)
+                    : new Image(
+                            com.itextpdf.io.image.ImageDataFactory.create(new java.net.URL(logoUrl()))))
                     .setWidth(70).setHeight(70)
                     .setHorizontalAlignment(HorizontalAlignment.CENTER);
 
