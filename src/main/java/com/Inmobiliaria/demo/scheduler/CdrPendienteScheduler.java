@@ -7,6 +7,7 @@ import com.Inmobiliaria.demo.service.SunatIntegrationService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -25,9 +26,20 @@ public class CdrPendienteScheduler {
     private final SunatIntegrationService sunatIntegrationService;
     private final EmpresaService empresaService;
 
+    /** Proveedor de facturacion: apisperu (default) o apisunat. Se lee de env (SUNAT_PROVIDER). */
+    @Value("${sunat.provider:apisperu}")
+    private String sunatProvider;
+
     @Scheduled(fixedRate = 3_600_000, zone = "America/Lima")
     @Transactional
     public void recuperarCdrspendientes() {
+        // Con api-sunat el CDR vive en la plataforma (api-sunat), no en el monolito:
+        // consultar a APIPERU aquí daría falsos 404 ("Empresa no encontrada").
+        if ("apisunat".equalsIgnoreCase(sunatProvider)) {
+            log.debug("Proveedor apisunat: recuperación de CDR delegada a api-sunat. Se omite.");
+            return;
+        }
+
         int page = 0;
         int PAGE_SIZE = 50;
         long totalProcesados = 0;
