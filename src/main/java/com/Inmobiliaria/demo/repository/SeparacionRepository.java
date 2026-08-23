@@ -44,7 +44,10 @@ public interface SeparacionRepository extends JpaRepository<Separacion, Integer>
            "JOIN sc.cliente c " +
            "JOIN s.lotes sl " + 
            "JOIN sl.lote l " +
-           "WHERE (LOWER(c.apellidos) LIKE LOWER(CONCAT('%', :filtro, '%')) " +
+           "WHERE (LOWER(COALESCE(c.nombre, '')) LIKE LOWER(CONCAT('%', :filtro, '%')) " +
+           "OR LOWER(COALESCE(c.apellidos, '')) LIKE LOWER(CONCAT('%', :filtro, '%')) " +
+           "OR LOWER(CONCAT(COALESCE(c.nombre, ''), ' ', COALESCE(c.apellidos, ''))) LIKE LOWER(CONCAT('%', :filtro, '%')) " +
+           "OR LOWER(CONCAT(COALESCE(c.apellidos, ''), ' ', COALESCE(c.nombre, ''))) LIKE LOWER(CONCAT('%', :filtro, '%')) " +
            "OR c.numDoc LIKE CONCAT('%', :filtro, '%') " +
            "OR CAST(s.idSeparacion AS string) LIKE CONCAT('%', :filtro, '%'))")
     List<SeparacionDTO> buscarPorDniOApellido(@Param("filtro") String filtro);
