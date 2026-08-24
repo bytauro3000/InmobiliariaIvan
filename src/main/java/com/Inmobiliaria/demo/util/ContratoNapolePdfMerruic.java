@@ -136,15 +136,21 @@ public class ContratoNapolePdfMerruic {
 		LoteResponseDTO lote = contrato.getLotes().get(0);
 
 		// ── ENCABEZADO ─────────────────────────────────────────────────────
+		// Tres líneas centradas, todas subrayadas y con el mismo espaciado.
 		document.add(new Paragraph("PROGRAMA NAPOLE")
-				.setFont(arialNarrowBold).setFontSize(12)
+				.setFont(arialNarrowBold).setFontSize(12).setUnderline()
 				.setTextAlignment(TextAlignment.CENTER)
 				.setFixedLeading(16).setMarginBottom(0));
 
-		document.add(new Paragraph("CONTRATO PRIVADO DE COMPRA Y VENTA DE TERRENO RÚSTICO EN FUTURA HABILITACIÓN URBANA")
+		document.add(new Paragraph("CONTRATO PRIVADO DE COMPRA Y VENTA DE TERRENO RÚSTICO EN FUTURA")
 				.setFont(arialNarrowBold).setFontSize(12).setUnderline()
 				.setTextAlignment(TextAlignment.CENTER)
-				.setFixedLeading(12).setMarginBottom(15));
+				.setFixedLeading(16).setMarginBottom(0));
+
+		document.add(new Paragraph("HABILITACIÓN URBANA")
+				.setFont(arialNarrowBold).setFontSize(12).setUnderline()
+				.setTextAlignment(TextAlignment.CENTER)
+				.setFixedLeading(16).setMarginBottom(15));
 
 		// ── INTRODUCCIÓN ──────────────────────────────────────────────────
 		Paragraph intro = new Paragraph()
@@ -252,7 +258,7 @@ public class ContratoNapolePdfMerruic {
 		document.add(divSegunda);
 
 		// ── TERCERA: PRECIO Y FORMA DE PAGO ────────────────────────────────
-		verificarEspacioYSalto(document, pdf, 0.4f);
+		verificarEspacioYSalto(document, pdf, 0.15f);
 		agregarEncabezadoClausula(document, arialNarrowBold, "PRECIO Y FORMA DE PAGO:");
 
 		DecimalFormat df = new DecimalFormat("#,##0.00", new DecimalFormatSymbols(Locale.US));
@@ -366,7 +372,7 @@ public class ContratoNapolePdfMerruic {
 
 		if (esFinanciado) {
 			// ── CUARTO: TÍTULO VALOR (solo financiado) ────────────────────────
-			verificarEspacioYSalto(document, pdf, 0.4f);
+			verificarEspacioYSalto(document, pdf, 0.15f);
 			agregarEncabezadoClausula(document, arialNarrowBold, "TÍTULO VALOR:");
 
 			Paragraph cuartoCuerpo = new Paragraph()
@@ -388,7 +394,7 @@ public class ContratoNapolePdfMerruic {
 			agregarEquivalencia(document, arialNarrowBold, arialNarrow, "QUINTO:");
 		} else {
 			// ── CUARTO: EQUIVALENCIA (contado) ──────────────────────────────
-			verificarEspacioYSalto(document, pdf, 0.4f);
+			verificarEspacioYSalto(document, pdf, 0.15f);
 			agregarEncabezadoClausula(document, arialNarrowBold, "EQUIVALENCIA:");
 
 			Paragraph cuartoCuerpo = new Paragraph()
@@ -425,7 +431,7 @@ public class ContratoNapolePdfMerruic {
 		}
 
 		// ── CIERRE Y FIRMAS ────────────────────────────────────────────────
-		verificarEspacioYSalto(document, pdf, 0.4f);
+		verificarEspacioYSalto(document, pdf, 0.15f);
 
 		document.add(new Paragraph("")
 				.setMarginTop(20f));
@@ -447,7 +453,7 @@ public class ContratoNapolePdfMerruic {
 	 * ======================================================================== */
 
 	private static void agregarEquivalencia(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String titulo) {
-		verificarEspacioYSalto(document, null, 0.4f);
+		verificarEspacioYSalto(document, null, 0.15f);
 		agregarEncabezadoClausula(document, arialNarrowBold, "EQUIVALENCIA:");
 
 		Paragraph cuerpo = new Paragraph()
@@ -460,7 +466,7 @@ public class ContratoNapolePdfMerruic {
 	}
 
 	private static void agregarGravamen(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String titulo) {
-		verificarEspacioYSalto(document, null, 0.4f);
+		verificarEspacioYSalto(document, null, 0.15f);
 		agregarEncabezadoClausula(document, arialNarrowBold, "GRAVAMEN:");
 
 		Paragraph cuerpo = new Paragraph()
@@ -474,7 +480,7 @@ public class ContratoNapolePdfMerruic {
 	}
 
 	private static void agregarEscrituraContado(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String etiquetaComprador) {
-		verificarEspacioYSalto(document, null, 0.4f);
+		verificarEspacioYSalto(document, null, 0.15f);
 		agregarEncabezadoClausula(document, arialNarrowBold, "ESCRITURA PÚBLICA:");
 
 		Paragraph cuerpo = new Paragraph()
@@ -490,7 +496,7 @@ public class ContratoNapolePdfMerruic {
 	}
 
 	private static void agregarEscrituraFinanciado(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String etiquetaComprador, String titulo) {
-		verificarEspacioYSalto(document, null, 0.4f);
+		verificarEspacioYSalto(document, null, 0.15f);
 		agregarEncabezadoClausula(document, arialNarrowBold, "ESCRITURA PÚBLICA:");
 
 		Paragraph cuerpo = new Paragraph()
@@ -506,7 +512,7 @@ public class ContratoNapolePdfMerruic {
 	}
 
 	private static void agregarHabilitacionContado(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String etiquetaComprador) {
-		verificarEspacioYSalto(document, null, 0.4f);
+		verificarEspacioYSalto(document, null, 0.15f);
 		agregarEncabezadoClausula(document, arialNarrowBold, "HABILITACIÓN URBANA:");
 
 		Paragraph cuerpo = new Paragraph()
@@ -523,7 +529,7 @@ public class ContratoNapolePdfMerruic {
 		cuerpo.add(" comunicará por carta simple y/o notarial el costo individual a cobrar en cada caso lo que será materia de un contrato anexo al presente documento.");
 		document.add(cuerpo);
 
-		verificarEspacioYSalto(document, null, 0.4f);
+		verificarEspacioYSalto(document, null, 0.15f);
 		agregarEncabezadoClausula(document, arialNarrowBold, "OCTAVO:");
 
 		Paragraph octavo = new Paragraph()
@@ -539,7 +545,7 @@ public class ContratoNapolePdfMerruic {
 	}
 
 	private static void agregarHabilitacionFinanciado(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String etiquetaComprador) {
-		verificarEspacioYSalto(document, null, 0.4f);
+		verificarEspacioYSalto(document, null, 0.15f);
 		agregarEncabezadoClausula(document, arialNarrowBold, "HABILITACIÓN URBANA:");
 
 		Paragraph cuerpo = new Paragraph()
@@ -567,7 +573,7 @@ public class ContratoNapolePdfMerruic {
 		cuerpo.add(" en la proporción que le corresponda.");
 		document.add(cuerpo);
 
-		verificarEspacioYSalto(document, null, 0.4f);
+		verificarEspacioYSalto(document, null, 0.15f);
 		agregarEncabezadoClausula(document, arialNarrowBold, "DÉCIMO CUARTO:");
 
 		Paragraph c14 = new Paragraph()
@@ -577,7 +583,7 @@ public class ContratoNapolePdfMerruic {
 		c14.add(" se obliga a cuenta y costo realizar la limpieza de calles y pistas del programa de vivienda donde se halla el lote de terreno materia de venta.");
 		document.add(c14);
 
-		verificarEspacioYSalto(document, null, 0.4f);
+		verificarEspacioYSalto(document, null, 0.15f);
 		agregarEncabezadoClausula(document, arialNarrowBold, "DÉCIMO QUINTO:");
 
 		Paragraph c15 = new Paragraph()
@@ -592,7 +598,7 @@ public class ContratoNapolePdfMerruic {
 	}
 
 	private static void agregarGastosTributos(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String etiquetaComprador, String titulo) {
-		verificarEspacioYSalto(document, null, 0.4f);
+		verificarEspacioYSalto(document, null, 0.15f);
 		agregarEncabezadoClausula(document, arialNarrowBold, "GASTOS Y TRIBUTOS:");
 
 		Paragraph cuerpo = new Paragraph()
@@ -607,7 +613,7 @@ public class ContratoNapolePdfMerruic {
 	}
 
 	private static void agregarEntrega(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String etiquetaComprador, String titulo) {
-		verificarEspacioYSalto(document, null, 0.4f);
+		verificarEspacioYSalto(document, null, 0.15f);
 		agregarEncabezadoClausula(document, arialNarrowBold, "ENTREGA DEL TERRENO:");
 
 		Paragraph cuerpo = new Paragraph()
@@ -625,7 +631,7 @@ public class ContratoNapolePdfMerruic {
 	}
 
 	private static void agregarDomicilio(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String titulo) {
-		verificarEspacioYSalto(document, null, 0.4f);
+		verificarEspacioYSalto(document, null, 0.15f);
 		agregarEncabezadoClausula(document, arialNarrowBold, "DOMICILIO:");
 
 		Paragraph cuerpo = new Paragraph()
@@ -638,7 +644,7 @@ public class ContratoNapolePdfMerruic {
 	}
 
 	private static void agregarCompetencia(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String titulo) {
-		verificarEspacioYSalto(document, null, 0.4f);
+		verificarEspacioYSalto(document, null, 0.15f);
 		agregarEncabezadoClausula(document, arialNarrowBold, "COMPETENCIA TERRITORIAL:");
 
 		Paragraph cuerpo = new Paragraph()
@@ -651,7 +657,7 @@ public class ContratoNapolePdfMerruic {
 	}
 
 	private static void agregarSupletoria(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String titulo) {
-		verificarEspacioYSalto(document, null, 0.4f);
+		verificarEspacioYSalto(document, null, 0.15f);
 		agregarEncabezadoClausula(document, arialNarrowBold, "APLICACIÓN SUPLETORIA DE LA LEY:");
 
 		Paragraph cuerpo = new Paragraph()
@@ -668,7 +674,7 @@ public class ContratoNapolePdfMerruic {
 	 * ======================================================================== */
 
 	private static void agregarClausulaResolutoria(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String etiquetaComprador, int numClientes) {
-		verificarEspacioYSalto(document, null, 0.4f);
+		verificarEspacioYSalto(document, null, 0.15f);
 		agregarEncabezadoClausula(document, arialNarrowBold, "CLÁUSULA RESOLUTORIA:");
 
 		Paragraph cuerpo = new Paragraph()
@@ -694,7 +700,7 @@ public class ContratoNapolePdfMerruic {
 		cuerpo.add(" haya pagado el 85% del precio total del inmueble materia de transferencia.");
 		document.add(cuerpo);
 
-		verificarEspacioYSalto(document, null, 0.4f);
+		verificarEspacioYSalto(document, null, 0.15f);
 		document.add(new Paragraph().add(new Text("SÉTIMO:").setFont(arialNarrowBold).setUnderline())
 				.setFontSize(12).setMarginTop(15));
 
@@ -712,7 +718,7 @@ public class ContratoNapolePdfMerruic {
 		cuerpo.add(" sin obligación de reembolso de ninguna clase por parte de ésta ni al pago de mejoras por acuerdo libre de ambas partes.");
 		document.add(cuerpo);
 
-		verificarEspacioYSalto(document, null, 0.4f);
+		verificarEspacioYSalto(document, null, 0.15f);
 		document.add(new Paragraph().add(new Text("OCTAVO:").setFont(arialNarrowBold).setUnderline())
 				.setFontSize(12).setMarginTop(15));
 
@@ -732,7 +738,7 @@ public class ContratoNapolePdfMerruic {
 		cuerpo.add(" según lo establecido en la cláusula cuarta.");
 		document.add(cuerpo);
 
-		verificarEspacioYSalto(document, null, 0.4f);
+		verificarEspacioYSalto(document, null, 0.15f);
 		document.add(new Paragraph().add(new Text("NOVENO:").setFont(arialNarrowBold).setUnderline())
 				.setFontSize(12).setMarginTop(15));
 
@@ -750,7 +756,7 @@ public class ContratoNapolePdfMerruic {
 	}
 
 	private static void agregarReservaPropiedad(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String etiquetaComprador) {
-		verificarEspacioYSalto(document, null, 0.4f);
+		verificarEspacioYSalto(document, null, 0.15f);
 		agregarEncabezadoClausula(document, arialNarrowBold, "PACTO DE RESERVA DE PROPIEDAD:");
 
 		Paragraph cuerpo = new Paragraph()
@@ -765,7 +771,7 @@ public class ContratoNapolePdfMerruic {
 	}
 
 	private static void agregarRenuncia(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String etiquetaComprador) {
-		verificarEspacioYSalto(document, null, 0.4f);
+		verificarEspacioYSalto(document, null, 0.15f);
 		agregarEncabezadoClausula(document, arialNarrowBold, "RENUNCIA:");
 
 		Paragraph cuerpo = new Paragraph()
@@ -814,7 +820,7 @@ public class ContratoNapolePdfMerruic {
 	}
 
 	private static void agregarClausulaPenal(Document document, PdfFont arialNarrowBold, PdfFont arialNarrow, String etiquetaComprador) {
-		verificarEspacioYSalto(document, null, 0.4f);
+		verificarEspacioYSalto(document, null, 0.15f);
 		agregarEncabezadoClausula(document, arialNarrowBold, "CLÁUSULA PENAL:");
 
 		Paragraph cuerpo = new Paragraph()
