@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import com.Inmobiliaria.demo.enums.Genero;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.*;
@@ -58,8 +59,11 @@ public class Vendedor {
 
     // Cuenta de usuario asociada (opcional). Solo los vendedores que necesitan
     // entrar al sistema tienen cuenta; los demás quedan con null (históricos).
+    // Se ignora en la serialización JSON para evitar errores de lazy/serialización
+    // en listados (la lista de vendedores y el select de contrato no la necesitan).
+    // El vínculo se resuelve por repositorio (findByIdUsuario), no por el JSON.
+    @JsonIgnore
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_usuario")
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "contrasena"})
     private Usuario usuario;
 }
