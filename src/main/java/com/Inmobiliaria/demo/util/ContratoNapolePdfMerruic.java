@@ -435,14 +435,11 @@ public class ContratoNapolePdfMerruic {
 		// ── CIERRE Y FIRMAS ────────────────────────────────────────────────
 		verificarEspacioYSalto(document, pdf, 0.15f);
 
-		document.add(new Paragraph("")
-				.setMarginTop(20f));
-
 		document.add(new Paragraph()
 				.add(new Text("Carabayllo, " + diaNum + "/" + mesNum + "/" + anioNum + ".").setFont(arialNarrow))
 				.setFontSize(12)
 				.setTextAlignment(TextAlignment.RIGHT)
-				.setMarginTop(15));
+				.setMarginTop(5));
 
 		agregarBloqueFirmas(document, clientes, arialNarrowBold, etiquetaComprador);
 
@@ -700,7 +697,8 @@ public class ContratoNapolePdfMerruic {
 		cuerpo.add(" haya pagado el 85% del precio total del inmueble materia de transferencia.");
 		document.add(cuerpo);
 
-		verificarEspacioYSalto(document, null, 0.15f);
+		// SÉTIMO: umbral bajo para que entre en la página actual aunque sea parcial
+		verificarEspacioYSalto(document, null, 0.05f);
 		cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
