@@ -162,7 +162,7 @@ public class ComprobanteInscripcionPdf {
                     .setHorizontalAlignment(HorizontalAlignment.CENTER);
 
             // ── Logo ─────────────────────────────────────────────────────────
-            ImageData logoData = LogoCacheService.logo();
+            ImageData logoData = LogoCacheService.logoImageData();
             Image logoImg = (logoData != null
                     ? new Image(logoData)
                     : new Image(ImageDataFactory.create(new URL(logoUrl()))))

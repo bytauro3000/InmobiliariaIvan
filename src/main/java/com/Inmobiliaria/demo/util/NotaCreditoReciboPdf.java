@@ -89,7 +89,7 @@ public class NotaCreditoReciboPdf {
                 } catch (Exception ignored) {}
             }
 
-            ImageData logoData = LogoCacheService.logo();
+            ImageData logoData = LogoCacheService.logoImageData();
             Image logoImg = (logoData != null
                     ? new Image(logoData)
                     : new Image(ImageDataFactory.create(new URL(logoUrl()))))

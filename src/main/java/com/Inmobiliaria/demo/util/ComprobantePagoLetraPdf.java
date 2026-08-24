@@ -350,7 +350,7 @@ public class ComprobantePagoLetraPdf {
                     .setWidth(52).setHeight(52)
                     .setHorizontalAlignment(HorizontalAlignment.CENTER);
 
-            ImageData logoData = LogoCacheService.logo();
+            ImageData logoData = LogoCacheService.logoImageData();
             Image logoImg = (logoData != null
                     ? new Image(logoData)
                     : new Image(ImageDataFactory.create(new URL(logoUrl()))))
@@ -644,14 +644,10 @@ public class ComprobantePagoLetraPdf {
                 ? 0 : (int) Math.ceil(vouchers.size() / 3.0);
         int maxPaginas = 1 + paginasVouchers;
 
-        // El logo se toma del cache (descarga única) y se reutiliza en cada intento
-        byte[] logoBytes = null;
-        try {
-            ImageData cachedLogo = LogoCacheService.logo();
-            if (cachedLogo != null) {
-                logoBytes = cachedLogo.getData();
-            }
-        } catch (Exception ignored) { }
+        // El logo se toma del cache (descarga única) y se reutiliza en cada intento.
+        // LogoCacheService.logo() devuelve los bytes ORIGINALES del archivo, que
+        // ImageDataFactory siempre puede interpretar (getData() de ImageData NO).
+        byte[] logoBytes = LogoCacheService.logo();
         if (logoBytes == null) {
             try {
                 logoBytes = StreamUtil.inputStreamToArray(new URL(logoUrl()).openStream());

@@ -19,6 +19,11 @@ import java.util.concurrent.atomic.AtomicReference;
  * en cada llamada. Con este servicio el logo se descarga UNA sola vez y se
  * reutiliza en todos los PDFs.
  *
+ * Se guardan los BYTES ORIGINALES del archivo (JPEG/PNG/WebP). Cada PDF crea su
+ * propia ImageData con ImageDataFactory.create(bytes) — así siempre es un formato
+ * reconocible. No se guarda la ImageData de iText porque su getData() devuelve
+ * datos internos que ImageDataFactory ya no reconoce.
+ *
  * Si la URL del logo cambia (empresa actualizada), se refresca automáticamente.
  * Si la descarga falla, se reutiliza el último logo conocido (o null).
  */
@@ -29,23 +34,39 @@ public class LogoCacheService {
 
     private static final LogoCacheService INSTANCIA = new LogoCacheService();
 
-    private final AtomicReference<ImageData> cache = new AtomicReference<>();
+    private final AtomicReference<byte[]> cache = new AtomicReference<>();
     private final AtomicReference<String> cacheUrl = new AtomicReference<>();
 
     /**
      * Acceso estático para las clases de generación de PDF (que son estáticas
-     * y no tienen inyección de dependencias).
+     * y no tienen inyección de dependencias). Devuelve los bytes originales
+     * del archivo del logo (o null si no hay/falla).
      */
-    public static ImageData logo() {
-        return INSTANCIA.getLogoImageData();
+    public static byte[] logo() {
+        return INSTANCIA.getLogoBytes();
     }
 
     /**
-     * Devuelve el logo de la empresa como ImageData listo para iText.
-     * Descarga una sola vez por URL; si la URL cambia, refresca.
-     * Si no hay logo configurado o falla, devuelve null (el PDF omite el logo).
+     * Conveniencia para los PDFs que solo necesitan la ImageData: crea una
+     * ImageData desde los bytes cacheados (o null si no hay logo/falla).
      */
-    public ImageData getLogoImageData() {
+    public static ImageData logoImageData() {
+        byte[] bytes = logo();
+        if (bytes == null) {
+            return null;
+        }
+        try {
+            return ImageDataFactory.create(bytes);
+        } catch (Exception e) {
+            log.warn("No se pudo interpretar el logo cacheado: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Devuelve los bytes del logo (descarga única por URL; refresca si cambia).
+     */
+    public byte[] getLogoBytes() {
         String url = obtenerUrlLogo();
         if (url == null || url.isBlank()) {
             cache.set(null);
@@ -53,7 +74,7 @@ public class LogoCacheService {
             return null;
         }
 
-        ImageData actual = cache.get();
+        byte[] actual = cache.get();
         String urlCacheadas = cacheUrl.get();
 
         // Misma URL y ya está cacheado → reutilizar (sin descarga).
@@ -64,11 +85,10 @@ public class LogoCacheService {
         // URL distinta o cache vacío → descargar una sola vez.
         try {
             byte[] bytes = StreamUtil.inputStreamToArray(new URL(url).openStream());
-            ImageData nuevo = ImageDataFactory.create(bytes);
-            cache.set(nuevo);
+            cache.set(bytes);
             cacheUrl.set(url);
             log.info("Logo de la empresa cargado en cache ({} bytes)", bytes.length);
-            return nuevo;
+            return bytes;
         } catch (Exception e) {
             log.warn("No se pudo cargar el logo desde {}: {}. Se reutiliza el último conocido.", url, e.getMessage());
             return actual;
