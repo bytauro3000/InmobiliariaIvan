@@ -20,6 +20,7 @@ import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.element.AreaBreak;
 import com.itextpdf.layout.element.Cell;
+import com.itextpdf.layout.element.Div;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.element.Text;
@@ -199,7 +200,11 @@ public class ContratoNapolePdfMerruic {
 		document.add(primeraCuerpo);
 
 		// ── SEGUNDA: OBJETO DEL CONTRATO ───────────────────────────────────
-		verificarEspacioYSalto(document, pdf, 0.4f);
+		// Se agrupa en un Div con keepTogether para que la cláusula completa
+		// (encabezado + texto + linderos) no se parta entre páginas.
+		verificarEspacioYSalto(document, pdf, 0.25f);
+		Div divSegunda = new Div().setKeepTogether(true);
+
 		agregarEncabezadoClausula(document, arialNarrowBold, "OBJETO DEL CONTRATO:");
 
 		Paragraph segundaIntro = new Paragraph()
@@ -219,7 +224,7 @@ public class ContratoNapolePdfMerruic {
 		segundaIntro.add(new Text(lote.getArea() + " m2").setFont(arialNarrowBold));
 		segundaIntro.add(", situado en el Distrito de Puente Piedra, Provincia y Departamento de Lima, encerrado dentro de los siguientes linderos y medidas perimétricas:");
 
-		document.add(segundaIntro);
+		divSegunda.add(segundaIntro);
 
 		Table tablaLinderos = new Table(UnitValue.createPercentArray(new float[]{30f, 45f, 25f}))
 				.useAllAvailableWidth()
@@ -231,7 +236,7 @@ public class ContratoNapolePdfMerruic {
 		agregarFilaLinderos(tablaLinderos, "Por la Izquierda", lote.getColindanteOeste(), "Con    " + lote.getLargo2() + "  m.l.", arialNarrow);
 		agregarFilaLinderos(tablaLinderos, "Por el fondo", lote.getColindanteSur(), "Con    " + lote.getAncho2() + "  m.l.", arialNarrow);
 
-		document.add(tablaLinderos);
+		divSegunda.add(tablaLinderos);
 
 		Paragraph segundaFinal = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
@@ -242,7 +247,9 @@ public class ContratoNapolePdfMerruic {
 		segundaFinal.add(new Text("\u201cad-corpus\u201d").setFont(arialNarrowBold));
 		segundaFinal.add(", comprendida además del área señalada del terreno rústico, sus entradas, salidas, aires, usos, costumbres, servidumbres y todo cuanto de hecho y por derecho correspondan al referido lote de terreno.");
 
-		document.add(segundaFinal);
+		divSegunda.add(segundaFinal);
+
+		document.add(divSegunda);
 
 		// ── TERCERA: PRECIO Y FORMA DE PAGO ────────────────────────────────
 		verificarEspacioYSalto(document, pdf, 0.4f);
@@ -292,6 +299,7 @@ public class ContratoNapolePdfMerruic {
 			Paragraph inicialPara = new Paragraph()
 					.setFont(arialNarrow).setFontSize(12)
 					.setMarginLeft(40).setMarginTop(10);
+			inicialPara.add(new Text("a. ").setFont(arialNarrowBold));
 			inicialPara.add("Cuota inicial de ");
 			BigDecimal inicial = contrato.getInicial() != null ? contrato.getInicial() : BigDecimal.ZERO;
 			inicialPara.add(new Text(prefMoneda + " " + df.format(inicial)).setFont(arialNarrowBold));
@@ -304,6 +312,7 @@ public class ContratoNapolePdfMerruic {
 					.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f)
 					.setMarginLeft(40).setMarginTop(10);
 
+			saldoPara.add(new Text("b. ").setFont(arialNarrowBold));
 			saldoPara.add("El saldo de ");
 			saldoPara.add(new Text(prefMoneda + " " + df.format(contrato.getSaldo())).setFont(arialNarrowBold));
 			saldoPara.add(" será cancelado en ");
@@ -348,6 +357,7 @@ public class ContratoNapolePdfMerruic {
 					.setTextAlignment(TextAlignment.JUSTIFIED)
 					.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f)
 					.setMarginLeft(40).setMarginTop(10);
+			lugarPago.add(new Text("c. ").setFont(arialNarrowBold));
 			lugarPago.add("El lugar de pago de todas las armadas se hará mediante depósito o efectivo en el domicilio de ");
 			lugarPago.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 			lugarPago.add(" señalado en el introito del presente acto jurídico.");
