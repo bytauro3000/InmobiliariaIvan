@@ -136,21 +136,22 @@ public class ContratoNapolePdfMerruic {
 		LoteResponseDTO lote = contrato.getLotes().get(0);
 
 		// ── ENCABEZADO ─────────────────────────────────────────────────────
-		// Tres líneas centradas, todas subrayadas y con el mismo espaciado.
+		// Tres líneas centradas, todas subrayadas y con el mismo espaciado
+		// compacto (igual al de los encabezados de cláusula).
 		document.add(new Paragraph("PROGRAMA NAPOLE")
 				.setFont(arialNarrowBold).setFontSize(12).setUnderline()
 				.setTextAlignment(TextAlignment.CENTER)
-				.setFixedLeading(16).setMarginBottom(0));
+				.setFixedLeading(12).setMarginBottom(0));
 
 		document.add(new Paragraph("CONTRATO PRIVADO DE COMPRA Y VENTA DE TERRENO RÚSTICO EN FUTURA")
 				.setFont(arialNarrowBold).setFontSize(12).setUnderline()
 				.setTextAlignment(TextAlignment.CENTER)
-				.setFixedLeading(16).setMarginBottom(0));
+				.setFixedLeading(12).setMarginBottom(0));
 
 		document.add(new Paragraph("HABILITACIÓN URBANA")
 				.setFont(arialNarrowBold).setFontSize(12).setUnderline()
 				.setTextAlignment(TextAlignment.CENTER)
-				.setFixedLeading(16).setMarginBottom(15));
+				.setFixedLeading(12).setMarginBottom(15));
 
 		// ── INTRODUCCIÓN ──────────────────────────────────────────────────
 		Paragraph intro = new Paragraph()
@@ -531,12 +532,11 @@ public class ContratoNapolePdfMerruic {
 		document.add(cuerpo);
 
 		verificarEspacioYSalto(document, null, 0.15f);
-		agregarEncabezadoClausula(document, arialNarrowBold, "OCTAVO:");
-
 		Paragraph octavo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
+		octavo.add(new Text("OCTAVO: ").setFont(arialNarrowBold));
 		octavo.add("Se acuerda que, los trámites del proyecto de habilitación urbana y ejecución de la misma correrá a cuenta de los clientes que conforman el programa de vivienda, obligándose ");
 		octavo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		octavo.add(" prestar el apoyo necesario en la emisión de documentos que resulten necesarios para cumplir dicho fin, siendo que, la independización del lote de terreno materia de venta será a cuenta de ");
@@ -575,21 +575,19 @@ public class ContratoNapolePdfMerruic {
 		document.add(cuerpo);
 
 		verificarEspacioYSalto(document, null, 0.15f);
-		agregarEncabezadoClausula(document, arialNarrowBold, "DÉCIMO CUARTO:");
-
 		Paragraph c14 = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
+		c14.add(new Text("DÉCIMO CUARTO: ").setFont(arialNarrowBold));
 		c14.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		c14.add(" se obliga a cuenta y costo realizar la limpieza de calles y pistas del programa de vivienda donde se halla el lote de terreno materia de venta.");
 		document.add(c14);
 
 		verificarEspacioYSalto(document, null, 0.15f);
-		agregarEncabezadoClausula(document, arialNarrowBold, "DÉCIMO QUINTO:");
-
 		Paragraph c15 = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
+		c15.add(new Text("DÉCIMO QUINTO: ").setFont(arialNarrowBold));
 		c15.add("Se acuerda que, los trámites del proyecto de habilitación urbana y ejecución de la misma correrá a cuenta de los clientes que conforman el programa de vivienda, obligándose ");
 		c15.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
 		c15.add(" prestar el apoyo necesario en la emisión de documentos que resulten necesarios para cumplir dicho fin, siendo que, la independización del lote de terreno materia de venta será a cuenta de ");
@@ -689,7 +687,8 @@ public class ContratoNapolePdfMerruic {
 		cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f)
-				.setMarginLeft(20).setMarginTop(8);
+				.setMarginLeft(20).setMarginTop(0);
+		cuerpo.add(new Text("a. ").setFont(arialNarrowBold));
 		cuerpo.add("El incumplimiento de pago de tres cuotas pactadas consecutivas o alternadas por parte de ");
 		cuerpo.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 		cuerpo.add(" según estipulado en el artículo 1561 del Código Civil concordante con el artículo 1428 del mismo cuerpo legal, en este caso, ");
@@ -702,12 +701,10 @@ public class ContratoNapolePdfMerruic {
 		document.add(cuerpo);
 
 		verificarEspacioYSalto(document, null, 0.15f);
-		document.add(new Paragraph().add(new Text("SÉTIMO:").setFont(arialNarrowBold).setUnderline())
-				.setFontSize(12).setMarginTop(15));
-
 		cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
+		cuerpo.add(new Text("SÉTIMO: ").setFont(arialNarrowBold));
 		cuerpo.add("De darse la resolución de la presente compra venta pactado en la cláusula anterior, se conviene expresamente que, ");
 		cuerpo.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 		cuerpo.add(" realizará la entrega física del lote de terreno totalmente desocupado y libre de interferencias, a favor de ");
@@ -720,12 +717,10 @@ public class ContratoNapolePdfMerruic {
 		document.add(cuerpo);
 
 		verificarEspacioYSalto(document, null, 0.15f);
-		document.add(new Paragraph().add(new Text("OCTAVO:").setFont(arialNarrowBold).setUnderline())
-				.setFontSize(12).setMarginTop(15));
-
 		cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
+		cuerpo.add(new Text("OCTAVO: ").setFont(arialNarrowBold));
 		cuerpo.add("Los contratantes convienen libremente que, en los casos previstos en la cláusula sexta, es decir; en caso de resolución del contrato por incumplimiento de ");
 		cuerpo.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 		cuerpo.add(" dará lugar a que ");
@@ -740,12 +735,10 @@ public class ContratoNapolePdfMerruic {
 		document.add(cuerpo);
 
 		verificarEspacioYSalto(document, null, 0.15f);
-		document.add(new Paragraph().add(new Text("NOVENO:").setFont(arialNarrowBold).setUnderline())
-				.setFontSize(12).setMarginTop(15));
-
 		cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
+		cuerpo.add(new Text("NOVENO: ").setFont(arialNarrowBold));
 		cuerpo.add("En caso ");
 		cuerpo.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 		cuerpo.add(" haya pagado más del 85% del precio total del terreno materia de venta, ");
