@@ -303,8 +303,9 @@ public class ContratoNapolePdfMerruic {
 
 			// 3.1 Cuota inicial
 			Paragraph inicialPara = new Paragraph()
-					.setFont(arialNarrow).setFontSize(12)
-					.setMarginLeft(40).setMarginTop(10);
+					.setTextAlignment(TextAlignment.JUSTIFIED)
+					.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f)
+					.setMarginLeft(40).setMarginTop(0);
 			inicialPara.add(new Text("a. ").setFont(arialNarrowBold));
 			inicialPara.add("Cuota inicial de ");
 			BigDecimal inicial = contrato.getInicial() != null ? contrato.getInicial() : BigDecimal.ZERO;
@@ -316,7 +317,7 @@ public class ContratoNapolePdfMerruic {
 			Paragraph saldoPara = new Paragraph()
 					.setTextAlignment(TextAlignment.JUSTIFIED)
 					.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f)
-					.setMarginLeft(40).setMarginTop(10);
+					.setMarginLeft(40).setMarginTop(0);
 
 			saldoPara.add(new Text("b. ").setFont(arialNarrowBold));
 			saldoPara.add("El saldo de ");
@@ -362,7 +363,7 @@ public class ContratoNapolePdfMerruic {
 			Paragraph lugarPago = new Paragraph()
 					.setTextAlignment(TextAlignment.JUSTIFIED)
 					.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f)
-					.setMarginLeft(40).setMarginTop(10);
+					.setMarginLeft(40).setMarginTop(0);
 			lugarPago.add(new Text("c. ").setFont(arialNarrowBold));
 			lugarPago.add("El lugar de pago de todas las armadas se hará mediante depósito o efectivo en el domicilio de ");
 			lugarPago.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
