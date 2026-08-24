@@ -306,7 +306,7 @@ public class ContratoNapolePdfMerruic {
 			Paragraph inicialPara = new Paragraph()
 					.setTextAlignment(TextAlignment.JUSTIFIED)
 					.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f)
-					.setMarginLeft(40).setMarginTop(0);
+					.setMarginLeft(52).setFirstLineIndent(-12).setMarginTop(0);
 			inicialPara.add(new Text("a. ").setFont(arialNarrowBold));
 			inicialPara.add("Cuota inicial de ");
 			BigDecimal inicial = contrato.getInicial() != null ? contrato.getInicial() : BigDecimal.ZERO;
@@ -318,7 +318,7 @@ public class ContratoNapolePdfMerruic {
 			Paragraph saldoPara = new Paragraph()
 					.setTextAlignment(TextAlignment.JUSTIFIED)
 					.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f)
-					.setMarginLeft(40).setMarginTop(0);
+					.setMarginLeft(52).setFirstLineIndent(-12).setMarginTop(0);
 
 			saldoPara.add(new Text("b. ").setFont(arialNarrowBold));
 			saldoPara.add("El saldo de ");
@@ -364,7 +364,7 @@ public class ContratoNapolePdfMerruic {
 			Paragraph lugarPago = new Paragraph()
 					.setTextAlignment(TextAlignment.JUSTIFIED)
 					.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f)
-					.setMarginLeft(40).setMarginTop(0);
+					.setMarginLeft(52).setFirstLineIndent(-12).setMarginTop(0);
 			lugarPago.add(new Text("c. ").setFont(arialNarrowBold));
 			lugarPago.add("El lugar de pago de todas las armadas se hará mediante depósito o efectivo en el domicilio de ");
 			lugarPago.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
@@ -687,7 +687,7 @@ public class ContratoNapolePdfMerruic {
 		cuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f)
-				.setMarginLeft(20).setMarginTop(0);
+				.setMarginLeft(32).setFirstLineIndent(-12).setMarginTop(0);
 		cuerpo.add(new Text("a. ").setFont(arialNarrowBold));
 		cuerpo.add("El incumplimiento de pago de tres cuotas pactadas consecutivas o alternadas por parte de ");
 		cuerpo.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
