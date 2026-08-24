@@ -262,8 +262,14 @@ import java.util.stream.Collectors;
 	        pago.setIdInscripcionServicio(idInscripcion);
 	        pago.setTipoServicio(request.getTipoServicio().toUpperCase());
 	
-	        PagoInscripcionComprobante pagoGuardado =
-	                pagoInscripcionComprobanteRepository.save(pago);
+PagoInscripcionComprobante pagoGuardado =
+                pagoInscripcionComprobanteRepository.save(pago);
+
+        // El comprobante se creó antes de que el pago tuviera id; se setea la
+        // referencia real (id del pago de inscripción) para que las NC/PDF
+        // puedan localizar el pago por comprobante.referencia_id.
+        comprobante.setReferenciaId(pagoGuardado.getIdPagoInscripcionComprobante());
+        comprobanteRepository.save(comprobante);
 
 	        // ── Notificar al admin solo si el pago es de hoy ───────────────────────
 	        if (fechaPago.equals(LocalDate.now())) {
