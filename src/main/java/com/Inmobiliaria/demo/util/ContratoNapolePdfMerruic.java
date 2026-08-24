@@ -148,7 +148,7 @@ public class ContratoNapolePdfMerruic {
 		// ── INTRODUCCIÓN ──────────────────────────────────────────────────
 		Paragraph intro = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.5f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
 		intro.add("Conste por este documento, que celebran de una parte la empresa ");
 		intro.add(new Text("\u201c" + empresa() + "\u201d ").setFont(arialNarrowBold));
