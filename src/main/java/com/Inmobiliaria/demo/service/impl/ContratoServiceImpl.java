@@ -177,7 +177,7 @@ public class ContratoServiceImpl implements ContratoService {
                 Comprobante compInicial = comprobanteService.generarComprobanteConNumero(
                     piReq.getTipoComprobante(),
                     TipoOrigenComprobante.PAGO_INICIAL,
-                    null, // id temporal
+                    pagoGuardado.getIdPagoInicial(), // referencia: id del pago inicial
                     pagoGuardado.getImportePagado(),
                     fechaPagoInicial,
                     piReq.getNumeroComprobantePersonalizado()
