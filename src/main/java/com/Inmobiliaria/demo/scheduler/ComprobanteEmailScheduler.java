@@ -8,8 +8,6 @@ import com.Inmobiliaria.demo.repository.PagoLetraRepository;
 import com.Inmobiliaria.demo.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
@@ -27,20 +25,6 @@ public class ComprobanteEmailScheduler {
 
     private final ComprobanteEmailHelper helper;
     private final AtomicBoolean ejecutando = new AtomicBoolean(false);
-
-    @EventListener(ApplicationReadyEvent.class)
-    public void enviarAlArrancar() {
-        log.info(">>> ComprobanteEmailScheduler: verificando comprobantes al arrancar...");
-        if (!ejecutando.compareAndSet(false, true)) {
-            log.warn(">>> ComprobanteEmailScheduler: ya hay un envío en curso, se omite.");
-            return;
-        }
-        try {
-            helper.enviarComprobantesDelDiaAnterior(ejecutando);
-        } finally {
-            ejecutando.set(false);
-        }
-    }
 
     // Ejecutar cada día a las 10:00 AM hora Lima
     @Scheduled(cron = "0 0 10 * * *", zone = "America/Lima")
