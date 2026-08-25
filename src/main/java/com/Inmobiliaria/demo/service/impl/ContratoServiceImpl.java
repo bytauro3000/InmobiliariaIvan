@@ -46,6 +46,7 @@ import com.Inmobiliaria.demo.entity.Voucher;
 import com.Inmobiliaria.demo.service.*;
 import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.util.ContratoFloridaPdf;
+import com.Inmobiliaria.demo.util.ContratoContadoFloridaPdf;
 import com.Inmobiliaria.demo.util.ContratoNapolePdfMerruic;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
@@ -663,6 +664,11 @@ public class ContratoServiceImpl implements ContratoService {
 
         if (nombreProgUp.contains("NAPOLE") || esPruebasTemporal) {
             return ContratoNapolePdfMerruic.generarContratoNapole(dto, primeraLetra);
+        }
+        // CONTRATO AL CONTADO (IVAN / Florida): no tiene letras, precio cancelado
+        // a la suscripción y termina con el CERTIFICADO DE CANCELACION.
+        if (dto.getTipoContrato() == com.Inmobiliaria.demo.enums.TipoContrato.CONTADO) {
+            return ContratoContadoFloridaPdf.generarContratoContadoFlorida(dto);
         }
         // LA FLORIDA DE TORRE BLANCA (cualquiera de sus etapas) y demás programas
         return ContratoFloridaPdf.generarContratoFlorida(dto, primeraLetra);
