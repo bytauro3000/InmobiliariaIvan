@@ -408,7 +408,11 @@ public class ContratoServiceImpl implements ContratoService {
     @Override
     @Transactional(readOnly = true)
     public List<ContratoResponseDTO> listarContratos() {
-        List<Contrato> contratos = contratoRepository.findAllConClientesYLotes();
+        // Dos queries separadas (clientes y lotes) para evitar el producto
+        // cartesiano clientes × lotes (causa de OutOfMemory en Render).
+        List<Contrato> contratos = combinarContratos(
+                contratoRepository.findAllConClientes(),
+                contratoRepository.findAllConLotes());
         if (contratos.isEmpty()) return List.of();
 
         // Batch-fetch vouchers de todos los pagos iniciales en 1 consulta
@@ -438,7 +442,9 @@ public class ContratoServiceImpl implements ContratoService {
     @Override
     @Transactional(readOnly = true)
     public List<ContratoListItemDTO> listarContratosResumen() {
-        List<Contrato> contratos = contratoRepository.findAllResumen();
+        List<Contrato> contratos = combinarContratos(
+                contratoRepository.findAllResumenConClientes(),
+                contratoRepository.findAllResumenConLotes());
         if (contratos.isEmpty()) return List.of();
 
         return contratos.stream()
@@ -1005,5 +1011,24 @@ public class ContratoServiceImpl implements ContratoService {
             }
         }
         return "";
+    }
+
+    /**
+     * Combina dos consultas de contratos (una con clientes, otra con lotes) en una
+     * sola lista, manteniendo clientes y lotes en cada contrato. Evita el producto
+     * cartesiano clientes × lotes de una query única con múltiples JOIN FETCH.
+     */
+    private List<Contrato> combinarContratos(List<Contrato> conClientes, List<Contrato> conLotes) {
+        Map<Integer, Contrato> mapa = new LinkedHashMap<>();
+        for (Contrato c : conClientes) mapa.put(c.getIdContrato(), c);
+        for (Contrato c : conLotes) {
+            Contrato existente = mapa.get(c.getIdContrato());
+            if (existente != null) {
+                existente.setLotes(c.getLotes());
+            } else {
+                mapa.put(c.getIdContrato(), c);
+            }
+        }
+        return new ArrayList<>(mapa.values());
     }
 }

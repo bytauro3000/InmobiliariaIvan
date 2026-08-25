@@ -33,8 +33,18 @@ public class ReporteMoraServiceImpl implements ReporteMoraService {
     @Transactional(readOnly = true)
     public List<ReporteClientesMoraDTO> obtenerClientesEnMora() {
 
-        // 1. Traer contratos con clientes y lotes en una sola query
-        List<Contrato> conClientesYLotes = contratoRepository.findAllConClientesYLotes();
+        // 1. Traer contratos con clientes y lotes (dos queries combinadas, sin producto cartesiano)
+        Map<Integer, Contrato> mapaContratos = new LinkedHashMap<>();
+        for (Contrato c : contratoRepository.findAllConClientes()) mapaContratos.put(c.getIdContrato(), c);
+        for (Contrato c : contratoRepository.findAllConLotes()) {
+            Contrato existente = mapaContratos.get(c.getIdContrato());
+            if (existente != null) {
+                existente.setLotes(c.getLotes());
+            } else {
+                mapaContratos.put(c.getIdContrato(), c);
+            }
+        }
+        List<Contrato> conClientesYLotes = new ArrayList<>(mapaContratos.values());
 
         // 2. Traer letras (misma query que usa el scheduler)
         List<Contrato> contratosConLetras = contratoRepository.findFinanciadosActivosConLetras();

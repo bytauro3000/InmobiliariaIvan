@@ -21,11 +21,20 @@ public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
                "GROUP BY cl.lote.programa.nombrePrograma, c.tipoContrato")
     List<Object[]> contarContratosPorProgramaYTipo();
 
-    // ✅ QUERY ÚNICA — Trae contratos con CLIENTES, LOTES y vendedor
+    // ✅ QUERY 1/2 — Contratos con CLIENTES + vendedor + comprobante inicial (SIN lotes)
+    // Separadas de lotes para evitar el producto cartesiano clientes × lotes.
     @Query("SELECT DISTINCT c FROM Contrato c " +
            "LEFT JOIN FETCH c.clientes cc " +
            "LEFT JOIN FETCH cc.cliente " +
            "LEFT JOIN FETCH cc.cliente.distrito " +
+           "LEFT JOIN FETCH c.vendedor " +
+           "LEFT JOIN FETCH c.comprobanteInicial " +
+           "LEFT JOIN FETCH c.pagoInicial " +
+           "ORDER BY c.idContrato DESC")
+    List<Contrato> findAllConClientes();
+
+    // ✅ QUERY 2/2 — Contratos con LOTES + programa (SIN clientes)
+    @Query("SELECT DISTINCT c FROM Contrato c " +
            "LEFT JOIN FETCH c.lotes cl " +
            "LEFT JOIN FETCH cl.lote l " +
            "LEFT JOIN FETCH l.programa " +
@@ -33,7 +42,7 @@ public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
            "LEFT JOIN FETCH c.comprobanteInicial " +
            "LEFT JOIN FETCH c.pagoInicial " +
            "ORDER BY c.idContrato DESC")
-    List<Contrato> findAllConClientesYLotes();
+    List<Contrato> findAllConLotes();
 
     @Query("SELECT DISTINCT c FROM Contrato c " +
            "LEFT JOIN FETCH c.clientes cc " +
@@ -165,11 +174,15 @@ public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
     @Query("SELECT DISTINCT c FROM Contrato c " +
            "LEFT JOIN FETCH c.clientes cc " +
            "LEFT JOIN FETCH cc.cliente " +
+           "ORDER BY c.idContrato DESC")
+    List<Contrato> findAllResumenConClientes();
+
+    @Query("SELECT DISTINCT c FROM Contrato c " +
            "LEFT JOIN FETCH c.lotes cl " +
            "LEFT JOIN FETCH cl.lote l " +
            "LEFT JOIN FETCH l.programa " +
            "ORDER BY c.idContrato DESC")
-    List<Contrato> findAllResumen();
+    List<Contrato> findAllResumenConLotes();
 
     @Query("SELECT c FROM Contrato c ORDER BY c.idContrato DESC")
     Page<Contrato> findAllResumenPaginado(Pageable pageable);
