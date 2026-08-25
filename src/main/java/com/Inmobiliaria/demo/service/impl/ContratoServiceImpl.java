@@ -3,6 +3,7 @@ package com.Inmobiliaria.demo.service.impl;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -920,5 +921,77 @@ public class ContratoServiceImpl implements ContratoService {
         } catch (Exception e) {
             log.warn("No se pudo enviar notificacion admin para pago inicial ID {}: {}", pago.getIdPagoInicial(), e.getMessage());
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public LotesVendidosResponseDTO listarLotesVendidos(Integer idVendedor) {
+        List<Contrato> contratos = contratoRepository.findLotesVendidos(idVendedor);
+
+        // Agrupar por programa. Como un contrato puede tener varios lotes, cada
+        // lote del contrato lleva el monto_total completo (no se divide).
+        LinkedHashMap<String, List<LotesVendidosResponseDTO.LoteVendidoDTO>> porPrograma = new LinkedHashMap<>();
+
+        for (Contrato c : contratos) {
+            String vendedorNombre = c.getVendedor() != null
+                    ? c.getVendedor().getNombre() + " " + c.getVendedor().getApellidos() : "";
+            String clienteNombre = resolverPrimerCliente(c);
+
+            if (c.getLotes() != null) {
+                for (ContratoLote cl : c.getLotes()) {
+                    if (cl.getLote() == null) continue;
+                    String programa = cl.getLote().getPrograma() != null
+                            ? cl.getLote().getPrograma().getNombrePrograma() : "SIN PROGRAMA";
+
+                    LotesVendidosResponseDTO.LoteVendidoDTO lote = LotesVendidosResponseDTO.LoteVendidoDTO.builder()
+                            .manzana(cl.getLote().getManzana())
+                            .numeroLote(cl.getLote().getNumeroLote())
+                            .area(cl.getLote().getArea())
+                            .costoVenta(c.getMontoTotal())
+                            .cliente(clienteNombre)
+                            .vendedor(vendedorNombre)
+                            .fechaContrato(c.getFechaContrato())
+                            .estadoContrato(c.getEstadoContrato() != null ? c.getEstadoContrato().name() : null)
+                            .idContrato(c.getIdContrato())
+                            .build();
+
+                    porPrograma.computeIfAbsent(programa, k -> new ArrayList<>()).add(lote);
+                }
+            }
+        }
+
+        List<LotesVendidosResponseDTO.ProgramaDTO> programas = new ArrayList<>();
+        long totalLotes = 0;
+        BigDecimal totalGeneral = BigDecimal.ZERO;
+
+        for (Map.Entry<String, List<LotesVendidosResponseDTO.LoteVendidoDTO>> entry : porPrograma.entrySet()) {
+            BigDecimal totalPrograma = entry.getValue().stream()
+                    .map(LotesVendidosResponseDTO.LoteVendidoDTO::getCostoVenta)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            totalGeneral = totalGeneral.add(totalPrograma);
+            totalLotes += entry.getValue().size();
+            programas.add(LotesVendidosResponseDTO.ProgramaDTO.builder()
+                    .nombrePrograma(entry.getKey())
+                    .lotes(entry.getValue())
+                    .totalPrograma(totalPrograma)
+                    .cantidadLotes(entry.getValue().size())
+                    .build());
+        }
+
+        return LotesVendidosResponseDTO.builder()
+                .programas(programas)
+                .totalGeneral(totalGeneral)
+                .cantidadLotes(totalLotes)
+                .build();
+    }
+
+    private String resolverPrimerCliente(Contrato c) {
+        if (c.getClientes() != null && !c.getClientes().isEmpty()) {
+            ContratoCliente cc = c.getClientes().iterator().next();
+            if (cc.getCliente() != null) {
+                return cc.getCliente().getNombre() + " " + cc.getCliente().getApellidos();
+            }
+        }
+        return "";
     }
 }

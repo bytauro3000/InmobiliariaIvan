@@ -11,6 +11,7 @@ import com.Inmobiliaria.demo.dto.TransferenciaResponseDTO;
 import com.Inmobiliaria.demo.dto.ContratoRequestDTO;
 import com.Inmobiliaria.demo.dto.ContratoResponseDTO;
 import com.Inmobiliaria.demo.dto.ContratoListItemDTO;
+import com.Inmobiliaria.demo.dto.LotesVendidosResponseDTO;
 
 public interface ContratoService {
 
@@ -39,6 +40,8 @@ public interface ContratoService {
     TransferenciaResponseDTO registrarTransferencia(Integer idContrato);
 
     List<ContratoResponseDTO> buscarPorNombreCliente(String termino);
+
+    LotesVendidosResponseDTO listarLotesVendidos(Integer idVendedor);
 
     List<ContratoListItemDTO> buscarPorNombreClienteResumen(String termino);
 

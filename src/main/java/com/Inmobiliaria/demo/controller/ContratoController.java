@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import com.Inmobiliaria.demo.dto.ContratoRequestDTO;
 import com.Inmobiliaria.demo.dto.ContratoResponseDTO;
 import com.Inmobiliaria.demo.dto.ContratoListItemDTO;
+import com.Inmobiliaria.demo.dto.LotesVendidosResponseDTO;
 import com.Inmobiliaria.demo.dto.TransferenciaResponseDTO;
 import com.Inmobiliaria.demo.service.ContratoService;
 
@@ -88,6 +89,13 @@ public class ContratoController {
     @GetMapping("/buscar-por-cliente-resumen")
     public List<ContratoListItemDTO> buscarPorClienteResumen(@RequestParam String termino) {
         return contratoService.buscarPorNombreClienteResumen(termino);
+    }
+
+    // Lotes vendidos (agrupados por programa). Filtro opcional por idVendedor.
+    @GetMapping("/lotes-vendidos")
+    public LotesVendidosResponseDTO listarLotesVendidos(
+            @RequestParam(value = "idVendedor", required = false) Integer idVendedor) {
+        return contratoService.listarLotesVendidos(idVendedor);
     }
 
     @DeleteMapping("/eliminar/{id}")

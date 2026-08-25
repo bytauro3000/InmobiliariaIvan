@@ -196,4 +196,27 @@ public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
             ") " +
             "ORDER BY cl.contrato.idContrato DESC")
     java.util.Optional<Contrato> findContratoByLoteId(@Param("idLote") Integer idLote);
+
+    /**
+     * Contratos con lotes en estado "vendido" (con clientes, lotes, programa y vendedor).
+     * Estados vendidos: ACTIVO, MORA, CANCELADO, TRANSFERIDO.
+     * Se excluyen: RESUELTO, RENUNCIA, CARTA_NOTARIAL, EN_RESOLUCION.
+     * Filtro por vendedor opcional.
+     */
+    @Query("SELECT DISTINCT c FROM Contrato c " +
+           "LEFT JOIN FETCH c.clientes cc " +
+           "LEFT JOIN FETCH cc.cliente " +
+           "LEFT JOIN FETCH c.lotes cl " +
+           "LEFT JOIN FETCH cl.lote l " +
+           "LEFT JOIN FETCH l.programa " +
+           "LEFT JOIN FETCH c.vendedor " +
+           "WHERE c.estadoContrato IN (" +
+           "  com.Inmobiliaria.demo.enums.EstadoContrato.ACTIVO, " +
+           "  com.Inmobiliaria.demo.enums.EstadoContrato.MORA, " +
+           "  com.Inmobiliaria.demo.enums.EstadoContrato.CANCELADO, " +
+           "  com.Inmobiliaria.demo.enums.EstadoContrato.TRANSFERIDO" +
+           ") " +
+           "AND (:idVendedor IS NULL OR c.vendedor.idVendedor = :idVendedor) " +
+           "ORDER BY c.idContrato DESC")
+    List<Contrato> findLotesVendidos(@Param("idVendedor") Integer idVendedor);
 }
