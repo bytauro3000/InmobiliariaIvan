@@ -1,5 +1,6 @@
 package com.Inmobiliaria.demo.controller;
 
+import com.Inmobiliaria.demo.client.InscripcionClient;
 import com.Inmobiliaria.demo.dto.NotaCreditoRequestDTO;
 import com.Inmobiliaria.demo.entity.*;
 import com.Inmobiliaria.demo.enums.Moneda;
@@ -45,6 +46,7 @@ public class NotaCreditoController {
     private final ComprobanteService comprobanteService;
     private final PagoLetraService pagoLetraService;
     private final SunatEnvioService sunatEnvioService;
+    private final InscripcionClient inscripcionClient;
 
     @PostMapping("/enviar")
     @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
@@ -110,6 +112,13 @@ public class NotaCreditoController {
                 pago.setFechaAnulacion(LocalDateTime.now());
                 pago.setAnuladoPor(anuladoPor);
                 savePago(pago);
+
+                // Para pago de inscripción de servicios básicos: anular también el abono
+                // en el microservicio para que recalcule el saldo y, si se anuló todo,
+                // deje el servicio disponible de nuevo.
+                if (pago instanceof PagoInscripcionComprobante pic) {
+                    anularAbonoEnMicroservicio(pic, notaCredito.getNumeroCompleto(), desMotivo, anuladoPor);
+                }
             }
 
             comprobanteOriginal.setIdNotaCreditoAnulacion(notaCredito.getIdComprobante());
@@ -186,6 +195,29 @@ public class NotaCreditoController {
             pagoMoraRepository.save(pm);
         } else if (pago instanceof PagoInscripcionComprobante pic) {
             pagoInscripcionRepository.save(pic);
+        }
+    }
+
+    /**
+     * Anula el abono de inscripción en el microservicio de servicios básicos.
+     * El microservicio recalcula el monto acumulado y, si quedó en 0, cancela la
+     * inscripción para que el servicio vuelva a estar disponible para inscribirse.
+     */
+    private void anularAbonoEnMicroservicio(PagoInscripcionComprobante pic, String nroNC, String desMotivo, String anuladoPor) {
+        try {
+            if (pic.getIdPagoInscripcionMs() == null) {
+                log.warn("Pago de inscripción {} sin idPagoInscripcionMs: no se puede anular en el microservicio.",
+                        pic.getIdPagoInscripcionComprobante());
+                return;
+            }
+            Map<String, Object> payload = Map.of("motivo", "NC " + nroNC + " - " + desMotivo);
+            inscripcionClient.anularAbono(pic.getIdInscripcionServicio(), pic.getIdPagoInscripcionMs(), payload);
+            log.info("Abono de inscripción {} anulado en el microservicio (inscripción {}, pago ms {}).",
+                    pic.getIdPagoInscripcionComprobante(), pic.getIdInscripcionServicio(), pic.getIdPagoInscripcionMs());
+        } catch (Exception e) {
+            // No romper la NC si el microservicio falla; se registra y se continúa.
+            log.error("No se pudo anular el abono {} en el microservicio: {}",
+                    pic.getIdPagoInscripcionComprobante(), e.getMessage());
         }
     }
 

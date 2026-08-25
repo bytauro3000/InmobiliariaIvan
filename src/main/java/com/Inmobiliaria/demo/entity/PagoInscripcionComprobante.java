@@ -25,4 +25,9 @@ public class PagoInscripcionComprobante extends PagoBase {
 
     @Column(name = "tipo_servicio", length = 10, nullable = false)
     private String tipoServicio;
+
+    // Id del abono en el microservicio de servicios básicos (pago_inscripcion.idPagoInscripcion).
+    // Se guarda al registrar el abono para poder anularlo ahí cuando se emite una NC.
+    @Column(name = "id_pago_inscripcion_ms")
+    private Long idPagoInscripcionMs;
 }

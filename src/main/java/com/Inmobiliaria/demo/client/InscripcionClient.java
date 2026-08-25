@@ -52,6 +52,12 @@ public interface InscripcionClient {
     @GetMapping("/resumen-pendientes")
     Map<Integer, List<Map<String, Object>>> obtenerResumenPendientes();
 
+    @PatchMapping("/{idInscripcion}/pagos/{idPagoInscripcion}/anular")
+    Map<String, Object> anularAbono(
+            @PathVariable("idInscripcion") Integer idInscripcion,
+            @PathVariable("idPagoInscripcion") Long idPagoInscripcion,
+            @RequestBody Map<String, Object> request);
+
     @GetMapping("/ingresos-rango")
     List<Map<String, Object>> obtenerIngresosPorRango(
             @RequestParam("desde") String desde,

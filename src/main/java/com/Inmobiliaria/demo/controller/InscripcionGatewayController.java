@@ -207,13 +207,14 @@ import java.util.stream.Collectors;
 	            return ResponseEntity.badRequest().body("El tipo de comprobante es obligatorio.");
 	
 	        // a) Enviar abono al microservicio
+	        Map<String, Object> abonoRespuestaMs = null;
 	        try {
 	            Map<String, Object> abonoPayload = new HashMap<>();
 	            abonoPayload.put("montoPagado", request.getMontoPagado());
 	            abonoPayload.put("metodoPago",  request.getMedioPago().name());
-	
-	            inscripcionClient.registrarAbono(idInscripcion, abonoPayload);
-	
+
+	            abonoRespuestaMs = inscripcionClient.registrarAbono(idInscripcion, abonoPayload);
+
 	        } catch (FeignException e) {
 	            return ResponseEntity.status(e.status()).body(e.contentUTF8());
 	        } catch (Exception e) {
@@ -261,6 +262,13 @@ import java.util.stream.Collectors;
 	        pago.setComprobante(comprobante);
 	        pago.setIdInscripcionServicio(idInscripcion);
 	        pago.setTipoServicio(request.getTipoServicio().toUpperCase());
+	        // Guardar el id del abono en el microservicio para poder anularlo al emitir una NC.
+	        if (abonoRespuestaMs != null && abonoRespuestaMs.get("idPagoInscripcion") != null) {
+	            Object idMs = abonoRespuestaMs.get("idPagoInscripcion");
+	            if (idMs instanceof Number) {
+	                pago.setIdPagoInscripcionMs(((Number) idMs).longValue());
+	            }
+	        }
 	
 PagoInscripcionComprobante pagoGuardado =
                 pagoInscripcionComprobanteRepository.save(pago);
