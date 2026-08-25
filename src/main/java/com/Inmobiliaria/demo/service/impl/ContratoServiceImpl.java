@@ -935,6 +935,7 @@ public class ContratoServiceImpl implements ContratoService {
         for (Contrato c : contratos) {
             String vendedorNombre = c.getVendedor() != null
                     ? c.getVendedor().getNombre() + " " + c.getVendedor().getApellidos() : "";
+            Integer idVendedorLote = c.getVendedor() != null ? c.getVendedor().getIdVendedor() : null;
             String clienteNombre = resolverPrimerCliente(c);
 
             if (c.getLotes() != null) {
@@ -950,6 +951,7 @@ public class ContratoServiceImpl implements ContratoService {
                             .costoVenta(c.getMontoTotal())
                             .cliente(clienteNombre)
                             .vendedor(vendedorNombre)
+                            .idVendedor(idVendedorLote)
                             .fechaContrato(c.getFechaContrato())
                             .estadoContrato(c.getEstadoContrato() != null ? c.getEstadoContrato().name() : null)
                             .idContrato(c.getIdContrato())

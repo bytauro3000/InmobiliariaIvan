@@ -37,6 +37,7 @@ public class LotesVendidosResponseDTO {
         private BigDecimal costoVenta;      // monto_total del contrato
         private String cliente;             // nombre completo del comprador
         private String vendedor;            // nombre completo del vendedor
+        private Integer idVendedor;
         private LocalDate fechaContrato;
         private String estadoContrato;
         private Integer idContrato;
