@@ -926,7 +926,17 @@ public class ContratoServiceImpl implements ContratoService {
     @Override
     @Transactional(readOnly = true)
     public LotesVendidosResponseDTO listarLotesVendidos(Integer idVendedor) {
-        List<Contrato> contratos = contratoRepository.findLotesVendidos(idVendedor);
+        // Dos queries separadas para evitar el producto cartesiano clientes × lotes
+        // (causa de OutOfMemory en Render). Luego se combinan por id de contrato.
+        List<Contrato> conClientes = contratoRepository.findLotesVendidosConClientes(idVendedor);
+        List<Contrato> conLotes    = contratoRepository.findLotesVendidosConLotes(idVendedor);
+
+        Map<Integer, Contrato> contratosMap = new LinkedHashMap<>();
+        for (Contrato c : conClientes) contratosMap.put(c.getIdContrato(), c);
+        for (Contrato c : conLotes) {
+            contratosMap.putIfAbsent(c.getIdContrato(), c);
+        }
+        List<Contrato> contratos = new ArrayList<>(contratosMap.values());
 
         // Agrupar por programa. Como un contrato puede tener varios lotes, cada
         // lote del contrato lleva el monto_total completo (no se divide).
