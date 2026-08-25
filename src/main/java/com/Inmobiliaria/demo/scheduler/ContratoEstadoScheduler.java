@@ -7,8 +7,6 @@ import com.Inmobiliaria.demo.enums.EstadoLetra;
 import com.Inmobiliaria.demo.repository.ContratoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -29,13 +27,6 @@ public class ContratoEstadoScheduler {
     private final ContratoRepository  contratoRepository;
 
     private final AtomicBoolean ejecutando = new AtomicBoolean(false);
-
-    @EventListener(ApplicationReadyEvent.class)
-    @Transactional
-    public void ejecutarAlArrancar() {
-        log.info(">>> Scheduler EstadoContrato: ejecución inicial al arrancar el servidor...");
-        actualizarEstadosContratos();
-    }
 
     @Scheduled(cron = "0 0 15 * * *")
     @Scheduled(cron = "0 15 18 * * *")
