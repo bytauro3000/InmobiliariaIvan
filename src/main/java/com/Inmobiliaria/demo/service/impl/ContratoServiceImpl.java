@@ -152,12 +152,17 @@ public class ContratoServiceImpl implements ContratoService {
         contrato.setPagoInicial(null); // Evitar que ModelMapper mapee PagoInicialRequestDTO → PagoInicial transient
         contratoGuardado = contratoRepository.save(contrato);
 
-        // ── Registrar pago de la inicial ───────────────────────────────────────
-        // Solo aplica a contratos FINANCIADOS con inicial > 0 y pagoInicial informado.
-        if (contratoGuardado.getTipoContrato() == TipoContrato.FINANCIADO
-                && requestDTO.getPagoInicial() != null
+        // ── Registrar pago de la inicial / pago al contado ──────────────────
+        // FINANCIADO: aplica con inicial > 0 y pagoInicial informado.
+        // CONTADO: el "pago inicial" es el pago total (al contado) — se usa el mismo
+        // flujo de comprobante (boleta/recibo) y de anulación.
+        boolean esFinanciadoConInicial = contratoGuardado.getTipoContrato() == TipoContrato.FINANCIADO
                 && contratoGuardado.getInicial() != null
-                && contratoGuardado.getInicial().compareTo(BigDecimal.ZERO) > 0) {
+                && contratoGuardado.getInicial().compareTo(BigDecimal.ZERO) > 0;
+        boolean esContadoConPago = contratoGuardado.getTipoContrato() == TipoContrato.CONTADO;
+
+        if (requestDTO.getPagoInicial() != null
+                && (esFinanciadoConInicial || esContadoConPago)) {
 
         	PagoInicialRequestDTO piReq = requestDTO.getPagoInicial();
             LocalDate fechaPagoInicial = piReq.getFechaPago() != null ? piReq.getFechaPago() : LocalDate.now();
@@ -207,7 +212,9 @@ public class ContratoServiceImpl implements ContratoService {
                                 "No se pudo determinar el cliente para emitir la boleta de la inicial.");
                     }
 
-                    String descripcion = "Pago inicial de contrato";
+                    String descripcion = (contratoGuardado.getTipoContrato() == TipoContrato.CONTADO)
+                            ? "Pago al contado de contrato"
+                            : "Pago inicial de contrato";
                     compInicial.setDescripcion(descripcion);
                     Map<String, Object> sunatRespuesta = sunatEnvioService.enviarBoleta(
                             cliente, contratoGuardado, compInicial,
