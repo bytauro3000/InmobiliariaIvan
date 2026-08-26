@@ -781,7 +781,7 @@ public class ContratoContadoFloridaPdf {
 		document.setMargins(122, 85, 57, 85);
 
 		document.add(new Paragraph("CERTIFICADO DE CANCELACION DE TERRENO")
-				.setFont(arialBoldItalic).setFontSize(14).setTextAlignment(TextAlignment.CENTER)
+				.setFont(arialBoldItalic).setFontSize(14).setUnderline().setTextAlignment(TextAlignment.CENTER)
 				.setMarginBottom(25));
 
 		Paragraph certEmpresa = new Paragraph()
@@ -860,7 +860,7 @@ public class ContratoContadoFloridaPdf {
 		document.add(certCierre);
 
 		document.add(new Paragraph("")
-				.setMarginTop(25));
+				.setMarginTop(10));
 
 		Paragraph certFirmaCiudad = new Paragraph()
 				.setTextAlignment(TextAlignment.RIGHT)
@@ -871,13 +871,13 @@ public class ContratoContadoFloridaPdf {
 		document.add(certFirmaCiudad);
 
 		document.add(new Paragraph("")
-				.setMarginTop(40));
+				.setMarginTop(12));
 
 		// Cierre del certificado: "Atentamente," centrado
 		Paragraph certAtentamente = new Paragraph("Atentamente,")
 				.setFont(arialItalic).setFontSize(12)
 				.setTextAlignment(TextAlignment.CENTER)
-				.setMarginTop(15);
+				.setMarginTop(8);
 
 		document.add(certAtentamente);
 
