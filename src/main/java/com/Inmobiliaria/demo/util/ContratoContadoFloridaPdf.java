@@ -863,7 +863,7 @@ public class ContratoContadoFloridaPdf {
 				.setMarginTop(25));
 
 		Paragraph certFirmaCiudad = new Paragraph()
-				.setTextAlignment(TextAlignment.CENTER)
+				.setTextAlignment(TextAlignment.RIGHT)
 				.setFont(arialItalic).setFontSize(12);
 
 		certFirmaCiudad.add("Los Olivos, " + diaNum + " de " + mesNombre.toLowerCase() + " del año " + anioNum + ".");
@@ -873,23 +873,13 @@ public class ContratoContadoFloridaPdf {
 		document.add(new Paragraph("")
 				.setMarginTop(40));
 
-		// Firma de la empresa en el certificado
-		Table tablaCert = new Table(UnitValue.createPercentArray(new float[]{45f, 10f, 45f}))
-				.useAllAvailableWidth()
-				.setBorder(Border.NO_BORDER);
+		// Cierre del certificado: "Atentamente," centrado
+		Paragraph certAtentamente = new Paragraph("Atentamente,")
+				.setFont(arialItalic).setFontSize(12)
+				.setTextAlignment(TextAlignment.CENTER)
+				.setMarginTop(15);
 
-		Cell celdaCertFirma = new Cell().setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.CENTER).setPadding(0);
-		Paragraph pLineaCert = new Paragraph().setBorderTop(new com.itextpdf.layout.borders.SolidBorder(1f))
-				.setWidth(220f).setMarginBottom(2).setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.CENTER);
-		celdaCertFirma.add(pLineaCert);
-		celdaCertFirma.add(new Paragraph(representanteLegal()).setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
-		celdaCertFirma.add(new Paragraph("DNI N°" + representanteDni()).setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
-		celdaCertFirma.add(new Paragraph("“LA VENDEDORA”").setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f));
-
-		tablaCert.addCell(celdaCertFirma);
-		tablaCert.addCell(new Cell().setBorder(Border.NO_BORDER));
-
-		document.add(tablaCert);
+		document.add(certAtentamente);
 
 		document.close();
 		return out.toByteArray();
