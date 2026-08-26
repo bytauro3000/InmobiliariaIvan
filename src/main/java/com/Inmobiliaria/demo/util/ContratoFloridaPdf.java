@@ -46,7 +46,7 @@ public class ContratoFloridaPdf {
 	private static String representanteLegal() { return EmpresaContext.empresaService.obtenerActiva().getRepresentanteLegal(); }
 	private static String representanteDni() { return EmpresaContext.empresaService.obtenerActiva().getRepresentanteDni(); }
 	private static String partidaElectronica() { return EmpresaContext.empresaService.obtenerActiva().getPartidaElectronica(); }
-	private static String direccion() { return EmpresaContext.empresaService.obtenerActiva().getDireccion(); }
+	private static String direccion() { return EmpresaPdfUtil.direccionCompleta(); }
 	private static String clausulaMora() {
 		return "interés compensatorio y moratorio mensual que es del 5% del valor de la letra vencida o impagada más 1 dólar diario hasta la cancelación de la misma";
 	}

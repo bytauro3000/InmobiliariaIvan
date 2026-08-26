@@ -61,7 +61,7 @@ public class ComprobanteInscripcionPdf {
     private static final DeviceGray GRIS_MEDIO  = new DeviceGray(0.45f);
 
     private static String empresa() { return EmpresaContext.empresaService.obtenerActiva().getNombreLegal(); }
-    private static String direccion() { return EmpresaContext.empresaService.obtenerActiva().getDireccion(); }
+    private static String direccion() { return EmpresaPdfUtil.direccionCompleta(); }
     private static String telefono() { return "Cel.: " + EmpresaContext.empresaService.obtenerActiva().getCelular(); }
     private static String ruc() { return "R.U.C.: " + EmpresaContext.empresaService.obtenerActiva().getRuc(); }
     private static String logoUrl() { return EmpresaContext.empresaService.obtenerActiva().getLogoSmallUrl(); }

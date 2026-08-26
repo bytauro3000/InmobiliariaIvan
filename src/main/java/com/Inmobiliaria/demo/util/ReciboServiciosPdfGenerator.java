@@ -22,7 +22,7 @@ import com.Inmobiliaria.demo.config.EmpresaContext;
 public class ReciboServiciosPdfGenerator {
 
     private static String empresaNombre() { return EmpresaContext.empresaService.obtenerActiva().getNombreLegal(); }
-    private static String empresaDireccion() { return EmpresaContext.empresaService.obtenerActiva().getDireccion(); }
+    private static String empresaDireccion() { return EmpresaPdfUtil.direccionCompleta(); }
     private static String empresaTelefono() { return "Telf.: " + EmpresaContext.empresaService.obtenerActiva().getTelefono(); }
     private static final DecimalFormat df = new DecimalFormat("#,##0.00");
 
