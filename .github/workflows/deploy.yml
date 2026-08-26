@@ -5,16 +5,22 @@ on:
     branches:
       - main
 
+# Concurrency: si se hacen varios pushes seguidos, cancela el job anterior
+# y solo corre el último (evita colas "Waiting for runner" y deploys duplicados).
+concurrency:
+  group: deploy-render-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout del código
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Configurar JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
@@ -24,13 +30,13 @@ jobs:
         run: mvn clean package -DskipTests
 
       - name: Login en Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
       - name: Construir y subir imagen a Docker Hub
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
