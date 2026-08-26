@@ -37,4 +37,30 @@ public class EmpresaPdfUtil {
 		}
 		return sb.toString();
 	}
+
+	/**
+	 * Dirección de la empresa para CONTRATOS, en el formato del modelo:
+	 * "calle, Distrito de X, Provincia y Departamento de Y".
+	 * Ej: "Av. Alfredo Mendiola N°3623 - ..., Distrito de Los Olivos, Provincia y Departamento de Lima"
+	 */
+	public static String direccionContrato() {
+		var e = EmpresaContext.empresaService.obtenerActiva();
+
+		StringBuilder sb = new StringBuilder();
+		if (e.getDireccion() != null && !e.getDireccion().isBlank()) {
+			sb.append(e.getDireccion().trim());
+		}
+		if (e.getDistrito() != null && !e.getDistrito().isBlank()) {
+			if (sb.length() > 0) sb.append(", ");
+			sb.append("Distrito de ").append(e.getDistrito().trim());
+		}
+		if (e.getProvincia() != null && !e.getProvincia().isBlank()) {
+			if (sb.length() > 0) sb.append(", ");
+			sb.append("Provincia y Departamento de ").append(e.getProvincia().trim());
+		} else if (e.getDepartamento() != null && !e.getDepartamento().isBlank()) {
+			if (sb.length() > 0) sb.append(", ");
+			sb.append("Provincia y Departamento de ").append(e.getDepartamento().trim());
+		}
+		return sb.toString();
+	}
 }
