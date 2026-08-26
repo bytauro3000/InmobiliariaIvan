@@ -241,6 +241,7 @@ public class ContratoFloridaPdf {
 		intro.add("con ");
 		intro.add(new Text("RUC N\u00ba " + ruc() + " ").setFont(arialBold));
 		intro.add("con domicilio en " + direccion() + ", debidamente representado por su ");
+		intro.add(new Text("Gerente General ").setFont(arialBold));
 		intro.add(new Text(representanteLegal() + " ").setFont(arialBold));
 		intro.add("con ");
 		intro.add(new Text("DNI No." + representanteDni() + " ").setFont(arialBold));
@@ -1125,6 +1126,7 @@ public class ContratoFloridaPdf {
 		introPosesion.add("con RUC No. ");
 		introPosesion.add(new Text(ruc() + " ").setFont(arialBold));
 		introPosesion.add("con domicilio en " + direccion() + ", debidamente representado por su ");
+		introPosesion.add(new Text("Gerente General ").setFont(arialBold));
 		introPosesion.add(new Text(representanteLegal() + " ").setFont(arialBold));
 		introPosesion.add("con ");
 		introPosesion.add(new Text("DNI No." + representanteDni() + " ").setFont(arialBold));
