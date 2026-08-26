@@ -1,15 +1,23 @@
 package com.Inmobiliaria.demo.util;
 
 import com.Inmobiliaria.demo.config.EmpresaContext;
+import com.Inmobiliaria.demo.entity.Empresa;
 
 /**
  * Utilidades de la empresa para las plantillas PDF.
  * Componer la dirección completa (calle + distrito + provincia + departamento)
  * a partir de los campos separados de la tabla empresa.
+ * Se lee la empresa directamente del repositorio (sin pasar por la caché de
+ * EmpresaService) para que los PDFs siempre reflejen el dato actual de la BD.
  */
 public class EmpresaPdfUtil {
 
 	private EmpresaPdfUtil() {
+	}
+
+	private static Empresa empresaFresca() {
+		return EmpresaContext.empresaRepository.findByActivaTrue()
+				.orElseThrow(() -> new RuntimeException("No hay una empresa activa configurada"));
 	}
 
 	/**
@@ -17,7 +25,7 @@ public class EmpresaPdfUtil {
 	 * Si los campos de ubicación están vacíos, se omite la parte faltante.
 	 */
 	public static String direccionCompleta() {
-		var e = EmpresaContext.empresaService.obtenerActiva();
+		var e = empresaFresca();
 
 		StringBuilder sb = new StringBuilder();
 		if (e.getDireccion() != null && !e.getDireccion().isBlank()) {
@@ -44,7 +52,7 @@ public class EmpresaPdfUtil {
 	 * Ej: "Av. Alfredo Mendiola N°3623 - ..., Distrito de Los Olivos, Provincia y Departamento de Lima"
 	 */
 	public static String direccionContrato() {
-		var e = EmpresaContext.empresaService.obtenerActiva();
+		var e = empresaFresca();
 
 		StringBuilder sb = new StringBuilder();
 		if (e.getDireccion() != null && !e.getDireccion().isBlank()) {
