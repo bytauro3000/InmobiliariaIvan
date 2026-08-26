@@ -1468,7 +1468,13 @@ public class ContratoFloridaPdf {
 		// 4. Agregar las firmas en la hoja de posesión
 		agregarBloqueFirmas(document, clientes, arialBoldItalic);
 
-		// 5. FINALIZAR DOCUMENTO Y RETORNAR BYTES
+		// 5. CERTIFICADO DE CANCELACION: solo cuando el contrato financiado
+		//    ya está CANCELADO (cliente pagó la última letra).
+		if (contrato.getEstadoContrato() == com.Inmobiliaria.demo.enums.EstadoContrato.CANCELADO) {
+			CertificadoCancelacionPdf.agregarCertificado(document, contrato, arialBold, arialBoldItalic, arialItalic);
+		}
+
+		// 6. FINALIZAR DOCUMENTO Y RETORNAR BYTES
 		document.close();
 		return out.toByteArray(); // 👈 ESTO ES LO QUE EL COMPILADOR TE PIDE
 

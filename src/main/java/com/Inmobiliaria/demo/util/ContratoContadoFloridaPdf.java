@@ -771,120 +771,16 @@ public class ContratoContadoFloridaPdf {
 		cierrePosesion.add(new Text(fechaTextoCierre).setFont(arialItalic));
 
 		document.add(cierrePosesion);
-
-		agregarBloqueFirmas(document, clientes, arialBoldItalic);
+agregarBloqueFirmas(document, clientes, arialBoldItalic);
 
 		/* =====================================================================
-		 * CERTIFICADO DE CANCELACION DE TERRENO
+		 * CERTIFICADO DE CANCELACION DE TERRENO (reutilizable)
 		 * ===================================================================== */
-		document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
-		document.setMargins(122, 85, 57, 85);
-
-		document.add(new Paragraph("CERTIFICADO DE CANCELACION DE TERRENO")
-				.setFont(arialBoldItalic).setFontSize(14).setUnderline().setTextAlignment(TextAlignment.CENTER)
-				.setMarginBottom(25));
-
-		Paragraph certEmpresa = new Paragraph()
-				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(12).setMultipliedLeading(1.2f);
-
-		certEmpresa.add("La Empresa ");
-		certEmpresa.add(new Text(empresa()).setFont(arialBold));
-		certEmpresa.add(", inscrito en la Ficha #" + partidaElectronica() + " del Registro Mercantil de Lima, con RUC # " + ruc() + ".");
-
-		document.add(certEmpresa);
-
-		document.add(new Paragraph("")
-				.setMarginTop(20));
-
-		document.add(new Paragraph("CERTIFICA:")
-				.setFont(arialBoldItalic).setFontSize(12).setTextAlignment(TextAlignment.LEFT)
-				.setMarginBottom(15));
-
-		Paragraph certCuerpo = new Paragraph()
-				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(12).setMultipliedLeading(1.2f);
-
-		certCuerpo.add("Que, ");
-		for (int i = 0; i < numClientes; i++) {
-			ClienteResponseDTO c = clientes.get(i);
-			boolean esFem = (c.getGenero() != null && c.getGenero().equals(Genero.Femenino));
-			String pref = esFem ? "la Sra. " : "el Sr. ";
-			String ident = esFem ? "identificada" : "identificado";
-			String nacion = resolverNacionalidad(c);
-			String estCivTexto = "";
-			if (c.getEstadoCivil() != null) {
-				estCivTexto = c.getEstadoCivil().toString().toLowerCase();
-				if (esFem) {
-					if (estCivTexto.equals("soltero")) estCivTexto = "soltera";
-					else if (estCivTexto.equals("casado")) estCivTexto = "casada";
-					else if (estCivTexto.equals("viudo")) estCivTexto = "viuda";
-				}
-			} else {
-				estCivTexto = esFem ? "soltera" : "soltero";
-			}
-			certCuerpo.add(pref);
-			certCuerpo.add(new Text(c.getNombre().toUpperCase() + " " + c.getApellidos().toUpperCase()).setFont(arialBold));
-			certCuerpo.add(", " + nacion + ", " + estCivTexto + ", " + ident + " con ");
-			certCuerpo.add(new Text(etiquetaDocumento(c) + c.getNumDoc()).setFont(arialBold));
-			if (numClientes > 1 && i < numClientes - 1) {
-				certCuerpo.add(i == numClientes - 2 ? " y " : ", ");
-			}
-		}
-		certCuerpo.add(", de ocupación independiente, con domicilio en " + direccionRealParaContrato);
-		certCuerpo.add("; ha adquirido un lote de terreno rústico para fines de vivienda con un área de ");
-		certCuerpo.add(new Text(lote.getArea() + "M2.").setFont(arialBold));
-		certCuerpo.add(" En la Manzana “");
-		certCuerpo.add(new Text(lote.getManzana()).setFont(arialBold));
-		certCuerpo.add("” asignado con el lote Nº ");
-		certCuerpo.add(new Text(lote.getNumeroLote()).setFont(arialBold));
-		certCuerpo.add("; lote que forma parte de un predio de mayor extensión denominado lote de terreno rústico con un área superficial de 201,224.03 m2 Equivalente a 20 Has. 1,224.03 m2, que corresponde al 100% de las acciones y derechos del Predio denominado Sector Pampa San Antonio, Margen derecha del Kilómetro 23 de La Avenida Túpac Amaru, Distrito de Carabayllo, Provincia y Departamento De Lima, el cual forma parte de un predio de mayor extensión ubicado en las Provincia de Huarochirí, Lima y Canta, inscrito a fojas 515 del tomo 10-H, actualmente ");
-		certCuerpo.add(new Text("Partida Electrónica 11049870 del Registro de Predios de Lima. ").setFont(arialBoldItalic));
-		certCuerpo.add("; El cual se viene desarrollando el Programa de Vivienda ");
-		certCuerpo.add(new Text("\"LA FLORIDA DE TORRE BLANCA\"").setFont(arialBoldItalic));
-		certCuerpo.add(". El lote de terreno fue adquirido mediante contrato de Compra-Venta del ");
-		certCuerpo.add(new Text(fechaRegistro.format(fmtFecha)).setFont(arialBoldItalic));
-		certCuerpo.add(", encontrándose a la fecha cancelado el precio total de venta.");
-
-		document.add(certCuerpo);
-
-		document.add(new Paragraph("")
-				.setMarginTop(15));
-
-		Paragraph certCierre = new Paragraph()
-				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(12).setMultipliedLeading(1.2f);
-
-		certCierre.add("Se extiende el presente certificado a solicitud de La Compradora, para los usos que crea conveniente.");
-
-		document.add(certCierre);
-
-		document.add(new Paragraph("")
-				.setMarginTop(10));
-
-		Paragraph certFirmaCiudad = new Paragraph()
-				.setTextAlignment(TextAlignment.RIGHT)
-				.setFont(arialItalic).setFontSize(12);
-
-		certFirmaCiudad.add("Los Olivos, " + diaNum + " de " + mesNombre.toLowerCase() + " del año " + anioNum + ".");
-
-		document.add(certFirmaCiudad);
-
-		document.add(new Paragraph("")
-				.setMarginTop(12));
-
-		// Cierre del certificado: "Atentamente," centrado
-		Paragraph certAtentamente = new Paragraph("Atentamente,")
-				.setFont(arialItalic).setFontSize(12)
-				.setTextAlignment(TextAlignment.CENTER)
-				.setMarginTop(8);
-
-		document.add(certAtentamente);
+		CertificadoCancelacionPdf.agregarCertificado(document, contrato, arialBold, arialBoldItalic, arialItalic);
 
 		document.close();
 		return out.toByteArray();
 	}
-
 	// ── Helpers ───────────────────────────────────────────────────────────────
 
 	private static void agregarFilaLinderos(Table tabla, String etiqueta, String colindante, String medidaCompleta, PdfFont font) {
