@@ -342,11 +342,13 @@ public class ContratoContadoFloridaPdf {
 
 		document.add(segundaIntro);
 
-		// Tabla de linderos
+		// Tabla de linderos — mismo espacio arriba y abajo del bloque
 		Table tablaLinderos = new Table(UnitValue.createPercentArray(new float[]{30f, 45f, 25f}))
 				.useAllAvailableWidth()
 				.setBorder(Border.NO_BORDER)
-				.setMarginLeft(20);
+				.setMarginLeft(20)
+				.setMarginTop(14)
+				.setMarginBottom(14);
 
 		agregarFilaLinderos(tablaLinderos, "Por el frente", lote.getColindanteNorte(), "Con    " + lote.getAncho1() + "  m.l.", arialItalic);
 		agregarFilaLinderos(tablaLinderos, "Por la derecha", lote.getColindanteEste(), "Con  " + lote.getLargo1() + "  m.l.", arialItalic);
@@ -357,7 +359,7 @@ public class ContratoContadoFloridaPdf {
 
 		Paragraph segundaFinal = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f).setMarginTop(10);
+				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
 
 		segundaFinal.add("Por el presente contrato ");
 		segundaFinal.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
@@ -380,7 +382,8 @@ public class ContratoContadoFloridaPdf {
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
 
-		terceraCuerpo.add("CLAUSULA TERCERA: El precio del bien objeto de la prestación a cargo de ");
+		terceraCuerpo.add(new Text("CLAUSULA TERCERA: ").setFont(arialBoldItalic));
+		terceraCuerpo.add("El precio del bien objeto de la prestación a cargo de ");
 		terceraCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
 		terceraCuerpo.add(" asciende a la suma de ");
 		terceraCuerpo.add(new Text(prefMoneda + " " + df.format(contrato.getMontoTotal())).setFont(arialBoldItalic));
@@ -421,7 +424,8 @@ public class ContratoContadoFloridaPdf {
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
 
-		cuartaCuerpo.add("CLAUSULA CUARTA: Las partes contratantes declaran que el precio total pactado es el que realmente corresponde a las acciones y derechos del predio objeto del presente contrato, existiendo entre aquellas y éste perfecta equivalencia, en consecuencia, se hacen recíproca donación de cualquier diferencia y renuncian a cualquier acción o excepción que por dicha causa pudieran interponer para invalidar los efectos del presente contrato, así como a los plazos para interponerla.");
+		cuartaCuerpo.add(new Text("CLAUSULA CUARTA: ").setFont(arialBoldItalic));
+		cuartaCuerpo.add("Las partes contratantes declaran que el precio total pactado es el que realmente corresponde a las acciones y derechos del predio objeto del presente contrato, existiendo entre aquellas y éste perfecta equivalencia, en consecuencia, se hacen recíproca donación de cualquier diferencia y renuncian a cualquier acción o excepción que por dicha causa pudieran interponer para invalidar los efectos del presente contrato, así como a los plazos para interponerla.");
 
 		document.add(cuartaCuerpo);
 
@@ -436,7 +440,7 @@ public class ContratoContadoFloridaPdf {
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
 
-		quintaCuerpo.add("CLAUSULA QUINTA: ");
+		quintaCuerpo.add(new Text("CLAUSULA QUINTA: ").setFont(arialBoldItalic));
 		quintaCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
 		quintaCuerpo.add(" declara que el bien objeto de la prestación a su cargo al momento de celebrarse este contrato se encuentra libre de toda carga, gravamen, derecho real de garantía, medida judicial o extrajudicial y en general de todo acto o circunstancia que impida, prive o limite la libre disponibilidad, y/o el derecho de propiedad, posesión o uso del bien. No obstante, ");
 		quintaCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
@@ -447,7 +451,11 @@ public class ContratoContadoFloridaPdf {
 		/* =====================================================================
 		 * SEXTA: GASTOS Y TRIBUTOS
 		 * ===================================================================== */
-		document.add(new Paragraph()
+		// Agrupamos título + cuerpo con setKeepTogether para que la cláusula
+		// no se corte entre dos páginas (toda la cláusula salta junta).
+		com.itextpdf.layout.element.Div sextaDiv = new com.itextpdf.layout.element.Div().setKeepTogether(true);
+
+		sextaDiv.add(new Paragraph()
 				.add(new Text("GASTOS Y TRIBUTOS").setFont(arialBoldItalic).setUnderline())
 				.setFontSize(11).setMarginTop(15));
 
@@ -455,11 +463,13 @@ public class ContratoContadoFloridaPdf {
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
 
-		sextaCuerpo.add("CLAUSULA SEXTA: Las partes contratantes acuerdan que todos los gastos y tributos que originen la celebración, formalización y ejecución del presente contrato serán asumidos por ");
+		sextaCuerpo.add(new Text("CLAUSULA SEXTA: ").setFont(arialBoldItalic));
+		sextaCuerpo.add("Las partes contratantes acuerdan que todos los gastos y tributos que originen la celebración, formalización y ejecución del presente contrato serán asumidos por ");
 		sextaCuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
 		sextaCuerpo.add(".");
 
-		document.add(sextaCuerpo);
+		sextaDiv.add(sextaCuerpo);
+		document.add(sextaDiv);
 
 		/* =====================================================================
 		 * SEPTIMA: ESCRITURA PÚBLICA
@@ -472,7 +482,8 @@ public class ContratoContadoFloridaPdf {
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
 
-		septimaCuerpo.add("CLAUSULA SEPTIMA: Queda establecido que los derechos y/o transferencia de propiedad que otorga el presente contrato serán formalizados mediante Escritura Publica una vez que ");
+		septimaCuerpo.add(new Text("CLAUSULA SEPTIMA: ").setFont(arialBoldItalic));
+		septimaCuerpo.add("Queda establecido que los derechos y/o transferencia de propiedad que otorga el presente contrato serán formalizados mediante Escritura Publica una vez que ");
 		septimaCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
 		septimaCuerpo.add(" haya concluido con todos los trámites pertinentes para la formalización de su derecho de propiedad, obligándose ");
 		septimaCuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
@@ -491,7 +502,7 @@ public class ContratoContadoFloridaPdf {
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
 
-		octavaCuerpo.add("CLAUSULA OCTAVA: ");
+		octavaCuerpo.add(new Text("CLAUSULA OCTAVA: ").setFont(arialBoldItalic));
 		octavaCuerpo.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
 		octavaCuerpo.add(" declara que la entrega física y real del predio objeto del presente contrato se realizara a la suscripción y legalización del presente contrato, por lo que a partir de ello el cuidado, administración y conservación del bien lo asume ");
 		octavaCuerpo.add(new Text(etiquetaComprador).setFont(arialBoldItalic));
@@ -512,7 +523,8 @@ public class ContratoContadoFloridaPdf {
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
 
-		novenaCuerpo.add("CLAUSULA NOVENA. - las partes contratantes renuncian expresamente al fuero de sus domicilios y se someten a la jurisdicción de los jueces y tribunales de la corte superior de justicia de lima norte, para todos los efectos del presente contrato que pudiera dar origen.");
+		novenaCuerpo.add(new Text("CLAUSULA NOVENA. - ").setFont(arialBoldItalic));
+		novenaCuerpo.add("las partes contratantes renuncian expresamente al fuero de sus domicilios y se someten a la jurisdicción de los jueces y tribunales de la corte superior de justicia de lima norte, para todos los efectos del presente contrato que pudiera dar origen.");
 
 		document.add(novenaCuerpo);
 
@@ -527,7 +539,8 @@ public class ContratoContadoFloridaPdf {
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
 
-		decimaCuerpo.add("CLAUSULA DECIMA.- en todo lo no previsto en el presente contrato ambas partes contratantes se someten a lo establecido por las normas del código civil y demás normas que sean aplicables, así mismo declaran que en el supuesto que surja cualquier diferencia o controversia en relación al presente contrato, tanto en su interpretación como en su ejecución, las partes tratarán de solucionarlo directamente y de común acuerdo, caso contrario las partes se someten a la competencia de los jueces y tribunales de lima norte.");
+		decimaCuerpo.add(new Text("CLAUSULA DECIMA.- ").setFont(arialBoldItalic));
+		decimaCuerpo.add("en todo lo no previsto en el presente contrato ambas partes contratantes se someten a lo establecido por las normas del código civil y demás normas que sean aplicables, así mismo declaran que en el supuesto que surja cualquier diferencia o controversia en relación al presente contrato, tanto en su interpretación como en su ejecución, las partes tratarán de solucionarlo directamente y de común acuerdo, caso contrario las partes se someten a la competencia de los jueces y tribunales de lima norte.");
 
 		document.add(decimaCuerpo);
 
@@ -542,7 +555,8 @@ public class ContratoContadoFloridaPdf {
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialItalic).setFontSize(11).setMultipliedLeading(1.0f);
 
-		undecimaCuerpo.add("CLAUSULA DECIMA PRIMERA - las partes declaran aceptar todas y cada una de las cláusulas contenidas en el presente contrato, expresando que suscriben la misma bajo libre expresión de su voluntad, no habiendo mediado presión, dolo, violencia u otro medio ilícito análogo, renunciando a cualquier acción legal ulterior destinado a enervar los efectos legales del presente contrato. ");
+		undecimaCuerpo.add(new Text("CLAUSULA DECIMA PRIMERA - ").setFont(arialBoldItalic));
+		undecimaCuerpo.add("las partes declaran aceptar todas y cada una de las cláusulas contenidas en el presente contrato, expresando que suscriben la misma bajo libre expresión de su voluntad, no habiendo mediado presión, dolo, violencia u otro medio ilícito análogo, renunciando a cualquier acción legal ulterior destinado a enervar los efectos legales del presente contrato. ");
 
 		// Fecha en letras
 		BigDecimal diaLetrasBD = BigDecimal.valueOf(fechaRegistro.getDayOfMonth());
@@ -667,7 +681,9 @@ public class ContratoContadoFloridaPdf {
 		Table tablaPosesionLinderos = new Table(UnitValue.createPercentArray(new float[]{30f, 45f, 25f}))
 				.useAllAvailableWidth()
 				.setBorder(Border.NO_BORDER)
-				.setMarginLeft(20);
+				.setMarginLeft(20)
+				.setMarginTop(14)
+				.setMarginBottom(14);
 
 		agregarFilaLinderos(tablaPosesionLinderos, "Por el frente", lote.getColindanteNorte(), "Con    " + lote.getAncho1() + "  m.l.", arialItalic);
 		agregarFilaLinderos(tablaPosesionLinderos, "Por la derecha", lote.getColindanteEste(), "Con  " + lote.getLargo1() + "  m.l.", arialItalic);
@@ -706,7 +722,9 @@ public class ContratoContadoFloridaPdf {
 				.setFont(arialItalic).setFontSize(11).setMarginTop(15).setMultipliedLeading(1.0f);
 
 		terceroPosesion.add(new Text("PRECIO DE VENTA").setFont(arialBoldItalic).setUnderline());
-		terceroPosesion.add("\nTERCERA. - El precio del bien objeto de la prestación a cargo de ");
+		terceroPosesion.add("\n");
+		terceroPosesion.add(new Text("TERCERA. - ").setFont(arialBold));
+		terceroPosesion.add("El precio del bien objeto de la prestación a cargo de ");
 		terceroPosesion.add(new Text("LA VENDEDORA").setFont(arialBoldItalic));
 		terceroPosesion.add(" asciende a la suma de ");
 		terceroPosesion.add(new Text(prefMoneda + " " + df.format(contrato.getMontoTotal())).setFont(arialBoldItalic));
