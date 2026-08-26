@@ -786,7 +786,7 @@ public class ContratoContadoFloridaPdf {
 
 		Paragraph certEmpresa = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(12).setMultipliedLeading(1.5f);
+				.setFont(arialItalic).setFontSize(12).setMultipliedLeading(1.2f);
 
 		certEmpresa.add("La Empresa ");
 		certEmpresa.add(new Text(empresa()).setFont(arialBold));
@@ -803,7 +803,7 @@ public class ContratoContadoFloridaPdf {
 
 		Paragraph certCuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(12).setMultipliedLeading(1.5f);
+				.setFont(arialItalic).setFontSize(12).setMultipliedLeading(1.2f);
 
 		certCuerpo.add("Que, ");
 		for (int i = 0; i < numClientes; i++) {
@@ -853,7 +853,7 @@ public class ContratoContadoFloridaPdf {
 
 		Paragraph certCierre = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialItalic).setFontSize(12).setMultipliedLeading(1.5f);
+				.setFont(arialItalic).setFontSize(12).setMultipliedLeading(1.2f);
 
 		certCierre.add("Se extiende el presente certificado a solicitud de La Compradora, para los usos que crea conveniente.");
 
