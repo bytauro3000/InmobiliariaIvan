@@ -8,5 +8,7 @@ public interface ReporteMoraService {
 
     List<ReporteClientesMoraDTO> obtenerClientesEnMora();
 
+    List<ReporteClientesMoraDTO> obtenerClientesLetrasVencidas();
+
     byte[] generarPdfClientesEnMora();
 }

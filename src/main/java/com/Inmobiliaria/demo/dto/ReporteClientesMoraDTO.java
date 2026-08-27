@@ -24,8 +24,9 @@ public class ReporteClientesMoraDTO {
     public static class FilaClienteMora {
 
         private String           nombreClientes;
-        private List<String>     manzanas;          
-        private List<String>     numeroLotes;         
+        private List<String>     manzanas;
+        private List<String>     numeroLotes;
+        private List<BigDecimal> areas;
         private int              cantidadLetrasAtrasadas;
         private String           rangoLetras;
         private BigDecimal       importeTotal;

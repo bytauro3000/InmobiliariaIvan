@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -32,8 +33,50 @@ public class ReporteMoraServiceImpl implements ReporteMoraService {
     @Override
     @Transactional(readOnly = true)
     public List<ReporteClientesMoraDTO> obtenerClientesEnMora() {
+        Map<Integer, Contrato> mapaContratos = cargarContratosConClientesYLotes();
+        Map<Integer, List<LetraCambio>> letrasPorContrato = cargarLetrasPorContrato();
 
-        // 1. Traer contratos con clientes y lotes (dos queries combinadas, sin producto cartesiano)
+        List<Contrato> contratosEnMora = mapaContratos.values().stream()
+                .filter(c -> EstadoContrato.MORA == c.getEstadoContrato())
+                .collect(Collectors.toList());
+
+        // Criterio del scheduler: solo letras marcadas VENCIDO.
+        Predicate<LetraCambio> esAtrasada = l ->
+                l.getEstadoLetra() == EstadoLetra.VENCIDO;
+
+        return construirReporte(contratosEnMora, letrasPorContrato, esAtrasada);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ReporteClientesMoraDTO> obtenerClientesLetrasVencidas() {
+        LocalDate hoy = LocalDate.now();
+
+        Map<Integer, Contrato> mapaContratos = cargarContratosConClientesYLotes();
+        Map<Integer, List<LetraCambio>> letrasPorContrato = cargarLetrasPorContrato();
+
+        // Solo contratos financiados con letras (ACTIVO o MORA), sin depender
+        // del estado VENCIDO que fija el scheduler (que corre 2 veces al día).
+        List<Contrato> financiadosActivos = mapaContratos.values().stream()
+                .filter(c -> letrasPorContrato.containsKey(c.getIdContrato()))
+                .collect(Collectors.toList());
+
+        // Vencidas a la fecha: cualquier letra no pagada con vencimiento <= hoy
+        // (incluye las que vencen HOY, que el scheduler aún no marca VENCIDO).
+        Predicate<LetraCambio> esAtrasada = l ->
+                l.getEstadoLetra() != EstadoLetra.PAGADO
+                        && l.getFechaVencimiento() != null
+                        && !l.getFechaVencimiento().isAfter(hoy);
+
+        return construirReporte(financiadosActivos, letrasPorContrato, esAtrasada);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  LÓGICA COMPARTIDA
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /** Carga contratos con clientes y lotes en dos queries (sin producto cartesiano). */
+    private Map<Integer, Contrato> cargarContratosConClientesYLotes() {
         Map<Integer, Contrato> mapaContratos = new LinkedHashMap<>();
         for (Contrato c : contratoRepository.findAllConClientes()) mapaContratos.put(c.getIdContrato(), c);
         for (Contrato c : contratoRepository.findAllConLotes()) {
@@ -44,126 +87,53 @@ public class ReporteMoraServiceImpl implements ReporteMoraService {
                 mapaContratos.put(c.getIdContrato(), c);
             }
         }
-        List<Contrato> conClientesYLotes = new ArrayList<>(mapaContratos.values());
+        return mapaContratos;
+    }
 
-        // 2. Traer letras (misma query que usa el scheduler)
-        List<Contrato> contratosConLetras = contratoRepository.findFinanciadosActivosConLetras();
-        Map<Integer, List<LetraCambio>> letrasPorContrato = contratosConLetras.stream()
+    /** Carga letras de contratos financiados activos/mora en una sola query. */
+    private Map<Integer, List<LetraCambio>> cargarLetrasPorContrato() {
+        return contratoRepository.findFinanciadosActivosConLetras().stream()
                 .collect(Collectors.toMap(
                         Contrato::getIdContrato,
                         c -> c.getLetrasCambio() != null ? c.getLetrasCambio() : Collections.emptyList(),
                         (a, b) -> a
                 ));
+    }
 
-        // 3. Filtrar solo contratos EN MORA
-        List<Contrato> contratosEnMora = conClientesYLotes.stream()
-                .filter(c -> EstadoContrato.MORA == c.getEstadoContrato())
-                .collect(Collectors.toList());
+    /** Construye el reporte agrupado por programa a partir de contratos y un criterio de letra atrasada. */
+    private List<ReporteClientesMoraDTO> construirReporte(
+            List<Contrato> contratos,
+            Map<Integer, List<LetraCambio>> letrasPorContrato,
+            Predicate<LetraCambio> esAtrasada) {
 
-        // 4. Construir una fila por contrato
         List<FilaClienteMora> filas = new ArrayList<>();
 
-        for (Contrato contrato : contratosEnMora) {
+        for (Contrato contrato : contratos) {
             List<LetraCambio> letras = letrasPorContrato.getOrDefault(
                     contrato.getIdContrato(), Collections.emptyList());
 
             if (letras.isEmpty()) continue;
 
             // ── Mismo criterio que ContratoEstadoScheduler ────────────────────
-            // Número de la última letra PAGADA (0 si ninguna está pagada)
             int numUltimaPagada = letras.stream()
                     .filter(l -> l.getEstadoLetra() == EstadoLetra.PAGADO)
                     .mapToInt(l -> extraerNumeroLetra(l.getNumeroLetra()))
                     .max()
                     .orElse(0);
 
-            // Solo las VENCIDAS con número mayor al de la última pagada
+            // Solo las atrasadas (según criterio) con número mayor al de la última pagada
             List<LetraCambio> letrasAtrasadas = letras.stream()
-                    .filter(l -> l.getEstadoLetra() == EstadoLetra.VENCIDO)
+                    .filter(esAtrasada)
                     .filter(l -> extraerNumeroLetra(l.getNumeroLetra()) > numUltimaPagada)
                     .sorted(Comparator.comparingInt(l -> extraerNumeroLetra(l.getNumeroLetra())))
                     .collect(Collectors.toList());
 
             if (letrasAtrasadas.isEmpty()) continue;
 
-            // ── Nombre de clientes ("JUAN PÉREZ / MARÍA PÉREZ") ──────────────
-            String nombreClientes = contrato.getClientes() == null ? "" :
-                    contrato.getClientes().stream()
-                            .map(ContratoCliente::getCliente)
-                            .filter(Objects::nonNull)
-                            .map(cl -> (cl.getNombre() + " " + cl.getApellidos()).trim().toUpperCase())
-                            .collect(Collectors.joining(" / "));
-
-            // ── Celular del primer titular ────────────────────────────────────
-            String celular = (contrato.getClientes() == null || contrato.getClientes().isEmpty()) ? "" :
-                    Optional.ofNullable(contrato.getClientes().iterator().next().getCliente())
-                            .map(Cliente::getCelular)
-                            .orElse("");
-
-            // ── Lotes: TODOS ordenados por manzana luego numeroLote ───────────
-            List<ContratoLote> lotesContrato = contrato.getLotes() != null
-                    ? new java.util.ArrayList<>(contrato.getLotes())
-                    : new java.util.ArrayList<>();
-
-            // Ordenar los lotes del contrato: por manzana (alfa) luego por número de lote
-            List<ContratoLote> lotesOrdenados = lotesContrato.stream()
-                    .filter(cl -> cl.getLote() != null)
-                    .sorted(Comparator
-                            .comparing((ContratoLote cl) -> cl.getLote().getManzana(),
-                                    Comparator.nullsLast(String::compareTo))
-                            .thenComparingInt(cl -> parsearNumeroLote(cl.getLote().getNumeroLote())))
-                    .collect(Collectors.toList());
-
-            List<String> manzanas    = lotesOrdenados.stream()
-                    .map(cl -> cl.getLote().getManzana())
-                    .collect(Collectors.toList());
-            List<String> numeroLotes = lotesOrdenados.stream()
-                    .map(cl -> cl.getLote().getNumeroLote())
-                    .collect(Collectors.toList());
-
-            // ── Nombre del programa (del primer lote ordenado) ────────────────
-            String nombrePrograma = lotesOrdenados.isEmpty() ? "SIN PROGRAMA" :
-                    Optional.ofNullable(lotesOrdenados.get(0).getLote().getPrograma())
-                            .map(Programa::getNombrePrograma)
-                            .orElse("SIN PROGRAMA");
-
-            // ── Rango legible de letras vencidas (ej: "1-4", "19-20", "1, 3") ─
-            List<Integer> numerosAtrasados = letrasAtrasadas.stream()
-                    .map(l -> extraerNumeroLetra(l.getNumeroLetra()))
-                    .collect(Collectors.toList());
-            String rangoLetras = construirRango(numerosAtrasados);
-
-            // ── Importe total adeudado ────────────────────────────────────────
-            BigDecimal importeTotal = letrasAtrasadas.stream()
-                    .map(LetraCambio::getImporte)
-                    .filter(Objects::nonNull)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            String moneda = contrato.getMoneda() != null ? contrato.getMoneda().name() : "USD";
-
-            // ── Fecha de vencimiento de la primera letra atrasada ─────────────
-            LocalDate fechaVencimientoInicio = letrasAtrasadas.get(0).getFechaVencimiento();
-
-            // ── Construir fila ─────────────────────────────────────────────────
-            FilaClienteMora fila = new FilaClienteMora(
-                    nombreClientes,
-                    manzanas,
-                    numeroLotes,
-                    letrasAtrasadas.size(),
-                    rangoLetras,
-                    importeTotal,
-                    moneda,
-                    celular,
-                    contrato.getIdContrato(),
-                    nombrePrograma,
-                    fechaVencimientoInicio
-            );
-
-            filas.add(fila);
+            filas.add(construirFila(contrato, letrasAtrasadas));
         }
 
-        // 5. Agrupar por programa y ordenar filas dentro de cada grupo
-        //    por manzana del primer lote, luego por número del primer lote
+        // ── Agrupar por programa y ordenar MZ → LT ───────────────────────────
         Map<String, List<FilaClienteMora>> porPrograma = filas.stream()
                 .collect(Collectors.groupingBy(
                         f -> f.getNombrePrograma() != null ? f.getNombrePrograma() : "SIN PROGRAMA",
@@ -174,7 +144,6 @@ public class ReporteMoraServiceImpl implements ReporteMoraService {
         return porPrograma.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
                 .map(e -> {
-                    // Ordenar clientes dentro del programa: MZ → LT (primer lote)
                     List<FilaClienteMora> clientesOrdenados = e.getValue().stream()
                             .sorted(Comparator
                                     .comparing((FilaClienteMora f) ->
@@ -187,6 +156,85 @@ public class ReporteMoraServiceImpl implements ReporteMoraService {
                     return new ReporteClientesMoraDTO(e.getKey(), clientesOrdenados);
                 })
                 .collect(Collectors.toList());
+    }
+
+    /** Construye la fila de un contrato con sus letras atrasadas. */
+    private FilaClienteMora construirFila(Contrato contrato, List<LetraCambio> letrasAtrasadas) {
+
+        // ── Nombre de clientes ("JUAN PÉREZ / MARÍA PÉREZ") ──────────────
+        String nombreClientes = contrato.getClientes() == null ? "" :
+                contrato.getClientes().stream()
+                        .map(ContratoCliente::getCliente)
+                        .filter(Objects::nonNull)
+                        .map(cl -> (cl.getNombre() + " " + cl.getApellidos()).trim().toUpperCase())
+                        .collect(Collectors.joining(" / "));
+
+        // ── Celular del primer titular ────────────────────────────────────
+        String celular = (contrato.getClientes() == null || contrato.getClientes().isEmpty()) ? "" :
+                Optional.ofNullable(contrato.getClientes().iterator().next().getCliente())
+                        .map(Cliente::getCelular)
+                        .orElse("");
+
+        // ── Lotes: TODOS ordenados por manzana luego numeroLote ───────────
+        List<ContratoLote> lotesContrato = contrato.getLotes() != null
+                ? new ArrayList<>(contrato.getLotes())
+                : new ArrayList<>();
+
+        List<ContratoLote> lotesOrdenados = lotesContrato.stream()
+                .filter(cl -> cl.getLote() != null)
+                .sorted(Comparator
+                        .comparing((ContratoLote cl) -> cl.getLote().getManzana(),
+                                Comparator.nullsLast(String::compareTo))
+                        .thenComparingInt(cl -> parsearNumeroLote(cl.getLote().getNumeroLote())))
+                .collect(Collectors.toList());
+
+        List<String> manzanas    = lotesOrdenados.stream()
+                .map(cl -> cl.getLote().getManzana())
+                .collect(Collectors.toList());
+        List<String> numeroLotes = lotesOrdenados.stream()
+                .map(cl -> cl.getLote().getNumeroLote())
+                .collect(Collectors.toList());
+        List<BigDecimal> areas   = lotesOrdenados.stream()
+                .map(cl -> cl.getLote().getArea())
+                .collect(Collectors.toList());
+
+        // ── Nombre del programa (del primer lote ordenado) ────────────────
+        String nombrePrograma = lotesOrdenados.isEmpty() ? "SIN PROGRAMA" :
+                Optional.ofNullable(lotesOrdenados.get(0).getLote().getPrograma())
+                        .map(Programa::getNombrePrograma)
+                        .orElse("SIN PROGRAMA");
+
+        // ── Rango legible de letras vencidas (ej: "1-4", "19-20", "1, 3") ─
+        List<Integer> numerosAtrasados = letrasAtrasadas.stream()
+                .map(l -> extraerNumeroLetra(l.getNumeroLetra()))
+                .collect(Collectors.toList());
+        String rangoLetras = construirRango(numerosAtrasados);
+
+        // ── Importe total adeudado ────────────────────────────────────────
+        BigDecimal importeTotal = letrasAtrasadas.stream()
+                .map(LetraCambio::getImporte)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        String moneda = contrato.getMoneda() != null ? contrato.getMoneda().name() : "USD";
+
+        // ── Fecha de vencimiento de la primera letra atrasada ─────────────
+        LocalDate fechaVencimientoInicio = letrasAtrasadas.get(0).getFechaVencimiento();
+
+        return new FilaClienteMora(
+                nombreClientes,
+                manzanas,
+                numeroLotes,
+                areas,
+                letrasAtrasadas.size(),
+                rangoLetras,
+                importeTotal,
+                moneda,
+                celular,
+                contrato.getIdContrato(),
+                nombrePrograma,
+                fechaVencimientoInicio
+        );
     }
 
     // ─────────────────────────────────────────────────────────────────────────

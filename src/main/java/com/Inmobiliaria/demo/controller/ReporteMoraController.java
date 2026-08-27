@@ -29,6 +29,12 @@ public class ReporteMoraController {
         return ResponseEntity.ok(reporte);
     }
 
+    @GetMapping("/letras-vencidas")
+    public ResponseEntity<List<ReporteClientesMoraDTO>> obtenerClientesLetrasVencidas() {
+        List<ReporteClientesMoraDTO> reporte = reporteMoraService.obtenerClientesLetrasVencidas();
+        return ResponseEntity.ok(reporte);
+    }
+
 
     @GetMapping("/clientes/pdf")
     public ResponseEntity<byte[]> descargarPdfClientesEnMora() {
