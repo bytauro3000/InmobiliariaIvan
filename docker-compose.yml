@@ -1,0 +1,20 @@
+services:
+  inmobiliariaivan:
+    image: tropimostaxias4/inmobiliariaivan:latest
+    container_name: inmobiliariaivan
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8081}:8081"
+    env_file:
+      - .env
+    environment:
+      # La app lee server.port desde la variable PORT.
+      PORT: "${APP_PORT:-8081}"
+      SPRING_PROFILES_ACTIVE: prod
+    # Límites: la JVM está acotada en el Dockerfile; esto protege al host.
+    mem_limit: 1536m
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"

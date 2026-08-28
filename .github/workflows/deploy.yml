@@ -1,4 +1,4 @@
-name: Deploy Backend to Render
+name: Deploy Backend to Hetzner + Render
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 # Concurrency: si se hacen varios pushes seguidos, cancela el job anterior
 # y solo corre el último (evita colas "Waiting for runner" y deploys duplicados).
 concurrency:
-  group: deploy-render-${{ github.ref }}
+  group: deploy-backend-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -43,8 +43,21 @@ jobs:
           # ✅ Se usan las variables de tus secretos para formar la ruta completa
           tags: "${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO }}:latest"
 
-      - name: Notificar a Render (Ivan)
-        run: curl -f "${{ secrets.RENDER_DEPLOY_HOOK }}"
+      # ── DESPLIEGUE EN HETZNER (monolito Ivan) ──
+      # Requiere secrets: HETZNER_HOST, HETZNER_USER, HETZNER_SSH_KEY, HETZNER_DEPLOY_DIR
+      - name: Desplegar en Hetzner (SSH)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          script: |
+            cd ${{ secrets.HETZNER_DEPLOY_DIR }}
+            docker compose pull inmobiliariaivan
+            docker compose up -d inmobiliariaivan
+            docker image prune -f
 
+      # ── NOTIFICAR A RENDER (Merruic) ──
+      # Ivan ya no se despliega en Render (migrado a Hetzner).
       - name: Notificar a Render (Merruic)
         run: curl -f "${{ secrets.RENDER_DEPLOY_HOOK_MERRUIC }}"
