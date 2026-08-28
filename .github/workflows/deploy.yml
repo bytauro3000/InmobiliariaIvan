@@ -54,6 +54,8 @@ jobs:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USER }}
           key: ${{ secrets.HETZNER_SSH_KEY }}
+          # Huella ED25519 del servidor (permite al runner verificar sin preguntar)
+          fingerprint: SHA256:d+/OEtS2FljIMvznugzqMo5ZOOnYBBe2u1pamB8XRso
           script: |
             cd ${{ secrets.HETZNER_DEPLOY_DIR }}
             docker compose pull inmobiliariaivan
