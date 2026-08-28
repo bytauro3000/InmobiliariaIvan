@@ -43,12 +43,21 @@ jobs:
           # ✅ Se usan las variables de tus secretos para formar la ruta completa
           tags: "${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO }}:latest"
 
-      # ── DESPLIEGUE EN HETZNER (monolito Ivan) ──
-      # Requiere secrets: HETZNER_HOST, HETZNER_USER, HETZNER_SSH_KEY, HETZNER_DEPLOY_DIR.
-      # Mientras no estén configurados, el paso se OMITE (no falla) y Render Ivan
-      # queda intacto. Solo se activa el deploy a Hetzner cuando los secrets existan.
+      # ── NOTIFICAR A RENDER (Merruic) ──
+      # Ivan ya no se despliega en Render (migrado a Hetzner).
+      - name: Notificar a Render (Merruic)
+        run: curl -f "${{ secrets.RENDER_DEPLOY_HOOK_MERRUIC }}"
+
+  # ── DESPLIEGUE EN HETZNER (monolito Ivan) ──
+  # Job separado: el `if` con secrets SÍ es válido a nivel de JOB (no de step).
+  # Mientras HETZNER_HOST no exista, este job se omite (no falla).
+  deploy-hetzner:
+    needs: build-and-push
+    if: ${{ secrets.HETZNER_HOST != '' }}
+    runs-on: ubuntu-latest
+
+    steps:
       - name: Desplegar en Hetzner (SSH)
-        if: ${{ secrets.HETZNER_HOST != '' }}
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.HETZNER_HOST }}
@@ -61,9 +70,3 @@ jobs:
             docker compose pull inmobiliariaivan
             docker compose up -d inmobiliariaivan
             docker image prune -f
-
-      # ── NOTIFICAR A RENDER (Merruic) ──
-      # Ivan ya no se despliega en Render (migrado a Hetzner).
-      # Se ejecuta SIEMPRE, incluso si el paso de Hetzner se omitió.
-      - name: Notificar a Render (Merruic)
-        run: curl -f "${{ secrets.RENDER_DEPLOY_HOOK_MERRUIC }}"
