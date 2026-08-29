@@ -36,6 +36,12 @@ public class ApiSunatBoletaRequest {
     @JsonProperty("enviar_automatico")
     private Boolean enviarAutomatico;
 
+    /** Leyenda SUNAT (Note). Ej: "OPERACION INAFECTA - VENTA DE TERRENO". */
+    private String leyenda;
+
+    /** Observación / nota de la operación (cbc:Note). Ej: "OPERACION INAFECTA - VENTA DE TERRENO". */
+    private String observacion;
+
     private Cliente cliente;
     private List<Item> items;
 
@@ -54,6 +60,11 @@ public class ApiSunatBoletaRequest {
         private String razonSocial;
 
         private String direccion;
+
+        private String ubigeo;
+        private String distrito;
+        private String provincia;
+        private String departamento;
     }
 
     @Data
@@ -61,6 +72,9 @@ public class ApiSunatBoletaRequest {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Item {
+        /** Código del producto/servicio (SellersItemIdentification). */
+        private String codigo;
+
         private String descripcion;
         private String unidad;
         private BigDecimal cantidad;

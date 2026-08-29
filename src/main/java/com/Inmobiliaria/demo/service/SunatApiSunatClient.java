@@ -333,14 +333,31 @@ public class SunatApiSunatClient {
                 ? comprobante.getFechaEmision().format(FECHA_FMT)
                 : String.valueOf(comprobante.getFechaEmision());
 
+        // Datos del distrito del cliente (ubigeo SUNAT), si existen.
+        String ubigeo = null;
+        String distrito = null;
+        String provincia = null;
+        String departamento = null;
+        if (cliente.getDistrito() != null) {
+            ubigeo = cliente.getDistrito().getCodigoUbigeo();
+            distrito = cliente.getDistrito().getNombre();
+            provincia = cliente.getDistrito().getProvincia();
+            departamento = derivarDepartamento(ubigeo);
+        }
+
         ApiSunatBoletaRequest.Cliente clienteApi = ApiSunatBoletaRequest.Cliente.builder()
                 .tipoDoc(mapTipoDocumento(cliente.getTipoCliente()))
                 .numDoc(cliente.getNumDoc())
                 .razonSocial(buildRazonSocial(cliente))
                 .direccion(cliente.getDireccion())
+                .ubigeo(ubigeo)
+                .distrito(distrito)
+                .provincia(provincia)
+                .departamento(departamento)
                 .build();
 
         ApiSunatBoletaRequest.Item item = ApiSunatBoletaRequest.Item.builder()
+                .codigo("SERV001")
                 .descripcion(descripcionDetalle)
                 .unidad("NIU")
                 .cantidad(BigDecimal.ONE)
@@ -355,6 +372,9 @@ public class SunatApiSunatClient {
                 .tipoMoneda(moneda)
                 .formaPago("Contado")
                 .enviarAutomatico(Boolean.TRUE)
+                // Note del XML (cbc:Note), igual que APIPERU. La leyenda del monto
+                // en letras la genera api-sunat por su cuenta para el PDF.
+                .observacion("OPERACION INAFECTA - VENTA DE TERRENO")
                 .cliente(clienteApi)
                 .items(Collections.singletonList(item))
                 .build();
@@ -378,5 +398,44 @@ public class SunatApiSunatClient {
         String nombre = cliente.getNombre() != null ? cliente.getNombre() : "";
         String apellidos = cliente.getApellidos() != null ? " " + cliente.getApellidos() : "";
         return (nombre + apellidos).trim();
+    }
+
+    /**
+     * Deriva el nombre del departamento desde los 2 primeros dígitos del ubigeo,
+     * igual que hace la integración con APIPERU (SunatIntegrationServiceImpl).
+     * Si el ubigeo es null o inválido, devuelve null.
+     */
+    private String derivarDepartamento(String ubigeo) {
+        if (ubigeo == null || ubigeo.length() < 2) {
+            return null;
+        }
+        return switch (ubigeo.substring(0, 2)) {
+            case "01" -> "AMAZONAS";
+            case "02" -> "ANCASH";
+            case "03" -> "APURIMAC";
+            case "04" -> "AREQUIPA";
+            case "05" -> "AYACUCHO";
+            case "06" -> "CAJAMARCA";
+            case "07" -> "CALLAO";
+            case "08" -> "CUSCO";
+            case "09" -> "HUANCAVELICA";
+            case "10" -> "HUANUCO";
+            case "11" -> "ICA";
+            case "12" -> "JUNIN";
+            case "13" -> "LA LIBERTAD";
+            case "14" -> "LAMBAYEQUE";
+            case "15" -> "LIMA";
+            case "16" -> "LORETO";
+            case "17" -> "MADRE DE DIOS";
+            case "18" -> "MOQUEGUA";
+            case "19" -> "PASCO";
+            case "20" -> "PIURA";
+            case "21" -> "PUNO";
+            case "22" -> "SAN MARTIN";
+            case "23" -> "TACNA";
+            case "24" -> "TUMBES";
+            case "25" -> "UCAYALI";
+            default -> null;
+        };
     }
 }
