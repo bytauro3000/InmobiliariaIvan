@@ -1147,11 +1147,11 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             }
         }
 
-        BigDecimal totalPagadoRestante = pagoLetraRepository.sumImportePagadoByLetra(letra.getIdLetra());
+        BigDecimal totalPagadoRestante = pagoLetraRepository.sumImportePagadoActivoByLetra(letra.getIdLetra());
         if (totalPagadoRestante == null) totalPagadoRestante = BigDecimal.ZERO;
         BigDecimal nuevoSaldo = letra.getImporte().subtract(totalPagadoRestante);
 
-        long count = pagoLetraRepository.countByLetraIdLetra(letra.getIdLetra());
+        long count = pagoLetraRepository.countActivosByLetraIdLetra(letra.getIdLetra());
         if (count == 0) {
             letra.setSaldoPendiente(letra.getImporte());
             letra.setEstadoLetra(letra.getFechaVencimiento().isBefore(LocalDate.now())
