@@ -222,14 +222,31 @@ public class SunatApiSunatClient {
                 ? notaCredito.getFechaEmision().format(FECHA_FMT)
                 : String.valueOf(notaCredito.getFechaEmision());
 
+        // Datos del distrito del cliente (ubigeo SUNAT), si existen.
+        String ubigeo = null;
+        String distrito = null;
+        String provincia = null;
+        String departamento = null;
+        if (cliente.getDistrito() != null) {
+            ubigeo = cliente.getDistrito().getCodigoUbigeo();
+            distrito = cliente.getDistrito().getNombre();
+            provincia = cliente.getDistrito().getProvincia();
+            departamento = derivarDepartamento(ubigeo);
+        }
+
         ApiSunatCreditNoteRequest.Cliente clienteApi = ApiSunatCreditNoteRequest.Cliente.builder()
                 .tipoDoc(mapTipoDocumento(cliente.getTipoCliente()))
                 .numDoc(cliente.getNumDoc())
                 .razonSocial(buildRazonSocial(cliente))
                 .direccion(cliente.getDireccion())
+                .ubigeo(ubigeo)
+                .distrito(distrito)
+                .provincia(provincia)
+                .departamento(departamento)
                 .build();
 
         ApiSunatCreditNoteRequest.Item item = ApiSunatCreditNoteRequest.Item.builder()
+                .codigo("SERV001")
                 .descripcion(descripcionDetalle)
                 .unidad("NIU")
                 .cantidad(BigDecimal.ONE)
@@ -243,6 +260,9 @@ public class SunatApiSunatClient {
                 .fechaEmision(fecha)
                 .tipoMoneda(moneda)
                 .enviarAutomatico(Boolean.TRUE)
+                // Note del XML (cbc:Note), igual que APIPERU. La leyenda del monto
+                // en letras la genera api-sunat por su cuenta para el PDF.
+                .observacion("OPERACION INAFECTA - VENTA DE TERRENO")
                 .cliente(clienteApi)
                 .docAfectadoTipo("03") // boleta — las NC de MERRUIC siempre son contra boletas
                 .docAfectadoSerie(comprobanteOriginal.getSerie())

@@ -33,6 +33,9 @@ public class ApiSunatCreditNoteRequest {
     @JsonProperty("enviar_automatico")
     private Boolean enviarAutomatico;
 
+    /** Observación / nota de la operación (cbc:Note). Ej: "OPERACION INAFECTA - VENTA DE TERRENO". */
+    private String observacion;
+
     private Cliente cliente;
 
     @JsonProperty("doc_afectado_tipo")
@@ -67,6 +70,11 @@ public class ApiSunatCreditNoteRequest {
         private String razonSocial;
 
         private String direccion;
+
+        private String ubigeo;
+        private String distrito;
+        private String provincia;
+        private String departamento;
     }
 
     @Data
@@ -74,6 +82,9 @@ public class ApiSunatCreditNoteRequest {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Item {
+        /** Código del producto/servicio (SellersItemIdentification). */
+        private String codigo;
+
         private String descripcion;
         private String unidad;
         private BigDecimal cantidad;
