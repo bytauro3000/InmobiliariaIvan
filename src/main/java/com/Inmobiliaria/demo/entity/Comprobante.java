@@ -11,7 +11,11 @@ import java.time.LocalDateTime;
 
 
 @Entity
-@Table(name = "comprobante")
+@Table(name = "comprobante",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uq_comprobante_serie_numero", columnNames = {"serie", "numero"}),
+        @UniqueConstraint(name = "uq_comprobante_numero_completo", columnNames = {"numero_completo"})
+    })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class Comprobante {
 

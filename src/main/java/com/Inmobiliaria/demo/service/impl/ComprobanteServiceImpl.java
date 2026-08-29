@@ -45,19 +45,6 @@ public class ComprobanteServiceImpl implements ComprobanteService {
         return String.format("%s-%d", serie, numero);
     }
 
-    // ─── Calcula el siguiente número esperado para una serie ───────────────────
-    // Toma el MAYOR entre el contador y el max real en comprobante, luego suma 1
-    private int calcularSiguienteEsperado(TipoComprobante tipo, String serie) {
-        int desdeContador = serieComprobanteRepository
-                .findByTipoComprobanteAndSerie(tipo, serie)
-                .map(SerieComprobante::getUltimoNumero)
-                .orElse(0);
-        Integer desdeTablaRaw = comprobanteRepository
-                .findMaxNumeroByTipoAndSerie(tipo, serie);
-        int desdeTabla = (desdeTablaRaw != null) ? desdeTablaRaw : 0;
-        return Math.max(desdeContador, desdeTabla) + 1;
-    }
-
     @Override
     @Transactional
     public Comprobante generarComprobante(
@@ -127,12 +114,12 @@ public class ComprobanteServiceImpl implements ComprobanteService {
 
         // Parsear el número correlativo del string ingresado
         // Acepta tanto "45" como "RB01-0045" o "EB01-0045" — extrae solo el número
-        int numeroInt;
+        int numeroSolicitado;
         try {
             String soloNumero = numeroPersonalizado.contains("-")
                     ? numeroPersonalizado.substring(numeroPersonalizado.lastIndexOf('-') + 1)
                     : numeroPersonalizado.trim();
-            numeroInt = Integer.parseInt(soloNumero);
+            numeroSolicitado = Integer.parseInt(soloNumero);
         } catch (NumberFormatException e) {
             throw new NegocioException(
                 "El número de comprobante personalizado no es válido: \"" + numeroPersonalizado + "\". "
@@ -140,50 +127,20 @@ public class ComprobanteServiceImpl implements ComprobanteService {
             );
         }
 
-        // Construir el número completo formateado
-        String numeroCompleto = formatearNumeroCompleto(tipoComprobante, serie, numeroInt);
+        // ── RESOLVER EL NÚMERO BAJO LOCK PESIMISTA (SELECT FOR UPDATE) ──────
+        // Todo el cálculo de correlatividad y unicidad ocurre DENTRO del lock,
+        // de modo que si dos secretarias envían el mismo número a la vez, solo la
+        // primera obtiene el que pidió y la segunda recibe automáticamente el
+        // siguiente número disponible (sin duplicados ni rechazo de SUNAT).
+        int numeroFinal = resolverNumeroBajoLock(tipoComprobante, serie, numeroSolicitado);
 
-        // Verificar que no exista ya ese número (evitar duplicados)
-        if (comprobanteRepository.existsByNumeroCompleto(numeroCompleto)) {
-            throw new NegocioException(
-                "Ya existe un comprobante con el número \"" + numeroCompleto + "\". "
-                + "Verifique el número ingresado."
-            );
-        }
+        String numeroCompleto = formatearNumeroCompleto(tipoComprobante, serie, numeroFinal);
 
-        // ── Validar correlatividad para series SUNAT (B001, BB01, etc.) ─────
-        // Las series que empiezan con "B" son emitidas por este CEE y SUNAT
-        // exige números consecutivos. Las series "E" (EB01) vienen del portal
-        // SOL y se registran con números libres.
-        if (serie.startsWith("B")) {
-            int esperado = calcularSiguienteEsperado(tipoComprobante, serie);
-            if (numeroInt != esperado) {
-                throw new NegocioException(
-                    "La serie " + serie + " requiere numeración correlativa. "
-                    + "El siguiente número debe ser "
-                    + formatearNumeroCompleto(tipoComprobante, serie, esperado)
-                    + ", no " + formatearNumeroCompleto(tipoComprobante, serie, numeroInt) + "."
-                );
-            }
-        }
-
-        // ── Actualizar el contador si el número manual es mayor al último registrado ──
-        // Esto garantiza que el próximo número automático siempre sea consecutivo
-        // al número más alto existente en la BD, sea manual o automático.
-        serieComprobanteRepository
-                .findByTipoComprobanteAndSerieForUpdate(tipoComprobante, serie)
-                .ifPresent(contador -> {
-                    if (numeroInt > contador.getUltimoNumero()) {
-                        contador.setUltimoNumero(numeroInt);
-                        serieComprobanteRepository.save(contador);
-                    }
-                });
-
-        // Crear el comprobante con el número personalizado
+        // Crear el comprobante con el número final resuelto bajo lock
         Comprobante comp = new Comprobante();
         comp.setTipoComprobante(tipoComprobante);
         comp.setSerie(serie);
-        comp.setNumero(numeroInt);
+        comp.setNumero(numeroFinal);
         comp.setNumeroCompleto(numeroCompleto);
         comp.setFechaEmision(fechaEmision != null ? fechaEmision : LocalDate.now());
         comp.setMonto(monto);
@@ -215,7 +172,7 @@ public class ComprobanteServiceImpl implements ComprobanteService {
         }
 
         String serie;
-        int numeroInt;
+        int numeroSolicitado;
 
         if (numeroPersonalizado.contains("-")) {
             String[] partes = numeroPersonalizado.split("-", 2);
@@ -231,7 +188,7 @@ public class ComprobanteServiceImpl implements ComprobanteService {
                     ? seriePersonalizada.trim().toUpperCase()
                     : serieExtraida;
             try {
-                numeroInt = Integer.parseInt(numeroStr);
+                numeroSolicitado = Integer.parseInt(numeroStr);
             } catch (NumberFormatException e) {
                 throw new NegocioException(
                     "El número correlativo no es válido: \"" + numeroStr + "\"."
@@ -242,7 +199,7 @@ public class ComprobanteServiceImpl implements ComprobanteService {
                     ? seriePersonalizada.trim().toUpperCase()
                     : serieDefecto(tipoComprobante);
             try {
-                numeroInt = Integer.parseInt(numeroPersonalizado.trim());
+                numeroSolicitado = Integer.parseInt(numeroPersonalizado.trim());
             } catch (NumberFormatException e) {
                 throw new NegocioException(
                     "El número de comprobante personalizado no es válido: \"" + numeroPersonalizado + "\". "
@@ -251,41 +208,19 @@ public class ComprobanteServiceImpl implements ComprobanteService {
             }
         }
 
-        String numeroCompleto = formatearNumeroCompleto(tipoComprobante, serie, numeroInt);
+        // ── RESOLVER EL NÚMERO BAJO LOCK PESIMISTA (SELECT FOR UPDATE) ──────
+        // Decide el número final dentro del lock: si otra transacción ya usó el
+        // número solicitado (dos secretarias a la vez), se asigna automáticamente
+        // el siguiente número disponible. Nunca se duplica.
+        int numeroFinal = resolverNumeroBajoLock(tipoComprobante, serie, numeroSolicitado);
 
-        if (comprobanteRepository.existsByNumeroCompleto(numeroCompleto)) {
-            throw new NegocioException(
-                "Ya existe un comprobante con el número \"" + numeroCompleto + "\". "
-                + "Verifique el número ingresado."
-            );
-        }
+        String numeroCompleto = formatearNumeroCompleto(tipoComprobante, serie, numeroFinal);
 
-        // ── Validar correlatividad para series SUNAT ──────────────────────────
-        if (serie.startsWith("B")) {
-            int esperado = calcularSiguienteEsperado(tipoComprobante, serie);
-            if (numeroInt != esperado) {
-                throw new NegocioException(
-                    "La serie " + serie + " requiere numeración correlativa. "
-                    + "El siguiente número debe ser "
-                    + formatearNumeroCompleto(tipoComprobante, serie, esperado)
-                    + ", no " + formatearNumeroCompleto(tipoComprobante, serie, numeroInt) + "."
-                );
-            }
-        }
-
-        serieComprobanteRepository
-                .findByTipoComprobanteAndSerieForUpdate(tipoComprobante, serie)
-                .ifPresent(contador -> {
-                    if (numeroInt > contador.getUltimoNumero()) {
-                        contador.setUltimoNumero(numeroInt);
-                        serieComprobanteRepository.save(contador);
-                    }
-                });
-
+        // Crear el comprobante con el número final resuelto bajo lock
         Comprobante comp = new Comprobante();
         comp.setTipoComprobante(tipoComprobante);
         comp.setSerie(serie);
-        comp.setNumero(numeroInt);
+        comp.setNumero(numeroFinal);
         comp.setNumeroCompleto(numeroCompleto);
         comp.setFechaEmision(fechaEmision != null ? fechaEmision : LocalDate.now());
         comp.setMonto(monto);
@@ -307,25 +242,9 @@ public class ComprobanteServiceImpl implements ComprobanteService {
 
         String serie = seriePersonalizada.trim().toUpperCase();
 
-        int desdeContador = serieComprobanteRepository
-                .findByTipoComprobanteAndSerie(tipoComprobante, serie)
-                .map(SerieComprobante::getUltimoNumero)
-                .orElse(0);
-
-        Integer desdeTablaRaw = comprobanteRepository
-                .findMaxNumeroByTipoAndSerie(tipoComprobante, serie);
-        int desdeTabla = (desdeTablaRaw != null) ? desdeTablaRaw : 0;
-
-        int siguiente = Math.max(desdeContador, desdeTabla) + 1;
-
-        serieComprobanteRepository
-                .findByTipoComprobanteAndSerieForUpdate(tipoComprobante, serie)
-                .ifPresent(contador -> {
-                    if (siguiente > contador.getUltimoNumero()) {
-                        contador.setUltimoNumero(siguiente);
-                        serieComprobanteRepository.save(contador);
-                    }
-                });
+        // El siguiente número se resuelve bajo lock pesimista (serializa la
+        // asignación del número para esta serie ante concurrencia).
+        int siguiente = resolverNumeroBajoLock(tipoComprobante, serie, Integer.MAX_VALUE);
 
         String numeroCompleto = formatearNumeroCompleto(tipoComprobante, serie, siguiente);
 
@@ -341,6 +260,72 @@ public class ComprobanteServiceImpl implements ComprobanteService {
         comp.setEmailEnviado(false);
 
         return comprobanteRepository.save(comp);
+    }
+
+    /**
+     * Resuelve el número de comprobante de forma ATÓMICA usando un lock pesimista
+     * (SELECT FOR UPDATE) sobre la fila de {@code serie_comprobante}.
+     *
+     * <p>Este método es la defensa principal contra la condición de carrera
+     * cuando dos secretarias registran un pago al mismo tiempo: ambas reciben el
+     * mismo número "sugerido" del preview, pero al persistir SOLO la primera
+     * transacción se queda con ese número. La segunda, al obtener el lock
+     * después, detecta que el número ya fue usado y asigna automáticamente el
+     * siguiente número disponible.</p>
+     *
+     * <p>Reglas:
+     * <ul>
+     *   <li>Si el número solicitado está libre y es el siguiente esperado, se usa tal cual.</li>
+     *   <li>Si el número solicitado ya existe (lo tomó otra transacción), se asigna el siguiente.</li>
+     *   <li>Si el número solicitado NO es el siguiente correlativo para una serie SUNAT (B*),
+     *       se ajusta al siguiente esperado (SUNAT exige numeración consecutiva).</li>
+     *   <li>El contador de la serie queda adelantado al número final asignado.</li>
+     * </ul></p>
+     *
+     * @return el número final asignado (diferente al solicitado si hubo conflicto)
+     */
+    private int resolverNumeroBajoLock(TipoComprobante tipoComprobante, String serie, int numeroSolicitado) {
+        // 1. Bloquear la fila del contador (SELECT FOR UPDATE). Esto serializa
+        //    todas las transacciones que piden número para la misma serie.
+        SerieComprobante contador = serieComprobanteRepository
+                .findByTipoComprobanteAndSerieForUpdate(tipoComprobante, serie)
+                .orElseThrow(() -> new NegocioException(
+                        "No existe serie configurada para el tipo de comprobante: "
+                        + tipoComprobante + " / serie: " + (serie.isBlank() ? "(vacío)" : serie)
+                        + ". Ejecute el SQL de inicialización de serie_comprobante."
+                ));
+
+        // 2. Calcular el siguiente esperado DENTRO del lock (máximo entre contador y BD real)
+        int esperado = Math.max(contador.getUltimoNumero(),
+                comprobanteRepository.findMaxNumeroByTipoAndSerie(tipoComprobante, serie) == null
+                        ? 0
+                        : comprobanteRepository.findMaxNumeroByTipoAndSerie(tipoComprobante, serie)) + 1;
+
+        // 3. El número solicitado queda libre y es el esperado → usarlo.
+        //    Si ya existe o no es el esperado para series SUNAT → usar el esperado.
+        boolean numeroLibre = !comprobanteRepository.existsByNumeroCompleto(
+                formatearNumeroCompleto(tipoComprobante, serie, numeroSolicitado));
+
+        int numeroFinal;
+        if (numeroLibre && (numeroSolicitado == esperado || !serie.startsWith("B"))) {
+            // Número libre: se usa. Para series no-SUNAT (RB01, EB01) se respeta
+            // cualquier número libre; para series SUNAT (B*) debe ser el esperado.
+            numeroFinal = numeroSolicitado;
+        } else {
+            // Conflicto (otra secretaria usó el número) o número no correlativo:
+            // asignar el siguiente número disponible bajo el lock.
+            numeroFinal = esperado;
+            log.info("Número {} no disponible para {} / {}: se asigna el siguiente {}",
+                    numeroSolicitado, tipoComprobante, serie, esperado);
+        }
+
+        // 4. Adelantar el contador al número asignado (siempre que sea mayor).
+        if (numeroFinal > contador.getUltimoNumero()) {
+            contador.setUltimoNumero(numeroFinal);
+            serieComprobanteRepository.save(contador);
+        }
+
+        return numeroFinal;
     }
 
     // ─── Generación de Nota de Crédito ────────────────────────────────────────
