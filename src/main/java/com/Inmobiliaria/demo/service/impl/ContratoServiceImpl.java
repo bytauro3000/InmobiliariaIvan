@@ -526,8 +526,14 @@ public class ContratoServiceImpl implements ContratoService {
     @Override
     @Transactional(readOnly = true)
     public List<ContratoResponseDTO> buscarPorNombreCliente(String termino) {
+        // Excluye estados terminales: un contrato renunciado, transferido, resuelto
+        // o cancelado ya no es cobrable y no debe figurar en el apartado de pagos.
+        List<EstadoContrato> estadosExcluidos = List.of(
+            EstadoContrato.RENUNCIA, EstadoContrato.TRANSFERIDO,
+            EstadoContrato.RESUELTO, EstadoContrato.CANCELADO);
         return contratoRepository.findByClienteNombreContaining(termino)
                 .stream()
+                .filter(c -> !estadosExcluidos.contains(c.getEstadoContrato()))
                 .map(this::mapToContratoResponseDTO)
                 .collect(Collectors.toList());
     }
@@ -730,11 +736,10 @@ public class ContratoServiceImpl implements ContratoService {
 
         contrato.setEstadoContrato(EstadoContrato.RENUNCIA);
         contrato.getLotes().forEach(cl -> cl.getLote().setEstado(EstadoLote.Disponible));
-        // El cliente renunció: las letras NO pagadas se anulan (no se marcaron como
-        // pagadas — nunca hubo pago). Incluye PARCIAL, que también deja de cobrarse.
-        contrato.getLetrasCambio().stream()
-            .filter(l -> l.getEstadoLetra() != EstadoLetra.PAGADO)
-            .forEach(l -> l.setEstadoLetra(EstadoLetra.ANULADO));
+        // El cliente renunció: TODAS las letras pasan a ANULADO (pagadas, pendientes,
+        // parciales y vencidas). El contrato deja de ser cobrable: el lote vuelve a
+        // Disponible y el cliente ya no es dueño.
+        contrato.getLetrasCambio().forEach(l -> l.setEstadoLetra(EstadoLetra.ANULADO));
 
         return mapToContratoResponseDTO(contratoRepository.save(contrato));
     }
