@@ -572,6 +572,9 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         if (letra.getEstadoLetra() == EstadoLetra.PAGADO)
             throw new NegocioException("La letra ya se encuentra pagada.");
 
+        if (letra.getEstadoLetra() == EstadoLetra.ANULADO)
+            throw new NegocioException("La letra está anulada y no se puede registrar un pago.");
+
         boolean esPagoAcuenta = Boolean.TRUE.equals(request.getEsPagoAcuenta());
 
         BigDecimal nuevoSaldo = validarYCalcularNuevoSaldo(letra, request.getImportePagado(), esPagoAcuenta);

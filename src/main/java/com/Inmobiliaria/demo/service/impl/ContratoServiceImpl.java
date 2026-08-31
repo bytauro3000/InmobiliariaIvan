@@ -730,9 +730,11 @@ public class ContratoServiceImpl implements ContratoService {
 
         contrato.setEstadoContrato(EstadoContrato.RENUNCIA);
         contrato.getLotes().forEach(cl -> cl.getLote().setEstado(EstadoLote.Disponible));
+        // El cliente renunció: las letras NO pagadas se anulan (no se marcaron como
+        // pagadas — nunca hubo pago). Incluye PARCIAL, que también deja de cobrarse.
         contrato.getLetrasCambio().stream()
-            .filter(l -> l.getEstadoLetra() == EstadoLetra.PENDIENTE || l.getEstadoLetra() == EstadoLetra.VENCIDO)
-            .forEach(l -> l.setEstadoLetra(EstadoLetra.PAGADO));
+            .filter(l -> l.getEstadoLetra() != EstadoLetra.PAGADO)
+            .forEach(l -> l.setEstadoLetra(EstadoLetra.ANULADO));
 
         return mapToContratoResponseDTO(contratoRepository.save(contrato));
     }

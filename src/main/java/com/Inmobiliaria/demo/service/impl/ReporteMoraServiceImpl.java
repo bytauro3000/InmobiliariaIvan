@@ -55,33 +55,35 @@ public class ReporteMoraServiceImpl implements ReporteMoraService {
         Map<Integer, Contrato> mapaContratos = cargarContratosConClientesYLotes();
         Map<Integer, List<LetraCambio>> letrasPorContrato = cargarLetrasPorContrato();
 
-        // Solo clientes que tienen una letra sin pagar cuyo vencimiento es HOY.
-        // Aunque acumule letras vencidas de meses anteriores (ej. 25 y 26),
-        // recién aparece cuando la siguiente letra por pagar vence el día de hoy
-        // (ej. la 27 vence 28/08 → aparece el 28/08 con el acumulado 25-27).
-        List<Contrato> conVencimientoHoy = mapaContratos.values().stream()
-                .filter(c -> {
-                    List<LetraCambio> letras = letrasPorContrato.getOrDefault(
-                            c.getIdContrato(), Collections.emptyList());
-                    if (letras.isEmpty()) return false;
+// Solo clientes que tienen una letra sin pagar cuyo vencimiento es HOY.
+                    // Aunque acumule letras vencidas de meses anteriores (ej. 25 y 26),
+                    // recién aparece cuando la siguiente letra por pagar vence el día de hoy
+                    // (ej. la 27 vence 28/08 → aparece el 28/08 con el acumulado 25-27).
+                    List<Contrato> conVencimientoHoy = mapaContratos.values().stream()
+                            .filter(c -> {
+                                List<LetraCambio> letras = letrasPorContrato.getOrDefault(
+                                        c.getIdContrato(), Collections.emptyList());
+                                if (letras.isEmpty()) return false;
 
-                    int numUltimaPagada = letras.stream()
-                            .filter(l -> l.getEstadoLetra() == EstadoLetra.PAGADO)
-                            .mapToInt(l -> extraerNumeroLetra(l.getNumeroLetra()))
-                            .max()
-                            .orElse(0);
+                                int numUltimaPagada = letras.stream()
+                                        .filter(l -> l.getEstadoLetra() == EstadoLetra.PAGADO)
+                                        .mapToInt(l -> extraerNumeroLetra(l.getNumeroLetra()))
+                                        .max()
+                                        .orElse(0);
 
-                    return letras.stream()
-                            .filter(l -> l.getEstadoLetra() != EstadoLetra.PAGADO)
-                            .filter(l -> l.getFechaVencimiento() != null)
-                            .filter(l -> l.getFechaVencimiento().isEqual(hoy))
-                            .anyMatch(l -> extraerNumeroLetra(l.getNumeroLetra()) > numUltimaPagada);
-                })
-                .collect(Collectors.toList());
+                                return letras.stream()
+                                        .filter(l -> l.getEstadoLetra() != EstadoLetra.PAGADO
+                                                && l.getEstadoLetra() != EstadoLetra.ANULADO)
+                                        .filter(l -> l.getFechaVencimiento() != null)
+                                        .filter(l -> l.getFechaVencimiento().isEqual(hoy))
+                                        .anyMatch(l -> extraerNumeroLetra(l.getNumeroLetra()) > numUltimaPagada);
+                            })
+                            .collect(Collectors.toList());
 
         // Acumulado: todas las letras no pagadas vencidas a la fecha (ej. 25-27)
         Predicate<LetraCambio> esAtrasada = l ->
                 l.getEstadoLetra() != EstadoLetra.PAGADO
+                        && l.getEstadoLetra() != EstadoLetra.ANULADO
                         && l.getFechaVencimiento() != null
                         && !l.getFechaVencimiento().isAfter(hoy);
 
