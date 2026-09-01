@@ -199,7 +199,7 @@ public class ContratoFloridaPdf {
 		// 1b. Bloque de AVALES (garantes) — se añade después de los compradores
 		Paragraph bloqueAvales = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setFontSize(10);
 		if (!avales.isEmpty()) {
-			bloqueAvales.add("; actuando como ");
+			bloqueAvales.add("; actuando como AVAL ");
 			for (int i = 0; i < avales.size(); i++) {
 				ClienteResponseDTO c = avales.get(i);
 				boolean esFemenino = (c.getGenero() != null && c.getGenero().equals(Genero.Femenino));
@@ -1230,7 +1230,7 @@ public class ContratoFloridaPdf {
 
 		// 4b. Bloque de AVALES en la cláusula de posesión, si los hay
 		if (!avales.isEmpty()) {
-			introPosesion.add("; actuando como ");
+			introPosesion.add("; actuando como AVAL ");
 			for (int i = 0; i < avales.size(); i++) {
 				ClienteResponseDTO c = avales.get(i);
 				boolean esFem = (c.getGenero() != null && c.getGenero().equals(Genero.Femenino));

@@ -164,7 +164,7 @@ public class ContratoContadoFloridaPdf {
 		// Bloque de AVALES (garantes), si los hay
 		Paragraph bloqueAvales = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setFontSize(10);
 		if (!avales.isEmpty()) {
-			bloqueAvales.add("; actuando como ");
+			bloqueAvales.add("; actuando como AVAL ");
 			for (int i = 0; i < avales.size(); i++) {
 				ClienteResponseDTO c = avales.get(i);
 				boolean esFemenino = (c.getGenero() != null && c.getGenero().equals(Genero.Femenino));
@@ -694,7 +694,7 @@ public class ContratoContadoFloridaPdf {
 
 		// Bloque de AVALES en la posesión, si los hay
 		if (!avales.isEmpty()) {
-			introPosesion.add("; actuando como ");
+			introPosesion.add("; actuando como AVAL ");
 			for (int i = 0; i < avales.size(); i++) {
 				ClienteResponseDTO c = avales.get(i);
 				boolean esFem = (c.getGenero() != null && c.getGenero().equals(Genero.Femenino));
