@@ -44,6 +44,7 @@ public class CuentasPorCobrarDTO {
         private String moneda;
         private int cantidadLetras;
         private BigDecimal montoPorCobrar;
+        private BigDecimal montoPagado;
         private LocalDate proximaVencimiento;
     }
 }

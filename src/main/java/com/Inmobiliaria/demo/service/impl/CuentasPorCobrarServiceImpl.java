@@ -55,16 +55,37 @@ public class CuentasPorCobrarServiceImpl implements CuentasPorCobrarService {
             List<LetraCambio> letras = letrasPorContrato.getOrDefault(
                     contrato.getIdContrato(), Collections.emptyList());
 
-            // Letras que aún se deben cobrar (no pagadas, no anuladas)
+            // ── Número de la última letra PAGADA ─────────────────────────────
+            // Regla de cobranza: si el cliente ya tiene letras registradas como
+            // PAGADO (ej. 50, 51, 52), se asume que las anteriores (1-49) también
+            // fueron pagadas aunque estén pendientes por registro físico. Solo se
+            // cobra lo que está DESPUÉS de la última letra pagada. Si no hay
+            // ninguna pagada, se cobran todas las letras registradas.
+            int numUltimaPagada = letras.stream()
+                    .filter(l -> l.getEstadoLetra() == EstadoLetra.PAGADO)
+                    .mapToInt(l -> extraerNumeroLetra(l.getNumeroLetra()))
+                    .max()
+                    .orElse(0);
+
+            // Letras que aún se deben cobrar: posteriores a la última pagada
             List<LetraCambio> porCobrar = letras.stream()
                     .filter(l -> l.getEstadoLetra() != EstadoLetra.PAGADO
                             && l.getEstadoLetra() != EstadoLetra.ANULADO)
+                    .filter(l -> extraerNumeroLetra(l.getNumeroLetra()) > numUltimaPagada)
                     .collect(Collectors.toList());
 
             if (porCobrar.isEmpty()) continue;
 
             BigDecimal montoPorCobrar = porCobrar.stream()
                     .map(this::montoCobrableDeLetra)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            // Monto ya pagado: letras hasta la última pagada (incluye las que
+            // están pagadas en físico y aún no registradas).
+            BigDecimal montoPagado = letras.stream()
+                    .filter(l -> l.getEstadoLetra() != EstadoLetra.ANULADO)
+                    .filter(l -> extraerNumeroLetra(l.getNumeroLetra()) <= numUltimaPagada)
+                    .map(l -> l.getImporte() != null ? l.getImporte() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             String moneda = contrato.getMoneda() != null
@@ -89,6 +110,7 @@ public class CuentasPorCobrarServiceImpl implements CuentasPorCobrarService {
                     moneda,
                     porCobrar.size(),
                     montoPorCobrar,
+                    montoPagado,
                     proximaVencimiento
             ));
         }
@@ -177,6 +199,16 @@ public class CuentasPorCobrarServiceImpl implements CuentasPorCobrarService {
         String soloDigitos = numeroLote.replaceAll("\\D", "");
         if (soloDigitos.isEmpty()) return 0;
         try { return Integer.parseInt(soloDigitos); }
+        catch (NumberFormatException e) { return 0; }
+    }
+
+    /** Extrae el número de una letra "19/120" → 19. */
+    private int extraerNumeroLetra(String numeroLetra) {
+        if (numeroLetra == null || numeroLetra.isBlank()) return 0;
+        String parte = numeroLetra.contains("/")
+                ? numeroLetra.split("/")[0].trim()
+                : numeroLetra.trim();
+        try { return Integer.parseInt(parte); }
         catch (NumberFormatException e) { return 0; }
     }
 
