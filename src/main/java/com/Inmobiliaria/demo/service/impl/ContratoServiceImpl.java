@@ -683,6 +683,10 @@ public class ContratoServiceImpl implements ContratoService {
         LetraCambio primeraLetra = letraCambioRepository
                 .findFirstByContratoIdContratoOrderByNumeroLetraAsc(idContrato).orElse(null);
 
+        // Fecha de pago de la última letra PAGADA (para el Certificado de Cancelación
+        // de contratos financiados CANCELADOS). Si no hay, se usa la del contrato.
+        java.time.LocalDate fechaCancelacion = resolverFechaCancelacion(contrato);
+
         String nombrePrograma = (dto.getLotes() != null && !dto.getLotes().isEmpty())
                 ? dto.getLotes().get(0).getNombrePrograma()
                 : "";
@@ -705,7 +709,45 @@ public class ContratoServiceImpl implements ContratoService {
             return ContratoContadoFloridaPdf.generarContratoContadoFlorida(dto);
         }
         // LA FLORIDA DE TORRE BLANCA (cualquiera de sus etapas) y demás programas
-        return ContratoFloridaPdf.generarContratoFlorida(dto, primeraLetra);
+        return ContratoFloridaPdf.generarContratoFlorida(dto, primeraLetra, fechaCancelacion);
+    }
+
+    /**
+     * Resuelve la fecha de cancelación de un contrato financiado: la fecha de pago
+     * de la última letra PAGADA (la de mayor número con estado PAGADO). Se usa en el
+     * Certificado de Cancelación del PDF. Si el contrato no está cancelado o no hay
+     * pago registrado, devuelve null (el PDF usará la fecha del contrato).
+     */
+    private java.time.LocalDate resolverFechaCancelacion(Contrato contrato) {
+        if (contrato == null
+                || contrato.getTipoContrato() != com.Inmobiliaria.demo.enums.TipoContrato.FINANCIADO
+                || contrato.getEstadoContrato() != EstadoContrato.CANCELADO) {
+            return null;
+        }
+        // Obtiene las letras con sus pagos (evita LazyInitializationException).
+        java.util.List<LetraCambio> letrasConPagos =
+                letraCambioRepository.findByContratoIdContratoConPagos(contrato.getIdContrato());
+        if (letrasConPagos == null || letrasConPagos.isEmpty()) return null;
+
+        // Última letra PAGADA = la de mayor número en estado PAGADO.
+        return letrasConPagos.stream()
+                .filter(l -> l.getEstadoLetra() == EstadoLetra.PAGADO)
+                .max(Comparator.comparingInt(l -> extraerNumeroLetra(l.getNumeroLetra())))
+                .flatMap(l -> l.getPagos() != null ? l.getPagos().stream()
+                        .filter(p -> p.getFechaPago() != null)
+                        .map(com.Inmobiliaria.demo.entity.PagoLetras::getFechaPago)
+                        .max(Comparator.naturalOrder()) : java.util.Optional.empty())
+                .orElse(null);
+    }
+
+    /** Extrae el número de una letra "19/120" → 19. */
+    private int extraerNumeroLetra(String numeroLetra) {
+        if (numeroLetra == null || numeroLetra.isBlank()) return 0;
+        String parte = numeroLetra.contains("/")
+                ? numeroLetra.split("/")[0].trim()
+                : numeroLetra.trim();
+        try { return Integer.parseInt(parte); }
+        catch (NumberFormatException e) { return 0; }
     }
 
     @Override

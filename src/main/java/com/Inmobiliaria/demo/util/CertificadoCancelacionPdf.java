@@ -33,9 +33,21 @@ public class CertificadoCancelacionPdf {
 
 	/**
 	 * Agrega al documento la hoja del certificado de cancelación.
-	 * Internamente calcula fecha, cliente(s), lote y dirección a partir del contrato.
+	 * Usa la fecha del contrato como fecha de cancelación.
 	 */
 	public static void agregarCertificado(Document document, ContratoResponseDTO contrato,
+			PdfFont arialBold, PdfFont arialBoldItalic, PdfFont arialItalic) {
+		agregarCertificado(document, contrato, null, arialBold, arialBoldItalic, arialItalic);
+	}
+
+	/**
+	 * Agrega al documento la hoja del certificado de cancelación.
+	 *
+	 * @param fechaCancelacion fecha de pago de la última letra (contrato financiado
+	 *                         cancelado). Si es {@code null}, se usa la fecha del contrato.
+	 */
+	public static void agregarCertificado(Document document, ContratoResponseDTO contrato,
+			java.time.LocalDate fechaCancelacion,
 			PdfFont arialBold, PdfFont arialBoldItalic, PdfFont arialItalic) {
 
 		document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
@@ -43,12 +55,16 @@ public class CertificadoCancelacionPdf {
 
 		LocalDate fechaRegistro = contrato.getFechaContrato();
 		if (fechaRegistro == null) fechaRegistro = LocalDate.now();
+		// El certificado de cancelación se emite cuando el cliente paga la última
+		// letra, no en la fecha del contrato. Si no hay fecha de pago (contado),
+		// se mantiene la fecha del contrato como respaldo.
+		LocalDate fechaCancelacionResuelta = fechaCancelacion != null ? fechaCancelacion : fechaRegistro;
 
 		String[] nombresMeses = {"Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
 				"Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"};
-		String diaNum = String.format("%02d", fechaRegistro.getDayOfMonth());
-		String mesNombre = nombresMeses[fechaRegistro.getMonthValue() - 1];
-		int anioNum = fechaRegistro.getYear();
+		String diaNum = String.format("%02d", fechaCancelacionResuelta.getDayOfMonth());
+		String mesNombre = nombresMeses[fechaCancelacionResuelta.getMonthValue() - 1];
+		int anioNum = fechaCancelacionResuelta.getYear();
 		DateTimeFormatter fmtFecha = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
 		List<ClienteResponseDTO> clientes = contrato.getClientes();
@@ -141,7 +157,7 @@ public class CertificadoCancelacionPdf {
 		certCuerpo.add("; El cual se viene desarrollando el Programa de Vivienda ");
 		certCuerpo.add(new Text("\"LA FLORIDA DE TORRE BLANCA\"").setFont(arialBoldItalic));
 		certCuerpo.add(". El lote de terreno fue adquirido mediante contrato de Compra-Venta del ");
-		certCuerpo.add(new Text(fechaRegistro.format(fmtFecha)).setFont(arialBoldItalic));
+		certCuerpo.add(new Text(fechaCancelacionResuelta.format(fmtFecha)).setFont(arialBoldItalic));
 		certCuerpo.add(", encontrándose a la fecha cancelado el precio total de venta.");
 
 		document.add(certCuerpo);

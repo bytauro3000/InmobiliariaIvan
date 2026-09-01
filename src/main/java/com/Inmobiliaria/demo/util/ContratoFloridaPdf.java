@@ -55,6 +55,11 @@ public class ContratoFloridaPdf {
 	}
 
 	public static byte[] generarContratoFlorida(ContratoResponseDTO contrato, LetraCambio primeraLetraEntidad) {
+		return generarContratoFlorida(contrato, primeraLetraEntidad, null);
+	}
+
+	public static byte[] generarContratoFlorida(ContratoResponseDTO contrato, LetraCambio primeraLetraEntidad,
+			java.time.LocalDate fechaCancelacion) {
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		PdfWriter writer = new PdfWriter(out);
 		PdfDocument pdf = new PdfDocument(writer);
@@ -1538,7 +1543,7 @@ public class ContratoFloridaPdf {
 		// 5. CERTIFICADO DE CANCELACION: solo cuando el contrato financiado
 		//    ya está CANCELADO (cliente pagó la última letra).
 		if (contrato.getEstadoContrato() == com.Inmobiliaria.demo.enums.EstadoContrato.CANCELADO) {
-			CertificadoCancelacionPdf.agregarCertificado(document, contrato, arialBold, arialBoldItalic, arialItalic);
+			CertificadoCancelacionPdf.agregarCertificado(document, contrato, fechaCancelacion, arialBold, arialBoldItalic, arialItalic);
 		}
 
 		// 6. FINALIZAR DOCUMENTO Y RETORNAR BYTES
