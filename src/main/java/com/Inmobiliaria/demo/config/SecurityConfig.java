@@ -65,6 +65,7 @@ public class SecurityConfig {
                     "/api/moras/**",
                     "/api/reporte-mora/**",
                     "/api/reporte-ingresos/**",
+                    "/api/cuentas-por-cobrar/**",
                     "/api/comprobantes/**",
                     "/api/nota-credito/**",
                     "/api/agendas/**",
