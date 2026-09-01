@@ -38,8 +38,8 @@ public class CuentasPorCobrarDTO {
     public static class FilaCuenta {
         private Integer idContrato;
         private String nombreCliente;
-        private String manzana;
-        private String numeroLote;
+        private List<String> manzanas;
+        private List<String> numeroLotes;
         private String nombrePrograma;
         private String moneda;
         private int cantidadLetras;

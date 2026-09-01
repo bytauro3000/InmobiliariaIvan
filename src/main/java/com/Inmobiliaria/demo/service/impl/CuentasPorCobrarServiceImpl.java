@@ -97,15 +97,15 @@ public class CuentasPorCobrarServiceImpl implements CuentasPorCobrarService {
                     .min(Comparator.naturalOrder())
                     .orElse(null);
 
-            Lote lote = primerLote(contrato);
-            String nombrePrograma = (lote != null && lote.getPrograma() != null)
-                    ? lote.getPrograma().getNombrePrograma() : "SIN PROGRAMA";
+            List<Lote> lotes = lotesOrdenados(contrato);
+            String nombrePrograma = (lotes.isEmpty() || lotes.get(0).getPrograma() == null)
+                    ? "SIN PROGRAMA" : lotes.get(0).getPrograma().getNombrePrograma();
 
             filas.add(new FilaCuenta(
                     contrato.getIdContrato(),
                     resolverNombreCliente(contrato.getClientes()),
-                    lote != null ? lote.getManzana() : "",
-                    lote != null ? lote.getNumeroLote() : "",
+                    lotes.stream().map(Lote::getManzana).collect(Collectors.toList()),
+                    lotes.stream().map(Lote::getNumeroLote).collect(Collectors.toList()),
                     nombrePrograma,
                     moneda,
                     porCobrar.size(),
@@ -128,9 +128,11 @@ public class CuentasPorCobrarServiceImpl implements CuentasPorCobrarService {
                 .map(e -> {
                     List<FilaCuenta> contratos = e.getValue().stream()
                             .sorted(Comparator
-                                    .comparing((FilaCuenta f) -> f.getManzana() == null ? "" : f.getManzana(),
+                                    .comparing((FilaCuenta f) -> f.getManzanas().isEmpty()
+                                            ? "" : f.getManzanas().get(0),
                                             Comparator.nullsLast(String::compareTo))
-                                    .thenComparing(f -> extraerNumeroLote(f.getNumeroLote())))
+                                    .thenComparing(f -> f.getNumeroLotes().isEmpty()
+                                            ? 0 : extraerNumeroLote(f.getNumeroLotes().get(0))))
                             .collect(Collectors.toList());
                     return new GrupoPrograma(
                             e.getKey(),
@@ -182,16 +184,19 @@ public class CuentasPorCobrarServiceImpl implements CuentasPorCobrarService {
                 .orElse("SIN CLIENTE");
     }
 
-    private Lote primerLote(Contrato contrato) {
-        if (contrato.getLotes() == null || contrato.getLotes().isEmpty()) return null;
+    /** Todos los lotes del contrato ordenados por manzana y luego número de lote. */
+    private List<Lote> lotesOrdenados(Contrato contrato) {
+        if (contrato.getLotes() == null || contrato.getLotes().isEmpty()) {
+            return new ArrayList<>();
+        }
         return contrato.getLotes().stream()
                 .map(ContratoLote::getLote)
                 .filter(Objects::nonNull)
-                .min(Comparator
+                .sorted(Comparator
                         .comparing((Lote l) -> l.getManzana() == null ? "" : l.getManzana(),
                                 Comparator.nullsLast(String::compareTo))
                         .thenComparing(l -> extraerNumeroLote(l.getNumeroLote())))
-                .orElse(null);
+                .collect(Collectors.toList());
     }
 
     private int extraerNumeroLote(String numeroLote) {
