@@ -131,6 +131,11 @@ public class ContratoServiceImpl implements ContratoService {
         }
 
         Contrato contrato = modelMapper.map(requestDTO, Contrato.class);
+        // El request trae `clientes` (List<ContratoClienteRequestDTO>) que ModelMapper
+        // intenta mapear a `Contrato.clientes` creando ContratoCliente con cliente=null
+        // (el DTO solo lleva idCliente/tipoPropietario). Se limpian aquí para que la
+        // asociación real la construya asociarClientesAlContrato() más adelante.
+        contrato.setClientes(null);
         if (contrato.getMoneda() == null) contrato.setMoneda(Moneda.USD);
 
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
