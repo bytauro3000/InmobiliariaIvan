@@ -146,8 +146,9 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
         "        cl.id_distrito, " +
         "        CASE WHEN cc.tipo_propietario = 'AVAL' THEN 1 ELSE 0 END AS es_aval, " +
         "        ROW_NUMBER() OVER (" +
-        "            PARTITION BY cc.id_contrato " +
-        "            ORDER BY CASE WHEN cc.tipo_propietario = 'AVAL' THEN 1 ELSE 0 END, cl.id_cliente" +
+        "            PARTITION BY cc.id_contrato, " +
+        "            CASE WHEN cc.tipo_propietario = 'AVAL' THEN 1 ELSE 0 END " +
+        "            ORDER BY cl.id_cliente" +
         "        ) AS client_rank " +
         "    FROM contrato_cliente cc " +
         "    JOIN cliente cl ON cc.id_cliente = cl.id_cliente " +
