@@ -31,6 +31,9 @@ public class ReporteCronogramaPagosClientesDTO {
     private String cliente2Nombre;
     private String cliente2Apellidos;
     private String cliente2NumDocumento;
+    private String aval1Nombre;
+    private String aval1Apellidos;
+    private String aval1NumDocumento;
     private String lote1Manzana;
     private String lote1NumeroLote;
     private BigDecimal lote1Area;

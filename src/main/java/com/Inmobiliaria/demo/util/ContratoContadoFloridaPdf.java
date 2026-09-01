@@ -7,6 +7,7 @@ import com.Inmobiliaria.demo.enums.Genero;
 import com.Inmobiliaria.demo.enums.MedioPago;
 import com.Inmobiliaria.demo.enums.Moneda;
 import com.Inmobiliaria.demo.enums.TipoCliente;
+import com.Inmobiliaria.demo.enums.TipoPropietario;
 import com.Inmobiliaria.demo.config.EmpresaContext;
 import com.itextpdf.io.font.PdfEncodings;
 import com.itextpdf.io.util.StreamUtil;
@@ -31,8 +32,10 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 /**
  * Plantilla de CONTRATO AL CONTADO para el Programa "LA FLORIDA DE TORRE BLANCA" (IVAN).
@@ -91,8 +94,24 @@ public class ContratoContadoFloridaPdf {
 
 		// ── Datos del cliente ──────────────────────────────────────────────────
 		List<ClienteResponseDTO> clientes = contrato.getClientes();
-		int numClientes = clientes.size();
-		ClienteResponseDTO titular = clientes.get(0);
+		// Separar TITULARES/compradores de los AVALES. Si un cliente no trae rol
+		// (contratos antiguos), se trata como titular (comportamiento histórico).
+		List<ClienteResponseDTO> titulares = clientes.stream()
+				.filter(c -> c.getTipoPropietario() == null
+						|| c.getTipoPropietario() != TipoPropietario.AVAL)
+				.collect(Collectors.toList());
+		List<ClienteResponseDTO> avales = clientes.stream()
+				.filter(c -> c.getTipoPropietario() != null
+						&& c.getTipoPropietario() == TipoPropietario.AVAL)
+				.collect(Collectors.toList());
+
+		if (titulares.isEmpty() && !clientes.isEmpty()) {
+			titulares = new ArrayList<>(clientes);
+			avales = new ArrayList<>();
+		}
+
+		int numClientes = titulares.size();
+		ClienteResponseDTO titular = titulares.get(0);
 
 		String nombreDistrito = (titular.getDistrito() != null) ? titular.getDistrito().getNombre() : "";
 		String domicilioCalle = (titular.getDireccion() != null) ? titular.getDireccion().toUpperCase() : "";
@@ -112,7 +131,7 @@ public class ContratoContadoFloridaPdf {
 		// Bloque de compradores
 		Paragraph bloqueCompradores = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setFontSize(10);
 		for (int i = 0; i < numClientes; i++) {
-			ClienteResponseDTO c = clientes.get(i);
+			ClienteResponseDTO c = titulares.get(i);
 			boolean esFemenino = (c.getGenero() != null && c.getGenero().equals(Genero.Femenino));
 
 			String prefijo = esFemenino ? "la Sra. " : "el Sr. ";
@@ -139,6 +158,25 @@ public class ContratoContadoFloridaPdf {
 			if (numClientes > 1 && i < numClientes - 1) {
 				if (i == numClientes - 2) bloqueCompradores.add(", y ");
 				else bloqueCompradores.add(", ");
+			}
+		}
+
+		// Bloque de AVALES (garantes), si los hay
+		Paragraph bloqueAvales = new Paragraph().setTextAlignment(TextAlignment.JUSTIFIED).setFontSize(10);
+		if (!avales.isEmpty()) {
+			bloqueAvales.add("; actuando como ");
+			for (int i = 0; i < avales.size(); i++) {
+				ClienteResponseDTO c = avales.get(i);
+				boolean esFemenino = (c.getGenero() != null && c.getGenero().equals(Genero.Femenino));
+				String prefijo = esFemenino ? "la Sra. " : "el Sr. ";
+				String identif = esFemenino ? "identificada" : "identificado";
+				bloqueAvales.add(prefijo);
+				bloqueAvales.add(new Text(c.getNombre().toUpperCase() + " " + c.getApellidos().toUpperCase()).setBold());
+				bloqueAvales.add(", " + identif + " con ");
+				bloqueAvales.add(new Text(etiquetaDocumento(c) + c.getNumDoc()).setBold());
+				if (i < avales.size() - 1) {
+					bloqueAvales.add(i == avales.size() - 2 ? " y " : ", ");
+				}
 			}
 		}
 
@@ -199,6 +237,13 @@ public class ContratoContadoFloridaPdf {
 
 		for (com.itextpdf.layout.element.IElement el : bloqueCompradores.getChildren()) {
 			intro.add((com.itextpdf.layout.element.ILeafElement) el);
+		}
+
+		// Bloque de avales (garantes), si los hay
+		if (!avales.isEmpty()) {
+			for (com.itextpdf.layout.element.IElement el : bloqueAvales.getChildren()) {
+				intro.add((com.itextpdf.layout.element.ILeafElement) el);
+			}
 		}
 
 		intro.add(", de ocupación independiente, " + etiquetaDomicilio + direccionRealParaContrato);
@@ -583,7 +628,7 @@ public class ContratoContadoFloridaPdf {
 		 * FIRMAS DEL CONTRATO
 		 * ===================================================================== */
 		document.add(new Paragraph("").setMarginTop(20f));
-		agregarBloqueFirmas(document, clientes, arialBoldItalic);
+		agregarBloqueFirmas(document, titulares, avales, arialBoldItalic);
 
 		/* =====================================================================
 		 * DOCUMENTO DE SEÑALIZACION Y TOMA DE POSESION DE TERRENO
@@ -618,7 +663,7 @@ public class ContratoContadoFloridaPdf {
 		introPosesion.add("y de la otra parte ");
 
 		for (int i = 0; i < numClientes; i++) {
-			ClienteResponseDTO c = clientes.get(i);
+			ClienteResponseDTO c = titulares.get(i);
 			boolean esFem = (c.getGenero() != null && c.getGenero().equals(Genero.Femenino));
 
 			String pref = esFem ? "la Sra. " : "el Sr. ";
@@ -644,6 +689,24 @@ public class ContratoContadoFloridaPdf {
 
 			if (numClientes > 1 && i < numClientes - 1) {
 				introPosesion.add(i == numClientes - 2 ? " y " : ", ");
+			}
+		}
+
+		// Bloque de AVALES en la posesión, si los hay
+		if (!avales.isEmpty()) {
+			introPosesion.add("; actuando como ");
+			for (int i = 0; i < avales.size(); i++) {
+				ClienteResponseDTO c = avales.get(i);
+				boolean esFem = (c.getGenero() != null && c.getGenero().equals(Genero.Femenino));
+				String pref = esFem ? "la Sra. " : "el Sr. ";
+				String ident = esFem ? "identificada" : "identificado";
+				introPosesion.add(pref);
+				introPosesion.add(new Text(c.getNombre().toUpperCase() + " " + c.getApellidos().toUpperCase()).setFont(arialBold));
+				introPosesion.add(", " + ident + " con ");
+				introPosesion.add(new Text(etiquetaDocumento(c) + c.getNumDoc()).setFont(arialBold));
+				if (i < avales.size() - 1) {
+					introPosesion.add(i == avales.size() - 2 ? " y " : ", ");
+				}
 			}
 		}
 
@@ -773,7 +836,7 @@ public class ContratoContadoFloridaPdf {
 		cierrePosesion.add(new Text(fechaTextoCierre).setFont(arialItalic));
 
 		document.add(cierrePosesion);
-agregarBloqueFirmas(document, clientes, arialBoldItalic);
+		agregarBloqueFirmas(document, titulares, avales, arialBoldItalic);
 
 		/* =====================================================================
 		 * CERTIFICADO DE CANCELACION DE TERRENO (reutilizable)
@@ -843,7 +906,8 @@ agregarBloqueFirmas(document, clientes, arialBoldItalic);
 		};
 	}
 
-	private static void agregarBloqueFirmas(Document document, List<ClienteResponseDTO> clientes, PdfFont arialBoldItalic) {
+	private static void agregarBloqueFirmas(Document document, List<ClienteResponseDTO> titulares,
+                                            List<ClienteResponseDTO> avales, PdfFont arialBoldItalic) {
 		Table contenedorPrincipal = new Table(1)
 				.useAllAvailableWidth()
 				.setBorder(Border.NO_BORDER)
@@ -854,7 +918,7 @@ agregarBloqueFirmas(document, clientes, arialBoldItalic);
 				.useAllAvailableWidth()
 				.setBorder(Border.NO_BORDER);
 
-		ClienteResponseDTO c1 = clientes.get(0);
+		ClienteResponseDTO c1 = titulares.get(0);
 		Cell celdaC1 = new Cell().setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.CENTER).setPadding(0);
 
 		Paragraph pLineaC1 = new Paragraph().setBorderTop(new com.itextpdf.layout.borders.SolidBorder(1f))
@@ -864,7 +928,7 @@ agregarBloqueFirmas(document, clientes, arialBoldItalic);
 		celdaC1.add(new Paragraph(c1.getNombre().toUpperCase() + " " + c1.getApellidos().toUpperCase()).setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
 		celdaC1.add(new Paragraph(etiquetaDocumento(c1) + c1.getNumDoc()).setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
 
-		if (clientes.size() == 1) {
+		if (titulares.size() == 1) {
 			String etiqueta = (c1.getGenero() != null && c1.getGenero().equals(Genero.Femenino))
 					? "“LA COMPRADORA”" : "“EL COMPRADOR”";
 			celdaC1.add(new Paragraph(etiqueta).setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f));
@@ -883,9 +947,9 @@ agregarBloqueFirmas(document, clientes, arialBoldItalic);
 
 		contenedorPrincipal.addCell(new Cell().add(fila1).setBorder(Border.NO_BORDER));
 
-		if (clientes.size() > 1) {
-			for (int i = 1; i < clientes.size(); i++) {
-				ClienteResponseDTO ci = clientes.get(i);
+		if (titulares.size() > 1) {
+			for (int i = 1; i < titulares.size(); i++) {
+				ClienteResponseDTO ci = titulares.get(i);
 
 				Table tablaExtra = new Table(new float[]{45f})
 						.setWidth(UnitValue.createPercentValue(45))
@@ -900,13 +964,33 @@ agregarBloqueFirmas(document, clientes, arialBoldItalic);
 				celdaExtra.add(new Paragraph(ci.getNombre().toUpperCase() + " " + ci.getApellidos().toUpperCase()).setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
 				celdaExtra.add(new Paragraph(etiquetaDocumento(ci) + ci.getNumDoc()).setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
 
-				if (i == clientes.size() - 1) {
+				if (i == titulares.size() - 1) {
 					celdaExtra.add(new Paragraph("“LOS COMPRADORES”").setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f));
 				}
 
 				tablaExtra.addCell(celdaExtra);
 				contenedorPrincipal.addCell(new Cell().add(tablaExtra).setBorder(Border.NO_BORDER));
 			}
+		}
+
+		// --- AVALES (Garantes) — firman como "LA AVAL" ---
+		for (ClienteResponseDTO aval : avales) {
+			Table tablaAval = new Table(new float[]{45f})
+					.setWidth(UnitValue.createPercentValue(45))
+					.setBorder(Border.NO_BORDER)
+					.setMarginTop(50f);
+
+			Cell celdaAval = new Cell().setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.CENTER).setPadding(0);
+			Paragraph pLineaAval = new Paragraph().setBorderTop(new com.itextpdf.layout.borders.SolidBorder(1f))
+					.setWidth(200f).setMarginBottom(2).setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.CENTER);
+
+			celdaAval.add(pLineaAval);
+			celdaAval.add(new Paragraph(aval.getNombre().toUpperCase() + " " + aval.getApellidos().toUpperCase()).setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
+			celdaAval.add(new Paragraph(etiquetaDocumento(aval) + aval.getNumDoc()).setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
+			celdaAval.add(new Paragraph("“LA AVAL”").setFont(arialBoldItalic).setFontSize(12).setFixedLeading(12f));
+
+			tablaAval.addCell(celdaAval);
+			contenedorPrincipal.addCell(new Cell().add(tablaAval).setBorder(Border.NO_BORDER));
 		}
 
 		document.add(contenedorPrincipal);

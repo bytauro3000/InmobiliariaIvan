@@ -28,7 +28,17 @@ public class ContratoRequestDTO {
     private Integer idVendedor;
     private Integer idUsuario;
     private Integer idSeparacion;
+
+    /**
+     * Clientes con su rol (TITULAR, AVAL, CONYUGE, etc.). Si viene null/vacío,
+     * se usa {@link #idClientes} como fallback (todos como TITULAR, comportamiento
+     * histórico de compatibilidad).
+     */
+    private List<ContratoClienteRequestDTO> clientes;
+
+    /** Legacy: lista plana de IDs, todos TITULAR. Solo se usa si {@link #clientes} es null. */
     private List<Integer> idClientes;
+
     private List<Integer> idLotes;
     private Moneda moneda;
     private PagoInicialRequestDTO pagoInicial;

@@ -250,37 +250,68 @@ public class ContratoServiceImpl implements ContratoService {
 
         final Contrato contratoFinal = contratoGuardado;
 
-        List<Integer> idsClientesAAsociar;
+        List<ContratoClienteRequestDTO> clientesConRol;
         if (requestDTO.getIdSeparacion() != null) {
             Separacion separacion = contratoFinal.getSeparacion();
             separacion.setEstado(EstadoSeparacion.CONCRETADO);
             separacionService.actualizarSeparacion(separacion);
-            idsClientesAAsociar = separacion.getClientes().stream()
-                    .map(sc -> sc.getCliente().getIdCliente()).collect(Collectors.toList());
+            // Conserva el rol que se asignó en la separación (TITULAR, AVAL, etc.)
+            clientesConRol = separacion.getClientes().stream()
+                    .map(sc -> new ContratoClienteRequestDTO(
+                            sc.getCliente().getIdCliente(), sc.getTipoPropietario()))
+                    .collect(Collectors.toList());
             separacion.getLotes().stream().map(sl -> sl.getLote().getIdLote())
                     .forEach(idLote -> registrarLoteEnContrato(contratoFinal, idLote));
         } else {
-            idsClientesAAsociar = requestDTO.getIdClientes();
+            clientesConRol = resolverClientesConRol(requestDTO);
             if (requestDTO.getIdLotes() != null)
                 requestDTO.getIdLotes().forEach(idLote -> registrarLoteEnContrato(contratoFinal, idLote));
         }
 
-        if (idsClientesAAsociar != null) {
-            int index = 0;
-            for (Integer idCliente : idsClientesAAsociar) {
-                Cliente cliente = clienteService.buscarClientePorId(idCliente);
-                if (cliente != null) {
-                    ContratoCliente cc = new ContratoCliente();
-                    cc.setId(new ContratoClienteId(contratoFinal.getIdContrato(), idCliente));
-                    cc.setContrato(contratoFinal);
-                    cc.setCliente(cliente);
-                    cc.setTipoPropietario(TipoPropietario.TITULAR);
-                    cc.setOrden(index++);
-                    contratoClienteService.guardar(cc);
-                }
-            }
-        }
+        asociarClientesAlContrato(contratoFinal, clientesConRol);
         return mapToContratoResponseDTO(contratoFinal);
+    }
+
+    /**
+     * Resuelve la lista de clientes con su rol desde el request.
+     * Prioriza {@link ContratoRequestDTO#getClientes()} (con rol); si viene vacío
+     * usa {@link ContratoRequestDTO#getIdClientes()} como fallback (todos TITULAR,
+     * comportamiento histórico de compatibilidad).
+     */
+    private List<ContratoClienteRequestDTO> resolverClientesConRol(ContratoRequestDTO requestDTO) {
+        if (requestDTO.getClientes() != null && !requestDTO.getClientes().isEmpty()) {
+            return requestDTO.getClientes();
+        }
+        if (requestDTO.getIdClientes() != null) {
+            return requestDTO.getIdClientes().stream()
+                    .map(id -> new ContratoClienteRequestDTO(id, TipoPropietario.TITULAR))
+                    .collect(Collectors.toList());
+        }
+        return new ArrayList<>();
+    }
+
+    /** Asocia los clientes al contrato guardando su rol y orden de aparición.
+     *  El TITULAR y demás roles NO-AVAL siempre van antes que los AVALES en el
+     *  campo `orden`, para que `getClientes().iterator().next()` (usado en
+     *  reportes, correos y cobranza) siga resolviendo al titular principal. */
+    private void asociarClientesAlContrato(Contrato contrato, List<ContratoClienteRequestDTO> clientesConRol) {
+        if (clientesConRol == null || clientesConRol.isEmpty()) return;
+        List<ContratoClienteRequestDTO> ordenados = new ArrayList<>(clientesConRol);
+        ordenados.sort(Comparator.comparingInt(c ->
+                c.getTipoPropietario() == TipoPropietario.AVAL ? 1 : 0));
+        int index = 0;
+        for (ContratoClienteRequestDTO req : ordenados) {
+            Cliente cliente = clienteService.buscarClientePorId(req.getIdCliente());
+            if (cliente == null) continue;
+            ContratoCliente cc = new ContratoCliente();
+            cc.setId(new ContratoClienteId(contrato.getIdContrato(), req.getIdCliente()));
+            cc.setContrato(contrato);
+            cc.setCliente(cliente);
+            cc.setTipoPropietario(req.getTipoPropietario() != null
+                    ? req.getTipoPropietario() : TipoPropietario.TITULAR);
+            cc.setOrden(index++);
+            contratoClienteService.guardar(cc);
+        }
     }
 
     @Override
@@ -366,18 +397,7 @@ public class ContratoServiceImpl implements ContratoService {
         if (requestDTO.getIdLotes() != null)
             requestDTO.getIdLotes().forEach(idLote -> registrarLoteEnContrato(contratoActualizado, idLote));
 
-        if (requestDTO.getIdClientes() != null) {
-            int index = 0;
-            for (Integer idCliente : requestDTO.getIdClientes()) {
-                Cliente cliente = clienteService.buscarClientePorId(idCliente);
-                ContratoCliente cc = new ContratoCliente();
-                cc.setId(new ContratoClienteId(contratoActualizado.getIdContrato(), idCliente));
-                cc.setContrato(contratoActualizado); cc.setCliente(cliente);
-                cc.setTipoPropietario(TipoPropietario.TITULAR);
-                cc.setOrden(index++);
-                contratoClienteService.guardar(cc);
-            }
-        }
+        asociarClientesAlContrato(contratoActualizado, resolverClientesConRol(requestDTO));
         return mapToContratoResponseDTO(contratoActualizado);
     }
 
@@ -486,7 +506,8 @@ public class ContratoServiceImpl implements ContratoService {
                 .map(cc -> {
                     Cliente c = cc.getCliente();
                     return new ContratoListItemDTO.ClienteSimpleDTO(
-                            c.getNombre(), c.getApellidos(), c.getNumDoc());
+                            c.getNombre(), c.getApellidos(), c.getNumDoc(),
+                            cc.getTipoPropietario() != null ? cc.getTipoPropietario().name() : null);
                 })
                 .collect(Collectors.toList()));
 
@@ -851,7 +872,7 @@ public class ContratoServiceImpl implements ContratoService {
                 DistritoDTO distritoDTO = d != null ? new DistritoDTO(
                     d.getIdDistrito(), d.getNombre(), d.getCodigoUbigeo(), d.getProvincia(), d.getDepartamento()
                 ) : null;
-                return new ClienteResponseDTO(
+                ClienteResponseDTO cr = new ClienteResponseDTO(
                         c.getIdCliente(), c.getNombre(), c.getApellidos(),
                         c.getEstadoCivil(), c.getNumDoc(), c.getDireccion(), c.getCelular(),
                         c.getTelefono(), c.getEmail(),
@@ -859,8 +880,10 @@ public class ContratoServiceImpl implements ContratoService {
                         c.getTipoCliente(),
                         c.getNacionalidad(),
                         c.getEstado(),
-                        c.getFechaRegistro()
+                        c.getFechaRegistro(),
+                        cc.getTipoPropietario()
                     );
+                return cr;
             }).collect(Collectors.toList()));
         }
 

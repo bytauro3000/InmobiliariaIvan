@@ -53,7 +53,12 @@ public class CertificadoCancelacionPdf {
 
 		List<ClienteResponseDTO> clientes = contrato.getClientes();
 		int numClientes = clientes.size();
-		ClienteResponseDTO titular = clientes.get(0);
+		// Prioriza al TITULAR si viene el rol (defensivo); si no, el primero.
+		ClienteResponseDTO titular = clientes.stream()
+				.filter(c -> c.getTipoPropietario() != null
+						&& c.getTipoPropietario() == com.Inmobiliaria.demo.enums.TipoPropietario.TITULAR)
+				.findFirst()
+				.orElse(clientes.get(0));
 		LoteResponseDTO lote = contrato.getLotes().get(0);
 
 		// Dirección real del titular

@@ -35,6 +35,7 @@ public class ContratoListItemDTO {
         private String nombre;
         private String apellidos;
         private String numDoc;
+        private String tipoPropietario;
     }
 
     @Data

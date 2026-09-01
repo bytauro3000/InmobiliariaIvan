@@ -6,6 +6,7 @@ import com.Inmobiliaria.demo.enums.EstadoCivil;
 import com.Inmobiliaria.demo.enums.EstadoCliente;
 import com.Inmobiliaria.demo.enums.Genero;
 import com.Inmobiliaria.demo.enums.TipoCliente;
+import com.Inmobiliaria.demo.enums.TipoPropietario;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -30,4 +31,7 @@ public class ClienteResponseDTO {
     private String nacionalidad;
     private EstadoCliente estado;
     private LocalDateTime fechaRegistro;
+
+    /** Rol del cliente dentro de un contrato (TITULAR, AVAL, etc.). Solo aplica en el contexto de un contrato. */
+    private TipoPropietario tipoPropietario;
 }

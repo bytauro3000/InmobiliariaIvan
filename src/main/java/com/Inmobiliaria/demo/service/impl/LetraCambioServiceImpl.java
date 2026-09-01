@@ -230,6 +230,9 @@ public class LetraCambioServiceImpl implements LetraCambioService {
             dto.setCliente2Nombre((String) row[i++]);
             dto.setCliente2Apellidos((String) row[i++]);
             dto.setCliente2NumDocumento((String) row[i++]);
+            dto.setAval1Nombre((String) row[i++]);
+            dto.setAval1Apellidos((String) row[i++]);
+            dto.setAval1NumDocumento((String) row[i++]);
             dto.setLote1Manzana((String) row[i++]);
             dto.setLote1NumeroLote((String) row[i++]);
             dto.setLote1Area((BigDecimal) row[i++]);

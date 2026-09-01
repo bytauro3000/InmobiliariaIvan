@@ -238,10 +238,10 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
     private String resolverNombreCliente(java.util.Collection<ContratoCliente> clientes) {
         if (clientes == null || clientes.isEmpty()) return null;
 
-        // Intentar obtener el TITULAR_PRINCIPAL primero
+        // Intentar obtener el TITULAR primero
         return clientes.stream()
                 .filter(cc -> cc.getTipoPropietario() != null
-                        && "TITULAR_PRINCIPAL".equals(cc.getTipoPropietario().name()))
+                        && "TITULAR".equals(cc.getTipoPropietario().name()))
                 .findFirst()
                 .map(cc -> cc.getCliente().getNombre() + " " + cc.getCliente().getApellidos())
                 .orElseGet(() -> {

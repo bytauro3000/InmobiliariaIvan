@@ -5,5 +5,6 @@ public enum TipoPropietario {
     CONYUGE,
     COPROPIETARIO,
     REPRESENTANTE_LEGAL,
-    APODERADO
+    APODERADO,
+    AVAL
 }

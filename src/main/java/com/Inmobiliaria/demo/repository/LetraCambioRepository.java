@@ -120,6 +120,9 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
         "MAX(CASE WHEN clientes.client_rank = 2 THEN clientes.nombre END) AS cliente2_nombre, " +
         "MAX(CASE WHEN clientes.client_rank = 2 THEN clientes.apellidos END) AS cliente2_apellidos, " +
         "MAX(CASE WHEN clientes.client_rank = 2 THEN clientes.numDocumento END) AS cliente2_numDocumento, " +
+        "MAX(CASE WHEN clientes.es_aval = 1 THEN clientes.nombre END) AS aval1_nombre, " +
+        "MAX(CASE WHEN clientes.es_aval = 1 THEN clientes.apellidos END) AS aval1_apellidos, " +
+        "MAX(CASE WHEN clientes.es_aval = 1 THEN clientes.numDocumento END) AS aval1_numDocumento, " +
         "MAX(CASE WHEN lotes.lote_rank = 1 THEN lotes.manzana END) AS lote1_manzana, " +
         "MAX(CASE WHEN lotes.lote_rank = 1 THEN lotes.numero_lote END) AS lote1_numero_lote, " +
         "MAX(CASE WHEN lotes.lote_rank = 1 THEN lotes.area END) AS lote1_area, " +
@@ -141,7 +144,11 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
         "        cl.telefono, " +
         "        cl.direccion, " +
         "        cl.id_distrito, " +
-        "        ROW_NUMBER() OVER (PARTITION BY cc.id_contrato ORDER BY cl.id_cliente) AS client_rank " +
+        "        CASE WHEN cc.tipo_propietario = 'AVAL' THEN 1 ELSE 0 END AS es_aval, " +
+        "        ROW_NUMBER() OVER (" +
+        "            PARTITION BY cc.id_contrato " +
+        "            ORDER BY CASE WHEN cc.tipo_propietario = 'AVAL' THEN 1 ELSE 0 END, cl.id_cliente" +
+        "        ) AS client_rank " +
         "    FROM contrato_cliente cc " +
         "    JOIN cliente cl ON cc.id_cliente = cl.id_cliente " +
         ") AS clientes ON c.id_contrato = clientes.id_contrato " +
