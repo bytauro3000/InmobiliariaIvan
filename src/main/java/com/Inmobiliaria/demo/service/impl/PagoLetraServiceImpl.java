@@ -1051,11 +1051,18 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         PagoLetras pago = pagoLetraRepository.findById(idPago)
             .orElseThrow(() -> new NegocioException("Pago no encontrado con id: " + idPago));
 
+        LocalDate fechaPagoAnterior   = pago.getFechaPago();
+        LocalDate fechaOperacionAnterior = pago.getFechaOperacion();
+
         pago.setImportePagado(request.getImportePagado());
         pago.setMedioPago(request.getMedioPago());
         pago.setNumeroOperacion(request.getNumeroOperacion());
         pago.setFechaPago(request.getFechaPago() != null ? request.getFechaPago() : LocalDate.now());
+        pago.setFechaOperacion(request.getFechaOperacion());
         pago.setObservaciones(request.getObservaciones());
+        if (request.getEsPagoAcuenta() != null) {
+            pago.setEsPagoAcuenta(request.getEsPagoAcuenta());
+        }
 
         if (vouchers != null && !vouchers.isEmpty()) {
             List<Voucher> vouchersExistentes = voucherRepository
@@ -1080,7 +1087,57 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             }
         }
 
-        return mapToDTO(pagoLetraRepository.save(pago));
+        PagoLetras pagoGuardado = pagoLetraRepository.save(pago);
+
+        // ── Si cambió la fecha de pago u operación, recalcular la mora asociada ──
+        boolean cambioFecha = !Objects.equals(fechaPagoAnterior, pago.getFechaPago())
+                || !Objects.equals(fechaOperacionAnterior, pago.getFechaOperacion());
+        if (cambioFecha) {
+            recalcularMoraDePago(pagoGuardado);
+        }
+
+        return mapToDTO(pagoGuardado);
+    }
+
+    /**
+     * Recalcula la mora asociada a un pago de letra usando la nueva fecha de
+     * referencia (fecha de pago / fecha de operación del voucher corregido).
+     */
+    private void recalcularMoraDePago(PagoLetras pago) {
+        LetraCambio letra = pago.getLetra();
+        if (letra == null) return;
+
+        LocalDate fechaVenc = letra.getFechaVencimiento();
+        LocalDate fechaPago = pago.getFechaPago();
+
+        // Solo aplica si el pago completó la letra y esta estaba vencida (o quedó vencida).
+        boolean letraCompleta = letra.getSaldoPendiente() != null
+                && letra.getSaldoPendiente().compareTo(BigDecimal.ZERO) == 0;
+        boolean vencida = fechaVenc != null
+                && MoraServiceImpl.aplicarGraciaDominical(fechaVenc).isBefore(fechaPago);
+
+        if (letraCompleta && vencida) {
+            int numLetra = extraerNumeroLetra(letra.getNumeroLetra());
+            Integer idContrato = pago.getLetra().getContrato() != null
+                    ? pago.getLetra().getContrato().getIdContrato() : null;
+            LocalDate fechaRef = esMedioBancario(pago.getMedioPago())
+                    ? (pago.getFechaOperacion() != null ? pago.getFechaOperacion() : fechaPago)
+                    : resolverFechaReferenciaMora(numLetra, idContrato, fechaPago);
+            moraService.generarMoraParaPago(letra, pago, fechaRef);
+        } else {
+            // El pago dejó de ser vencido con la nueva fecha → anular la mora pendiente
+            // asociada a este pago (si existe).
+            List<MoraLetra> moras = moraRepository.findByPagoLetraIdPago(pago.getIdPago());
+            for (MoraLetra mora : moras) {
+                if (mora.getEstadoMora() == EstadoMora.PENDIENTE) {
+                    mora.setEstadoMora(EstadoMora.ANULADO);
+                    mora.setMotivoAnulacion("Fecha de pago corregida (ya no corresponde mora)");
+                    mora.setFechaAnulacion(LocalDateTime.now());
+                    mora.setAnuladoPor(obtenerUsuarioActual());
+                    moraRepository.save(mora);
+                }
+            }
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
