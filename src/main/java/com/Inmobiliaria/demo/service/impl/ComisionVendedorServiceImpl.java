@@ -412,6 +412,64 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         return resultado(comision, List.of(egreso.getNumeroCompleto()));
     }
 
+    // ─── Actualizar monto de comisión acordado (negociación) ──────────────────
+
+    @Override
+    @Transactional
+    public ComisionVendedorDTO actualizarMontoComision(ActualizarMontoComisionRequest request) {
+        if (request == null || request.getIdComision() == null) {
+            throw new NegocioException("Debe indicar la comisión.");
+        }
+        if (request.getMonto() == null || request.getMonto().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new NegocioException("El monto acordado debe ser mayor a 0.");
+        }
+        ComisionVendedor comision = obtenerComision(request.getIdComision());
+        Contrato contrato = comision.getContrato();
+        if (contrato == null) throw new NegocioException("La comisión no tiene contrato asociado.");
+        if (contratoEstadoTerminal(contrato.getEstadoContrato())) {
+            throw new NegocioException("No se puede editar el monto: el contrato está " + contrato.getEstadoContrato());
+        }
+
+        // Solo editable mientras NO haya pagos registrados (adelanto ni mensuales).
+        boolean tienePagos = pagoComisionRepository
+                .findByComisionIdComisionOrderByIdPagoComisionAsc(comision.getIdComision()).stream()
+                .anyMatch(p -> p.getTipo() != null);
+        if (tienePagos) {
+            throw new NegocioException("No se puede editar el monto: ya existen pagos registrados para esta comisión.");
+        }
+
+        // Límite: no puede superar el 3% del monto total del contrato.
+        BigDecimal montoTotal = contrato.getMontoTotal() != null ? contrato.getMontoTotal() : BigDecimal.ZERO;
+        BigDecimal maximo = floor(porcentajeDe(montoTotal, BigDecimal.valueOf(3)));
+        BigDecimal montoAcordado = floor(request.getMonto());
+        if (montoAcordado.compareTo(maximo) > 0) {
+            throw new NegocioException(
+                    "El monto acordado no puede superar el 3% del contrato (" + maximo + ").");
+        }
+
+        // Recalcular el % efectivo (monto acordado respecto al monto total).
+        BigDecimal porcentajeEfectivo = montoTotal.compareTo(BigDecimal.ZERO) > 0
+                ? montoAcordado.multiply(BigDecimal.valueOf(100))
+                        .divide(montoTotal, 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+
+        comision.setMontoComisionTotal(montoAcordado);
+        comision.setPorcentajeComision(porcentajeEfectivo);
+        comision.setSaldoPendiente(montoAcordado);
+        comision.setMontoAdelanto(null);
+        comision.setEstado(EstadoComision.PENDIENTE);
+        comisionRepository.save(comision);
+
+        log.info("Comisión {}: monto acordado actualizado a {} (máx {})",
+                comision.getIdComision(), montoAcordado, maximo);
+
+        // Devuelve el DTO actualizado (usa listado por id único).
+        return listarComisiones().stream()
+                .filter(d -> d.getIdComision().equals(comision.getIdComision()))
+                .findFirst()
+                .orElse(null);
+    }
+
     // ─── Registrar pagos mensuales (multiselección) ───────────────────────────
 
     @Override

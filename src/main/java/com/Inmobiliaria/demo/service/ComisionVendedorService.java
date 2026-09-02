@@ -5,6 +5,7 @@ import com.Inmobiliaria.demo.dto.PagoComisionMensualDTO;
 import com.Inmobiliaria.demo.dto.PagoComisionResultadoDTO;
 import com.Inmobiliaria.demo.dto.RegistrarAdelantoRequest;
 import com.Inmobiliaria.demo.dto.RegistrarPagosMensualesRequest;
+import com.Inmobiliaria.demo.dto.ActualizarMontoComisionRequest;
 import com.Inmobiliaria.demo.entity.ComisionVendedor;
 import com.Inmobiliaria.demo.entity.Contrato;
 
@@ -31,6 +32,13 @@ public interface ComisionVendedorService {
 
     /** Registra el adelanto de comisión y genera recibo de egresos EG01. */
     PagoComisionResultadoDTO registrarAdelanto(RegistrarAdelantoRequest request);
+
+    /**
+     * Actualiza el monto total de comisión acordado (negociado por el gerente).
+     * Solo aplica mientras no haya pagos registrados. No puede superar el 3% del
+     * monto total del contrato.
+     */
+    ComisionVendedorDTO actualizarMontoComision(ActualizarMontoComisionRequest request);
 
     /** Registra uno o varios pagos mensuales y genera un único recibo de egresos. */
     PagoComisionResultadoDTO registrarPagosMensuales(RegistrarPagosMensualesRequest request);

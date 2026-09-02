@@ -5,6 +5,7 @@ import com.Inmobiliaria.demo.dto.PagoComisionMensualDTO;
 import com.Inmobiliaria.demo.dto.PagoComisionResultadoDTO;
 import com.Inmobiliaria.demo.dto.RegistrarAdelantoRequest;
 import com.Inmobiliaria.demo.dto.RegistrarPagosMensualesRequest;
+import com.Inmobiliaria.demo.dto.ActualizarMontoComisionRequest;
 import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.service.ComisionVendedorService;
 import com.Inmobiliaria.demo.service.ReciboEgresoService;
@@ -53,6 +54,17 @@ public class ComisionController {
     public ResponseEntity<List<PagoComisionMensualDTO>> pagosMensualesHabilitados(
             @PathVariable Integer idComision) {
         return ResponseEntity.ok(comisionService.pagosMensualesHabilitados(idComision));
+    }
+
+    // ─── Actualizar monto de comisión acordado (negociación) ─────────────────
+
+    @PutMapping("/monto")
+    public ResponseEntity<?> actualizarMontoComision(@RequestBody ActualizarMontoComisionRequest request) {
+        try {
+            return ResponseEntity.ok(comisionService.actualizarMontoComision(request));
+        } catch (NegocioException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
     }
 
     // ─── Registrar adelanto ───────────────────────────────────────────────────
