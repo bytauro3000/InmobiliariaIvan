@@ -63,6 +63,18 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
 
     // ─── Crear comisión al guardar contrato ────────────────────────────────────
 
+    /**
+     * ¿Es el vendedor la propia inmobiliaria? (INMOBILIARIA CONSTRUCTORA IVAN).
+     * Cuando la empresa vende directamente no hay comisión que pagar, por lo que
+     * esos contratos no generan comisión ni figuran en la lista.
+     */
+    private boolean esVendedorLaPropiaInmobiliaria(Vendedor v) {
+        if (v == null) return false;
+        String nombreCompleto = ((v.getNombre() == null ? "" : v.getNombre())
+                + " " + (v.getApellidos() == null ? "" : v.getApellidos())).toUpperCase();
+        return nombreCompleto.contains("INMOBILIARIA") && nombreCompleto.contains("IVAN");
+    }
+
     @Override
     @Transactional
     public ComisionVendedor crearComisionSiAplica(Contrato contrato) {
@@ -71,6 +83,8 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         // y % de comisión > 0. Si el contrato está RENUNCIADO/RESUELTO/TRANSFERIDO,
         // NO se genera comisión.
         if (contrato.getVendedor() == null) return null;
+        // La propia inmobiliaria como vendedor NO genera comisión (vende directamente).
+        if (esVendedorLaPropiaInmobiliaria(contrato.getVendedor())) return null;
         var tipo = contrato.getTipoContrato();
         if (tipo != com.Inmobiliaria.demo.enums.TipoContrato.FINANCIADO
                 && tipo != com.Inmobiliaria.demo.enums.TipoContrato.CONTADO) return null;
@@ -861,6 +875,7 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         Integer idContrato = contrato.getIdContrato();
 
         boolean tieneVendedorValido = contrato.getVendedor() != null
+                && !esVendedorLaPropiaInmobiliaria(contrato.getVendedor())
                 && contrato.getVendedor().getComision() != null
                 && contrato.getVendedor().getComision().compareTo(BigDecimal.ZERO) > 0;
         boolean esElegible = (contrato.getTipoContrato() == com.Inmobiliaria.demo.enums.TipoContrato.FINANCIADO

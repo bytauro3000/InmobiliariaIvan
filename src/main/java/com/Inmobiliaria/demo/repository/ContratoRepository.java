@@ -18,12 +18,15 @@ public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
 
     /**
      * Contratos elegibles para migración de comisiones: FINANCIADO o CONTADO,
-     * con vendedor cuyo % de comisión &gt; 0, y que aún no tengan comisión creada.
+     * con vendedor cuyo % de comisión &gt; 0, que no sea la propia inmobiliaria,
+     * y que aún no tengan comisión creada.
      */
     @Query("SELECT c FROM Contrato c " +
            "LEFT JOIN FETCH c.vendedor " +
            "WHERE c.vendedor IS NOT NULL " +
            "  AND c.vendedor.comision > 0 " +
+           "  AND UPPER(CONCAT(COALESCE(c.vendedor.nombre,''), ' ', COALESCE(c.vendedor.apellidos,''))) " +
+           "      NOT LIKE '%INMOBILIARIA%IVAN%' " +
            "  AND (c.tipoContrato = com.Inmobiliaria.demo.enums.TipoContrato.FINANCIADO " +
            "    OR c.tipoContrato = com.Inmobiliaria.demo.enums.TipoContrato.CONTADO) " +
            "  AND NOT EXISTS (SELECT 1 FROM ComisionVendedor cv WHERE cv.contrato.idContrato = c.idContrato) " +
