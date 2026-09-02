@@ -6,8 +6,10 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 import com.Inmobiliaria.demo.entity.Empresa;
+import com.Inmobiliaria.demo.entity.SerieEgreso;
 import com.Inmobiliaria.demo.enums.TipoCalculoMora;
 import com.Inmobiliaria.demo.repository.EmpresaRepository;
+import com.Inmobiliaria.demo.repository.SerieEgresoRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,9 +20,12 @@ import lombok.extern.slf4j.Slf4j;
 public class DataInitializer implements CommandLineRunner {
 
     private final EmpresaRepository empresaRepository;
+    private final SerieEgresoRepository serieEgresoRepository;
 
     @Override
     public void run(String... args) {
+        inicializarSerieEgreso();
+
         if (empresaRepository.count() > 0) {
             log.info("Ya existe empresa configurada, se omite la inicialización.");
             return;
@@ -59,5 +64,16 @@ public class DataInitializer implements CommandLineRunner {
 
         empresaRepository.save(e);
         log.info("Empresa inicializada con datos de INMOBILIARIA CONSTRUCTORA IVAN E.I.R.L.");
+    }
+
+    /** Garantiza que exista el contador de la serie de egresos EG01. */
+    private void inicializarSerieEgreso() {
+        if (serieEgresoRepository.findBySerie("EG01").isEmpty()) {
+            SerieEgreso s = new SerieEgreso();
+            s.setSerie("EG01");
+            s.setUltimoNumero(0);
+            serieEgresoRepository.save(s);
+            log.info("Serie de egresos EG01 inicializada.");
+        }
     }
 }

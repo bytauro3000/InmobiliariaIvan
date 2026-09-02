@@ -75,6 +75,7 @@ public class ContratoServiceImpl implements ContratoService {
     private final PagoInscripcionComprobanteRepository pagoInscripcionComprobanteRepository;
     private final ModelMapper modelMapper;
     private final ComprobanteService comprobanteService;
+    private final ComisionVendedorService comisionVendedorService;
 
     private final SunatEnvioService            sunatEnvioService;
     private final Cloudinary                   cloudinary;
@@ -156,6 +157,14 @@ public class ContratoServiceImpl implements ContratoService {
         Contrato contratoGuardado;
         contrato.setPagoInicial(null); // Evitar que ModelMapper mapee PagoInicialRequestDTO → PagoInicial transient
         contratoGuardado = contratoRepository.save(contrato);
+
+        // ── Crear comisión de vendedor (si aplica: financiado + vendedor con %) ──
+        try {
+            comisionVendedorService.crearComisionSiAplica(contratoGuardado);
+        } catch (Exception e) {
+            log.warn("No se pudo crear la comisión para el contrato {}: {}",
+                    contratoGuardado.getIdContrato(), e.getMessage());
+        }
 
         // ── Registrar pago de la inicial / pago al contado ──────────────────
         // FINANCIADO: aplica con inicial > 0 y pagoInicial informado.
@@ -775,8 +784,10 @@ public class ContratoServiceImpl implements ContratoService {
         validarTransicion(estadoActual, nuevoEstado);
         contrato.setEstadoContrato(nuevoEstado);
 
-        if (nuevoEstado == EstadoContrato.RESUELTO)
+        if (nuevoEstado == EstadoContrato.RESUELTO) {
             contrato.getLotes().forEach(cl -> cl.getLote().setEstado(EstadoLote.Disponible));
+            comisionVendedorService.anularComisionSiExiste(idContrato);
+        }
 
         return mapToContratoResponseDTO(contratoRepository.save(contrato));
     }
@@ -808,6 +819,10 @@ public class ContratoServiceImpl implements ContratoService {
         // parciales y vencidas). El contrato deja de ser cobrable: el lote vuelve a
         // Disponible y el cliente ya no es dueño.
         contrato.getLetrasCambio().forEach(l -> l.setEstadoLetra(EstadoLetra.ANULADO));
+
+        // La comisión del vendedor se cancela: el cliente renunció y ya no hay
+        // pagos mensuales habilitados.
+        comisionVendedorService.anularComisionSiExiste(idContrato);
 
         return mapToContratoResponseDTO(contratoRepository.save(contrato));
     }

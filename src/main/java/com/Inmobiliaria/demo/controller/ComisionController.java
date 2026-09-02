@@ -1,0 +1,86 @@
+package com.Inmobiliaria.demo.controller;
+
+import com.Inmobiliaria.demo.dto.ComisionVendedorDTO;
+import com.Inmobiliaria.demo.dto.PagoComisionMensualDTO;
+import com.Inmobiliaria.demo.dto.PagoComisionResultadoDTO;
+import com.Inmobiliaria.demo.dto.RegistrarAdelantoRequest;
+import com.Inmobiliaria.demo.dto.RegistrarPagosMensualesRequest;
+import com.Inmobiliaria.demo.exception.NegocioException;
+import com.Inmobiliaria.demo.service.ComisionVendedorService;
+import com.Inmobiliaria.demo.service.ReciboEgresoService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@Slf4j
+@RestController
+@RequestMapping("/api/comisiones")
+@RequiredArgsConstructor
+public class ComisionController {
+
+    private final ComisionVendedorService comisionService;
+    private final ReciboEgresoService reciboEgresoService;
+
+    // ─── Listado de comisiones (secretaría) ───────────────────────────────────
+
+    @GetMapping
+    public ResponseEntity<List<ComisionVendedorDTO>> listarComisiones() {
+        return ResponseEntity.ok(comisionService.listarComisiones());
+    }
+
+    // ─── Pagos mensuales habilitados de una comisión ──────────────────────────
+
+    @GetMapping("/{idComision}/pagos-habilitados")
+    public ResponseEntity<List<PagoComisionMensualDTO>> pagosMensualesHabilitados(
+            @PathVariable Integer idComision) {
+        return ResponseEntity.ok(comisionService.pagosMensualesHabilitados(idComision));
+    }
+
+    // ─── Registrar adelanto ───────────────────────────────────────────────────
+
+    @PostMapping("/adelantos")
+    public ResponseEntity<?> registrarAdelanto(@RequestBody RegistrarAdelantoRequest request) {
+        try {
+            return ResponseEntity.ok(comisionService.registrarAdelanto(request));
+        } catch (NegocioException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+
+    // ─── Registrar pagos mensuales (multiselección) ───────────────────────────
+
+    @PostMapping("/pagos")
+    public ResponseEntity<?> registrarPagosMensuales(@RequestBody RegistrarPagosMensualesRequest request) {
+        try {
+            return ResponseEntity.ok(comisionService.registrarPagosMensuales(request));
+        } catch (NegocioException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+
+    // ─── Descargar PDF del recibo de egresos ──────────────────────────────────
+
+    @GetMapping("/egresos/{numeroEgreso}/pdf")
+    public ResponseEntity<byte[]> descargarEgresoPdf(@PathVariable String numeroEgreso) {
+        try {
+            byte[] pdf = reciboEgresoService.generarPdf(numeroEgreso);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "inline; filename=\"egreso-" + numeroEgreso + ".pdf\"")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (NegocioException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (Exception e) {
+            log.error("Error generando recibo de egreso {}: ", numeroEgreso, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(("Error generando PDF: " + e.getMessage()).getBytes());
+        }
+    }
+}

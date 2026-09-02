@@ -42,6 +42,9 @@ public class SecurityConfig {
                     "/api/contratos/*/pago-inicial/comprobante-pdf",
                     "/error"
                 ).permitAll()
+                // ── Comisiones de vendedores: SOLO SECRETARIA y ADMIN (el vendedor no lo ve) ──
+                .requestMatchers("/api/comisiones/**")
+                .hasAnyAuthority("ROLE_SECRETARIA", "ROLE_ADMINISTRADOR")
                 // ── Rutas de negocio: SECRETARIA o ADMINISTRADOR ──────────────────────
                 .requestMatchers(
                     "/api/distritos/**",

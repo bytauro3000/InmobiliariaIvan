@@ -26,6 +26,12 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
 
     Optional<LetraCambio> findFirstByContratoIdContratoOrderByNumeroLetraAsc(Integer idContrato);
 
+    List<LetraCambio> findByContratoIdContratoAndEstadoLetraOrderByIdLetraAsc(
+            Integer idContrato, com.Inmobiliaria.demo.enums.EstadoLetra estado);
+
+    long countByContratoIdContratoAndEstadoLetra(
+            Integer idContrato, com.Inmobiliaria.demo.enums.EstadoLetra estado);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT l FROM LetraCambio l WHERE l.idLetra = :idLetra")
     Optional<LetraCambio> findByIdWithLock(@Param("idLetra") Integer idLetra);

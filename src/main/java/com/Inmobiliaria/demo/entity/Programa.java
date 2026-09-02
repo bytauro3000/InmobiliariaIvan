@@ -33,6 +33,10 @@ public class Programa {
     @Column(name = "costo_total", precision = 12, scale = 2)
     private BigDecimal costoTotal;
 
+    /** Adelanto sugerido al vendedor al firmar contrato (default $100). Configurable por programa. */
+    @Column(name = "adelanto_vendedor", precision = 12, scale = 2)
+    private BigDecimal adelantoVendedor = BigDecimal.valueOf(100);
+
     @ManyToOne
     @JoinColumn(name = "id_parcelero")
     private Parcelero parcelero;
