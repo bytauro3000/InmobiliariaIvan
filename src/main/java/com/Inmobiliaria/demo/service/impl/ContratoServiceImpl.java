@@ -404,6 +404,13 @@ public class ContratoServiceImpl implements ContratoService {
             contrato.setVendedor(null);
         }
 
+        // Sincronizar la comisión del vendedor con el cambio (nombre/%/montos)
+        try {
+            comisionVendedorService.sincronizarVendedorComision(contrato);
+        } catch (Exception e) {
+            log.warn("No se pudo sincronizar la comisión al editar contrato {}: {}", id, e.getMessage());
+        }
+
         contrato.getClientes().clear();
 
         Contrato contratoActualizado = contratoRepository.saveAndFlush(contrato);

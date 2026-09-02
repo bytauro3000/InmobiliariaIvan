@@ -278,7 +278,8 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
                 .collect(Collectors.joining(", "));
     }
 
-    /** Adelanto sugerido: 30% de la inicial, o adelanto del programa si no hubo inicial. */
+    /** Adelanto sugerido: siempre el adelanto del programa (default $100), aunque el
+     *  cliente pague inicial. NO se usa el 30% de la inicial (regla corregida). */
     private BigDecimal calcularAdelantoSugerido(ComisionVendedor c) {
         Contrato contrato = c.getContrato();
         List<Programa> programas = contrato != null
@@ -287,15 +288,8 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         return calcularAdelantoSugerido(c, programas);
     }
 
-    /** Adelanto sugerido: 30% de la inicial, o adelanto del programa si no hubo inicial. */
+    /** Adelanto sugerido: siempre el adelanto del programa (default $100). */
     private BigDecimal calcularAdelantoSugerido(ComisionVendedor c, List<Programa> programas) {
-        Contrato contrato = c.getContrato();
-        if (contrato == null) return BigDecimal.ZERO;
-        BigDecimal inicial = contrato.getInicial() != null ? contrato.getInicial() : BigDecimal.ZERO;
-        if (inicial.compareTo(BigDecimal.ZERO) > 0) {
-            return floor(porcentajeDe(inicial, BigDecimal.valueOf(30)));
-        }
-        // Sin inicial → adelanto del programa (default $100)
         if (programas != null) {
             for (Programa p : programas) {
                 if (p.getAdelantoVendedor() != null) {
@@ -519,6 +513,60 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
                 log.info("Comisión {} ANULADA por contrato {}", c.getIdComision(), idContrato);
             }
         });
+    }
+
+    // ─── Sincronizar vendedor al editar el contrato ───────────────────────────
+
+    @Override
+    @Transactional
+    public void sincronizarVendedorComision(Contrato contrato) {
+        if (contrato == null || contrato.getIdContrato() == null) return;
+        Integer idContrato = contrato.getIdContrato();
+
+        boolean tieneVendedorValido = contrato.getVendedor() != null
+                && contrato.getVendedor().getComision() != null
+                && contrato.getVendedor().getComision().compareTo(BigDecimal.ZERO) > 0;
+        boolean esElegible = (contrato.getTipoContrato() == com.Inmobiliaria.demo.enums.TipoContrato.FINANCIADO
+                || contrato.getTipoContrato() == com.Inmobiliaria.demo.enums.TipoContrato.CONTADO)
+                && !contratoEstadoTerminal(contrato.getEstadoContrato());
+
+        var existente = comisionRepository.findByContratoIdContrato(idContrato);
+
+        if (!esElegible || !tieneVendedorValido) {
+            // El contrato ya no califica para comisión → anular (si no está completada).
+            existente.ifPresent(c -> {
+                if (c.getEstado() != EstadoComision.COMPLETADA) {
+                    c.setEstado(EstadoComision.ANULADA);
+                    comisionRepository.save(c);
+                    log.info("Comisión {} ANULADA al editar contrato {} (sin vendedor elegible)",
+                            c.getIdComision(), idContrato);
+                }
+            });
+            return;
+        }
+
+        ComisionVendedor comision = existente.orElseGet(() -> crearComisionSiAplica(contrato));
+        if (comision == null) return;
+
+        // Actualizar vendedor (el % se congeló al crear; si aún no hay pagos, se
+        // recalcula con el % del nuevo vendedor).
+        comision.setVendedor(contrato.getVendedor());
+        boolean tienePagos = pagoComisionRepository
+                .findByComisionIdComisionOrderByIdPagoComisionAsc(comision.getIdComision()).stream()
+                .anyMatch(p -> p.getTipo() != null);
+        if (!tienePagos) {
+            BigDecimal montoTotal = contrato.getMontoTotal() != null ? contrato.getMontoTotal() : BigDecimal.ZERO;
+            BigDecimal nuevoTotal = floor(porcentajeDe(montoTotal, contrato.getVendedor().getComision()));
+            comision.setPorcentajeComision(contrato.getVendedor().getComision());
+            comision.setMontoTotalContrato(montoTotal);
+            comision.setMontoComisionTotal(nuevoTotal);
+            comision.setSaldoPendiente(nuevoTotal);
+            comision.setMontoAdelanto(null);
+            comision.setEstado(EstadoComision.PENDIENTE);
+        }
+        comisionRepository.save(comision);
+        log.info("Comisión {} sincronizada con el nuevo vendedor del contrato {}",
+                comision.getIdComision(), idContrato);
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
