@@ -16,6 +16,10 @@ public interface ComisionVendedorRepository extends JpaRepository<ComisionVended
     @EntityGraph(attributePaths = {"contrato", "vendedor"})
     List<ComisionVendedor> findAllByOrderByIdComisionDesc();
 
+    /** Comisiones ordenadas por fecha de contrato, de la más reciente a la más antigua. */
+    @EntityGraph(attributePaths = {"contrato", "vendedor"})
+    List<ComisionVendedor> findAllByOrderByContratoFechaContratoDescIdComisionDesc();
+
     @EntityGraph(attributePaths = {"contrato", "vendedor"})
     List<ComisionVendedor> findByContratoEstadoContratoIn(java.util.Collection<com.Inmobiliaria.demo.enums.EstadoContrato> estados);
 

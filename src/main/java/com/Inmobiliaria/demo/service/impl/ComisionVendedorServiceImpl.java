@@ -145,7 +145,8 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
     @Override
     @Transactional(readOnly = true)
     public List<ComisionVendedorDTO> listarComisiones() {
-        List<ComisionVendedor> comisiones = comisionRepository.findAllByOrderByIdComisionDesc();
+        List<ComisionVendedor> comisiones = comisionRepository
+                .findAllByOrderByContratoFechaContratoDescIdComisionDesc();
         if (comisiones.isEmpty()) return new ArrayList<>();
 
         // ── Pre-cargar en batch (evita N+1: antes hacía ~4 queries por comisión) ──
@@ -237,6 +238,8 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         dto.setSaldoPendiente(c.getSaldoPendiente());
         dto.setEstado(c.getEstado() != null ? c.getEstado().name() : "PENDIENTE");
         dto.setFechaCreacion(c.getFechaCreacion() != null ? c.getFechaCreacion().toLocalDate() : null);
+        dto.setFechaContrato(contrato != null && contrato.getFechaContrato() != null
+                ? contrato.getFechaContrato() : null);
 
         long pagadas = idContrato != null
                 ? letrasPagadasPorContrato.getOrDefault(idContrato, 0L) : 0L;

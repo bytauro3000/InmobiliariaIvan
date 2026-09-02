@@ -36,4 +36,6 @@ public class ComisionVendedorDTO {
     /** Cantidad de letras pagadas del contrato. */
     private long cantidadLetrasPagadas;
     private LocalDate fechaCreacion;
+    /** Fecha del contrato (para ordenar la lista). */
+    private LocalDate fechaContrato;
 }
