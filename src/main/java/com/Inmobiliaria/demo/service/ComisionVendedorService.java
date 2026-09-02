@@ -2,12 +2,15 @@ package com.Inmobiliaria.demo.service;
 
 import com.Inmobiliaria.demo.dto.ComisionVendedorDTO;
 import com.Inmobiliaria.demo.dto.PagoComisionMensualDTO;
+import com.Inmobiliaria.demo.dto.PagoComisionRequestDTO;
+import com.Inmobiliaria.demo.dto.PagoComisionResponseDTO;
 import com.Inmobiliaria.demo.dto.PagoComisionResultadoDTO;
 import com.Inmobiliaria.demo.dto.RegistrarAdelantoRequest;
 import com.Inmobiliaria.demo.dto.RegistrarPagosMensualesRequest;
 import com.Inmobiliaria.demo.dto.ActualizarMontoComisionRequest;
 import com.Inmobiliaria.demo.entity.ComisionVendedor;
 import com.Inmobiliaria.demo.entity.Contrato;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -29,6 +32,14 @@ public interface ComisionVendedorService {
 
     /** Pagos mensuales habilitados de una comisión (letras pagadas > 8 sin pago). */
     List<PagoComisionMensualDTO> pagosMensualesHabilitados(Integer idComision);
+
+    /**
+     * Registra un pago de comisión (adelanto o mensual, posiblemente multi-lote)
+     * con medio de pago, N° de operación, fecha de operación y vouchers.
+     * Genera UN solo recibo de egresos EG01 con el detalle por lote y el total.
+     */
+    PagoComisionResponseDTO registrarPagoComision(PagoComisionRequestDTO request,
+                                                  List<MultipartFile> vouchers);
 
     /** Registra el adelanto de comisión y genera recibo de egresos EG01. */
     PagoComisionResultadoDTO registrarAdelanto(RegistrarAdelantoRequest request);

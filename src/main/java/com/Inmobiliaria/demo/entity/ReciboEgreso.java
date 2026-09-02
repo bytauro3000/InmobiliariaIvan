@@ -53,4 +53,16 @@ public class ReciboEgreso {
 
     @Column(name = "moneda", length = 10, nullable = false)
     private String moneda;
+
+    /** Medio de pago (EFECTIVO, DEPOSITO, TRANSFERENCIA, YAPE, PLIN...). */
+    @Column(name = "medio_pago", length = 20)
+    private String medioPago;
+
+    /** Número de operación bancaria (si aplica). */
+    @Column(name = "numero_operacion", length = 100)
+    private String numeroOperacion;
+
+    /** Fecha de la operación (del voucher). */
+    @Column(name = "fecha_operacion")
+    private LocalDate fechaOperacion;
 }

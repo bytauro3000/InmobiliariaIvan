@@ -38,4 +38,10 @@ public class ComisionVendedorDTO {
     private LocalDate fechaCreacion;
     /** Fecha del contrato (para ordenar la lista). */
     private LocalDate fechaContrato;
+    /** Pagos mensuales de comisión acumulados pendientes (letras pagadas tras la 8ª sin pagar comisión). */
+    private long pagosMensualesPendientes;
+    /** Nivel de color: VERDE (0) / NARANJA (1-2) / ROJO (3+). */
+    private String nivelColor;
+    /** Cantidad de pagos mensuales de comisión ya registrados. */
+    private long pagosMensualesRegistrados;
 }

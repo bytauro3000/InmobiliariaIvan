@@ -1,5 +1,6 @@
 package com.Inmobiliaria.demo.entity;
 
+import com.Inmobiliaria.demo.enums.MedioPago;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -41,6 +42,17 @@ public class PagoComisionVendedor {
 
     @Column(name = "fecha_pago", nullable = false)
     private LocalDate fechaPago;
+
+    /** Fecha de la operación (del voucher) para medios bancarios. */
+    @Column(name = "fecha_operacion")
+    private LocalDate fechaOperacion;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "medio_pago", length = 20)
+    private MedioPago medioPago;
+
+    @Column(name = "numero_operacion", length = 100)
+    private String numeroOperacion;
 
     /** Recibo de egresos generado (serie EG01-número). */
     @Column(name = "numero_egreso", length = 30)

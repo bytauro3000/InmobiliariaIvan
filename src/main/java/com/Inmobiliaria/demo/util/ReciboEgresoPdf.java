@@ -2,6 +2,7 @@ package com.Inmobiliaria.demo.util;
 
 import com.Inmobiliaria.demo.config.EmpresaContext;
 import com.Inmobiliaria.demo.entity.ReciboEgreso;
+import com.Inmobiliaria.demo.entity.Voucher;
 import com.Inmobiliaria.demo.service.LogoCacheService;
 import com.itextpdf.io.font.PdfEncodings;
 import com.itextpdf.io.image.ImageData;
@@ -14,14 +15,17 @@ import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfViewerPreferences;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.borders.SolidBorder;
+import com.itextpdf.layout.element.AreaBreak;
 import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Image;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
+import com.itextpdf.layout.properties.AreaBreakType;
 import com.itextpdf.layout.properties.HorizontalAlignment;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
@@ -34,12 +38,14 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 
 /**
  * Plantilla del RECIBO DE EGRESOS (serie EG01). Documento interno de salida de
  * dinero (pago de comisión a vendedor). Reutilizable a futuro para egresos
- * genéricos (parceleros/proveedores).
+ * genéricos (parceleros/proveedores). Incluye reverso con vouchers adjuntos.
  */
 public class ReciboEgresoPdf {
 
@@ -69,7 +75,7 @@ public class ReciboEgresoPdf {
         return EmpresaContext.empresaService.obtenerActiva().getLogoSmallUrl();
     }
 
-    public static byte[] generar(ReciboEgreso egreso) {
+    public static byte[] generar(ReciboEgreso egreso, List<Voucher> vouchers) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
              PdfDocument pdf = new PdfDocument(new PdfWriter(baos));
              Document doc = new Document(pdf, PageSize.A5.rotate())) {
@@ -84,6 +90,8 @@ public class ReciboEgresoPdf {
             String monedaNombre = "PEN".equals(egreso.getMoneda()) ? "SOLES" : "DOLAR AMERICANO";
             String fechaStr = egreso.getFechaEmision() != null ? egreso.getFechaEmision().format(FMT) : "-";
             String montoStr = DF.format(egreso.getMonto() != null ? egreso.getMonto() : BigDecimal.ZERO);
+            String fechaOperacionStr = egreso.getFechaOperacion() != null
+                    ? egreso.getFechaOperacion().format(FMT) : null;
 
             ImageData logoData = LogoCacheService.logoImageData();
             Image logoImg = (logoData != null
@@ -141,13 +149,26 @@ public class ReciboEgresoPdf {
             tablaCliente.addCell(labelCell("Pagado a", courierBold));
             tablaCliente.addCell(valueCell(egreso.getBeneficiario() != null ? egreso.getBeneficiario().toUpperCase() : "-", courier));
             tablaCliente.addCell(labelCell("Concepto", courierBold));
-            tablaCliente.addCell(valueCell(egreso.getConcepto() != null ? egreso.getConcepto().toUpperCase() : "-", courier));
+            tablaCliente.addCell(conceptoCell(egreso.getConcepto(), courier));
             tablaCliente.addCell(labelCell("Contrato N°", courierBold));
             tablaCliente.addCell(valueCell(egreso.getIdContrato() != null ? String.valueOf(egreso.getIdContrato()) : "-", courier));
             tablaCliente.addCell(labelCell("Fecha de Emisión", courierBold));
             tablaCliente.addCell(valueCell(fechaStr, courier));
             tablaCliente.addCell(labelCell("Tipo de Moneda", courierBold));
             tablaCliente.addCell(valueCell(monedaNombre, courier));
+
+            if (egreso.getMedioPago() != null && !egreso.getMedioPago().isBlank()) {
+                tablaCliente.addCell(labelCell("Medio de Pago", courierBold));
+                tablaCliente.addCell(valueCell(egreso.getMedioPago(), courier));
+            }
+            if (egreso.getNumeroOperacion() != null && !egreso.getNumeroOperacion().isBlank()) {
+                tablaCliente.addCell(labelCell("N° Operación", courierBold));
+                tablaCliente.addCell(valueCell(egreso.getNumeroOperacion(), courier));
+            }
+            if (fechaOperacionStr != null) {
+                tablaCliente.addCell(labelCell("Fecha Operación", courierBold));
+                tablaCliente.addCell(valueCell(fechaOperacionStr, courier));
+            }
 
             doc.add(tablaCliente);
 
@@ -202,11 +223,113 @@ public class ReciboEgresoPdf {
                   .stroke();
             lienzo.release();
 
+            agregarPaginaReverso(doc, pdf, vouchers, courierBold);
+
             doc.close();
             return baos.toByteArray();
 
         } catch (Exception e) {
             throw new RuntimeException("Error al generar recibo de egreso PDF", e);
+        }
+    }
+
+    /** Celdas de concepto multi-línea (detalle por lote del egreso). */
+    private static Cell conceptoCell(String concepto, PdfFont normal) {
+        Cell cell = new Cell()
+                .setBorder(Border.NO_BORDER)
+                .setPadding(1.5f);
+        if (concepto != null) {
+            String[] lineas = concepto.split("\\r?\\n");
+            for (String linea : lineas) {
+                cell.add(new Paragraph(": " + linea).setFont(normal).setFontSize(7.5f)
+                        .setMarginBottom(0.5f));
+            }
+        } else {
+            cell.add(new Paragraph(": -").setFont(normal).setFontSize(7.5f));
+        }
+        return cell;
+    }
+
+    private static void agregarPaginaReverso(Document doc, PdfDocument pdf,
+                                             List<Voucher> vouchers, PdfFont courierBold) {
+        if (vouchers == null || vouchers.isEmpty()) return;
+
+        pdf.getCatalog().setViewerPreferences(
+            new PdfViewerPreferences()
+                .setDuplex(PdfViewerPreferences.PdfViewerPreferencesConstants.DUPLEX_FLIP_LONG_EDGE)
+        );
+
+        doc.setTopMargin(8f);
+        doc.setBottomMargin(8f);
+        doc.setLeftMargin(10f);
+        doc.setRightMargin(10f);
+
+        final int    COLS    = 3;
+        final float  IMG_W   = 172f;
+        final float  IMG_H   = 280f;
+        final float  CELL_H  = 290f;
+
+        int total = vouchers.size();
+        int idx   = 0;
+
+        while (idx < total) {
+            List<Voucher> grupo = vouchers.subList(idx, Math.min(idx + COLS, total));
+            int n = grupo.size();
+
+            doc.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
+
+            doc.add(new Paragraph("VOUCHERS DE PAGO ADJUNTOS")
+                    .setFont(courierBold).setFontSize(10f)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginBottom(4).setMarginTop(0));
+
+            Table lineaTitulo = new Table(UnitValue.createPercentArray(new float[]{1}))
+                    .setWidth(UnitValue.createPercentValue(100)).setMarginBottom(6);
+            lineaTitulo.addCell(new Cell()
+                    .setBorder(Border.NO_BORDER)
+                    .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                    .setPadding(0).setHeight(1));
+            doc.add(lineaTitulo);
+
+            float[] colWidths = new float[COLS];
+            Arrays.fill(colWidths, 1f);
+            Table grid = new Table(UnitValue.createPercentArray(colWidths))
+                    .setWidth(UnitValue.createPercentValue(100));
+
+            int vaciosIzq = (COLS - n) / 2;
+            for (int i = 0; i < vaciosIzq; i++) {
+                grid.addCell(new Cell().setBorder(Border.NO_BORDER).setHeight(CELL_H));
+            }
+
+            for (Voucher v : grupo) {
+                Cell cell = new Cell()
+                        .setBorder(Border.NO_BORDER)
+                        .setPadding(4)
+                        .setHeight(CELL_H)
+                        .setTextAlignment(TextAlignment.CENTER)
+                        .setVerticalAlignment(VerticalAlignment.MIDDLE);
+                try {
+                    Image img = new Image(ImageDataFactory.create(new URL(v.getUrl())))
+                            .setWidth(IMG_W)
+                            .setHeight(IMG_H)
+                            .setAutoScale(false)
+                            .setHorizontalAlignment(HorizontalAlignment.CENTER);
+                    cell.add(img);
+                } catch (Exception e) {
+                    cell.add(new Paragraph("[ Imagen no\ndisponible ]")
+                            .setFont(courierBold).setFontSize(8f)
+                            .setTextAlignment(TextAlignment.CENTER));
+                }
+                grid.addCell(cell);
+            }
+
+            int vaciosDer = COLS - n - vaciosIzq;
+            for (int i = 0; i < vaciosDer; i++) {
+                grid.addCell(new Cell().setBorder(Border.NO_BORDER).setHeight(CELL_H));
+            }
+
+            doc.add(grid);
+            idx += COLS;
         }
     }
 

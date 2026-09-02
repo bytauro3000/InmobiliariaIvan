@@ -5,6 +5,7 @@ import com.Inmobiliaria.demo.entity.*;
 import com.Inmobiliaria.demo.enums.EstadoComision;
 import com.Inmobiliaria.demo.enums.EstadoContrato;
 import com.Inmobiliaria.demo.enums.EstadoLetra;
+import com.Inmobiliaria.demo.enums.MedioPago;
 import com.Inmobiliaria.demo.enums.Moneda;
 import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.repository.*;
@@ -14,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -39,6 +41,7 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
     private final ContratoLoteRepository contratoLoteRepository;
     private final ContratoClienteRepository contratoClienteRepository;
     private final ContratoRepository contratoRepository;
+    private final VoucherRepository voucherRepository;
     private final ReciboEgresoService reciboEgresoService;
 
     // ─── Redondeos ─────────────────────────────────────────────────────────────
@@ -191,10 +194,19 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
             clientesPorContrato.computeIfAbsent(cc.getContrato().getIdContrato(), k -> new ArrayList<>()).add(cc);
         }
 
+        // Pagos mensuales de comisión registrados por comisión (batch)
+        List<Integer> idsComisiones = comisiones.stream()
+                .map(ComisionVendedor::getIdComision).collect(Collectors.toList());
+        Map<Integer, Long> mensualesRegistradosPorComision = new HashMap<>();
+        for (Object[] fila : pagoComisionRepository.countByComisionesAndTipo(idsComisiones, "MENSUAL")) {
+            mensualesRegistradosPorComision.put((Integer) fila[0], (Long) fila[1]);
+        }
+
         List<ComisionVendedorDTO> result = new ArrayList<>(comisiones.size());
         for (ComisionVendedor c : comisiones) {
             result.add(toDTO(c, letrasPagadasPorContrato, manzanasPorContrato,
-                    numerosLotePorContrato, programasPorContrato, clientesPorContrato));
+                    numerosLotePorContrato, programasPorContrato, clientesPorContrato,
+                    mensualesRegistradosPorComision));
         }
         return result;
     }
@@ -205,7 +217,8 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
             Map<Integer, List<String>> manzanasPorContrato,
             Map<Integer, List<String>> numerosLotePorContrato,
             Map<Integer, List<Programa>> programasPorContrato,
-            Map<Integer, List<ContratoCliente>> clientesPorContrato) {
+            Map<Integer, List<ContratoCliente>> clientesPorContrato,
+            Map<Integer, Long> mensualesRegistradosPorComision) {
 
         ComisionVendedorDTO dto = new ComisionVendedorDTO();
         dto.setIdComision(c.getIdComision());
@@ -244,6 +257,15 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         long pagadas = idContrato != null
                 ? letrasPagadasPorContrato.getOrDefault(idContrato, 0L) : 0L;
         dto.setCantidadLetrasPagadas(pagadas);
+
+        // Pagos mensuales pendientes = letras pagadas tras la 8ª − mensuales registrados
+        long registrados = mensualesRegistradosPorComision.getOrDefault(c.getIdComision(), 0L);
+        long habilitables = Math.max(0L, pagadas - LETRAS_PREVIAS);
+        long pendientes = Math.max(0L, habilitables - registrados);
+        dto.setPagosMensualesRegistrados(registrados);
+        dto.setPagosMensualesPendientes(pendientes);
+        dto.setNivelColor(nivelColor(pendientes));
+
         boolean esContado = contrato != null
                 && contrato.getTipoContrato() == com.Inmobiliaria.demo.enums.TipoContrato.CONTADO;
         if (esContado) {
@@ -258,6 +280,13 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
                     c, programasPorContrato.get(idContrato)));
         }
         return dto;
+    }
+
+    /** Nivel de color según pagos de comisión pendientes: 0=VERDE, 1-2=NARANJA, 3+=ROJO. */
+    private String nivelColor(long pendientes) {
+        if (pendientes >= 3) return "ROJO";
+        if (pendientes >= 1) return "NARANJA";
+        return "VERDE";
     }
 
     private long letrasPagadas(Integer idContrato) {
@@ -468,6 +497,253 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
                 .filter(d -> d.getIdComision().equals(comision.getIdComision()))
                 .findFirst()
                 .orElse(null);
+    }
+
+    // ─── Registrar pago de comisión (adelanto o mensual multi-lote) con vouchers ─
+
+    @Override
+    @Transactional
+    public PagoComisionResponseDTO registrarPagoComision(PagoComisionRequestDTO request,
+                                                         List<MultipartFile> vouchers) {
+        if (request == null || request.getTipo() == null) {
+            throw new NegocioException("Debe indicar el tipo de pago (ADELANTO o MENSUAL).");
+        }
+
+        LocalDate fechaPago = request.getFechaPago() != null ? request.getFechaPago() : LocalDate.now();
+        boolean esBancario = request.getMedioPago() != null
+                && request.getMedioPago() != com.Inmobiliaria.demo.enums.MedioPago.EFECTIVO;
+        if (esBancario) {
+            if (request.getNumeroOperacion() == null || request.getNumeroOperacion().isBlank()) {
+                throw new NegocioException("Para medios bancarios debe indicar el N° de operación.");
+            }
+            if (request.getFechaOperacion() == null) {
+                throw new NegocioException("Para medios bancarios debe indicar la fecha de operación.");
+            }
+        }
+
+        if ("ADELANTO".equalsIgnoreCase(request.getTipo())) {
+            return registrarAdelantoConDetalle(request, fechaPago, vouchers);
+        }
+        if ("MENSUAL".equalsIgnoreCase(request.getTipo())) {
+            return registrarMensualConDetalle(request, fechaPago, vouchers);
+        }
+        throw new NegocioException("Tipo de pago inválido: " + request.getTipo());
+    }
+
+    /** Adelanto: valida reglas, genera UN egreso EG01 y guarda vouchers. */
+    private PagoComisionResponseDTO registrarAdelantoConDetalle(
+            PagoComisionRequestDTO request, LocalDate fechaPago, List<MultipartFile> vouchers) {
+
+        if (request.getIdComision() == null) {
+            throw new NegocioException("Debe indicar la comisión para el adelanto.");
+        }
+        ComisionVendedor comision = obtenerComision(request.getIdComision());
+        if (pagoComisionRepository.existsByComisionIdComisionAndTipo(comision.getIdComision(), "ADELANTO")) {
+            throw new NegocioException("El adelanto de esta comisión ya fue registrado.");
+        }
+        Contrato contrato = comision.getContrato();
+        if (contrato == null) throw new NegocioException("La comisión no tiene contrato asociado.");
+        if (contratoEstadoTerminal(contrato.getEstadoContrato())) {
+            throw new NegocioException("No se puede registrar el adelanto: el contrato está " + contrato.getEstadoContrato());
+        }
+        boolean esContado = contrato.getTipoContrato() == com.Inmobiliaria.demo.enums.TipoContrato.CONTADO;
+        if (!esContado && letrasPagadas(contrato.getIdContrato()) < 1) {
+            throw new NegocioException("El adelanto se habilita cuando el cliente pague la primera letra.");
+        }
+
+        BigDecimal monto = request.getMonto() != null ? floor(request.getMonto()) : calcularAdelantoSugerido(comision);
+        if (monto.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new NegocioException("El monto del adelanto debe ser mayor a 0.");
+        }
+        BigDecimal saldoActual = comision.getSaldoPendiente() != null ? comision.getSaldoPendiente() : BigDecimal.ZERO;
+        if (monto.compareTo(saldoActual) > 0) monto = saldoActual;
+
+        String beneficiario = comision.getVendedor() != null
+                ? (comision.getVendedor().getNombre() + " " + comision.getVendedor().getApellidos()).trim() : "-";
+        String concepto = "Pago de comisión al vendedor - Adelanto";
+
+        ReciboEgreso egreso = reciboEgresoService.generarEgresoConVouchers(
+                concepto, beneficiario, contrato.getIdContrato(), monto,
+                comision.getMoneda().name(), request.getMedioPago(),
+                request.getNumeroOperacion(), request.getFechaOperacion(), vouchers);
+
+        PagoComisionVendedor pago = new PagoComisionVendedor();
+        pago.setComision(comision);
+        pago.setTipo("ADELANTO");
+        pago.setMonto(monto);
+        pago.setFechaPago(fechaPago);
+        pago.setFechaOperacion(request.getFechaOperacion());
+        pago.setMedioPago(request.getMedioPago());
+        pago.setNumeroOperacion(request.getNumeroOperacion());
+        pago.setNumeroEgreso(egreso.getNumeroCompleto());
+        pago.setObservacion(request.getObservacion());
+        pagoComisionRepository.save(pago);
+
+        comision.setMontoAdelanto(monto);
+        BigDecimal nuevoSaldo = saldoActual.subtract(monto);
+        comision.setSaldoPendiente(nuevoSaldo);
+        comision.setEstado(nuevoSaldo.compareTo(BigDecimal.ZERO) <= 0
+                ? EstadoComision.COMPLETADA : EstadoComision.EN_PAGO);
+        comisionRepository.save(comision);
+
+        log.info("Adelanto de comisión {} registrado: {} ({})",
+                comision.getIdComision(), monto, egreso.getNumeroCompleto());
+
+        PagoComisionResponseDTO resp = new PagoComisionResponseDTO();
+        resp.setNumerosEgreso(List.of(egreso.getNumeroCompleto()));
+        resp.setIdsComision(List.of(comision.getIdComision()));
+        resp.setSaldoPendiente(comision.getSaldoPendiente());
+        resp.setEstado(comision.getEstado().name());
+        resp.setFechaPago(fechaPago);
+        resp.setUrlsVoucher(extraerUrlsVouchers(egreso));
+        resp.setConceptoDetalle(concepto);
+        return resp;
+    }
+
+    /**
+     * Mensual multi-lote: las letras seleccionadas pueden cruzar varios contratos.
+     * Valida las reglas por contrato y genera UN solo egreso EG01 cuyo concepto
+     * lista cada lote (programa · MZ · LT · monto) y el total.
+     */
+    private PagoComisionResponseDTO registrarMensualConDetalle(
+            PagoComisionRequestDTO request, LocalDate fechaPago, List<MultipartFile> vouchers) {
+
+        if (request.getIdLetras() == null || request.getIdLetras().isEmpty()) {
+            throw new NegocioException("Seleccione al menos un pago mensual.");
+        }
+        List<LetraCambio> letrasSeleccionadas = letraRepository.findAllById(request.getIdLetras());
+        if (letrasSeleccionadas.isEmpty()) {
+            throw new NegocioException("Las letras seleccionadas no existen.");
+        }
+
+        // Validar cada letra y agrupar los pagos por comisión (contrato).
+        List<PagoComisionVendedor> pagos = new ArrayList<>();
+        Map<Integer, ComisionVendedor> comisionesAfectadas = new HashMap<>();
+        List<String> lineasDetalle = new ArrayList<>();
+        BigDecimal totalPagado = BigDecimal.ZERO;
+
+        for (LetraCambio letra : letrasSeleccionadas) {
+            Contrato contrato = letra.getContrato();
+            if (contrato == null) throw new NegocioException("La letra " + letra.getIdLetra() + " no tiene contrato.");
+            if (contratoEstadoTerminal(contrato.getEstadoContrato())) {
+                throw new NegocioException("No se pueden registrar pagos: el contrato está " + contrato.getEstadoContrato());
+            }
+            if (letra.getEstadoLetra() != EstadoLetra.PAGADO) {
+                throw new NegocioException("La letra " + letra.getNumeroLetra() + " no está pagada por el cliente.");
+            }
+            ComisionVendedor comision = comisionRepository.findByContratoIdContrato(contrato.getIdContrato())
+                    .orElseThrow(() -> new NegocioException(
+                            "El contrato " + contrato.getIdContrato() + " no tiene comisión registrada."));
+            if (comision.getMontoAdelanto() == null) {
+                throw new NegocioException(
+                        "Primero debe registrarse el adelanto de la comisión del contrato " + contrato.getIdContrato() + ".");
+            }
+            if (pagoComisionRepository.existsByLetraIdLetraAndTipo(letra.getIdLetra(), "MENSUAL")) {
+                throw new NegocioException("La letra " + letra.getNumeroLetra() + " ya tiene pago de comisión registrado.");
+            }
+
+            // Verificar posición de la letra (debe estar después de las 8 previas).
+            List<LetraCambio> letrasPagadasContrato = letraRepository
+                    .findByContratoIdContratoAndEstadoLetraOrderByIdLetraAsc(contrato.getIdContrato(), EstadoLetra.PAGADO);
+            int posicion = letrasPagadasContrato.indexOf(letra);
+            if (posicion < LETRAS_PREVIAS) {
+                throw new NegocioException(
+                        "La letra " + letra.getNumeroLetra() + " no habilita pago de comisión (debe ser posterior a 8 letras pagadas).");
+            }
+
+            BigDecimal montoComision = redondear(porcentajeDe(letra.getImporte(), BigDecimal.valueOf(10)));
+            BigDecimal saldo = comision.getSaldoPendiente() != null ? comision.getSaldoPendiente() : BigDecimal.ZERO;
+            if (montoComision.compareTo(saldo) > 0) montoComision = saldo;
+            if (montoComision.compareTo(BigDecimal.ZERO) <= 0) continue;
+
+            PagoComisionVendedor pago = new PagoComisionVendedor();
+            pago.setComision(comision);
+            pago.setLetra(letra);
+            pago.setTipo("MENSUAL");
+            pago.setMonto(montoComision);
+            pago.setFechaPago(fechaPago);
+            pago.setFechaOperacion(request.getFechaOperacion());
+            pago.setMedioPago(request.getMedioPago());
+            pago.setNumeroOperacion(request.getNumeroOperacion());
+            pago.setObservacion(request.getObservacion());
+            pagos.add(pago);
+
+            comisionesAfectadas.put(comision.getIdComision(), comision);
+            totalPagado = totalPagado.add(montoComision);
+            lineasDetalle.add(detalleLote(contrato, letra) + "  " + montoComision.toPlainString());
+        }
+
+        if (pagos.isEmpty()) {
+            throw new NegocioException("No hay montos que registrar (saldo pendiente en 0).");
+        }
+
+        // Beneficiario: si hay un solo vendedor se usa su nombre; si son varios, se indica "Vendedores".
+        String beneficiario;
+        List<ComisionVendedor> comisList = new ArrayList<>(comisionesAfectadas.values());
+        if (comisList.size() == 1 && comisList.get(0).getVendedor() != null) {
+            Vendedor v = comisList.get(0).getVendedor();
+            beneficiario = (v.getNombre() + " " + v.getApellidos()).trim();
+        } else {
+            beneficiario = "VENDEDORES (comisiones)";
+        }
+
+        lineasDetalle.add("TOTAL: " + totalPagado.toPlainString());
+        String concepto = String.join("\n", lineasDetalle);
+
+        // Un solo egreso EG01 para todo el lote seleccionado.
+        ReciboEgreso egreso = reciboEgresoService.generarEgresoConVouchers(
+                concepto, beneficiario, null, totalPagado,
+                comisList.get(0).getMoneda().name(), request.getMedioPago(),
+                request.getNumeroOperacion(), request.getFechaOperacion(), vouchers);
+
+        String numeroEgreso = egreso.getNumeroCompleto();
+        for (PagoComisionVendedor p : pagos) {
+            p.setNumeroEgreso(numeroEgreso);
+            pagoComisionRepository.save(p);
+            ComisionVendedor c = comisionesAfectadas.get(p.getComision().getIdComision());
+            if (c != null) {
+                BigDecimal ns = c.getSaldoPendiente().subtract(p.getMonto());
+                c.setSaldoPendiente(ns);
+                c.setEstado(ns.compareTo(BigDecimal.ZERO) <= 0
+                        ? EstadoComision.COMPLETADA : EstadoComision.EN_PAGO);
+            }
+        }
+        comisionRepository.saveAll(comisionesAfectadas.values());
+
+        log.info("Pagos mensuales de comisión registrados: {} letras, total {} ({})",
+                pagos.size(), totalPagado, numeroEgreso);
+
+        PagoComisionResponseDTO resp = new PagoComisionResponseDTO();
+        resp.setNumerosEgreso(List.of(numeroEgreso));
+        resp.setIdsComision(new ArrayList<>(comisionesAfectadas.keySet()));
+        resp.setSaldoPendiente(null); // multi-lote
+        resp.setEstado("OK");
+        resp.setFechaPago(fechaPago);
+        resp.setUrlsVoucher(extraerUrlsVouchers(egreso));
+        resp.setConceptoDetalle(concepto);
+        return resp;
+    }
+
+    /** Línea de detalle del lote para el concepto del egreso. */
+    private String detalleLote(Contrato contrato, LetraCambio letra) {
+        List<Programa> programas = contratoLoteRepository.findProgramasByContrato(contrato.getIdContrato());
+        String programa = nombrePrograma(programas);
+        List<String> mz = new ArrayList<>();
+        List<String> lotes = new ArrayList<>();
+        List<Lote> lotesContrato = contratoLoteRepository.findLotesByContrato(contrato.getIdContrato());
+        for (Lote l : lotesContrato) {
+            if (l.getManzana() != null && !l.getManzana().isBlank()) mz.add(l.getManzana());
+            if (l.getNumeroLote() != null && !l.getNumeroLote().isBlank()) lotes.add(l.getNumeroLote());
+        }
+        return "Pago de comisión MZ " + String.join(",", mz)
+                + " · LT " + String.join(",", lotes)
+                + " · " + programa + " · Letra " + letra.getNumeroLetra();
+    }
+
+    private List<String> extraerUrlsVouchers(ReciboEgreso egreso) {
+        return voucherRepository
+                .findByTipoOrigenAndReferenciaId("PAGO_COMISION", egreso.getIdReciboEgreso().intValue())
+                .stream().map(Voucher::getUrl).collect(Collectors.toList());
     }
 
     // ─── Registrar pagos mensuales (multiselección) ───────────────────────────
