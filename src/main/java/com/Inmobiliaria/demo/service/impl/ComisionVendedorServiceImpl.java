@@ -20,6 +20,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -34,6 +35,7 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
     private final PagoComisionVendedorRepository pagoComisionRepository;
     private final LetraCambioRepository letraRepository;
     private final ContratoLoteRepository contratoLoteRepository;
+    private final ContratoRepository contratoRepository;
     private final ReciboEgresoService reciboEgresoService;
 
     // ─── Redondeos ─────────────────────────────────────────────────────────────
@@ -59,9 +61,14 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
     @Transactional
     public ComisionVendedor crearComisionSiAplica(Contrato contrato) {
         if (contrato == null) return null;
-        // Solo contratos financiados con vendedor y % de comisión > 0
+        // La comisión se genera si el contrato es FINANCIADO o CONTADO con vendedor
+        // y % de comisión > 0. Si el contrato está RENUNCIADO/RESUELTO/TRANSFERIDO,
+        // NO se genera comisión.
         if (contrato.getVendedor() == null) return null;
-        if (contrato.getTipoContrato() != com.Inmobiliaria.demo.enums.TipoContrato.FINANCIADO) return null;
+        var tipo = contrato.getTipoContrato();
+        if (tipo != com.Inmobiliaria.demo.enums.TipoContrato.FINANCIADO
+                && tipo != com.Inmobiliaria.demo.enums.TipoContrato.CONTADO) return null;
+        if (contratoEstadoTerminal(contrato.getEstadoContrato())) return null;
         BigDecimal porcentaje = contrato.getVendedor().getComision();
         if (porcentaje == null || porcentaje.compareTo(BigDecimal.ZERO) <= 0) return null;
         if (comisionRepository.existsByContratoIdContrato(contrato.getIdContrato())) {
@@ -87,6 +94,47 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         log.info("Comisión creada para contrato {} ({}% → {})",
                 contrato.getIdContrato(), porcentaje, montoComisionTotal);
         return guardada;
+    }
+
+    // ─── Migración (backfill) de contratos existentes ─────────────────────────
+
+    @Override
+    @Transactional
+    public Map<String, Object> migrarComisiones() {
+        List<Contrato> elegibles = contratoRepository.findContratosElegiblesParaComision();
+        int creadas = 0;
+        int omitidasRenuncia = 0;
+        int omitidasVendedor = 0;
+        List<Integer> creadasIds = new ArrayList<>();
+
+        for (Contrato c : elegibles) {
+            // Exclusión explícita por estado (renuncia/resuelto/transferido)
+            if (contratoEstadoTerminal(c.getEstadoContrato())) {
+                omitidasRenuncia++;
+                continue;
+            }
+            if (c.getVendedor() == null
+                    || c.getVendedor().getComision() == null
+                    || c.getVendedor().getComision().compareTo(BigDecimal.ZERO) <= 0) {
+                omitidasVendedor++;
+                continue;
+            }
+            if (comisionRepository.existsByContratoIdContrato(c.getIdContrato())) continue;
+
+            ComisionVendedor nueva = crearComisionSiAplica(c);
+            if (nueva != null) {
+                creadas++;
+                creadasIds.add(nueva.getIdComision());
+            }
+        }
+
+        log.info("Migración de comisiones: {} creadas (renuncia/resuelto: {} omitidas, sin vendedor válido: {} omitidas)",
+                creadas, omitidasRenuncia, omitidasVendedor);
+        return Map.of(
+                "creadas", creadas,
+                "omitidasRenuncia", omitidasRenuncia,
+                "omitidasSinVendedor", omitidasVendedor,
+                "idsComisionesCreadas", creadasIds);
     }
 
     // ─── Listado (secretaría) ─────────────────────────────────────────────────
@@ -134,9 +182,18 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
 
         long pagadas = letrasPagadas(c.getContrato() != null ? c.getContrato().getIdContrato() : null);
         dto.setCantidadLetrasPagadas(pagadas);
-        // El adelanto se habilita cuando la primera letra ya fue pagada y aún no se registró.
-        dto.setAdelantoHabilitado(c.getMontoAdelanto() == null && pagadas >= 1);
-        dto.setMontoAdelantoSugerido(calcularAdelantoSugerido(c));
+        boolean esContado = contrato != null
+                && contrato.getTipoContrato() == com.Inmobiliaria.demo.enums.TipoContrato.CONTADO;
+        if (esContado) {
+            // Al contado: el cliente ya pagó todo. El adelanto se habilita de inmediato
+            // (no hay letras que esperar) y sugiere la comisión total.
+            dto.setAdelantoHabilitado(c.getMontoAdelanto() == null);
+            dto.setMontoAdelantoSugerido(c.getMontoComisionTotal());
+        } else {
+            // El adelanto se habilita cuando la primera letra ya fue pagada y aún no se registró.
+            dto.setAdelantoHabilitado(c.getMontoAdelanto() == null && pagadas >= 1);
+            dto.setMontoAdelantoSugerido(calcularAdelantoSugerido(c));
+        }
         return dto;
     }
 
@@ -247,8 +304,10 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         if (contratoEstadoTerminal(contrato.getEstadoContrato())) {
             throw new NegocioException("No se puede registrar el adelanto: el contrato está " + contrato.getEstadoContrato());
         }
-        // Solo se habilita cuando la primera letra fue pagada.
-        if (letrasPagadas(contrato.getIdContrato()) < 1) {
+        // Solo se habilita cuando la primera letra fue pagada (contratos financiados).
+        // En CONTADO el cliente ya pagó todo al firmar, no hay letras que esperar.
+        boolean esContado = contrato.getTipoContrato() == com.Inmobiliaria.demo.enums.TipoContrato.CONTADO;
+        if (!esContado && letrasPagadas(contrato.getIdContrato()) < 1) {
             throw new NegocioException("El adelanto se habilita cuando el cliente pague la primera letra.");
         }
 
@@ -403,12 +462,17 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
                 .orElseThrow(() -> new NegocioException("Comisión no encontrada: " + idComision));
     }
 
+    /**
+     * Estados del contrato en los que NO se cobra comisión al vendedor:
+     * RENUNCIA, RESUELTO o TRANSFERIDO. CANCELADO NO es terminal para la comisión:
+     * un financiado pagado íntegro (CANCELADO) sí genera comisión, y los contratos
+     * CONTADO se crean directamente en estado CANCELADO.
+     */
     private boolean contratoEstadoTerminal(EstadoContrato estado) {
         if (estado == null) return false;
         return estado == EstadoContrato.RENUNCIA
                 || estado == EstadoContrato.RESUELTO
-                || estado == EstadoContrato.TRANSFERIDO
-                || estado == EstadoContrato.CANCELADO;
+                || estado == EstadoContrato.TRANSFERIDO;
     }
 
     private PagoComisionResultadoDTO resultado(ComisionVendedor comision, List<String> numerosEgreso) {

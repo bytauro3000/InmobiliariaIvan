@@ -9,6 +9,7 @@ import com.Inmobiliaria.demo.entity.ComisionVendedor;
 import com.Inmobiliaria.demo.entity.Contrato;
 
 import java.util.List;
+import java.util.Map;
 
 public interface ComisionVendedorService {
 
@@ -17,6 +18,13 @@ public interface ComisionVendedorService {
 
     /** Lista todas las comisiones (secretaría). */
     List<ComisionVendedorDTO> listarComisiones();
+
+    /**
+     * Migración (backfill): crea comisiones para los contratos FINANCIADO/CONTADO
+     * existentes con vendedor y % &gt; 0 que aún no tienen comisión. No crea comisión
+     * en contratos RENUNCIADOS/RESUELTOS/TRANSFERIDOS. Idempotente.
+     */
+    Map<String, Object> migrarComisiones();
 
     /** Pagos mensuales habilitados de una comisión (letras pagadas > 8 sin pago). */
     List<PagoComisionMensualDTO> pagosMensualesHabilitados(Integer idComision);

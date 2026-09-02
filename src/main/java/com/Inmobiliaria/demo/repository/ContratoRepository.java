@@ -16,6 +16,20 @@ import com.Inmobiliaria.demo.enums.EstadoContrato;
 @Repository
 public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
 
+    /**
+     * Contratos elegibles para migración de comisiones: FINANCIADO o CONTADO,
+     * con vendedor cuyo % de comisión &gt; 0, y que aún no tengan comisión creada.
+     */
+    @Query("SELECT c FROM Contrato c " +
+           "LEFT JOIN FETCH c.vendedor " +
+           "WHERE c.vendedor IS NOT NULL " +
+           "  AND c.vendedor.comision > 0 " +
+           "  AND (c.tipoContrato = com.Inmobiliaria.demo.enums.TipoContrato.FINANCIADO " +
+           "    OR c.tipoContrato = com.Inmobiliaria.demo.enums.TipoContrato.CONTADO) " +
+           "  AND NOT EXISTS (SELECT 1 FROM ComisionVendedor cv WHERE cv.contrato.idContrato = c.idContrato) " +
+           "ORDER BY c.idContrato ASC")
+    java.util.List<Contrato> findContratosElegiblesParaComision();
+
     @Query("SELECT cl.lote.programa.nombrePrograma, c.tipoContrato, COUNT(c) " +
                "FROM Contrato c JOIN c.lotes cl " +
                "GROUP BY cl.lote.programa.nombrePrograma, c.tipoContrato")

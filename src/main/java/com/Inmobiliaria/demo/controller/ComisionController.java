@@ -34,6 +34,19 @@ public class ComisionController {
         return ResponseEntity.ok(comisionService.listarComisiones());
     }
 
+    // ─── Migración (backfill) de contratos existentes ─────────────────────────
+
+    @PostMapping("/migrar")
+    public ResponseEntity<?> migrarComisiones() {
+        try {
+            return ResponseEntity.ok(comisionService.migrarComisiones());
+        } catch (Exception e) {
+            log.error("Error en la migración de comisiones: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error en la migración: " + e.getMessage());
+        }
+    }
+
     // ─── Pagos mensuales habilitados de una comisión ──────────────────────────
 
     @GetMapping("/{idComision}/pagos-habilitados")
