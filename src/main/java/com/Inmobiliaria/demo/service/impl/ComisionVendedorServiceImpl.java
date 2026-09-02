@@ -19,8 +19,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -35,6 +37,7 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
     private final PagoComisionVendedorRepository pagoComisionRepository;
     private final LetraCambioRepository letraRepository;
     private final ContratoLoteRepository contratoLoteRepository;
+    private final ContratoClienteRepository contratoClienteRepository;
     private final ContratoRepository contratoRepository;
     private final ReciboEgresoService reciboEgresoService;
 
@@ -143,34 +146,89 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
     @Transactional(readOnly = true)
     public List<ComisionVendedorDTO> listarComisiones() {
         List<ComisionVendedor> comisiones = comisionRepository.findAllByOrderByIdComisionDesc();
-        List<ComisionVendedorDTO> result = new ArrayList<>();
+        if (comisiones.isEmpty()) return new ArrayList<>();
+
+        // ── Pre-cargar en batch (evita N+1: antes hacía ~4 queries por comisión) ──
+        List<Integer> idContratos = comisiones.stream()
+                .map(c -> c.getContrato() != null ? c.getContrato().getIdContrato() : null)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        // Letras pagadas por contrato
+        Map<Integer, Long> letrasPagadasPorContrato = new HashMap<>();
+        for (Object[] fila : letraRepository.countByContratosAndEstadoLetra(idContratos, EstadoLetra.PAGADO)) {
+            letrasPagadasPorContrato.put((Integer) fila[0], (Long) fila[1]);
+        }
+
+        // Lotes (manzana / número) por contrato
+        Map<Integer, List<String>> manzanasPorContrato = new HashMap<>();
+        Map<Integer, List<String>> numerosLotePorContrato = new HashMap<>();
+        for (Object[] fila : contratoLoteRepository.findLotesByContratos(idContratos)) {
+            Integer idContrato = (Integer) fila[0];
+            String manzana = (String) fila[1];
+            String numeroLote = (String) fila[2];
+            manzanasPorContrato.computeIfAbsent(idContrato, k -> new ArrayList<>());
+            numerosLotePorContrato.computeIfAbsent(idContrato, k -> new ArrayList<>());
+            if (manzana != null && !manzana.isBlank()) manzanasPorContrato.get(idContrato).add(manzana);
+            if (numeroLote != null && !numeroLote.isBlank()) numerosLotePorContrato.get(idContrato).add(numeroLote);
+        }
+
+        // Programa(s) por contrato
+        Map<Integer, List<Programa>> programasPorContrato = new HashMap<>();
+        for (Object[] fila : contratoLoteRepository.findProgramasByContratos(idContratos)) {
+            Integer idContrato = (Integer) fila[0];
+            if (fila[1] instanceof Programa programa) {
+                programasPorContrato.computeIfAbsent(idContrato, k -> new ArrayList<>()).add(programa);
+            }
+        }
+
+        // Clientes (ordenados) por contrato — para el nombre del titular
+        Map<Integer, List<ContratoCliente>> clientesPorContrato = new HashMap<>();
+        for (ContratoCliente cc : contratoClienteRepository
+                .findByContratoIdContratoInOrderByOrdenAsc(idContratos)) {
+            clientesPorContrato.computeIfAbsent(cc.getContrato().getIdContrato(), k -> new ArrayList<>()).add(cc);
+        }
+
+        List<ComisionVendedorDTO> result = new ArrayList<>(comisiones.size());
         for (ComisionVendedor c : comisiones) {
-            result.add(toDTO(c));
+            result.add(toDTO(c, letrasPagadasPorContrato, manzanasPorContrato,
+                    numerosLotePorContrato, programasPorContrato, clientesPorContrato));
         }
         return result;
     }
 
-    private ComisionVendedorDTO toDTO(ComisionVendedor c) {
+    private ComisionVendedorDTO toDTO(
+            ComisionVendedor c,
+            Map<Integer, Long> letrasPagadasPorContrato,
+            Map<Integer, List<String>> manzanasPorContrato,
+            Map<Integer, List<String>> numerosLotePorContrato,
+            Map<Integer, List<Programa>> programasPorContrato,
+            Map<Integer, List<ContratoCliente>> clientesPorContrato) {
+
         ComisionVendedorDTO dto = new ComisionVendedorDTO();
         dto.setIdComision(c.getIdComision());
         Contrato contrato = c.getContrato();
-        dto.setIdContrato(contrato != null ? contrato.getIdContrato() : null);
+        Integer idContrato = contrato != null ? contrato.getIdContrato() : null;
+        dto.setIdContrato(idContrato);
         dto.setNombreVendedor(c.getVendedor() != null
                 ? (c.getVendedor().getNombre() + " " + c.getVendedor().getApellidos()).trim()
                 : "-");
-        dto.setNombreCliente(primerClienteNombre(contrato));
-        dto.setPrograma(nombrePrograma(contrato));
-        List<String> mz = new ArrayList<>();
-        List<String> lotes = new ArrayList<>();
-        if (contrato != null) {
-            List<Lote> lotesContrato = contratoLoteRepository.findLotesByContrato(contrato.getIdContrato());
-            for (Lote l : lotesContrato) {
-                if (l.getManzana() != null && !l.getManzana().isBlank()) mz.add(l.getManzana());
-                if (l.getNumeroLote() != null && !l.getNumeroLote().isBlank()) lotes.add(l.getNumeroLote());
-            }
+
+        if (idContrato != null) {
+            dto.setNombreCliente(primerClienteNombre(clientesPorContrato.get(idContrato)));
+            dto.setPrograma(nombrePrograma(programasPorContrato.get(idContrato)));
+            List<String> mz = manzanasPorContrato.getOrDefault(idContrato, List.of());
+            List<String> lotes = numerosLotePorContrato.getOrDefault(idContrato, List.of());
+            dto.setManzanas(String.join(", ", mz));
+            dto.setNumeroLotes(String.join(", ", lotes));
+        } else {
+            dto.setNombreCliente("-");
+            dto.setPrograma("-");
+            dto.setManzanas("");
+            dto.setNumeroLotes("");
         }
-        dto.setManzanas(String.join(", ", mz));
-        dto.setNumeroLotes(String.join(", ", lotes));
+
         dto.setPorcentajeComision(c.getPorcentajeComision());
         dto.setMontoTotalContrato(c.getMontoTotalContrato());
         dto.setMontoComisionTotal(c.getMontoComisionTotal());
@@ -180,7 +238,8 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         dto.setEstado(c.getEstado() != null ? c.getEstado().name() : "PENDIENTE");
         dto.setFechaCreacion(c.getFechaCreacion() != null ? c.getFechaCreacion().toLocalDate() : null);
 
-        long pagadas = letrasPagadas(c.getContrato() != null ? c.getContrato().getIdContrato() : null);
+        long pagadas = idContrato != null
+                ? letrasPagadasPorContrato.getOrDefault(idContrato, 0L) : 0L;
         dto.setCantidadLetrasPagadas(pagadas);
         boolean esContado = contrato != null
                 && contrato.getTipoContrato() == com.Inmobiliaria.demo.enums.TipoContrato.CONTADO;
@@ -192,7 +251,8 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         } else {
             // El adelanto se habilita cuando la primera letra ya fue pagada y aún no se registró.
             dto.setAdelantoHabilitado(c.getMontoAdelanto() == null && pagadas >= 1);
-            dto.setMontoAdelantoSugerido(calcularAdelantoSugerido(c));
+            dto.setMontoAdelantoSugerido(calcularAdelantoSugerido(
+                    c, programasPorContrato.get(idContrato)));
         }
         return dto;
     }
@@ -202,22 +262,18 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         return letraRepository.countByContratoIdContratoAndEstadoLetra(idContrato, EstadoLetra.PAGADO);
     }
 
-    private String primerClienteNombre(Contrato contrato) {
-        if (contrato == null || contrato.getClientes() == null || contrato.getClientes().isEmpty()) return "-";
-        return contrato.getClientes().stream()
-                .sorted((a, b) -> Integer.compare(
-                        a.getOrden() != null ? a.getOrden() : 0,
-                        b.getOrden() != null ? b.getOrden() : 0))
-                .map(cc -> cc.getCliente())
+    private String primerClienteNombre(List<ContratoCliente> clientes) {
+        if (clientes == null || clientes.isEmpty()) return "-";
+        return clientes.stream()
+                .map(ContratoCliente::getCliente)
                 .filter(cl -> cl != null)
                 .findFirst()
                 .map(cl -> (cl.getNombre() + " " + cl.getApellidos()).trim())
                 .orElse("-");
     }
 
-    private String nombrePrograma(Contrato contrato) {
-        if (contrato == null) return "-";
-        List<Programa> programas = contratoLoteRepository.findProgramasByContrato(contrato.getIdContrato());
+    private String nombrePrograma(List<Programa> programas) {
+        if (programas == null || programas.isEmpty()) return "-";
         return programas.stream().map(Programa::getNombrePrograma).distinct()
                 .collect(Collectors.joining(", "));
     }
@@ -225,16 +281,26 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
     /** Adelanto sugerido: 30% de la inicial, o adelanto del programa si no hubo inicial. */
     private BigDecimal calcularAdelantoSugerido(ComisionVendedor c) {
         Contrato contrato = c.getContrato();
+        List<Programa> programas = contrato != null
+                ? contratoLoteRepository.findProgramasByContrato(contrato.getIdContrato())
+                : List.of();
+        return calcularAdelantoSugerido(c, programas);
+    }
+
+    /** Adelanto sugerido: 30% de la inicial, o adelanto del programa si no hubo inicial. */
+    private BigDecimal calcularAdelantoSugerido(ComisionVendedor c, List<Programa> programas) {
+        Contrato contrato = c.getContrato();
         if (contrato == null) return BigDecimal.ZERO;
         BigDecimal inicial = contrato.getInicial() != null ? contrato.getInicial() : BigDecimal.ZERO;
         if (inicial.compareTo(BigDecimal.ZERO) > 0) {
             return floor(porcentajeDe(inicial, BigDecimal.valueOf(30)));
         }
         // Sin inicial → adelanto del programa (default $100)
-        List<Programa> programas = contratoLoteRepository.findProgramasByContrato(contrato.getIdContrato());
-        for (Programa p : programas) {
-            if (p.getAdelantoVendedor() != null) {
-                return floor(p.getAdelantoVendedor());
+        if (programas != null) {
+            for (Programa p : programas) {
+                if (p.getAdelantoVendedor() != null) {
+                    return floor(p.getAdelantoVendedor());
+                }
             }
         }
         return BigDecimal.valueOf(100);

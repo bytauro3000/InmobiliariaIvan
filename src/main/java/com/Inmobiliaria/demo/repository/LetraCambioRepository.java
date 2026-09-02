@@ -32,6 +32,14 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
     long countByContratoIdContratoAndEstadoLetra(
             Integer idContrato, com.Inmobiliaria.demo.enums.EstadoLetra estado);
 
+    /** Batch: cantidad de letras pagadas por contrato (para listado de comisiones). */
+    @Query("SELECT l.contrato.idContrato, COUNT(l) FROM LetraCambio l " +
+           "WHERE l.contrato.idContrato IN :ids AND l.estadoLetra = :estado " +
+           "GROUP BY l.contrato.idContrato")
+    List<Object[]> countByContratosAndEstadoLetra(
+            @Param("ids") java.util.Collection<Integer> ids,
+            @Param("estado") com.Inmobiliaria.demo.enums.EstadoLetra estado);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT l FROM LetraCambio l WHERE l.idLetra = :idLetra")
     Optional<LetraCambio> findByIdWithLock(@Param("idLetra") Integer idLetra);
