@@ -5,12 +5,14 @@ import com.Inmobiliaria.demo.entity.ReciboEgreso;
 import com.Inmobiliaria.demo.entity.Voucher;
 import com.Inmobiliaria.demo.enums.Moneda;
 import com.Inmobiliaria.demo.service.LogoCacheService;
+import com.itextpdf.barcodes.BarcodeQRCode;
 import com.itextpdf.io.font.PdfEncodings;
 import com.itextpdf.io.image.ImageData;
 import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.io.util.StreamUtil;
 import com.itextpdf.kernel.colors.ColorConstants;
 import com.itextpdf.kernel.colors.DeviceGray;
+import com.itextpdf.kernel.colors.DeviceRgb;
 import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.geom.PageSize;
@@ -62,12 +64,8 @@ public class ReciboEgresoPdf {
 
     private static final DeviceGray GRIS_OSCURO = new DeviceGray(0.15f);
     private static final DeviceGray GRIS_MEDIO = new DeviceGray(0.45f);
-    private static final DeviceRgbCol AZUL = new DeviceRgbCol(0, 32, 96);
-
-    private static class DeviceRgbCol {
-        final float r, g, b;
-        DeviceRgbCol(float r, float g, float b) { this.r = r; this.g = g; this.b = b; }
-    }
+    // Mismo azul marino de las boletas/recibos
+    private static final DeviceRgb AZUL_MARINO = new DeviceRgb(0, 32, 96);
 
     private static String empresa() {
         return EmpresaContext.empresaService.obtenerActiva().getNombreLegal();
@@ -165,23 +163,33 @@ public class ReciboEgresoPdf {
                     .setFont(courierBold).setFontSize(16)
                     .setTextAlignment(TextAlignment.CENTER).setMarginBottom(1));
             celdaEmpresa.add(new Paragraph("N\u00b0 " + serieCorrelativo)
-                    .setFont(courierBold).setFontSize(9f).setFontColor(GRIS_OSCURO)
+                    .setFont(courierBold).setFontSize(9f).setFontColor(AZUL_MARINO)
                     .setTextAlignment(TextAlignment.CENTER)
                     .setMarginTop(0).setMarginBottom(2));
             encabezado.addCell(celdaEmpresa);
 
-            Cell celdaDerecha = new Cell()
+            // QR (como los recibos de ingreso)
+            String urlQr = "https://gatewayinmobiliaria.onrender.com/api/comisiones/egresos/"
+                    + egreso.getNumeroCompleto() + "/pdf";
+            BarcodeQRCode qrCode = new BarcodeQRCode(urlQr);
+            Image qrImage = new Image(qrCode.createFormXObject(pdf))
+                    .setWidth(52).setHeight(52)
+                    .setHorizontalAlignment(HorizontalAlignment.CENTER);
+
+            Cell celdaQr = new Cell()
                     .setBorderTop(new SolidBorder(ColorConstants.BLACK, 1f))
                     .setBorderRight(new SolidBorder(ColorConstants.BLACK, 1f))
                     .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 1f))
                     .setBorderLeft(Border.NO_BORDER)
-                    .setPadding(6)
+                    .setPadding(4)
                     .setTextAlignment(TextAlignment.CENTER)
                     .setVerticalAlignment(VerticalAlignment.MIDDLE);
-            celdaDerecha.add(new Paragraph("DOCUMENTO\nINTERNO")
-                    .setFont(courier).setFontSize(7f).setFontColor(GRIS_MEDIO)
-                    .setTextAlignment(TextAlignment.CENTER));
-            encabezado.addCell(celdaDerecha);
+            celdaQr.add(qrImage);
+            celdaQr.add(new Paragraph("Escanea tu\nrecibo")
+                    .setFont(courier).setFontSize(6f).setFontColor(GRIS_MEDIO)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginTop(2).setMarginBottom(0));
+            encabezado.addCell(celdaQr);
 
             doc.add(encabezado);
 
@@ -208,27 +216,28 @@ public class ReciboEgresoPdf {
             Table tablaItems = new Table(UnitValue.createPercentArray(new float[]{1, 0.24f}))
                     .setWidth(UnitValue.createPercentValue(100));
 
+            // Encabezado con azul marino y letras blancas (como boletas)
             tablaItems.addHeaderCell(new Cell()
-                    .setBackgroundColor(new com.itextpdf.kernel.colors.DeviceRgb(AZUL.r, AZUL.g, AZUL.b))
+                    .setBackgroundColor(AZUL_MARINO)
                     .setPadding(3)
                     .add(new Paragraph("DETALLE").setFont(courierBold).setFontSize(8f)
                             .setFontColor(ColorConstants.WHITE).setTextAlignment(TextAlignment.LEFT)));
             tablaItems.addHeaderCell(new Cell()
-                    .setBackgroundColor(new com.itextpdf.kernel.colors.DeviceRgb(AZUL.r, AZUL.g, AZUL.b))
+                    .setBackgroundColor(AZUL_MARINO)
                     .setPadding(3)
                     .add(new Paragraph("IMPORTE").setFont(courierBold).setFontSize(8f)
                             .setFontColor(ColorConstants.WHITE).setTextAlignment(TextAlignment.RIGHT)));
 
             boolean esMultiItem = items.size() > 1;
             if (items.isEmpty()) {
-                // Concepto sin líneas parseables: un solo item con el monto total
                 tablaItems.addCell(cellDetalle(egreso.getConcepto(), courier));
                 tablaItems.addCell(cellDetalle(monedaSimbolo + " " + montoStr, courier, TextAlignment.RIGHT));
             } else {
                 for (String[] item : items) {
                     tablaItems.addCell(cellDetalle(item[0], courier));
                     String importe = item[1];
-                    if (!esMultiItem && !importe.startsWith(monedaSimbolo)) {
+                    if (!esMultiItem) {
+                        // Un solo item: el importe es el monto total del egreso
                         importe = monedaSimbolo + " " + montoStr;
                     }
                     tablaItems.addCell(cellDetalle(importe, courier, TextAlignment.RIGHT));
@@ -264,7 +273,6 @@ public class ReciboEgresoPdf {
             Table pie = new Table(UnitValue.createPercentArray(new float[]{1f, 0.8f, 1f}))
                     .setWidth(UnitValue.createPercentValue(100));
 
-            // Izquierdo: vendedor + DNI + firma
             Cell celdaVendedor = new Cell()
                     .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f)).setPadding(8)
                     .setVerticalAlignment(VerticalAlignment.BOTTOM);
@@ -280,7 +288,6 @@ public class ReciboEgresoPdf {
                     .setTextAlignment(TextAlignment.CENTER));
             pie.addCell(celdaVendedor);
 
-            // Centro: fecha de pago
             String[] pf = fechaEmisionStr.split("/");
             String dia = pf.length > 0 ? pf[0] : "--";
             String mes = pf.length > 1 ? pf[1] : "--";
@@ -313,7 +320,6 @@ public class ReciboEgresoPdf {
             celdaFecha.add(tablaFecha);
             pie.addCell(celdaFecha);
 
-            // Derecho: usuario que realizó el pago + firma
             Cell celdaUsuario = new Cell()
                     .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f)).setPadding(5)
                     .setTextAlignment(TextAlignment.CENTER)
@@ -351,8 +357,8 @@ public class ReciboEgresoPdf {
 
     /**
      * Parsea el concepto multi-línea del egreso en items [descripción, importe].
-     * Cada línea que termina con un número se trata como item con su importe.
-     * La línea "TOTAL: ..." se ignora (el total se muestra en el bloque aparte).
+     * Cada línea es un item; el importe es el número al final de la línea
+     * (el monto de esa comisión). La línea "TOTAL: ..." se ignora.
      */
     private static List<String[]> parsearItems(String concepto, String monedaSimbolo) {
         List<String[]> items = new ArrayList<>();
@@ -361,20 +367,26 @@ public class ReciboEgresoPdf {
         for (String linea : lineas) {
             if (linea.isBlank()) continue;
             if (linea.toUpperCase().startsWith("TOTAL")) continue;
-            String descripcion = linea;
-            String importe = monedaSimbolo + " " + montoStr(linea);
-            items.add(new String[]{descripcion.trim(), importe});
+            String descripcion = linea.trim();
+            items.add(new String[]{descripcion, monedaSimbolo + " " + montoStr(linea)});
         }
         return items;
     }
 
+    /** Extrae el monto al final de la línea y lo formatea (ej: 22.50 -> 22.50). */
     private static String montoStr(String linea) {
         Matcher m = MONTO_FINAL.matcher(linea);
         if (m.find()) {
-            String num = m.group(1).replace(",", "").replace(".", "");
-            return num;
+            String raw = m.group(1).trim();
+            try {
+                // Conserva decimales si vienen (22.50); si es entero, agrega .00
+                BigDecimal val = new BigDecimal(raw);
+                return DF.format(val);
+            } catch (NumberFormatException e) {
+                return raw;
+            }
         }
-        return "";
+        return "0.00";
     }
 
     private static Cell cellDetalle(String texto, PdfFont normal) {
