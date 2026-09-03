@@ -243,6 +243,7 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         Contrato contrato = c.getContrato();
         Integer idContrato = contrato != null ? contrato.getIdContrato() : null;
         dto.setIdContrato(idContrato);
+        dto.setIdVendedor(c.getVendedor() != null ? c.getVendedor().getIdVendedor() : null);
         dto.setNombreVendedor(c.getVendedor() != null
                 ? (c.getVendedor().getNombre() + " " + c.getVendedor().getApellidos()).trim()
                 : "-");
@@ -485,14 +486,10 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
             throw new NegocioException("No se puede editar el monto: ya existen pagos registrados para esta comisión.");
         }
 
-        // Límite: no puede superar el 3% del monto total del contrato.
+        // El monto acordado puede superar el % del vendedor si el gerente lo acepta
+        // (el frontend muestra una confirmación SweetAlert). Sin tope duro.
         BigDecimal montoTotal = contrato.getMontoTotal() != null ? contrato.getMontoTotal() : BigDecimal.ZERO;
-        BigDecimal maximo = floor(porcentajeDe(montoTotal, BigDecimal.valueOf(3)));
         BigDecimal montoAcordado = floor(request.getMonto());
-        if (montoAcordado.compareTo(maximo) > 0) {
-            throw new NegocioException(
-                    "El monto acordado no puede superar el 3% del contrato (" + maximo + ").");
-        }
 
         // Recalcular el % efectivo (monto acordado respecto al monto total).
         BigDecimal porcentajeEfectivo = montoTotal.compareTo(BigDecimal.ZERO) > 0
@@ -507,8 +504,7 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         comision.setEstado(EstadoComision.PENDIENTE);
         comisionRepository.save(comision);
 
-        log.info("Comisión {}: monto acordado actualizado a {} (máx {})",
-                comision.getIdComision(), montoAcordado, maximo);
+        log.info("Comisión {}: monto acordado actualizado a {}", comision.getIdComision(), montoAcordado);
 
         // Devuelve el DTO actualizado (usa listado por id único).
         return listarComisiones().stream()

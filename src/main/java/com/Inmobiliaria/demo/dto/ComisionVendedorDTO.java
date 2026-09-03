@@ -17,6 +17,7 @@ public class ComisionVendedorDTO {
 
     private Integer idComision;
     private Integer idContrato;
+    private Integer idVendedor;
     private String nombreVendedor;
     private String nombreCliente;
     private String programa;
