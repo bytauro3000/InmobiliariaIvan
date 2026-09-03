@@ -11,8 +11,11 @@ import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.repository.*;
 import com.Inmobiliaria.demo.service.ComisionVendedorService;
 import com.Inmobiliaria.demo.service.ReciboEgresoService;
+import com.Inmobiliaria.demo.service.UsuarioService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -42,6 +45,7 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
     private final ContratoClienteRepository contratoClienteRepository;
     private final ContratoRepository contratoRepository;
     private final VoucherRepository voucherRepository;
+    private final UsuarioService usuarioService;
     private final ReciboEgresoService reciboEgresoService;
 
     // ─── Redondeos ─────────────────────────────────────────────────────────────
@@ -576,8 +580,10 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
                 ? (comision.getVendedor().getNombre() + " " + comision.getVendedor().getApellidos()).trim() : "-";
         String concepto = "Pago de comisión al vendedor - Adelanto";
 
+        String dniVendedor = comision.getVendedor() != null ? comision.getVendedor().getDni() : null;
         ReciboEgreso egreso = reciboEgresoService.generarEgresoConVouchers(
-                concepto, beneficiario, contrato.getIdContrato(), monto,
+                concepto, beneficiario, dniVendedor, obtenerUsuarioRegistro(),
+                contrato.getIdContrato(), monto,
                 comision.getMoneda().name(), request.getMedioPago(),
                 request.getNumeroOperacion(), request.getFechaOperacion(), vouchers);
 
@@ -705,8 +711,11 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         String concepto = String.join("\n", lineasDetalle);
 
         // Un solo egreso EG01 para todo el lote seleccionado.
+        String dniVendedor = (comisList.size() == 1 && comisList.get(0).getVendedor() != null)
+                ? comisList.get(0).getVendedor().getDni() : null;
         ReciboEgreso egreso = reciboEgresoService.generarEgresoConVouchers(
-                concepto, beneficiario, null, totalPagado,
+                concepto, beneficiario, dniVendedor, obtenerUsuarioRegistro(),
+                null, totalPagado,
                 comisList.get(0).getMoneda().name(), request.getMedioPago(),
                 request.getNumeroOperacion(), request.getFechaOperacion(), vouchers);
 
@@ -758,6 +767,23 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         return voucherRepository
                 .findByTipoOrigenAndReferenciaId("PAGO_COMISION", egreso.getIdReciboEgreso().intValue())
                 .stream().map(Voucher::getUrl).collect(Collectors.toList());
+    }
+
+    /** Nombre del usuario autenticado que registra el pago (para el recibo). */
+    private String obtenerUsuarioRegistro() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) return "SECRETARIA";
+        try {
+            Usuario u = usuarioService.buscarByUsuario(auth.getName());
+            if (u != null) {
+                String nombre = ((u.getNombres() == null ? "" : u.getNombres())
+                        + " " + (u.getApellidos() == null ? "" : u.getApellidos())).trim();
+                if (!nombre.isBlank()) return nombre.toUpperCase();
+            }
+        } catch (Exception e) {
+            log.warn("No se pudo obtener el usuario actual: {}", e.getMessage());
+        }
+        return auth.getName();
     }
 
     // ─── Registrar pagos mensuales (multiselección) ───────────────────────────

@@ -110,9 +110,30 @@ public class ReciboEgresoServiceImpl implements ReciboEgresoService {
             String numeroOperacion,
             LocalDate fechaOperacion,
             List<MultipartFile> vouchers) {
+        return generarEgresoConVouchers(concepto, beneficiario, null, null,
+                idContrato, monto, moneda, medioPago, numeroOperacion, fechaOperacion, vouchers);
+    }
+
+    @Override
+    @Transactional
+    public ReciboEgreso generarEgresoConVouchers(
+            String concepto,
+            String beneficiario,
+            String dniBeneficiario,
+            String usuarioRegistro,
+            Integer idContrato,
+            BigDecimal monto,
+            String moneda,
+            MedioPago medioPago,
+            String numeroOperacion,
+            LocalDate fechaOperacion,
+            List<MultipartFile> vouchers) {
 
         ReciboEgreso egreso = generarEgreso(concepto, beneficiario, idContrato, monto,
                 moneda, medioPago, numeroOperacion, fechaOperacion);
+        egreso.setDniBeneficiario(dniBeneficiario);
+        egreso.setUsuarioRegistro(usuarioRegistro);
+        egreso = reciboEgresoRepository.save(egreso);
 
         if (vouchers != null && !vouchers.isEmpty()) {
             for (MultipartFile file : vouchers) {

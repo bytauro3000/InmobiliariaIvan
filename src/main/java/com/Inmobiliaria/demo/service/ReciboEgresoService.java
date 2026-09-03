@@ -41,6 +41,20 @@ public interface ReciboEgresoService {
             LocalDate fechaOperacion,
             List<MultipartFile> vouchers);
 
+    /** Genera un egreso con datos del beneficiario (DNI) y usuario registrador. */
+    ReciboEgreso generarEgresoConVouchers(
+            String concepto,
+            String beneficiario,
+            String dniBeneficiario,
+            String usuarioRegistro,
+            Integer idContrato,
+            BigDecimal monto,
+            String moneda,
+            MedioPago medioPago,
+            String numeroOperacion,
+            LocalDate fechaOperacion,
+            List<MultipartFile> vouchers);
+
     /** Devuelve el número del siguiente egreso (ej: "EG01-7") SIN persistir nada. */
     String previewSiguienteNumero();
 

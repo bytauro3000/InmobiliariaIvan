@@ -44,6 +44,14 @@ public class ReciboEgreso {
     @Column(name = "beneficiario", nullable = false, length = 255)
     private String beneficiario;
 
+    /** DNI del beneficiario (vendedor) para el recibo. */
+    @Column(name = "dni_beneficiario", length = 20)
+    private String dniBeneficiario;
+
+    /** Nombre del usuario que registró el pago (quien realizó el egreso). */
+    @Column(name = "usuario_registro", length = 255)
+    private String usuarioRegistro;
+
     /** Contrato asociado (puede ser null en egresos genéricos). */
     @Column(name = "id_contrato")
     private Integer idContrato;
