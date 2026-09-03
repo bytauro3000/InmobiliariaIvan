@@ -3,12 +3,14 @@ package com.Inmobiliaria.demo.service.impl;
 import com.Inmobiliaria.demo.entity.PagoComisionVendedor;
 import com.Inmobiliaria.demo.entity.ReciboEgreso;
 import com.Inmobiliaria.demo.entity.SerieEgreso;
+import com.Inmobiliaria.demo.entity.Vendedor;
 import com.Inmobiliaria.demo.entity.Voucher;
 import com.Inmobiliaria.demo.enums.MedioPago;
 import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.repository.PagoComisionVendedorRepository;
 import com.Inmobiliaria.demo.repository.ReciboEgresoRepository;
 import com.Inmobiliaria.demo.repository.SerieEgresoRepository;
+import com.Inmobiliaria.demo.repository.VendedorRepository;
 import com.Inmobiliaria.demo.repository.VoucherRepository;
 import com.Inmobiliaria.demo.service.ReciboEgresoService;
 import com.Inmobiliaria.demo.util.ReciboEgresoPdf;
@@ -42,6 +44,7 @@ public class ReciboEgresoServiceImpl implements ReciboEgresoService {
     private final ReciboEgresoRepository reciboEgresoRepository;
     private final VoucherRepository voucherRepository;
     private final PagoComisionVendedorRepository pagoComisionRepository;
+    private final VendedorRepository vendedorRepository;
     private final Cloudinary cloudinary;
 
     @Override
@@ -153,10 +156,35 @@ public class ReciboEgresoServiceImpl implements ReciboEgresoService {
         ReciboEgreso egreso = reciboEgresoRepository.findByNumeroCompleto(numeroCompleto)
                 .orElseThrow(() -> new NegocioException("Recibo de egreso no encontrado: " + numeroCompleto));
 
+        // Egresos antiguos no tienen DNI guardado: se resuelve del vendedor por nombre.
+        if (egreso.getDniBeneficiario() == null || egreso.getDniBeneficiario().isBlank()) {
+            resolverDniDesdeVendedor(egreso);
+        }
+
         // Vouchers asociados al egreso (referenciaId = id del recibo de egreso)
         List<Voucher> vouchers = voucherRepository
                 .findByTipoOrigenAndReferenciaId(ORIGEN_VOUCHER, egreso.getIdReciboEgreso().intValue());
         return ReciboEgresoPdf.generar(egreso, vouchers);
+    }
+
+    /** Resuelve el DNI del beneficiario buscando el vendedor por nombre (egresos antiguos). */
+    private void resolverDniDesdeVendedor(ReciboEgreso egreso) {
+        try {
+            String nombre = egreso.getBeneficiario() != null
+                    ? egreso.getBeneficiario().trim() : "";
+            if (nombre.isBlank()) return;
+            // El beneficiario es "NOMBRE APELLIDOS" — busca aproximada por el primer apellido
+            String[] partes = nombre.split("\\s+");
+            String apellido = partes.length >= 2 ? partes[partes.length - 1] : nombre;
+            Vendedor v = vendedorRepository.findByNombreCompletoLike(apellido)
+                    .stream().findFirst().orElse(null);
+            if (v != null && v.getDni() != null && !v.getDni().isBlank()) {
+                egreso.setDniBeneficiario(v.getDni());
+            }
+        } catch (Exception e) {
+            log.warn("No se pudo resolver el DNI del beneficiario del egreso {}: {}",
+                    egreso.getNumeroCompleto(), e.getMessage());
+        }
     }
 
     @Override

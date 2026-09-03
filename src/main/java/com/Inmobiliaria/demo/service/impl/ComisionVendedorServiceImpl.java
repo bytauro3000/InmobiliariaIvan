@@ -578,7 +578,17 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
 
         String beneficiario = comision.getVendedor() != null
                 ? (comision.getVendedor().getNombre() + " " + comision.getVendedor().getApellidos()).trim() : "-";
-        String concepto = "Pago de comisión al vendedor - Adelanto";
+        // Concepto con detalle del lote (igual que las observaciones por defecto)
+        String mz = comision.getContrato() != null && !manzanasPorContratoLocal(comision).isEmpty()
+                ? String.join(",", manzanasPorContratoLocal(comision)) : "—";
+        String lt = comision.getContrato() != null && !lotesPorContratoLocal(comision).isEmpty()
+                ? String.join(",", lotesPorContratoLocal(comision)) : "—";
+        String programa = contrato != null ? nombrePrograma(
+                contratoLoteRepository.findProgramasByContrato(contrato.getIdContrato())) : "—";
+        String concepto = "Pago de la 1ra cuota de comisión de la MZ: " + mz
+                + " LT: " + lt + " y programa: " + programa
+                + " - saldo: " + (comision.getMoneda().name().equals("PEN") ? "S/" : "$")
+                + " " + (comision.getSaldoPendiente() != null ? comision.getSaldoPendiente() : BigDecimal.ZERO);
 
         String dniVendedor = comision.getVendedor() != null ? comision.getVendedor().getDni() : null;
         ReciboEgreso egreso = reciboEgresoService.generarEgresoConVouchers(
@@ -761,6 +771,26 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         return "Pago de comisión MZ " + String.join(",", mz)
                 + " · LT " + String.join(",", lotes)
                 + " · " + programa + " · Letra " + letra.getNumeroLetra();
+    }
+
+    private List<String> manzanasPorContratoLocal(ComisionVendedor c) {
+        List<String> mz = new ArrayList<>();
+        if (c.getContrato() != null) {
+            for (Lote l : contratoLoteRepository.findLotesByContrato(c.getContrato().getIdContrato())) {
+                if (l.getManzana() != null && !l.getManzana().isBlank()) mz.add(l.getManzana());
+            }
+        }
+        return mz;
+    }
+
+    private List<String> lotesPorContratoLocal(ComisionVendedor c) {
+        List<String> lotes = new ArrayList<>();
+        if (c.getContrato() != null) {
+            for (Lote l : contratoLoteRepository.findLotesByContrato(c.getContrato().getIdContrato())) {
+                if (l.getNumeroLote() != null && !l.getNumeroLote().isBlank()) lotes.add(l.getNumeroLote());
+            }
+        }
+        return lotes;
     }
 
     private List<String> extraerUrlsVouchers(ReciboEgreso egreso) {

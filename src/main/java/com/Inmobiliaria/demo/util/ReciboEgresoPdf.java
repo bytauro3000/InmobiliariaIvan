@@ -41,26 +41,33 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
- * Plantilla del RECIBO DE EGRESOS (serie EG01). Documento interno de salida de
- * dinero (pago de comisión a vendedor). Estructura similar al RECIBO DE INGRESO:
- * - Cabecera con logo/empresa y "RECIBO DE EGRESO N° EG01-x"
- * - Fila "Pagado a: <vendedor> (DNI: ...)" + caja con el monto
- * - Cuerpo: "La cantidad de:", "Por concepto de:", "Medio de pago:"
- * - Pie con 3 cuadros: vendedor + DNI + firma | fecha de pago | usuario que
- *   realizó el pago + firma. Reverso con vouchers adjuntos.
+ * Plantilla del RECIBO DE EGRESOS (serie EG01). Estructura tipo FACTURA con
+ * items de detalle (cada lote en una fila con su importe) y total. Pie con 3
+ * cuadros: vendedor + DNI + firma | fecha de pago | usuario que realizó el pago
+ * + firma. Reverso con vouchers adjuntos (3 por página).
  */
 public class ReciboEgresoPdf {
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DecimalFormat DF = new DecimalFormat("#,##0.00", new DecimalFormatSymbols(Locale.US));
+    private static final Pattern MONTO_FINAL = Pattern.compile("([\\d.,]+)\\s*$");
 
     private static final DeviceGray GRIS_OSCURO = new DeviceGray(0.15f);
     private static final DeviceGray GRIS_MEDIO = new DeviceGray(0.45f);
+    private static final DeviceRgbCol AZUL = new DeviceRgbCol(0, 32, 96);
+
+    private static class DeviceRgbCol {
+        final float r, g, b;
+        DeviceRgbCol(float r, float g, float b) { this.r = r; this.g = g; this.b = b; }
+    }
 
     private static String empresa() {
         return EmpresaContext.empresaService.obtenerActiva().getNombreLegal();
@@ -88,10 +95,7 @@ public class ReciboEgresoPdf {
         try (PdfDocument pdf = new PdfDocument(new PdfWriter(out));
              Document doc = new Document(pdf, PageSize.A5.rotate())) {
 
-            float fs1 = 10f;
-            float cH1 = (4f * fs1 * 1.6f) + (5f * 2f) + (3f * 3f);
-            float tot1 = 115f + 5f + 30f + cH1 + 72f;
-            float marg1 = Math.min(30f, Math.max(8f, (420f - tot1) / 2f));
+            float marg1 = 20f;
             doc.setMargins(marg1, 18, marg1, 52);
 
             PdfFont courier = cargarFuente("fonts/COUR.TTF");
@@ -166,7 +170,6 @@ public class ReciboEgresoPdf {
                     .setMarginTop(0).setMarginBottom(2));
             encabezado.addCell(celdaEmpresa);
 
-            // Celda derecha vacía (sin QR) pero con borde para el recuadro completo
             Cell celdaDerecha = new Cell()
                     .setBorderTop(new SolidBorder(ColorConstants.BLACK, 1f))
                     .setBorderRight(new SolidBorder(ColorConstants.BLACK, 1f))
@@ -182,89 +185,86 @@ public class ReciboEgresoPdf {
 
             doc.add(encabezado);
 
-            // ── FILA: Pagado a + Caja monto ──
-            float fuenteCliente = beneficiario.length() > 100 ? 8.5f
-                    : beneficiario.length() > 80 ? 9f : 10f;
+            // ── DATOS DEL RECIBO (como factura) ──
+            Table datos = new Table(UnitValue.createPercentArray(new float[]{0.22f, 1}))
+                    .setWidth(UnitValue.createPercentValue(100)).setMarginTop(6);
+            datos.addCell(labelCell("Señor(es)", courierBold));
+            datos.addCell(valueCell(beneficiario + "  (DNI: " + dni + ")", courier));
+            datos.addCell(labelCell("Fecha de Emisión", courierBold));
+            datos.addCell(valueCell(fechaEmisionStr, courier));
+            datos.addCell(labelCell("Tipo de Moneda", courierBold));
+            datos.addCell(valueCell("PEN".equals(egreso.getMoneda()) ? "SOLES" : "DOLAR AMERICANO", courier));
+            datos.addCell(labelCell("Medio de Pago", courierBold));
+            datos.addCell(valueCell(medioPago + numOp + fechaOp, courier));
+            doc.add(datos);
 
-            Table filaPagado = new Table(UnitValue.createPercentArray(new float[]{1, 0.28f}))
-                    .setWidth(UnitValue.createPercentValue(100)).setMarginTop(5);
+            doc.add(new Paragraph()
+                    .setBorderBottom(new SolidBorder(GRIS_MEDIO, 0.5f))
+                    .setMarginTop(4).setMarginBottom(4));
 
-            Cell celdaPagado = new Cell()
-                    .setBorderTop(new SolidBorder(ColorConstants.BLACK, 0.8f))
-                    .setBorderLeft(new SolidBorder(ColorConstants.BLACK, 0.8f))
-                    .setBorderRight(new SolidBorder(ColorConstants.BLACK, 0.8f))
-                    .setBorderBottom(Border.NO_BORDER)
-                    .setPadding(8);
-            Paragraph pPagado = new Paragraph()
-                    .add(new Text("Pagado a: ").setFont(courierBold).setFontSize(fuenteCliente))
-                    .add(new Text(beneficiario + " (DNI: " + dni + ")").setFont(courier).setFontSize(fuenteCliente))
-                    .setMarginBottom(0);
-            pPagado.setProperty(com.itextpdf.layout.properties.Property.OVERFLOW_WRAP,
-                    com.itextpdf.layout.properties.OverflowWrapPropertyValue.ANYWHERE);
-            celdaPagado.add(pPagado);
-            filaPagado.addCell(celdaPagado);
+            // ── TABLA DE ITEMS (detalle por lote) ──
+            List<String[]> items = parsearItems(egreso.getConcepto(), monedaSimbolo);
 
-            filaPagado.addCell(new Cell()
-                    .setBorderTop(new SolidBorder(ColorConstants.BLACK, 1.5f))
-                    .setBorderLeft(new SolidBorder(ColorConstants.BLACK, 1.5f))
-                    .setBorderRight(new SolidBorder(ColorConstants.BLACK, 1.5f))
-                    .setBorderBottom(Border.NO_BORDER)
-                    .setPadding(4)
-                    .setTextAlignment(TextAlignment.CENTER)
-                    .setVerticalAlignment(VerticalAlignment.MIDDLE)
-                    .add(new Paragraph(monedaSimbolo + " " + montoStr)
-                            .setFont(courierBold).setFontSize(15)
-                            .setTextAlignment(TextAlignment.CENTER)));
-            doc.add(filaPagado);
-
-            // ── CUERPO ──
-            Table cuerpo = new Table(UnitValue.createPercentArray(new float[]{1}))
+            Table tablaItems = new Table(UnitValue.createPercentArray(new float[]{1, 0.24f}))
                     .setWidth(UnitValue.createPercentValue(100));
-            Cell celdaCuerpo = new Cell()
-                    .setBorderTop(new SolidBorder(ColorConstants.BLACK, 1.5f))
-                    .setBorderLeft(new SolidBorder(ColorConstants.BLACK, 0.8f))
-                    .setBorderRight(new SolidBorder(ColorConstants.BLACK, 0.8f))
-                    .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.8f))
-                    .setPaddingLeft(8).setPaddingRight(8).setPaddingTop(5).setPaddingBottom(5);
 
-            // "La cantidad de" + concepto (multilínea) en un solo párrafo
-            Paragraph pCantidad = new Paragraph()
-                    .add(new Text("La cantidad de: ").setFont(courierBold).setFontSize(10f))
-                    .add(new Text(importeLetras).setFont(courier).setFontSize(10f))
-                    .setMarginBottom(1);
-            pCantidad.setProperty(com.itextpdf.layout.properties.Property.OVERFLOW_WRAP,
-                    com.itextpdf.layout.properties.OverflowWrapPropertyValue.ANYWHERE);
-            celdaCuerpo.add(pCantidad);
-            celdaCuerpo.add(separadorLinea());
+            tablaItems.addHeaderCell(new Cell()
+                    .setBackgroundColor(new com.itextpdf.kernel.colors.DeviceRgb(AZUL.r, AZUL.g, AZUL.b))
+                    .setPadding(3)
+                    .add(new Paragraph("DETALLE").setFont(courierBold).setFontSize(8f)
+                            .setFontColor(ColorConstants.WHITE).setTextAlignment(TextAlignment.LEFT)));
+            tablaItems.addHeaderCell(new Cell()
+                    .setBackgroundColor(new com.itextpdf.kernel.colors.DeviceRgb(AZUL.r, AZUL.g, AZUL.b))
+                    .setPadding(3)
+                    .add(new Paragraph("IMPORTE").setFont(courierBold).setFontSize(8f)
+                            .setFontColor(ColorConstants.WHITE).setTextAlignment(TextAlignment.RIGHT)));
 
-            String concepto = egreso.getConcepto() != null ? egreso.getConcepto() : "-";
-            Paragraph pConcepto = new Paragraph()
-                    .add(new Text("Por concepto de: ").setFont(courierBold).setFontSize(10f));
-            String[] lineas = concepto.split("\\r?\\n");
-            for (int i = 0; i < lineas.length; i++) {
-                pConcepto.add(new Text(lineas[i]).setFont(courier).setFontSize(9f));
-                if (i < lineas.length - 1) {
-                    pConcepto.add(new Text("\n                   ").setFont(courier).setFontSize(9f));
+            boolean esMultiItem = items.size() > 1;
+            if (items.isEmpty()) {
+                // Concepto sin líneas parseables: un solo item con el monto total
+                tablaItems.addCell(cellDetalle(egreso.getConcepto(), courier));
+                tablaItems.addCell(cellDetalle(monedaSimbolo + " " + montoStr, courier, TextAlignment.RIGHT));
+            } else {
+                for (String[] item : items) {
+                    tablaItems.addCell(cellDetalle(item[0], courier));
+                    String importe = item[1];
+                    if (!esMultiItem && !importe.startsWith(monedaSimbolo)) {
+                        importe = monedaSimbolo + " " + montoStr;
+                    }
+                    tablaItems.addCell(cellDetalle(importe, courier, TextAlignment.RIGHT));
                 }
             }
-            pConcepto.setMarginBottom(1);
-            pConcepto.setProperty(com.itextpdf.layout.properties.Property.OVERFLOW_WRAP,
-                    com.itextpdf.layout.properties.OverflowWrapPropertyValue.ANYWHERE);
-            celdaCuerpo.add(pConcepto);
-            celdaCuerpo.add(separadorLinea());
 
-            celdaCuerpo.add(lineaDato("Medio de pago: ", medioPago + numOp + fechaOp, courier, courierBold, 10f));
-            celdaCuerpo.add(separadorLinea());
-            celdaCuerpo.add(lineaDato("Fecha de Emisión: ", fechaEmisionStr, courier, courierBold, 10f));
-            celdaCuerpo.add(separadorLinea());
-            cuerpo.addCell(celdaCuerpo);
-            doc.add(cuerpo);
+            doc.add(tablaItems);
+
+            // ── TOTAL ──
+            Table tablaTotal = new Table(UnitValue.createPercentArray(new float[]{1, 0.24f}))
+                    .setWidth(UnitValue.createPercentValue(100)).setMarginTop(2);
+            Cell celdaSon = new Cell()
+                    .setBorder(Border.NO_BORDER).setPadding(1)
+                    .setVerticalAlignment(VerticalAlignment.MIDDLE);
+            celdaSon.add(new Paragraph("SON: " + importeLetras)
+                    .setFont(courier).setFontSize(7f).setItalic());
+            tablaTotal.addCell(celdaSon);
+            Cell celdaTotalValor = new Cell()
+                    .setBorderTop(new SolidBorder(ColorConstants.BLACK, 1f))
+                    .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 2f))
+                    .setBorderLeft(Border.NO_BORDER).setBorderRight(Border.NO_BORDER)
+                    .setPadding(2).setTextAlignment(TextAlignment.RIGHT)
+                    .add(new Paragraph(monedaSimbolo + " " + montoStr)
+                            .setFont(courierBold).setFontSize(10f));
+            tablaTotal.addCell(celdaTotalValor);
+            doc.add(tablaTotal);
+
+            doc.add(new Paragraph()
+                    .setBorderBottom(new SolidBorder(GRIS_MEDIO, 0.5f))
+                    .setMarginTop(5).setMarginBottom(4));
 
             // ── PIE (3 cuadros) ──
             Table pie = new Table(UnitValue.createPercentArray(new float[]{1f, 0.8f, 1f}))
                     .setWidth(UnitValue.createPercentValue(100));
 
-            // Cuadro izquierdo: vendedor + DNI + línea firma
+            // Izquierdo: vendedor + DNI + firma
             Cell celdaVendedor = new Cell()
                     .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f)).setPadding(8)
                     .setVerticalAlignment(VerticalAlignment.BOTTOM);
@@ -280,7 +280,7 @@ public class ReciboEgresoPdf {
                     .setTextAlignment(TextAlignment.CENTER));
             pie.addCell(celdaVendedor);
 
-            // Cuadro central: fecha de pago (día/mes/año en cajas)
+            // Centro: fecha de pago
             String[] pf = fechaEmisionStr.split("/");
             String dia = pf.length > 0 ? pf[0] : "--";
             String mes = pf.length > 1 ? pf[1] : "--";
@@ -313,7 +313,7 @@ public class ReciboEgresoPdf {
             celdaFecha.add(tablaFecha);
             pie.addCell(celdaFecha);
 
-            // Cuadro derecho: usuario que realizó el pago + línea firma
+            // Derecho: usuario que realizó el pago + firma
             Cell celdaUsuario = new Cell()
                     .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f)).setPadding(5)
                     .setTextAlignment(TextAlignment.CENTER)
@@ -347,6 +347,48 @@ public class ReciboEgresoPdf {
             throw new RuntimeException("Error al generar recibo de egreso PDF: " + e.getMessage(), e);
         }
         return out.toByteArray();
+    }
+
+    /**
+     * Parsea el concepto multi-línea del egreso en items [descripción, importe].
+     * Cada línea que termina con un número se trata como item con su importe.
+     * La línea "TOTAL: ..." se ignora (el total se muestra en el bloque aparte).
+     */
+    private static List<String[]> parsearItems(String concepto, String monedaSimbolo) {
+        List<String[]> items = new ArrayList<>();
+        if (concepto == null || concepto.isBlank()) return items;
+        String[] lineas = concepto.split("\\r?\\n");
+        for (String linea : lineas) {
+            if (linea.isBlank()) continue;
+            if (linea.toUpperCase().startsWith("TOTAL")) continue;
+            String descripcion = linea;
+            String importe = monedaSimbolo + " " + montoStr(linea);
+            items.add(new String[]{descripcion.trim(), importe});
+        }
+        return items;
+    }
+
+    private static String montoStr(String linea) {
+        Matcher m = MONTO_FINAL.matcher(linea);
+        if (m.find()) {
+            String num = m.group(1).replace(",", "").replace(".", "");
+            return num;
+        }
+        return "";
+    }
+
+    private static Cell cellDetalle(String texto, PdfFont normal) {
+        return cellDetalle(texto, normal, TextAlignment.LEFT);
+    }
+
+    private static Cell cellDetalle(String texto, PdfFont normal, TextAlignment alineacion) {
+        Cell c = new Cell().setBorder(new SolidBorder(GRIS_MEDIO, 0.4f))
+                .setPadding(3).setTextAlignment(alineacion);
+        Paragraph p = new Paragraph(texto).setFont(normal).setFontSize(8f);
+        p.setProperty(com.itextpdf.layout.properties.Property.OVERFLOW_WRAP,
+                com.itextpdf.layout.properties.OverflowWrapPropertyValue.ANYWHERE);
+        c.add(p);
+        return c;
     }
 
     private static void agregarPaginaReverso(Document doc, PdfDocument pdf,
@@ -432,26 +474,19 @@ public class ReciboEgresoPdf {
         }
     }
 
-    private static Paragraph lineaDato(String label, String valor,
-                                        PdfFont normal, PdfFont bold, float size) {
-        Paragraph p = new Paragraph()
-                .add(new Text(label).setFont(bold).setFontSize(size))
-                .add(new Text(valor).setFont(normal).setFontSize(size))
-                .setMarginBottom(1);
-        p.setProperty(com.itextpdf.layout.properties.Property.OVERFLOW_WRAP,
-                com.itextpdf.layout.properties.OverflowWrapPropertyValue.ANYWHERE);
-        return p;
+    private static Cell labelCell(String texto, PdfFont bold) {
+        return new Cell()
+                .setBorder(Border.NO_BORDER)
+                .setPadding(0.5f)
+                .add(new Paragraph(texto).setFont(bold).setFontSize(8f)
+                        .setTextAlignment(TextAlignment.LEFT));
     }
 
-    private static Table separadorLinea() {
-        Table linea = new Table(UnitValue.createPercentArray(new float[]{1}))
-                .setWidth(UnitValue.createPercentValue(100))
-                .setMarginTop(1).setMarginBottom(1);
-        linea.addCell(new Cell()
+    private static Cell valueCell(String texto, PdfFont normal) {
+        return new Cell()
                 .setBorder(Border.NO_BORDER)
-                .setBorderBottom(new SolidBorder(new DeviceGray(0.75f), 0.5f))
-                .setPadding(0).setHeight(1));
-        return linea;
+                .setPadding(1.5f)
+                .add(new Paragraph(": " + (texto != null ? texto : "-")).setFont(normal).setFontSize(8f));
     }
 
     private static Table lineaFirma() {
