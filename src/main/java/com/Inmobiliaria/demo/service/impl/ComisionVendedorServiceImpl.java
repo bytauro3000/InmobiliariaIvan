@@ -587,8 +587,8 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
                 contratoLoteRepository.findProgramasByContrato(contrato.getIdContrato())) : "—";
         String concepto = "Pago de la 1ra cuota de comisión de la MZ: " + mz
                 + " LT: " + lt + " y programa: " + programa
-                + "  " + (comision.getMoneda().name().equals("PEN") ? "S/" : "$")
-                + " " + monto.toPlainString();
+                + ", Saldo: " + (comision.getMoneda().name().equals("PEN") ? "S/" : "$")
+                + " " + saldoActual.subtract(monto).toPlainString();
 
         String dniVendedor = comision.getVendedor() != null ? comision.getVendedor().getDni() : null;
         ReciboEgreso egreso = reciboEgresoService.generarEgresoConVouchers(
