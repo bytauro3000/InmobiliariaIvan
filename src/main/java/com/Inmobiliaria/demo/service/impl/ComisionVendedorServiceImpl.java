@@ -277,10 +277,14 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
                 ? letrasPagadasPorContrato.getOrDefault(idContrato, 0L) : 0L;
         dto.setCantidadLetrasPagadas(pagadas);
 
-        // Pagos mensuales pendientes = letras pagadas tras la 8ª − mensuales registrados
+        // Pagos mensuales pendientes = letras pagadas tras la 8ª − mensuales registrados.
+        // Si la comisión está COMPLETADA (cancelada en su totalidad), no hay pendientes.
+        boolean completada = c.getEstado() == EstadoComision.COMPLETADA
+                || (c.getSaldoPendiente() != null
+                    && c.getSaldoPendiente().compareTo(BigDecimal.ZERO) <= 0);
         long registrados = mensualesRegistradosPorComision.getOrDefault(c.getIdComision(), 0L);
         long habilitables = Math.max(0L, pagadas - LETRAS_PREVIAS);
-        long pendientes = Math.max(0L, habilitables - registrados);
+        long pendientes = completada ? 0L : Math.max(0L, habilitables - registrados);
         dto.setPagosMensualesRegistrados(registrados);
         dto.setPagosMensualesPendientes(pendientes);
         dto.setNivelColor(nivelColor(pendientes));
@@ -362,6 +366,13 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
 
         // Si el contrato está en estado terminal, ya no se habilitan pagos.
         if (contratoEstadoTerminal(contrato.getEstadoContrato())) {
+            return new ArrayList<>();
+        }
+        // Comisión completada (cancelada en su totalidad): ya no hay pagos mensuales
+        // habilitados, aunque haya letras pagadas sin pago MENSUAL individual (histórico).
+        if (comision.getEstado() == EstadoComision.COMPLETADA
+                || (comision.getSaldoPendiente() != null
+                    && comision.getSaldoPendiente().compareTo(BigDecimal.ZERO) <= 0)) {
             return new ArrayList<>();
         }
         // Los pagos mensuales solo aplican después de registrar el adelanto.
