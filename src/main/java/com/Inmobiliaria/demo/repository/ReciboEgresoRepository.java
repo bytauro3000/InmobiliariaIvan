@@ -19,4 +19,7 @@ public interface ReciboEgresoRepository extends JpaRepository<ReciboEgreso, Long
     List<ReciboEgreso> findTopBySerieForUpdate(@Param("serie") String serie);
 
     Optional<ReciboEgreso> findByNumeroCompleto(String numeroCompleto);
+
+    @Query("SELECT MAX(r.numero) FROM ReciboEgreso r WHERE r.serie = :serie")
+    Integer findMaxNumeroBySerie(@Param("serie") String serie);
 }

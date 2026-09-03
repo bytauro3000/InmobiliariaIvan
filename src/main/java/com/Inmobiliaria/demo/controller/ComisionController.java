@@ -110,6 +110,13 @@ public class ComisionController {
         }
     }
 
+    // ─── Preview del siguiente número de egreso ────────────────────────────────
+
+    @GetMapping("/egresos/preview-siguiente")
+    public ResponseEntity<String> previewSiguienteEgreso() {
+        return ResponseEntity.ok(reciboEgresoService.previewSiguienteNumero());
+    }
+
     // ─── Descargar PDF del recibo de egresos ──────────────────────────────────
 
     @GetMapping("/egresos/{numeroEgreso}/pdf")

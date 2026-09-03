@@ -41,5 +41,8 @@ public interface ReciboEgresoService {
             LocalDate fechaOperacion,
             List<MultipartFile> vouchers);
 
+    /** Devuelve el número del siguiente egreso (ej: "EG01-7") SIN persistir nada. */
+    String previewSiguienteNumero();
+
     byte[] generarPdf(String numeroCompleto);
 }

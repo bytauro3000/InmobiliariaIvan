@@ -138,6 +138,19 @@ public class ReciboEgresoServiceImpl implements ReciboEgresoService {
         return ReciboEgresoPdf.generar(egreso, vouchers);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public String previewSiguienteNumero() {
+        // Mayor entre el contador interno y el número más alto real en la BD
+        int desdeContador = serieEgresoRepository.findBySerie(SERIE_EGRESO)
+                .map(com.Inmobiliaria.demo.entity.SerieEgreso::getUltimoNumero)
+                .orElse(0);
+        Integer desdeTablaRaw = reciboEgresoRepository.findMaxNumeroBySerie(SERIE_EGRESO);
+        int desdeTabla = (desdeTablaRaw != null) ? desdeTablaRaw : 0;
+        int siguiente = Math.max(desdeContador, desdeTabla) + 1;
+        return SERIE_EGRESO + "-" + siguiente;
+    }
+
     private String subirImagen(MultipartFile file, Integer idContrato) throws RuntimeException {
         try {
             String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
