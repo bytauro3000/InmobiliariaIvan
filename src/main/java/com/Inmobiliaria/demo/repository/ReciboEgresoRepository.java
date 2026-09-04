@@ -25,4 +25,23 @@ public interface ReciboEgresoRepository extends JpaRepository<ReciboEgreso, Long
     Integer findMaxNumeroBySerie(@Param("serie") String serie);
 
     List<ReciboEgreso> findByFechaEmisionBetweenOrderByNumeroAsc(LocalDate desde, LocalDate hasta);
+
+    /**
+     * Egresos por rango usando fecha de PAGO para comisiones y fecha de EMISIÓN para otros.
+     * Retorna Object[]: [numeroCompleto, serie, numero, fechaDocumento, concepto,
+     *   beneficiario, idContrato, monto, moneda, medioPago, numeroOperacion,
+     *   fechaOperacion, usuarioRegistro]
+     */
+    @Query(value = "SELECT r.numero_completo, r.serie, r.numero, " +
+            "COALESCE(pcv.fecha_pago, r.fecha_emision) AS fecha_doc, " +
+            "r.concepto, r.beneficiario, r.id_contrato, r.monto, r.moneda, " +
+            "r.medio_pago, r.numero_operacion, r.fecha_operacion, r.usuario_registro " +
+            "FROM recibo_egreso r " +
+            "LEFT JOIN pago_comision_vendedor pcv ON r.numero_completo = pcv.numero_egreso " +
+            "WHERE COALESCE(pcv.fecha_pago, r.fecha_emision) BETWEEN :desde AND :hasta " +
+            "ORDER BY fecha_doc ASC, r.numero ASC",
+            nativeQuery = true)
+    List<Object[]> findEgresosPorFechaPagoOrEmision(
+            @Param("desde") LocalDate desde,
+            @Param("hasta") LocalDate hasta);
 }
