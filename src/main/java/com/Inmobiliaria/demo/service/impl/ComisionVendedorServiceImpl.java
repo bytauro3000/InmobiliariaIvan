@@ -320,6 +320,18 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         dto.setPagosMensualesPendientes(pendientes);
         dto.setNivelColor(nivelColor(pendientes));
 
+        // Recalcular estado según la nueva lógica:
+        // EN_PAGO = adelanto pagado + 0 cuotas pendientes; PENDIENTE = lo contrario.
+        if (completada) {
+            dto.setEstado(EstadoComision.COMPLETADA.name());
+        } else {
+            boolean adelantoPagado = c.getMontoAdelanto() != null
+                    && c.getMontoAdelanto().compareTo(BigDecimal.ZERO) > 0;
+            dto.setEstado(adelantoPagado && pendientes == 0
+                    ? EstadoComision.EN_PAGO.name()
+                    : EstadoComision.PENDIENTE.name());
+        }
+
         boolean esContado = contrato != null
                 && contrato.getTipoContrato() == com.Inmobiliaria.demo.enums.TipoContrato.CONTADO;
         if (esContado) {
@@ -344,6 +356,36 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         if (pendientes >= 3) return "ROJO";
         if (pendientes >= 1) return "NARANJA";
         return "VERDE";
+    }
+
+    /**
+     * Calcula el estado correcto de una comisión:
+     * - COMPLETADA si saldo ≤ 0.
+     * - EN_PAGO si el adelanto está pagado Y no hay cuotas mensuales pendientes.
+     * - PENDIENTE en cualquier otro caso.
+     */
+    private EstadoComision calcularEstado(ComisionVendedor c) {
+        BigDecimal saldo = c.getSaldoPendiente() != null ? c.getSaldoPendiente() : BigDecimal.ZERO;
+        if (saldo.compareTo(BigDecimal.ZERO) <= 0) {
+            return EstadoComision.COMPLETADA;
+        }
+        boolean adelantoPagado = c.getMontoAdelanto() != null
+                && c.getMontoAdelanto().compareTo(BigDecimal.ZERO) > 0;
+        if (!adelantoPagado) {
+            return EstadoComision.PENDIENTE;
+        }
+        // Calcular cuotas mensuales pendientes para esta comisión
+        Integer idContrato = c.getContrato() != null ? c.getContrato().getIdContrato() : null;
+        if (idContrato == null) return EstadoComision.EN_PAGO;
+        long maxNumero = letraRepository
+                .maxNumeroLetraPagadaPorContratos(List.of(idContrato)).stream()
+                .findFirst().map(f -> ((Number) f[1]).longValue()).orElse(0L);
+        long habilitables = Math.max(0L, maxNumero - LETRAS_PREVIAS);
+        long registrados = pagoComisionRepository
+                .countByComisionesAndTipo(List.of(c.getIdComision()), "MENSUAL").stream()
+                .findFirst().map(f -> (Long) f[1]).orElse(0L);
+        long pendientes = Math.max(0L, habilitables - registrados);
+        return pendientes == 0 ? EstadoComision.EN_PAGO : EstadoComision.PENDIENTE;
     }
 
     private long letrasPagadas(Integer idContrato) {
@@ -502,8 +544,7 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         comision.setMontoAdelanto(monto);
         BigDecimal nuevoSaldo = comision.getSaldoPendiente().subtract(monto);
         comision.setSaldoPendiente(nuevoSaldo);
-        comision.setEstado(nuevoSaldo.compareTo(BigDecimal.ZERO) <= 0
-                ? EstadoComision.COMPLETADA : EstadoComision.EN_PAGO);
+        comision.setEstado(calcularEstado(comision));
         comisionRepository.save(comision);
 
         log.info("Adelanto de comisión {} registrado: {} ({})", comision.getIdComision(), monto, egreso.getNumeroCompleto());
@@ -659,8 +700,7 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         comision.setMontoAdelanto(monto);
         BigDecimal nuevoSaldo = saldoActual.subtract(monto);
         comision.setSaldoPendiente(nuevoSaldo);
-        comision.setEstado(nuevoSaldo.compareTo(BigDecimal.ZERO) <= 0
-                ? EstadoComision.COMPLETADA : EstadoComision.EN_PAGO);
+        comision.setEstado(calcularEstado(comision));
         comisionRepository.save(comision);
 
         log.info("Adelanto de comisión {} registrado: {} ({})",
@@ -784,8 +824,7 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
             if (c != null) {
                 BigDecimal ns = c.getSaldoPendiente().subtract(p.getMonto());
                 c.setSaldoPendiente(ns);
-                c.setEstado(ns.compareTo(BigDecimal.ZERO) <= 0
-                        ? EstadoComision.COMPLETADA : EstadoComision.EN_PAGO);
+                c.setEstado(calcularEstado(c));
             }
         }
         comisionRepository.saveAll(comisionesAfectadas.values());
@@ -945,8 +984,7 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         }
 
         comision.setSaldoPendiente(saldo);
-        comision.setEstado(saldo.compareTo(BigDecimal.ZERO) <= 0
-                ? EstadoComision.COMPLETADA : EstadoComision.EN_PAGO);
+        comision.setEstado(calcularEstado(comision));
         comisionRepository.save(comision);
 
         log.info("Pagos mensuales de comisión {} registrados: {} letras, total {} ({})",
