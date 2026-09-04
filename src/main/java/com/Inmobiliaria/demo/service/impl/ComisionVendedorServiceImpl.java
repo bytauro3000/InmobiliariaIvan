@@ -59,6 +59,7 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
     private final ContratoClienteRepository contratoClienteRepository;
     private final ContratoRepository contratoRepository;
     private final VoucherRepository voucherRepository;
+    private final PagoInicialRepository pagoInicialRepository;
     private final UsuarioService usuarioService;
     private final ReciboEgresoService reciboEgresoService;
 
@@ -241,11 +242,15 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
             mensualesRegistradosPorComision.put((Integer) fila[0], (Long) fila[1]);
         }
 
+        // Contratos con inicial pagada (batch) — habilita adelanto para financiados sin letras pagadas
+        java.util.Set<Integer> contratosConInicial = new java.util.HashSet<>(
+                pagoInicialRepository.findContratosConInicialPagada(idContratos));
+
         List<ComisionVendedorDTO> result = new ArrayList<>(comisiones.size());
         for (ComisionVendedor c : comisiones) {
             result.add(toDTO(c, letrasPagadasPorContrato, maxNumeroPorContrato,
                     manzanasPorContrato, numerosLotePorContrato, programasPorContrato,
-                    clientesPorContrato, mensualesRegistradosPorComision));
+                    clientesPorContrato, mensualesRegistradosPorComision, contratosConInicial));
         }
         return result;
     }
@@ -258,7 +263,8 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
             Map<Integer, List<String>> numerosLotePorContrato,
             Map<Integer, List<Programa>> programasPorContrato,
             Map<Integer, List<ContratoCliente>> clientesPorContrato,
-            Map<Integer, Long> mensualesRegistradosPorComision) {
+            Map<Integer, Long> mensualesRegistradosPorComision,
+            java.util.Set<Integer> contratosConInicial) {
 
         ComisionVendedorDTO dto = new ComisionVendedorDTO();
         dto.setIdComision(c.getIdComision());
@@ -322,8 +328,11 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
             dto.setAdelantoHabilitado(c.getMontoAdelanto() == null);
             dto.setMontoAdelantoSugerido(c.getMontoComisionTotal());
         } else {
-            // El adelanto se habilita cuando la primera letra ya fue pagada y aún no se registró.
-            dto.setAdelantoHabilitado(c.getMontoAdelanto() == null && pagadas >= 1);
+            // Financiado: el adelanto se habilita cuando:
+            // 1) La primera letra ya fue pagada, O
+            // 2) El cliente pagó la inicial (la empresa le debe el 1er pago al vendedor).
+            boolean inicialPagada = idContrato != null && contratosConInicial.contains(idContrato);
+            dto.setAdelantoHabilitado(c.getMontoAdelanto() == null && (pagadas >= 1 || inicialPagada));
             dto.setMontoAdelantoSugerido(calcularAdelantoSugerido(
                     c, programasPorContrato.get(idContrato)));
         }

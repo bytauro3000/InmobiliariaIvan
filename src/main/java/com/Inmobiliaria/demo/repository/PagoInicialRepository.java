@@ -17,6 +17,11 @@ public interface PagoInicialRepository extends JpaRepository<PagoInicial, Intege
 
     Optional<PagoInicial> findByContratoIdContrato(Integer idContrato);
 
+    /** Batch: IDs de contrato que ya tienen inicial pagada (para comisiones). */
+    @Query("SELECT p.contrato.idContrato FROM PagoInicial p " +
+           "WHERE p.contrato.idContrato IN :ids")
+    List<Integer> findContratosConInicialPagada(@Param("ids") java.util.Collection<Integer> ids);
+
     // ── Para generación de PDF: evita LazyInitializationException cargando
     //    comprobante + contrato + clientes + cliente + usuario. Hibernate no
     //    permite JOIN FETCH de dos colecciones (clientes + lotes) en la misma
