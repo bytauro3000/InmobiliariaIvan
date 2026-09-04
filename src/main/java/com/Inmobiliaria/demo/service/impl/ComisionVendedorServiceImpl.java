@@ -464,11 +464,12 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         if (contratoEstadoTerminal(contrato.getEstadoContrato())) {
             throw new NegocioException("No se puede registrar el adelanto: el contrato está " + contrato.getEstadoContrato());
         }
-        // Solo se habilita cuando la primera letra fue pagada (contratos financiados).
+        // Solo se habilita cuando la primera letra fue pagada O el cliente pagó la inicial.
         // En CONTADO el cliente ya pagó todo al firmar, no hay letras que esperar.
         boolean esContado = contrato.getTipoContrato() == com.Inmobiliaria.demo.enums.TipoContrato.CONTADO;
-        if (!esContado && letrasPagadas(contrato.getIdContrato()) < 1) {
-            throw new NegocioException("El adelanto se habilita cuando el cliente pague la primera letra.");
+        if (!esContado && letrasPagadas(contrato.getIdContrato()) < 1
+                && !pagoInicialRepository.findByContratoIdContrato(contrato.getIdContrato()).isPresent()) {
+            throw new NegocioException("El adelanto se habilita cuando el cliente pague la inicial o la primera letra.");
         }
 
         // Monto: si no viene, usa el sugerido (30% de la inicial o adelanto del programa).
@@ -610,8 +611,9 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
             throw new NegocioException("No se puede registrar el adelanto: el contrato está " + contrato.getEstadoContrato());
         }
         boolean esContado = contrato.getTipoContrato() == com.Inmobiliaria.demo.enums.TipoContrato.CONTADO;
-        if (!esContado && letrasPagadas(contrato.getIdContrato()) < 1) {
-            throw new NegocioException("El adelanto se habilita cuando el cliente pague la primera letra.");
+        if (!esContado && letrasPagadas(contrato.getIdContrato()) < 1
+                && !pagoInicialRepository.findByContratoIdContrato(contrato.getIdContrato()).isPresent()) {
+            throw new NegocioException("El adelanto se habilita cuando el cliente pague la inicial o la primera letra.");
         }
 
         BigDecimal monto = request.getMonto() != null ? floor(request.getMonto()) : calcularAdelantoSugerido(comision);
