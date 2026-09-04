@@ -40,6 +40,17 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
             @Param("ids") java.util.Collection<Integer> ids,
             @Param("estado") com.Inmobiliaria.demo.enums.EstadoLetra estado);
 
+    /**
+     * Batch: NÚMERO máximo de letra PAGADO por contrato. Se asume secuencia estricta:
+     * si la letra más alta pagada es la 9, las letras 1-8 también están pagadas aunque
+     * solo algunas estén registradas en el sistema (las demás en recibos físicos).
+     */
+    @Query(value = "SELECT id_contrato, MAX(CAST(SUBSTRING_INDEX(numero_letra, '/', 1) AS UNSIGNED)) " +
+            "FROM letra_cambio " +
+            "WHERE id_contrato IN (:ids) AND estado_letra = 'PAGADO' " +
+            "GROUP BY id_contrato", nativeQuery = true)
+    List<Object[]> maxNumeroLetraPagadaPorContratos(@Param("ids") java.util.Collection<Integer> ids);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT l FROM LetraCambio l WHERE l.idLetra = :idLetra")
     Optional<LetraCambio> findByIdWithLock(@Param("idLetra") Integer idLetra);

@@ -35,8 +35,22 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ComisionVendedorServiceImpl implements ComisionVendedorService {
 
-    /** Cantidad de letras que el cliente debe pagar antes de habilitar pagos mensuales. */
-    private static final int LETRAS_PREVIAS = 8;
+    /** Cantidad de letras previas que NO generan comisión mensual (la letra 8 es la primera). */
+    private static final int LETRAS_PREVIAS = 7;
+
+    /**
+     * Extrae el número de una letra del formato "N/120" (o "8").
+     * Ej: "8/120" → 8. Si no es numérico, devuelve 0.
+     */
+    private static int extraerNumeroLetra(String numeroLetra) {
+        if (numeroLetra == null || numeroLetra.isBlank()) return 0;
+        String parte = numeroLetra.split("/")[0].trim();
+        try {
+            return Integer.parseInt(parte);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
 
     private final ComisionVendedorRepository comisionRepository;
     private final PagoComisionVendedorRepository pagoComisionRepository;
@@ -183,6 +197,13 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
             letrasPagadasPorContrato.put((Integer) fila[0], (Long) fila[1]);
         }
 
+        // Número máximo de letra PAGADO por contrato. Se asume secuencia: si la letra
+        // más alta pagada es la 9, las 1-8 también están pagadas (recibos físicos).
+        Map<Integer, Long> maxNumeroPorContrato = new HashMap<>();
+        for (Object[] fila : letraRepository.maxNumeroLetraPagadaPorContratos(idContratos)) {
+            maxNumeroPorContrato.put(((Number) fila[0]).intValue(), ((Number) fila[1]).longValue());
+        }
+
         // Lotes (manzana / número) por contrato
         Map<Integer, List<String>> manzanasPorContrato = new HashMap<>();
         Map<Integer, List<String>> numerosLotePorContrato = new HashMap<>();
@@ -222,9 +243,9 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
 
         List<ComisionVendedorDTO> result = new ArrayList<>(comisiones.size());
         for (ComisionVendedor c : comisiones) {
-            result.add(toDTO(c, letrasPagadasPorContrato, manzanasPorContrato,
-                    numerosLotePorContrato, programasPorContrato, clientesPorContrato,
-                    mensualesRegistradosPorComision));
+            result.add(toDTO(c, letrasPagadasPorContrato, maxNumeroPorContrato,
+                    manzanasPorContrato, numerosLotePorContrato, programasPorContrato,
+                    clientesPorContrato, mensualesRegistradosPorComision));
         }
         return result;
     }
@@ -232,6 +253,7 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
     private ComisionVendedorDTO toDTO(
             ComisionVendedor c,
             Map<Integer, Long> letrasPagadasPorContrato,
+            Map<Integer, Long> maxNumeroPorContrato,
             Map<Integer, List<String>> manzanasPorContrato,
             Map<Integer, List<String>> numerosLotePorContrato,
             Map<Integer, List<Programa>> programasPorContrato,
@@ -277,13 +299,16 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
                 ? letrasPagadasPorContrato.getOrDefault(idContrato, 0L) : 0L;
         dto.setCantidadLetrasPagadas(pagadas);
 
-        // Pagos mensuales pendientes = letras pagadas tras la 8ª − mensuales registrados.
+        // Pagos mensuales pendientes = letras habilitables (número > 7 → letra 8+) −
+        // mensuales registrados. Se cuenta por NÚMERO de letra, no por posición.
         // Si la comisión está COMPLETADA (cancelada en su totalidad), no hay pendientes.
         boolean completada = c.getEstado() == EstadoComision.COMPLETADA
                 || (c.getSaldoPendiente() != null
                     && c.getSaldoPendiente().compareTo(BigDecimal.ZERO) <= 0);
         long registrados = mensualesRegistradosPorComision.getOrDefault(c.getIdComision(), 0L);
-        long habilitables = Math.max(0L, pagadas - LETRAS_PREVIAS);
+        long maxNumero = idContrato != null
+                ? maxNumeroPorContrato.getOrDefault(idContrato, 0L) : 0L;
+        long habilitables = Math.max(0L, maxNumero - LETRAS_PREVIAS);
         long pendientes = completada ? 0L : Math.max(0L, habilitables - registrados);
         dto.setPagosMensualesRegistrados(registrados);
         dto.setPagosMensualesPendientes(pendientes);
@@ -380,14 +405,18 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
             return new ArrayList<>();
         }
 
-        // Las letras se pagan en secuencia estricta. Se habilitan las letras pagadas
-        // cuya posición (orden de generación) supera las 8 previas.
+        // Las letras se pagan en secuencia estricta. Se habilitan las letras PAGADO cuyo
+        // NÚMERO (antes de '/') supera las 7 previas (letra 8 en adelante). Se usa el
+        // número, NO la posición: si solo están registradas las letras 8 y 9, se asume
+        // que las 1-7 también están pagadas (recibos físicos aún no pasados al sistema).
         List<LetraCambio> letras = letraRepository
                 .findByContratoIdContratoAndEstadoLetraOrderByIdLetraAsc(contrato.getIdContrato(), EstadoLetra.PAGADO);
 
         List<PagoComisionMensualDTO> result = new ArrayList<>();
-        for (int i = LETRAS_PREVIAS; i < letras.size(); i++) {
-            LetraCambio letra = letras.get(i);
+        for (LetraCambio letra : letras) {
+            int numero = extraerNumeroLetra(letra.getNumeroLetra());
+            // Solo generan comisión las letras posteriores a las 7 previas (letra 8+).
+            if (numero <= LETRAS_PREVIAS) continue;
             // Si ya se registró el pago mensual de esta letra, no se habilita.
             if (pagoComisionRepository.existsByLetraIdLetraAndTipo(letra.getIdLetra(), "MENSUAL")) continue;
 
@@ -679,13 +708,13 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
                 throw new NegocioException("La letra " + letra.getNumeroLetra() + " ya tiene pago de comisión registrado.");
             }
 
-            // Verificar posición de la letra (debe estar después de las 8 previas).
-            List<LetraCambio> letrasPagadasContrato = letraRepository
-                    .findByContratoIdContratoAndEstadoLetraOrderByIdLetraAsc(contrato.getIdContrato(), EstadoLetra.PAGADO);
-            int posicion = letrasPagadasContrato.indexOf(letra);
-            if (posicion < LETRAS_PREVIAS) {
+            // Verificar el número de la letra (debe superar las 7 previas → letra 8 en adelante).
+            // Se usa el número, NO la posición: las letras 1-7 pueden estar en recibos
+            // físicos aún no pasados al sistema, pero se asumen pagadas por secuencia.
+            int numero = extraerNumeroLetra(letra.getNumeroLetra());
+            if (numero <= LETRAS_PREVIAS) {
                 throw new NegocioException(
-                        "La letra " + letra.getNumeroLetra() + " no habilita pago de comisión (debe ser posterior a 8 letras pagadas).");
+                        "La letra " + letra.getNumeroLetra() + " no habilita pago de comisión (debe ser la letra 8 en adelante).");
             }
 
             BigDecimal montoComision = redondear(porcentajeDe(letra.getImporte(), BigDecimal.valueOf(10)));
