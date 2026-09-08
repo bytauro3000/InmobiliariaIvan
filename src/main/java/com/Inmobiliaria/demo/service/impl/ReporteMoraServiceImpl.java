@@ -208,6 +208,14 @@ public class ReporteMoraServiceImpl implements ReporteMoraService {
                         .filter(c -> c != null && !c.isBlank())
                         .collect(Collectors.toList());
 
+        // ── IDs de clientes (para poder actualizar celular desde frontend) ─
+        List<Integer> idClientes = (contrato.getClientes() == null) ? Collections.emptyList() :
+                contrato.getClientes().stream()
+                        .map(ContratoCliente::getCliente)
+                        .filter(Objects::nonNull)
+                        .map(Cliente::getIdCliente)
+                        .collect(Collectors.toList());
+
         // ── Lotes: TODOS ordenados por manzana luego numeroLote ───────────
         List<ContratoLote> lotesContrato = contrato.getLotes() != null
                 ? new ArrayList<>(contrato.getLotes())
@@ -265,6 +273,7 @@ public class ReporteMoraServiceImpl implements ReporteMoraService {
                 moneda,
                 celular,
                 celulares,
+                idClientes,
                 contrato.getIdContrato(),
                 nombrePrograma,
                 fechaVencimientoInicio

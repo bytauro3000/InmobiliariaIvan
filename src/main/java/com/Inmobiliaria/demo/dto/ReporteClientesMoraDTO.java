@@ -33,6 +33,7 @@ public class ReporteClientesMoraDTO {
         private String           moneda;
         private String           celular;
         private List<String>     celulares;
+        private List<Integer>    idClientes;
         private Integer          idContrato;
         private String           nombrePrograma;
         private LocalDate        fechaVencimientoInicio; 

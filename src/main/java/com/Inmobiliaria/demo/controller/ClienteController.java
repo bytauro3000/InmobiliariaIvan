@@ -103,6 +103,21 @@ public class ClienteController {
         return ResponseEntity.ok(toResponseDTO(actualizado));
     }
 
+    @PatchMapping("/actualizar-celular/{id}")
+    public ResponseEntity<ClienteResponseDTO> actualizarCelular(@PathVariable Integer id, @RequestBody java.util.Map<String, String> body) {
+        String nuevoCelular = body.get("celular");
+        if (nuevoCelular == null || nuevoCelular.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        Cliente cliente = clienteService.buscarClientePorId(id);
+        if (cliente == null) {
+            return ResponseEntity.notFound().build();
+        }
+        cliente.setCelular(nuevoCelular);
+        Cliente actualizado = clienteService.editarCliente(cliente);
+        return ResponseEntity.ok(toResponseDTO(actualizado));
+    }
+
     @DeleteMapping("/eliminar/{id}")
     public void eliminarCliente(@PathVariable Integer id) {
         clienteService.eliminarClienteById(id);
