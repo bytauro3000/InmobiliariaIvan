@@ -950,16 +950,7 @@ public class ContratoNapolePdfMerruic {
 		}
 		fila1.addCell(celdaC1);
 		fila1.addCell(new Cell().setBorder(Border.NO_BORDER));
-
-		Cell celdaV = new Cell().setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.CENTER).setPadding(0);
-		Paragraph pLineaV = new Paragraph().setBorderTop(new com.itextpdf.layout.borders.SolidBorder(1f))
-				.setWidth(160f).setMarginBottom(2)
-				.setHorizontalAlignment(HorizontalAlignment.CENTER);
-
-		celdaV.add(pLineaV);
-		celdaV.add(new Paragraph("\u201cLA VENDEDORA\u201d").setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
-		celdaV.add(new Paragraph("DNI N°" + representanteDni()).setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f));
-		fila1.addCell(celdaV);
+		fila1.addCell(new Cell().setBorder(Border.NO_BORDER));
 
 		contenedorPrincipal.addCell(new Cell().add(fila1).setBorder(Border.NO_BORDER));
 
