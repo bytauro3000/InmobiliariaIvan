@@ -279,24 +279,39 @@ public class ReporteMoraServiceImpl implements ReporteMoraService {
     public List<DetalleLetraVencidaDTO> obtenerDetalleLetrasVencidas(Integer idContrato) {
         LocalDate hoy = LocalDate.now();
 
-        // Buscar el contrato con sus letras
         Contrato contrato = contratoRepository.findById(idContrato)
                 .orElse(null);
         if (contrato == null || contrato.getLetrasCambio() == null) {
             return Collections.emptyList();
         }
 
-        List<LetraCambio> todasLetras = contrato.getLetrasCambio().stream()
+        List<LetraCambio> letras = contrato.getLetrasCambio();
+
+        // ── Encontrar la primera letra pagada (por número) ──────────────────
+        // Después del primer pago, solo se cuentan letras vencidas desde esa
+        // posición en adelante. Las anteriores son comprobantes físicos no
+        // registrados en el sistema.
+        int numPrimeraPagada = letras.stream()
+                .filter(l -> l.getEstadoLetra() == EstadoLetra.PAGADO)
+                .mapToInt(l -> extraerNumeroLetra(l.getNumeroLetra()))
+                .min()
+                .orElse(0);
+
+        // ── Filtrar letras vencidas (no pagadas, no anuladas, vencidas o hoy) ─
+        List<LetraCambio> letrasFiltradas = letras.stream()
                 .filter(l -> l.getEstadoLetra() != EstadoLetra.PAGADO
                         && l.getEstadoLetra() != EstadoLetra.ANULADO)
                 .filter(l -> l.getFechaVencimiento() != null)
                 .filter(l -> !l.getFechaVencimiento().isAfter(hoy))
+                // Si ya hay pago registrado, ignorar letras anteriores a la primera pagada
+                .filter(l -> numPrimeraPagada == 0
+                        || extraerNumeroLetra(l.getNumeroLetra()) >= numPrimeraPagada)
                 .sorted(Comparator.comparingInt(l -> extraerNumeroLetra(l.getNumeroLetra())))
                 .collect(Collectors.toList());
 
         List<DetalleLetraVencidaDTO> resultado = new ArrayList<>();
 
-        for (LetraCambio letra : todasLetras) {
+        for (LetraCambio letra : letrasFiltradas) {
             int diasMora = (int) java.time.temporal.ChronoUnit.DAYS.between(letra.getFechaVencimiento(), hoy);
             boolean venceHoy = letra.getFechaVencimiento().isEqual(hoy);
 
