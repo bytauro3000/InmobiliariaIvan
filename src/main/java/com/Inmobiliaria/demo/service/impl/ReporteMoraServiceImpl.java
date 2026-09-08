@@ -8,6 +8,7 @@ import com.Inmobiliaria.demo.enums.EstadoContrato;
 import com.Inmobiliaria.demo.enums.EstadoLetra;
 import com.Inmobiliaria.demo.repository.ContratoRepository;
 import com.Inmobiliaria.demo.repository.MoraRepository;
+import com.Inmobiliaria.demo.service.EmpresaService;
 import com.Inmobiliaria.demo.service.ReporteMoraService;
 import com.Inmobiliaria.demo.util.ReporteClientesMoraPdf;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class ReporteMoraServiceImpl implements ReporteMoraService {
 
     private final ContratoRepository contratoRepository;
     private final MoraRepository moraRepository;
+    private final EmpresaService empresaService;
 
     // ─────────────────────────────────────────────────────────────────────────
     //  LÓGICA DE NEGOCIO
@@ -311,6 +313,8 @@ public class ReporteMoraServiceImpl implements ReporteMoraService {
 
         List<DetalleLetraVencidaDTO> resultado = new ArrayList<>();
 
+        String nombreEmpresa = empresaService.obtenerActiva().getNombreLegal();
+
         for (LetraCambio letra : letrasFiltradas) {
             int diasMora = (int) java.time.temporal.ChronoUnit.DAYS.between(letra.getFechaVencimiento(), hoy);
             boolean venceHoy = letra.getFechaVencimiento().isEqual(hoy);
@@ -339,7 +343,8 @@ public class ReporteMoraServiceImpl implements ReporteMoraService {
                     diasMora,
                     montoMora,
                     venceHoy,
-                    estado
+                    estado,
+                    nombreEmpresa
             ));
         }
 

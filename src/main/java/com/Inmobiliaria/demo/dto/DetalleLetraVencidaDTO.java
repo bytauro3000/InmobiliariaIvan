@@ -19,4 +19,5 @@ public class DetalleLetraVencidaDTO {
     private BigDecimal       montoMora;
     private boolean          venceHoy;
     private String           estado;
+    private String           nombreEmpresa;
 }
