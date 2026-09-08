@@ -32,6 +32,7 @@ public class ReporteClientesMoraDTO {
         private BigDecimal       importeTotal;
         private String           moneda;
         private String           celular;
+        private List<String>     celulares;
         private Integer          idContrato;
         private String           nombrePrograma;
         private LocalDate        fechaVencimientoInicio; 
