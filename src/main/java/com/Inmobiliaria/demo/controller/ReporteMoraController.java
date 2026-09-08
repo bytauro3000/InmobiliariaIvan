@@ -1,14 +1,13 @@
 package com.Inmobiliaria.demo.controller;
 
+import com.Inmobiliaria.demo.dto.DetalleLetraVencidaDTO;
 import com.Inmobiliaria.demo.dto.ReporteClientesMoraDTO;
 import com.Inmobiliaria.demo.service.ReporteMoraService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -35,6 +34,12 @@ public class ReporteMoraController {
         return ResponseEntity.ok(reporte);
     }
 
+    @GetMapping("/letras-detalle/{idContrato}")
+    public ResponseEntity<List<DetalleLetraVencidaDTO>> obtenerDetalleLetrasVencidas(
+            @PathVariable Integer idContrato) {
+        List<DetalleLetraVencidaDTO> detalle = reporteMoraService.obtenerDetalleLetrasVencidas(idContrato);
+        return ResponseEntity.ok(detalle);
+    }
 
     @GetMapping("/clientes/pdf")
     public ResponseEntity<byte[]> descargarPdfClientesEnMora() {

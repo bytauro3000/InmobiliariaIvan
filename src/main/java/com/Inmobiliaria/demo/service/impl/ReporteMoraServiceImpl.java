@@ -1,11 +1,13 @@
 package com.Inmobiliaria.demo.service.impl;
 
+import com.Inmobiliaria.demo.dto.DetalleLetraVencidaDTO;
 import com.Inmobiliaria.demo.dto.ReporteClientesMoraDTO;
 import com.Inmobiliaria.demo.dto.ReporteClientesMoraDTO.FilaClienteMora;
 import com.Inmobiliaria.demo.entity.*;
 import com.Inmobiliaria.demo.enums.EstadoContrato;
 import com.Inmobiliaria.demo.enums.EstadoLetra;
 import com.Inmobiliaria.demo.repository.ContratoRepository;
+import com.Inmobiliaria.demo.repository.MoraRepository;
 import com.Inmobiliaria.demo.service.ReporteMoraService;
 import com.Inmobiliaria.demo.util.ReporteClientesMoraPdf;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ import java.util.stream.Collectors;
 public class ReporteMoraServiceImpl implements ReporteMoraService {
 
     private final ContratoRepository contratoRepository;
+    private final MoraRepository moraRepository;
 
     // ─────────────────────────────────────────────────────────────────────────
     //  LÓGICA DE NEGOCIO
@@ -265,6 +268,67 @@ public class ReporteMoraServiceImpl implements ReporteMoraService {
     public byte[] generarPdfClientesEnMora() {
         List<ReporteClientesMoraDTO> datos = obtenerClientesEnMora();
         return ReporteClientesMoraPdf.generar(datos);   // ← solo delega al util
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  DETALLE DE LETRAS VENCIDAS (para WhatsApp)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DetalleLetraVencidaDTO> obtenerDetalleLetrasVencidas(Integer idContrato) {
+        LocalDate hoy = LocalDate.now();
+
+        // Buscar el contrato con sus letras
+        Contrato contrato = contratoRepository.findById(idContrato)
+                .orElse(null);
+        if (contrato == null || contrato.getLetrasCambio() == null) {
+            return Collections.emptyList();
+        }
+
+        List<LetraCambio> todasLetras = contrato.getLetrasCambio().stream()
+                .filter(l -> l.getEstadoLetra() != EstadoLetra.PAGADO
+                        && l.getEstadoLetra() != EstadoLetra.ANULADO)
+                .filter(l -> l.getFechaVencimiento() != null)
+                .filter(l -> !l.getFechaVencimiento().isAfter(hoy))
+                .sorted(Comparator.comparingInt(l -> extraerNumeroLetra(l.getNumeroLetra())))
+                .collect(Collectors.toList());
+
+        List<DetalleLetraVencidaDTO> resultado = new ArrayList<>();
+
+        for (LetraCambio letra : todasLetras) {
+            int diasMora = (int) java.time.temporal.ChronoUnit.DAYS.between(letra.getFechaVencimiento(), hoy);
+            boolean venceHoy = letra.getFechaVencimiento().isEqual(hoy);
+
+            // Buscar mora existente para esta letra
+            BigDecimal montoMora = moraRepository.findByLetraIdLetra(letra.getIdLetra()).stream()
+                    .filter(m -> m.getEstadoMora() != com.Inmobiliaria.demo.enums.EstadoMora.ANULADO)
+                    .map(MoraLetra::getMontoMoraTotal)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            // Si no hay mora registrada, calcular proyectada
+            if (montoMora.compareTo(BigDecimal.ZERO) == 0 && diasMora > 0) {
+                BigDecimal porcentaje = letra.getImporte()
+                        .multiply(new BigDecimal("0.05"))
+                        .setScale(2, java.math.RoundingMode.HALF_UP);
+                BigDecimal diario = new BigDecimal(diasMora);
+                montoMora = porcentaje.add(diario);
+            }
+
+            String estado = venceHoy ? "VENCE_HOY" : "VENCIDA";
+
+            resultado.add(new DetalleLetraVencidaDTO(
+                    letra.getNumeroLetra(),
+                    letra.getImporte(),
+                    letra.getFechaVencimiento(),
+                    diasMora,
+                    montoMora,
+                    venceHoy,
+                    estado
+            ));
+        }
+
+        return resultado;
     }
 
     // ─────────────────────────────────────────────────────────────────────────

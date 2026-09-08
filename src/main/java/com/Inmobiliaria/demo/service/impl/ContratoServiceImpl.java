@@ -37,6 +37,7 @@ import com.Inmobiliaria.demo.enums.TipoOrigenComprobante;
 import com.Inmobiliaria.demo.enums.Moneda;
 import com.Inmobiliaria.demo.enums.TipoPropietario;
 import com.Inmobiliaria.demo.repository.ContratoRepository;
+import com.Inmobiliaria.demo.repository.ContratoClienteRepository;
 import com.Inmobiliaria.demo.repository.LetraCambioRepository;
 import com.Inmobiliaria.demo.repository.PagoInicialRepository;
 import com.Inmobiliaria.demo.repository.PagoInscripcionComprobanteRepository;
@@ -62,6 +63,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class ContratoServiceImpl implements ContratoService {
 
     private final ContratoRepository contratoRepository;
+    private final ContratoClienteRepository contratoClienteRepository;
     private final ContratoClienteService contratoClienteService;
     private final ContratoLoteService contratoLoteService;
     private final ClienteService clienteService;
@@ -1015,9 +1017,15 @@ public class ContratoServiceImpl implements ContratoService {
             Moneda moneda = contrato.getMoneda() != null ? contrato.getMoneda() : Moneda.USD;
 
             String clienteNombre = "-";
-            if (contrato.getClientes() != null && !contrato.getClientes().isEmpty()) {
-                var c = contrato.getClientes().iterator().next().getCliente();
-                clienteNombre = c.getNombre() + " " + c.getApellidos();
+            try {
+                var clientesCC = contratoClienteRepository
+                        .findByContratoIdContratoInOrderByOrdenAsc(List.of(contrato.getIdContrato()));
+                if (clientesCC != null && !clientesCC.isEmpty()) {
+                    var c = clientesCC.get(0).getCliente();
+                    clienteNombre = c.getNombre() + " " + c.getApellidos();
+                }
+            } catch (Exception ex) {
+                log.warn("No se pudo obtener cliente del contrato {}: {}", contrato.getIdContrato(), ex.getMessage());
             }
 
             String detalle = "Pago inicial / cuota del contrato";
