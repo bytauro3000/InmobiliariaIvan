@@ -31,7 +31,5 @@ public class EmpresaRequestDTO {
     private BigDecimal moraMontoDiario;
     private BigDecimal moraTasaDiaria;
 
-    private String apisperuEnvironment;
-    private String whatsappDeviceId;
     private String notificacionEmail;
 }

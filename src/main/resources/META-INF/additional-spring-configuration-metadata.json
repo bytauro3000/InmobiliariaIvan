@@ -75,26 +75,6 @@
     "description": "A description for 'apisperu.environment'"
   },
   {
-    "name": "whatsapp.base-url",
-    "type": "java.lang.String",
-    "description": "A description for 'whatsapp.base-url'"
-  },
-  {
-    "name": "whatsapp.password",
-    "type": "java.lang.String",
-    "description": "A description for 'whatsapp.password'"
-  },
-  {
-    "name": "whatsapp.username",
-    "type": "java.lang.String",
-    "description": "A description for 'whatsapp.username'"
-  },
-  {
-    "name": "whatsapp.device-id",
-    "type": "java.lang.String",
-    "description": "A description for 'whatsapp.device-id'"
-  },
-  {
     "name": "app.pago.pin",
     "type": "java.lang.String",
     "description": "A description for 'app.pago.pin'"

@@ -95,12 +95,6 @@ public class Empresa {
     @Column(name = "departamento", length = 100)
     private String departamento;
 
-    @Column(name = "apisperu_environment", length = 20)
-    private String apisperuEnvironment;
-
-    @Column(name = "whatsapp_device_id", length = 100)
-    private String whatsappDeviceId;
-
     @Column(name = "notificacion_email", length = 200)
     private String notificacionEmail;
 

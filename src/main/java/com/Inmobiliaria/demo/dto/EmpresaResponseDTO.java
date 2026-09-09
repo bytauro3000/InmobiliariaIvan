@@ -33,8 +33,6 @@ public class EmpresaResponseDTO {
     private BigDecimal moraMontoDiario;
     private BigDecimal moraTasaDiaria;
 
-    private String apisperuEnvironment;
-    private String whatsappDeviceId;
     private String notificacionEmail;
     private Boolean activa;
     private LocalDateTime fechaRegistro;
