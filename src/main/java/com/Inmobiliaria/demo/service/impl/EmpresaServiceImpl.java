@@ -77,8 +77,6 @@ public class EmpresaServiceImpl implements EmpresaService {
         if (datos.getMoraPorcentaje() != null) existente.setMoraPorcentaje(datos.getMoraPorcentaje());
         if (datos.getMoraMontoDiario() != null) existente.setMoraMontoDiario(datos.getMoraMontoDiario());
         if (datos.getMoraTasaDiaria() != null) existente.setMoraTasaDiaria(datos.getMoraTasaDiaria());
-        if (datos.getApisperuEnvironment() != null) existente.setApisperuEnvironment(datos.getApisperuEnvironment());
-        if (datos.getWhatsappDeviceId() != null) existente.setWhatsappDeviceId(datos.getWhatsappDeviceId());
         if (datos.getNotificacionEmail() != null) existente.setNotificacionEmail(datos.getNotificacionEmail());
         if (datos.getActiva() != null) {
             if (Boolean.TRUE.equals(datos.getActiva())) {

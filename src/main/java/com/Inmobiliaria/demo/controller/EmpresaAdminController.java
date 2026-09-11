@@ -77,7 +77,6 @@ public class EmpresaAdminController {
         dto.setLogoUrl(e.getLogoUrl());
         dto.setLogoSmallUrl(e.getLogoSmallUrl());
         dto.setPaginaWeb(e.getPaginaWeb());
-        dto.setWhatsapp(e.getCelular());
         dto.setRepresentanteLegal(e.getRepresentanteLegal());
         dto.setRepresentanteDni(e.getRepresentanteDni());
         dto.setPartidaElectronica(e.getPartidaElectronica());
@@ -89,8 +88,6 @@ public class EmpresaAdminController {
         dto.setMoraPorcentaje(e.getMoraPorcentaje());
         dto.setMoraMontoDiario(e.getMoraMontoDiario());
         dto.setMoraTasaDiaria(e.getMoraTasaDiaria());
-        dto.setApisperuEnvironment(e.getApisperuEnvironment());
-        dto.setWhatsappDeviceId(e.getWhatsappDeviceId());
         dto.setNotificacionEmail(e.getNotificacionEmail());
         dto.setActiva(e.getActiva());
         dto.setFechaRegistro(e.getFechaRegistro());
@@ -124,8 +121,6 @@ public class EmpresaAdminController {
         e.setMoraPorcentaje(dto.getMoraPorcentaje());
         e.setMoraMontoDiario(dto.getMoraMontoDiario());
         e.setMoraTasaDiaria(dto.getMoraTasaDiaria());
-        e.setApisperuEnvironment(dto.getApisperuEnvironment());
-        e.setWhatsappDeviceId(dto.getWhatsappDeviceId());
         e.setNotificacionEmail(dto.getNotificacionEmail());
         return e;
     }

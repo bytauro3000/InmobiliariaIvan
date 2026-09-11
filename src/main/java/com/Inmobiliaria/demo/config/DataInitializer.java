@@ -56,8 +56,6 @@ public class DataInitializer implements CommandLineRunner {
         e.setProvincia("LIMA");
         e.setDepartamento("LIMA");
 
-        e.setApisperuEnvironment("produccion");
-        e.setWhatsappDeviceId("InmobiliariaIVAN");
         e.setNotificacionEmail("bytauro2016@gmail.com");
 
         e.setActiva(true);

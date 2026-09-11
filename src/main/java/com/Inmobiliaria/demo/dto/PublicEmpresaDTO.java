@@ -16,5 +16,4 @@ public class PublicEmpresaDTO {
     private String logoUrl;
     private String logoSmallUrl;
     private String paginaWeb;
-    private String whatsapp;
 }

@@ -18,7 +18,6 @@ public class EmpresaRequestDTO {
     private String logoUrl;
     private String logoSmallUrl;
     private String paginaWeb;
-    private String whatsapp;
     private String representanteLegal;
     private String representanteDni;
     private String partidaElectronica;

@@ -33,7 +33,6 @@ public class PublicEmpresaController {
         dto.setLogoUrl(e.getLogoUrl());
         dto.setLogoSmallUrl(e.getLogoSmallUrl());
         dto.setPaginaWeb(e.getPaginaWeb());
-        dto.setWhatsapp(e.getCelular());
 
         return ResponseEntity.ok(dto);
     }
