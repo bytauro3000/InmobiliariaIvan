@@ -209,7 +209,7 @@ public class ContratoNapolePdfMerruic {
 		intro.add(", identificado con ");
 		intro.add(new Text("DNI N° " + representanteDni()).setFont(arialNarrowBold));
 		intro.add(", a quien en adelante se le denominará ");
-		intro.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
+		intro.add(new Text("EL VENDEDOR").setFont(arialNarrowBold));
 		intro.add(" y de la otra parte ");
 
 		for (com.itextpdf.layout.element.IElement el : bloqueCompradores.getChildren()) {
@@ -238,13 +238,13 @@ public class ContratoNapolePdfMerruic {
 				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
 		primeraCuerpo.add(new Text("PRIMERA: ").setFont(arialNarrowBold));
-		primeraCuerpo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
+		primeraCuerpo.add(new Text(empresa()).setFont(arialNarrowBold));
 		primeraCuerpo.add(" ostenta a su cargo la posesión física, continua, pública y pacífica de un terreno de 17,999.94 m2, PARCELA AGRICOLA N° 10 U.C. 11444, ZONA PARCELACION GALLINAZO PUENTE PIEDRA equivalente a un área física de 21,623.49 m2, cuya inscripción registral consta en la partida electrónica N°");
 		primeraCuerpo.add(new Text("49014934").setFont(arialNarrowBold));
 		primeraCuerpo.add(" del registro de propiedad inmuebles de Lima-SUNARP. CON CODIGO DE contribuyente Nº");
 		primeraCuerpo.add(new Text("175516").setFont(arialNarrowBold));
 		primeraCuerpo.add(", Distrito de Puente Piedra, Provincia y Departamento de Lima. ");
-		primeraCuerpo.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
+		primeraCuerpo.add(new Text(empresa()).setFont(arialNarrowBold));
 		primeraCuerpo.add(" con fecha 24/02/2023 celebraron el CONTRATO PRIVADO DE COMPRA Y VENTA DE TERRENO RÚSTICO a fin que la empresa en mención realice la lotización del 50.42% de acciones y derechos que equivale a un área de 17,999.94m2 de terreno, la misma que encuentra dentro del área de mayor extensión a que hace referencia esta cláusula, en ese sentido, la empresa, sobre el referido terreno viene desarrollando el PROGRAMA DE VIVIENDA ");
 		primeraCuerpo.add(new Text("\u201cNAPOLE\u201d").setFont(arialNarrowBold));
 		primeraCuerpo.add(" la misma que se distribuye en lotes y manzanas con sus respectivas áreas conforme al plano de lotización.");
@@ -265,8 +265,8 @@ public class ContratoNapolePdfMerruic {
 
 		segundaIntro.add(new Text("SEGUNDA: ").setFont(arialNarrowBold));
 		segundaIntro.add("Por medio del presente documento ");
-		segundaIntro.add(new Text("LA VENDEDORA").setFont(arialNarrowBold));
-		segundaIntro.add(" da en venta real y enajenación perpetua a favor de ");
+		segundaIntro.add(new Text("EL VENDEDOR").setFont(arialNarrowBold));
+		segundaIntro.add(" dan en venta real y enajenación perpetua a favor de ");
 		segundaIntro.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
 		segundaIntro.add(" el lote de terreno rústico ubicado en el PROGRAMA DE VIVIENDA NAPOLE, Manzana ");
 		segundaIntro.add(new Text("\u201c" + lote.getManzana() + "\u201d").setFont(arialNarrowBold));
