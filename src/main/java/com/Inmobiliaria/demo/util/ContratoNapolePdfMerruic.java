@@ -942,59 +942,51 @@ public class ContratoNapolePdfMerruic {
 				.setMarginTop(50f)
 				.setKeepTogether(true);
 
-		Table fila1 = new Table(UnitValue.createPercentArray(new float[]{45f, 10f, 45f}))
-				.useAllAvailableWidth()
-				.setBorder(Border.NO_BORDER);
+		// Agrupar titulares de 2 en 2 para mostrar en la misma fila
+		for (int i = 0; i < titulares.size(); i += 2) {
+			ClienteResponseDTO c1 = titulares.get(i);
+			ClienteResponseDTO c2 = (i + 1 < titulares.size()) ? titulares.get(i + 1) : null;
 
-		ClienteResponseDTO c1 = titulares.get(0);
-		Cell celdaC1 = new Cell().setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.CENTER).setPadding(0);
+			Table fila = new Table(UnitValue.createPercentArray(new float[]{45f, 10f, 45f}))
+					.useAllAvailableWidth()
+					.setBorder(Border.NO_BORDER);
 
-		String nombreFirmaC1 = c1.getNombre().toUpperCase() + " " + c1.getApellidos().toUpperCase();
-		float anchoLineaC1 = calcularAnchoLineaFirma(nombreFirmaC1);
+			// Columna izquierda: primer titular
+			Cell celdaC1 = new Cell().setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.CENTER).setPadding(0);
+			String nombreFirmaC1 = c1.getNombre().toUpperCase() + " " + c1.getApellidos().toUpperCase();
+			float anchoLineaC1 = calcularAnchoLineaFirma(nombreFirmaC1);
 
-		Paragraph pLineaC1 = new Paragraph().setBorderTop(new com.itextpdf.layout.borders.SolidBorder(1f))
-				.setWidth(anchoLineaC1).setMarginBottom(2)
-				.setHorizontalAlignment(HorizontalAlignment.CENTER);
+			Paragraph pLineaC1 = new Paragraph().setBorderTop(new com.itextpdf.layout.borders.SolidBorder(1f))
+					.setWidth(anchoLineaC1).setMarginBottom(2)
+					.setHorizontalAlignment(HorizontalAlignment.CENTER);
 
-		celdaC1.add(pLineaC1);
-		celdaC1.add(new Paragraph(nombreFirmaC1).setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
-		celdaC1.add(new Paragraph(etiquetaDocumento(c1) + c1.getNumDoc()).setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
+			celdaC1.add(pLineaC1);
+			celdaC1.add(new Paragraph(nombreFirmaC1).setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
+			celdaC1.add(new Paragraph(etiquetaDocumento(c1) + c1.getNumDoc()).setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
+			fila.addCell(celdaC1);
 
-		if (titulares.size() == 1) {
-			celdaC1.add(new Paragraph("\u201c" + etiquetaComprador + "\u201d").setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f));
-		}
-		fila1.addCell(celdaC1);
-		fila1.addCell(new Cell().setBorder(Border.NO_BORDER));
-		fila1.addCell(new Cell().setBorder(Border.NO_BORDER));
+			// Columna centro: espacio
+			fila.addCell(new Cell().setBorder(Border.NO_BORDER));
 
-		contenedorPrincipal.addCell(new Cell().add(fila1).setBorder(Border.NO_BORDER));
+			// Columna derecha: segundo titular (si existe)
+			if (c2 != null) {
+				Cell celdaC2 = new Cell().setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.CENTER).setPadding(0);
+				String nombreFirmaC2 = c2.getNombre().toUpperCase() + " " + c2.getApellidos().toUpperCase();
+				float anchoLineaC2 = calcularAnchoLineaFirma(nombreFirmaC2);
 
-		if (titulares.size() > 1) {
-			for (int i = 1; i < titulares.size(); i++) {
-				ClienteResponseDTO ci = titulares.get(i);
-				Table tablaExtra = new Table(new float[]{45f})
-						.setWidth(UnitValue.createPercentValue(45))
-						.setBorder(Border.NO_BORDER)
-						.setMarginTop(50f);
-
-				Cell celdaExtra = new Cell().setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.CENTER).setPadding(0);
-				String nombreFirmaExtra = ci.getNombre().toUpperCase() + " " + ci.getApellidos().toUpperCase();
-				float anchoLineaExtra = calcularAnchoLineaFirma(nombreFirmaExtra);
-				Paragraph pLineaExtra = new Paragraph().setBorderTop(new com.itextpdf.layout.borders.SolidBorder(1f))
-						.setWidth(anchoLineaExtra).setMarginBottom(2)
+				Paragraph pLineaC2 = new Paragraph().setBorderTop(new com.itextpdf.layout.borders.SolidBorder(1f))
+						.setWidth(anchoLineaC2).setMarginBottom(2)
 						.setHorizontalAlignment(HorizontalAlignment.CENTER);
 
-				celdaExtra.add(pLineaExtra);
-				celdaExtra.add(new Paragraph(nombreFirmaExtra).setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
-				celdaExtra.add(new Paragraph(etiquetaDocumento(ci) + ci.getNumDoc()).setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
-
-				if (i == titulares.size() - 1) {
-					celdaExtra.add(new Paragraph("\u201c" + etiquetaComprador + "\u201d").setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f));
-				}
-
-				tablaExtra.addCell(celdaExtra);
-				contenedorPrincipal.addCell(new Cell().add(tablaExtra).setBorder(Border.NO_BORDER));
+				celdaC2.add(pLineaC2);
+				celdaC2.add(new Paragraph(nombreFirmaC2).setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
+				celdaC2.add(new Paragraph(etiquetaDocumento(c2) + c2.getNumDoc()).setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
+				fila.addCell(celdaC2);
+			} else {
+				fila.addCell(new Cell().setBorder(Border.NO_BORDER));
 			}
+
+			contenedorPrincipal.addCell(new Cell().add(fila).setBorder(Border.NO_BORDER));
 		}
 
 		// --- AVALES (Garantes) — firman como "LA AVAL" ---
