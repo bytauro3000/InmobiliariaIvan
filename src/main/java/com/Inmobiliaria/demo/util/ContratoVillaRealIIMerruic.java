@@ -835,12 +835,25 @@ public class ContratoVillaRealIIMerruic {
 	}
 
 	private static float calcularAnchoLineaFirma(String nombreCompleto) {
-		float anchoPorCaracter = 6.5f;
-		float padding = 40f;
-		float minAncho = 150f;
-		float maxAncho = 350f;
-		float anchoCalculado = nombreCompleto.length() * anchoPorCaracter + padding;
-		return Math.max(minAncho, Math.min(maxAncho, anchoCalculado));
+		// Ancho de columna = 45% de pagina A4 (595pt) = 267.75pt
+		float anchoColumna = 267.75f;
+		int len = nombreCompleto.length();
+		// Calcular proporcion exacta segun largo del nombre
+		float proporcion;
+		if (len <= 15) {
+			proporcion = 0.50f;  // 50% de la columna
+		} else if (len <= 20) {
+			proporcion = 0.60f;  // 60%
+		} else if (len <= 25) {
+			proporcion = 0.70f;  // 70%
+		} else if (len <= 30) {
+			proporcion = 0.80f;  // 80%
+		} else if (len <= 35) {
+			proporcion = 0.90f;  // 90%
+		} else {
+			proporcion = 1.00f;  // 100%
+		}
+		return anchoColumna * proporcion;
 	}
 
 	private static void agregarBloqueFirmas(Document document, List<ClienteResponseDTO> titulares,
