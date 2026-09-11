@@ -49,6 +49,7 @@ import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.util.ContratoFloridaPdf;
 import com.Inmobiliaria.demo.util.ContratoContadoFloridaPdf;
 import com.Inmobiliaria.demo.util.ContratoNapolePdfMerruic;
+import com.Inmobiliaria.demo.util.ContratoVillaRealIIMerruic;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 
@@ -715,24 +716,25 @@ public class ContratoServiceImpl implements ContratoService {
                 : "";
         String nombreProgUp = (nombrePrograma != null) ? nombrePrograma.toUpperCase() : "";
 
-        // Plantilla NAPOLE (MERRUIC). Uso normal: programas cuyo nombre contiene "NAPOLE".
-        // EXCEPCIÓN TEMPORAL: el programa de pruebas "PROGRAMA PRUEBAS" (solo MERRUIC)
-        // también usa la plantilla Napole para validar el contrato. Se debe quitar
-        // cuando ya no se necesite la prueba.
         String rucActivo = empresaService.obtenerActiva().getRuc();
         boolean esMerruic = "20552273223".equals(rucActivo);
-        boolean esPruebasTemporal = esMerruic && nombreProgUp.contains("PRUEBAS");
+        boolean esFinanciado = dto.getTipoContrato() == com.Inmobiliaria.demo.enums.TipoContrato.FINANCIADO
+                || (dto.getLetras() != null && !dto.getLetras().isEmpty());
 
-        if (nombreProgUp.contains("NAPOLE") || esPruebasTemporal) {
+        // Plantilla NAPOLE (MERRUIC): solo FINANCIADO + programa NAPOLE
+        if (esMerruic && esFinanciado && nombreProgUp.contains("NAPOLE")) {
             return ContratoNapolePdfMerruic.generarContratoNapole(dto, primeraLetra);
         }
-        // CONTRATO AL CONTADO (IVAN / Florida): no tiene letras, precio cancelado
-        // a la suscripción y termina con el CERTIFICADO DE CANCELACION.
-        if (dto.getTipoContrato() == com.Inmobiliaria.demo.enums.TipoContrato.CONTADO) {
-            return ContratoContadoFloridaPdf.generarContratoContadoFlorida(dto);
+        // Plantilla VILLA REAL II (MERRUIC): solo FINANCIADO + programa VILLA REAL II
+        if (esMerruic && esFinanciado && nombreProgUp.contains("VILLA REAL II")) {
+            return ContratoVillaRealIIMerruic.generarContratoVillaRealII(dto, primeraLetra);
         }
-        // LA FLORIDA DE TORRE BLANCA (cualquiera de sus etapas) y demás programas
-        return ContratoFloridaPdf.generarContratoFlorida(dto, primeraLetra, fechaCancelacion);
+        // No existe plantilla para este programa / tipo de contrato
+        throw new NegocioException(
+                "No existe plantilla de contrato para el programa \"" + nombrePrograma
+                + "\" y tipo " + dto.getTipoContrato()
+                + ". Por favor, comuníquese con su proveedor para registrar la plantilla."
+        );
     }
 
     /**
