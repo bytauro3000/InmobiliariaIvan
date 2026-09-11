@@ -909,6 +909,15 @@ public class ContratoPalmasDeMallorcaPdfMerruic {
 		return "DNI N°";
 	}
 
+	private static float calcularAnchoLineaFirma(String nombreCompleto) {
+		float anchoPorCaracter = 6.5f;
+		float padding = 40f;
+		float minAncho = 150f;
+		float maxAncho = 350f;
+		float anchoCalculado = nombreCompleto.length() * anchoPorCaracter + padding;
+		return Math.max(minAncho, Math.min(maxAncho, anchoCalculado));
+	}
+
 	private static void agregarBloqueFirmas(Document document, List<ClienteResponseDTO> titulares,
                                             List<ClienteResponseDTO> avales, PdfFont arialNarrowBold, String etiquetaComprador) {
 		Table contenedorPrincipal = new Table(1)
@@ -924,12 +933,15 @@ public class ContratoPalmasDeMallorcaPdfMerruic {
 		ClienteResponseDTO c1 = titulares.get(0);
 		Cell celdaC1 = new Cell().setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.CENTER).setPadding(0);
 
+		String nombreFirmaC1 = c1.getNombre().toUpperCase() + " " + c1.getApellidos().toUpperCase();
+		float anchoLineaC1 = calcularAnchoLineaFirma(nombreFirmaC1);
+
 		Paragraph pLineaC1 = new Paragraph().setBorderTop(new com.itextpdf.layout.borders.SolidBorder(1f))
-				.setWidth(200f).setMarginBottom(2)
+				.setWidth(anchoLineaC1).setMarginBottom(2)
 				.setHorizontalAlignment(HorizontalAlignment.CENTER);
 
 		celdaC1.add(pLineaC1);
-		celdaC1.add(new Paragraph(c1.getNombre().toUpperCase() + " " + c1.getApellidos().toUpperCase()).setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
+		celdaC1.add(new Paragraph(nombreFirmaC1).setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
 		celdaC1.add(new Paragraph(etiquetaDocumento(c1) + c1.getNumDoc()).setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
 
 		if (titulares.size() == 1) {
@@ -950,12 +962,14 @@ public class ContratoPalmasDeMallorcaPdfMerruic {
 						.setMarginTop(50f);
 
 				Cell celdaExtra = new Cell().setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.CENTER).setPadding(0);
+				String nombreFirmaExtra = ci.getNombre().toUpperCase() + " " + ci.getApellidos().toUpperCase();
+				float anchoLineaExtra = calcularAnchoLineaFirma(nombreFirmaExtra);
 				Paragraph pLineaExtra = new Paragraph().setBorderTop(new com.itextpdf.layout.borders.SolidBorder(1f))
-						.setWidth(200f).setMarginBottom(2)
+						.setWidth(anchoLineaExtra).setMarginBottom(2)
 						.setHorizontalAlignment(HorizontalAlignment.CENTER);
 
 				celdaExtra.add(pLineaExtra);
-				celdaExtra.add(new Paragraph(ci.getNombre().toUpperCase() + " " + ci.getApellidos().toUpperCase()).setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
+				celdaExtra.add(new Paragraph(nombreFirmaExtra).setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
 				celdaExtra.add(new Paragraph(etiquetaDocumento(ci) + ci.getNumDoc()).setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
 
 				if (i == titulares.size() - 1) {
@@ -975,12 +989,14 @@ public class ContratoPalmasDeMallorcaPdfMerruic {
 					.setMarginTop(50f);
 
 			Cell celdaAval = new Cell().setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.CENTER).setPadding(0);
+			String nombreFirmaAval = aval.getNombre().toUpperCase() + " " + aval.getApellidos().toUpperCase();
+			float anchoLineaAval = calcularAnchoLineaFirma(nombreFirmaAval);
 			Paragraph pLineaAval = new Paragraph().setBorderTop(new com.itextpdf.layout.borders.SolidBorder(1f))
-					.setWidth(200f).setMarginBottom(2)
+					.setWidth(anchoLineaAval).setMarginBottom(2)
 					.setHorizontalAlignment(HorizontalAlignment.CENTER);
 
 			celdaAval.add(pLineaAval);
-			celdaAval.add(new Paragraph(aval.getNombre().toUpperCase() + " " + aval.getApellidos().toUpperCase()).setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
+			celdaAval.add(new Paragraph(nombreFirmaAval).setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
 			celdaAval.add(new Paragraph(etiquetaDocumento(aval) + aval.getNumDoc()).setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f).setMarginBottom(0));
 			celdaAval.add(new Paragraph("\u201cLA AVAL\u201d").setFont(arialNarrowBold).setFontSize(12).setFixedLeading(12f));
 
