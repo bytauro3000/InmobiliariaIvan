@@ -58,7 +58,10 @@ public class ContratoVillaRealIIMerruic {
 	private static String representanteLegal() { return EmpresaContext.empresaService.obtenerActiva().getRepresentanteLegal(); }
 	private static String representanteDni() { return EmpresaContext.empresaService.obtenerActiva().getRepresentanteDni(); }
 	private static String partidaElectronica() { return EmpresaContext.empresaService.obtenerActiva().getPartidaElectronica(); }
-	private static String direccion() { return EmpresaPdfUtil.direccionCompleta(); }
+	private static String direccion() {
+		var e = EmpresaContext.empresaService.obtenerActiva();
+		return (e.getDireccion() != null && !e.getDireccion().isBlank()) ? e.getDireccion().trim() : "";
+	}
 	private static String distrito() { return EmpresaContext.empresaService.obtenerActiva().getDistrito(); }
 	private static String departamento() { return EmpresaContext.empresaService.obtenerActiva().getDepartamento(); }
 
