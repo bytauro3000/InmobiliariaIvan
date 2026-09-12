@@ -288,7 +288,7 @@ public class ContratoPalmasDeMallorcaPdfMerruic {
 		Table tablaLinderos = new Table(UnitValue.createPercentArray(new float[]{30f, 45f, 25f}))
 				.useAllAvailableWidth()
 				.setBorder(Border.NO_BORDER)
-				.setMarginBottom(20);
+				.setMarginBottom(12);
 
 		agregarFilaLinderos(tablaLinderos, "Por el frente", lote.getColindanteNorte(), "Con    " + lote.getAncho1() + "  m.l.", arialNarrow);
 		agregarFilaLinderos(tablaLinderos, "Por la derecha", lote.getColindanteEste(), "Con  " + lote.getLargo1() + "  m.l.", arialNarrow);
@@ -345,7 +345,7 @@ public class ContratoPalmasDeMallorcaPdfMerruic {
 			Paragraph inicialPara = new Paragraph()
 					.setTextAlignment(TextAlignment.JUSTIFIED)
 					.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f)
-					.setMarginLeft(52).setFirstLineIndent(-12).setMarginTop(0);
+					.setMarginLeft(52).setFirstLineIndent(-12).setMarginTop(12);
 			inicialPara.add(new Text("a. ").setFont(arialNarrowBold));
 			inicialPara.add("Cuota inicial de ");
 			BigDecimal inicial = contrato.getInicial() != null ? contrato.getInicial() : BigDecimal.ZERO;
@@ -357,7 +357,7 @@ public class ContratoPalmasDeMallorcaPdfMerruic {
 			Paragraph saldoPara = new Paragraph()
 					.setTextAlignment(TextAlignment.JUSTIFIED)
 					.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f)
-					.setMarginLeft(52).setFirstLineIndent(-12).setMarginTop(0);
+					.setMarginLeft(52).setFirstLineIndent(-12).setMarginTop(12);
 
 			saldoPara.add(new Text("b. ").setFont(arialNarrowBold));
 			saldoPara.add("El saldo de ");
@@ -403,7 +403,7 @@ public class ContratoPalmasDeMallorcaPdfMerruic {
 			Paragraph lugarPago = new Paragraph()
 					.setTextAlignment(TextAlignment.JUSTIFIED)
 					.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f)
-					.setMarginLeft(52).setFirstLineIndent(-12).setMarginTop(0);
+					.setMarginLeft(52).setFirstLineIndent(-12).setMarginTop(12);
 			lugarPago.add(new Text("c. ").setFont(arialNarrowBold));
 			lugarPago.add("El lugar de pago de todas las armadas se hará mediante depósito o efectivo en el domicilio de ");
 			lugarPago.add(new Text("EL TRANSFIRIENTE").setFont(arialNarrowBold));
@@ -1046,6 +1046,6 @@ public class ContratoPalmasDeMallorcaPdfMerruic {
 	 */
 	private static void agregarEncabezadoClausula(Document document, PdfFont arialNarrowBold, String titulo) {
 		document.add(new Paragraph().add(new Text(titulo).setFont(arialNarrowBold).setUnderline())
-				.setFontSize(12).setFixedLeading(12).setMarginTop(1).setMarginBottom(0));
+				.setFontSize(12).setFixedLeading(12).setMarginTop(12).setMarginBottom(0));
 	}
 }
