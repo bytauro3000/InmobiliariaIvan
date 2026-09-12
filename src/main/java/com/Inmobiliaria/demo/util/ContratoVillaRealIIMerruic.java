@@ -964,6 +964,6 @@ public class ContratoVillaRealIIMerruic {
 	 */
 	private static void agregarEncabezadoClausula(Document document, PdfFont arialNarrowBold, String titulo) {
 		document.add(new Paragraph().add(new Text(titulo).setFont(arialNarrowBold).setUnderline())
-				.setFontSize(12).setFixedLeading(12).setMarginTop(10).setMarginBottom(0));
+				.setFontSize(12).setFixedLeading(12).setMarginTop(1).setMarginBottom(0));
 	}
 }
