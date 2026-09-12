@@ -266,8 +266,7 @@ public class ContratoPalmasDeMallorcaPdfMerruic {
 
 		document.add(divSegunda);
 
-		// ── TERCERA: OBJETO DEL CONTRATO (Venta del terreno) ────────────────
-		agregarEncabezadoClausula(document, arialNarrowBold, "OBJETO DEL CONTRATO:");
+		// ── TERCERA: Venta del terreno ────────────────────────────────────
 
 		Paragraph terceraIntro = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
@@ -289,6 +288,19 @@ public class ContratoPalmasDeMallorcaPdfMerruic {
 		terceraIntro.add(" situado en el Distrito de Carabayllo, Provincia y Departamento de Lima, encerrado dentro de los siguientes linderos y medidas perimétricas:");
 
 		document.add(terceraIntro);
+
+		// ── Tabla de linderos ──────────────────────────────────────────────
+		Table tablaLinderos = new Table(UnitValue.createPercentArray(new float[]{30f, 45f, 25f}))
+				.useAllAvailableWidth()
+				.setBorder(Border.NO_BORDER)
+				.setMarginBottom(20);
+
+		agregarFilaLinderos(tablaLinderos, "Por el frente", lote.getColindanteNorte(), "Con    " + lote.getAncho1() + "  m.l.", arialNarrow);
+		agregarFilaLinderos(tablaLinderos, "Por la derecha", lote.getColindanteEste(), "Con  " + lote.getLargo1() + "  m.l.", arialNarrow);
+		agregarFilaLinderos(tablaLinderos, "Por la Izquierda", lote.getColindanteOeste(), "Con    " + lote.getLargo2() + "  m.l.", arialNarrow);
+		agregarFilaLinderos(tablaLinderos, "Por el fondo", lote.getColindanteSur(), "Con    " + lote.getAncho2() + "  m.l.", arialNarrow);
+
+		document.add(tablaLinderos);
 
 		// ── CUARTA: PRECIO Y FORMA DE PAGO ────────────────────────────────
 		verificarEspacioYSalto(document, pdf, 0.15f);
