@@ -71,7 +71,7 @@ public class ContratoPalmasDeMallorcaPdfMerruic {
 		PdfWriter writer = new PdfWriter(out);
 		PdfDocument pdf = new PdfDocument(writer);
 		Document document = new Document(pdf);
-		document.setMargins(122, 85, 57, 85);
+		document.setMargins(92, 73, 57, 99);
 
 		PdfFont arialNarrow;      // Arial Narrow regular (texto, SIN cursiva)
 		PdfFont arialNarrowBold;  // Arial Narrow negrita (énfasis, SIN cursiva)
