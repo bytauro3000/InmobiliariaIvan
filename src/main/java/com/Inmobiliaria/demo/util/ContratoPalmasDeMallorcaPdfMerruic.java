@@ -173,12 +173,7 @@ public class ContratoPalmasDeMallorcaPdfMerruic {
 				.setTextAlignment(TextAlignment.CENTER)
 				.setFixedLeading(12).setMarginBottom(0));
 
-		document.add(new Paragraph("CONTRATO PRIVADO DE TRANSFERENCIA DE POSESION DE TERRENO RÚSTICO EN FUTURA")
-				.setFont(arialNarrowBold).setFontSize(12).setUnderline()
-				.setTextAlignment(TextAlignment.CENTER)
-				.setFixedLeading(12).setMarginBottom(0));
-
-		document.add(new Paragraph("HABILITACIÓN URBANA")
+		document.add(new Paragraph("CONTRATO PRIVADO DE TRANSFERENCIA DE POSESION DE TERRENO RÚSTICO EN FUTURA HABILITACIÓN URBANA")
 				.setFont(arialNarrowBold).setFontSize(12).setUnderline()
 				.setTextAlignment(TextAlignment.CENTER)
 				.setFixedLeading(12).setMarginBottom(15));
