@@ -722,6 +722,21 @@ public class ContratoServiceImpl implements ContratoService {
         boolean esFinanciado = dto.getTipoContrato() == com.Inmobiliaria.demo.enums.TipoContrato.FINANCIADO
                 || (dto.getLetras() != null && !dto.getLetras().isEmpty());
 
+        // Obtener ID del programa del primer lote
+        Integer idPrograma = (dto.getLotes() != null && !dto.getLotes().isEmpty())
+                ? dto.getLotes().get(0).getIdPrograma()
+                : null;
+
+        // Plantilla FLORIDA (cualquier RUC): FINANCIADO o CONTADO + programas Florida
+        boolean esFlorida = idPrograma != null
+                && (idPrograma == 4 || idPrograma == 30006 || idPrograma == 60006);
+        if (esFlorida && esFinanciado) {
+            return ContratoFloridaPdf.generarContratoFlorida(dto, primeraLetra);
+        }
+        if (esFlorida && !esFinanciado) {
+            return ContratoContadoFloridaPdf.generarContratoContadoFlorida(dto);
+        }
+
         // Plantilla NAPOLE (MERRUIC): solo FINANCIADO + programa NAPOLE
         if (esMerruic && esFinanciado && nombreProgUp.contains("NAPOLE")) {
             return ContratoNapolePdfMerruic.generarContratoNapole(dto, primeraLetra);
