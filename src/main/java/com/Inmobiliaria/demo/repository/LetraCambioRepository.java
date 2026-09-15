@@ -97,7 +97,8 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
             "MAX(CASE WHEN clientes.client_rank = 2 THEN clientes.apellidos END) AS cliente2_apellidos, " +
             "MAX(CASE WHEN clientes.client_rank = 2 THEN clientes.numDocumento END) AS cliente2_numDocumento, " +
             "MAX(CASE WHEN clientes.client_rank = 1 THEN clientes.direccion END) AS cliente1_direccion, " +
-            "MAX(CASE WHEN clientes.client_rank = 1 THEN clienteDistrito.nombre END) AS cliente1_distrito " +
+            "MAX(CASE WHEN clientes.client_rank = 1 THEN clienteDistrito.nombre END) AS cliente1_distrito, " +
+            "MAX(CASE WHEN clientes.client_rank = 1 THEN clientes.celular END) AS cliente1_celular " +
             "FROM letra_cambio lc " +
             "JOIN distrito d ON lc.id_distrito = d.id_distrito " +
             "JOIN contrato c ON lc.id_contrato = c.id_contrato " +
@@ -108,6 +109,7 @@ public interface LetraCambioRepository extends JpaRepository<LetraCambio, Intege
             "        cl.apellidos, " +
             "        cl.numDocumento, " +
             "        cl.direccion, " +
+            "        cl.celular, " +
             "        cl.id_distrito AS cliente_distrito_id, " +
             "        ROW_NUMBER() OVER (PARTITION BY cc.id_contrato ORDER BY cl.id_cliente) AS client_rank " +
             "    FROM contrato_cliente cc " +

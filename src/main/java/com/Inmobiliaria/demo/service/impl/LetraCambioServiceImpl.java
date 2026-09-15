@@ -35,7 +35,9 @@ import com.Inmobiliaria.demo.repository.DistritoRepository;
 import com.Inmobiliaria.demo.repository.LetraCambioRepository;
 import com.Inmobiliaria.demo.service.LetraCambioService;
 import com.Inmobiliaria.demo.util.LetraCambioPdf;
+import com.Inmobiliaria.demo.util.LetraCambioPdfMerruic;
 import com.Inmobiliaria.demo.util.NumeroALetras;
+import com.Inmobiliaria.demo.config.EmpresaContext;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -196,6 +198,7 @@ public class LetraCambioServiceImpl implements LetraCambioService {
             dto.setCliente2NumDocumento((String) row[11]);
             dto.setCliente1Direccion((String) row[12]);
             dto.setCliente1Distrito((String) row[13]);
+            dto.setCliente1Celular((String) row[14]);
             reportes.add(dto);
         }
         return reportes;
@@ -490,6 +493,13 @@ public class LetraCambioServiceImpl implements LetraCambioService {
                     "El contrato " + idContrato + " no tiene letras generadas.");
         }
 
+        // Detectar si es MERRUI por RUC
+        String ruc = EmpresaContext.empresaService.obtenerActiva().getRuc();
+        boolean esMerruic = "20552273223".equals(ruc);
+
+        if (esMerruic) {
+            return LetraCambioPdfMerruic.generar(reportes, moneda);
+        }
         return LetraCambioPdf.generar(reportes, moneda);
     }
 }

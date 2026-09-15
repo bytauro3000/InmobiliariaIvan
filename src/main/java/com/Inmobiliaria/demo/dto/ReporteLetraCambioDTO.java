@@ -30,4 +30,6 @@ public class ReporteLetraCambioDTO {
     private String cliente1Direccion;
     
     private String cliente1Distrito;
+
+    private String cliente1Celular;
 }
