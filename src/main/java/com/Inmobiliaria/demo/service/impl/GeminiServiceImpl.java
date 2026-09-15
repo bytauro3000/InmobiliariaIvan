@@ -25,6 +25,11 @@ public class GeminiServiceImpl implements GeminiService {
 
     @Override
     public String consultar(String mensaje) {
+        if (geminiConfig.getApiKey() == null || geminiConfig.getApiKey().isBlank()) {
+            log.warn("GEMINI_API_KEY no está configurada. El asistente IA no está disponible.");
+            return "El asistente IA no está configurado en este momento. Contacta al administrador para activarlo.";
+        }
+
         try {
             String url = geminiConfig.getApiUrl() + "?key=" + geminiConfig.getApiKey();
 
