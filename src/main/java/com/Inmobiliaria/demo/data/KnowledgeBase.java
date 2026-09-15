@@ -121,18 +121,32 @@ public final class KnowledgeBase {
             Ruta: /secretaria-menu/contratos (luego navegar al contrato especifico)
 
             COMO REGISTRAR UN PAGO DE LETRA:
-            Existen 2 formas de buscar el contrato para pagar:
+            Para buscar un contrato en Pagos de Letras existen 3 formas:
 
-            FORMA DE BUSQUEDA 1 - Por numero de contrato:
+            FORMA DE BUSQUEDA 1 - Por programa, manzana y lote (busqueda principal):
             1. Ir a Contratos > Pagos de Letras en el menu.
-            2. En el campo de busqueda, ingresar el numero de contrato.
-            3. Se mostrara el contrato con todas sus letras pendientes.
+            2. En la barra principal seleccionar el Programa del dropdown.
+            3. Ingresar la Manzana (ejemplo: A1).
+            4. Ingresar el Numero de Lote (ejemplo: 10).
+            5. Hacer clic en Buscar.
+            6. Se mostrara el contrato con todas sus letras pendientes.
 
-            FORMA DE BUSQUEDA 2 - Por nombre del cliente:
+            FORMA DE BUSQUEDA 2 - Por nombre o apellido del cliente:
             1. Ir a Contratos > Pagos de Letras en el menu.
-            2. En el campo de busqueda, escribir el nombre o apellido del cliente.
-            3. Se filtraran los contratos que coincidan con el nombre.
-            4. Seleccionar el contrato correcto.
+            2. Hacer clic en el boton de lupa (buscar) que aparece al lado de los filtros.
+            3. Seleccionar la pestana "Por nombre / apellido".
+            4. Escribir el nombre o apellido del cliente (minimo 2 caracteres).
+            5. Hacer clic en Buscar.
+            6. Se mostraran los contratos que coincidan con el nombre.
+            7. Seleccionar el contrato correcto de la lista.
+
+            FORMA DE BUSQUEDA 3 - Por ID de contrato:
+            1. Ir a Contratos > Pagos de Letras en el menu.
+            2. Hacer clic en el boton de lupa (buscar).
+            3. Seleccionar la pestana "Por ID de contrato".
+            4. Ingresar el numero ID del contrato.
+            5. Hacer clic en Buscar.
+            6. Se abrira directamente ese contrato.
 
             Una vez encontrado el contrato:
             1. Seleccionar la(s) letra(s) a pagar (puedes pagar una sola o varias a la vez).
