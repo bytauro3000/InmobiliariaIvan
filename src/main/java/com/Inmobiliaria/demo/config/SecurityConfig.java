@@ -42,6 +42,9 @@ public class SecurityConfig {
                     "/api/contratos/*/pago-inicial/comprobante-pdf",
                     "/error"
                 ).permitAll()
+                // ── Asistente IA: SECRETARIA, ADMIN y SOPORTE ──────────────────────────────
+                .requestMatchers("/api/ai/**")
+                .hasAnyAuthority("ROLE_SECRETARIA", "ROLE_ADMINISTRADOR", "ROLE_SOPORTE")
                 // ── Comisiones de vendedores: SECRETARIA, ADMIN y SOPORTE (el VENDEDOR no lo ve) ──
                 .requestMatchers("/api/comisiones/**")
                 .hasAnyAuthority("ROLE_SECRETARIA", "ROLE_ADMINISTRADOR", "ROLE_SOPORTE")
