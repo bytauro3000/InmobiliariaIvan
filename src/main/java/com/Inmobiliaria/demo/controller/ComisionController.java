@@ -8,9 +8,11 @@ import com.Inmobiliaria.demo.dto.PagoComisionResultadoDTO;
 import com.Inmobiliaria.demo.dto.RegistrarAdelantoRequest;
 import com.Inmobiliaria.demo.dto.RegistrarPagosMensualesRequest;
 import com.Inmobiliaria.demo.dto.ActualizarMontoComisionRequest;
+import com.Inmobiliaria.demo.dto.ReporteComisionVendedorDTO;
 import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.service.ComisionVendedorService;
 import com.Inmobiliaria.demo.service.ReciboEgresoService;
+import com.Inmobiliaria.demo.util.ReporteComisionPdf;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -132,6 +134,27 @@ public class ComisionController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         } catch (Exception e) {
             log.error("Error generando recibo de egreso {}: ", numeroEgreso, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(("Error generando PDF: " + e.getMessage()).getBytes());
+        }
+    }
+
+    // ─── Reporte de comisiones por vendedor (PDF) ────────────────────────────
+
+    @GetMapping("/reporte/{idVendedor}/pdf")
+    public ResponseEntity<byte[]> reporteComisionPdf(@PathVariable Integer idVendedor) {
+        try {
+            ReporteComisionVendedorDTO dto = comisionService.generarReportePorVendedor(idVendedor);
+            byte[] pdf = ReporteComisionPdf.generar(dto);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "inline; filename=\"comisiones-vendedor-" + idVendedor + ".pdf\"")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (NegocioException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (Exception e) {
+            log.error("Error generando reporte de comisiones para vendedor {}: ", idVendedor, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(("Error generando PDF: " + e.getMessage()).getBytes());
         }

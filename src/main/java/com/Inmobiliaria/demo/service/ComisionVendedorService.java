@@ -8,6 +8,7 @@ import com.Inmobiliaria.demo.dto.PagoComisionResultadoDTO;
 import com.Inmobiliaria.demo.dto.RegistrarAdelantoRequest;
 import com.Inmobiliaria.demo.dto.RegistrarPagosMensualesRequest;
 import com.Inmobiliaria.demo.dto.ActualizarMontoComisionRequest;
+import com.Inmobiliaria.demo.dto.ReporteComisionVendedorDTO;
 import com.Inmobiliaria.demo.entity.ComisionVendedor;
 import com.Inmobiliaria.demo.entity.Contrato;
 import org.springframework.web.multipart.MultipartFile;
@@ -63,4 +64,7 @@ public interface ComisionVendedorService {
      * no tiene comisión y no hay pagos, anula la comisión.
      */
     void sincronizarVendedorComision(Contrato contrato);
+
+    /** Genera el reporte de historial de comisiones para un vendedor. */
+    ReporteComisionVendedorDTO generarReportePorVendedor(Integer idVendedor);
 }

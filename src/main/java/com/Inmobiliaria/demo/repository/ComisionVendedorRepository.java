@@ -24,4 +24,7 @@ public interface ComisionVendedorRepository extends JpaRepository<ComisionVended
     List<ComisionVendedor> findByContratoEstadoContratoIn(java.util.Collection<com.Inmobiliaria.demo.enums.EstadoContrato> estados);
 
     boolean existsByContratoIdContrato(Integer idContrato);
+
+    @EntityGraph(attributePaths = {"contrato", "contrato.programa", "vendedor"})
+    List<ComisionVendedor> findByVendedorIdVendedor(Integer idVendedor);
 }

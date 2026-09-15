@@ -25,6 +25,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -62,6 +63,7 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
     private final PagoInicialRepository pagoInicialRepository;
     private final UsuarioService usuarioService;
     private final ReciboEgresoService reciboEgresoService;
+    private final VendedorRepository vendedorRepository;
 
     // ─── Redondeos ─────────────────────────────────────────────────────────────
     // Comisión total, 30% de la inicial y adelanto del programa: SIEMPRE hacia abajo (floor).
@@ -1060,6 +1062,84 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         comisionRepository.save(comision);
         log.info("Comisión {} sincronizada con el nuevo vendedor del contrato {}",
                 comision.getIdComision(), idContrato);
+    }
+
+    // ─── Reporte de comisiones por vendedor ────────────────────────────────────
+
+    @Override
+    @Transactional(readOnly = true)
+    public ReporteComisionVendedorDTO generarReportePorVendedor(Integer idVendedor) {
+        Vendedor vendedor = vendedorRepository.findById(idVendedor)
+                .orElseThrow(() -> new NegocioException("Vendedor no encontrado: " + idVendedor));
+
+        List<ComisionVendedor> comisiones = comisionRepository.findByVendedorIdVendedor(idVendedor);
+
+        // Calcular totales
+        BigDecimal totalComision = BigDecimal.ZERO;
+        BigDecimal aporteComision = BigDecimal.ZERO;
+
+        // Agrupar por programa
+        Map<String, ReporteComisionVendedorDTO.ProgramaComision> mapaProgramas = new LinkedHashMap<>();
+
+        for (ComisionVendedor cv : comisiones) {
+            if (cv.getEstado() == EstadoComision.ANULADA) continue;
+
+            String nombrePrograma;
+            List<com.Inmobiliaria.demo.entity.Lote> lotes = contratoLoteRepository.findLotesByContrato(cv.getContrato().getIdContrato());
+            if (!lotes.isEmpty() && lotes.get(0).getPrograma() != null) {
+                nombrePrograma = lotes.get(0).getPrograma().getNombrePrograma();
+            } else {
+                nombrePrograma = "SIN PROGRAMA";
+            }
+
+            totalComision = totalComision.add(cv.getMontoComisionTotal() != null ? cv.getMontoComisionTotal() : BigDecimal.ZERO);
+
+            // Obtener pagos de esta comision
+            List<PagoComisionVendedor> pagos = pagoComisionRepository.findByComisionIdComisionOrderByIdPagoComisionAsc(cv.getIdComision());
+            BigDecimal pagosDeEstaComision = BigDecimal.ZERO;
+            for (PagoComisionVendedor pago : pagos) {
+                pagosDeEstaComision = pagosDeEstaComision.add(pago.getMonto());
+            }
+            aporteComision = aporteComision.add(pagosDeEstaComision);
+
+            ReporteComisionVendedorDTO.ProgramaComision programa = mapaProgramas.computeIfAbsent(nombrePrograma, k -> {
+                ReporteComisionVendedorDTO.ProgramaComision p = new ReporteComisionVendedorDTO.ProgramaComision();
+                p.setNombrePrograma(k);
+                p.setFilas(new ArrayList<>());
+                p.setTotalPrograma(BigDecimal.ZERO);
+                return p;
+            });
+
+            for (com.Inmobiliaria.demo.entity.Lote lote : lotes) {
+                ReporteComisionVendedorDTO.FilaComision fila = new ReporteComisionVendedorDTO.FilaComision();
+                fila.setManzana(lote.getManzana());
+                fila.setNumeroLote(lote.getNumeroLote());
+                fila.setMontoComision(cv.getMontoComisionTotal());
+                fila.setPagosRealizados(pagosDeEstaComision);
+                fila.setSaldoComision(cv.getSaldoPendiente());
+                fila.setMoneda(cv.getMoneda() != null ? cv.getMoneda().name() : "USD");
+                programa.getFilas().add(fila);
+                programa.setTotalPrograma(programa.getTotalPrograma().add(cv.getMontoComisionTotal() != null ? cv.getMontoComisionTotal() : BigDecimal.ZERO));
+            }
+        }
+
+        ReporteComisionVendedorDTO dto = new ReporteComisionVendedorDTO();
+        dto.setIdVendedor(vendedor.getIdVendedor());
+        dto.setNombreVendedor(vendedor.getNombre());
+        dto.setApellidosVendedor(vendedor.getApellidos());
+        dto.setDniVendedor(vendedor.getDni());
+        dto.setCelularVendedor(vendedor.getCelular());
+        dto.setDireccionVendedor(vendedor.getDireccion());
+        dto.setDistritoVendedor(vendedor.getDistrito() != null ? vendedor.getDistrito().getNombre() : "");
+        dto.setPorcentajeComision(vendedor.getComision());
+        dto.setTotalComision(totalComision);
+        dto.setAporteComision(aporteComision);
+        dto.setSaldoPendiente(totalComision.subtract(aporteComision));
+        dto.setMoneda("PEN");
+        dto.setFechaEmision(java.time.LocalDateTime.now());
+        dto.setProgramas(new ArrayList<>(mapaProgramas.values()));
+
+        return dto;
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
