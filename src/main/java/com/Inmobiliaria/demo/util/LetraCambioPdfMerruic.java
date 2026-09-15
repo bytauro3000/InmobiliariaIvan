@@ -77,12 +77,12 @@ public class LetraCambioPdfMerruic {
                 // DISTRICTO (antes iba Fecha de Giro en Ivan)
                 escribir(canvas, fontBold, FONT_SIZE,
                         reporte.getDistritoNombre(),
-                        99, 23);
+                        99, 22);
 
                 // FECHA DE GIRO (antes iba Distrito en Ivan)
                 escribir(canvas, fontBold, FONT_SIZE,
                         formatearFecha(reporte.getFechaGiro()),
-                        127, 22);
+                        127, 23);
 
                 // Fecha de Vencimiento
                 escribir(canvas, fontBold, FONT_SIZE,
@@ -133,7 +133,7 @@ public class LetraCambioPdfMerruic {
                 String dniRucCelular = reporte.getCliente1NumDocumento();
                 if (reporte.getCliente1Celular() != null
                         && !reporte.getCliente1Celular().isBlank()) {
-                    dniRucCelular += "  Cel: " + reporte.getCliente1Celular();
+                    dniRucCelular += "   " + reporte.getCliente1Celular();
                 }
                 escribir(canvas, fontBold, FONT_SIZE, dniRucCelular, 50, 58);
 
