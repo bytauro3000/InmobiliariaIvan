@@ -28,6 +28,7 @@ import com.Inmobiliaria.demo.config.EmpresaContext;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.time.format.DateTimeFormatter;
@@ -208,15 +209,15 @@ public class ReporteComisionPdf {
 
     private static Table tablaComision(ReporteComisionVendedorDTO.ProgramaComision programa,
                                        PdfFont normal, PdfFont bold) {
-        String[] headers = {"N°", "MZ", "LT", "FECHA", "MONTO COMISION", "PAGOS REALIZADOS", "SALDO"};
-        Table t = new Table(UnitValue.createPercentArray(new float[]{0.05f, 0.08f, 0.12f, 0.10f, 0.22f, 0.22f, 0.21f}))
+        String[] headers = {"N°", "MZ", "LT", "FECHA", "MONTO COMISION", "PAGOS REALIZADOS", "SALDO", "DEUDA"};
+        Table t = new Table(UnitValue.createPercentArray(new float[]{0.05f, 0.07f, 0.10f, 0.09f, 0.17f, 0.17f, 0.17f, 0.18f}))
                 .setWidth(UnitValue.createPercentValue(100))
                 .setMarginBottom(2);
 
         // Header
         for (String h : headers) {
             t.addCell(new Cell()
-                    .add(new Paragraph(h).setFont(bold).setFontSize(7.5f).setFontColor(ColorConstants.WHITE))
+                    .add(new Paragraph(h).setFont(bold).setFontSize(7f).setFontColor(ColorConstants.WHITE))
                     .setBackgroundColor(COLOR_GRIS_HEADER)
                     .setPadding(3)
                     .setTextAlignment(TextAlignment.CENTER)
@@ -239,25 +240,30 @@ public class ReporteComisionPdf {
             t.addCell(celdaFila(fila.getMoneda() + " " + DF.format(fila.getMontoComision()), normal, bg));
             t.addCell(celdaFila(fila.getMoneda() + " " + DF.format(fila.getPagosRealizados()), normal, bg));
             t.addCell(celdaFila(fila.getMoneda() + " " + DF.format(fila.getSaldoComision()), normal, bg));
+            t.addCell(celdaFila(fila.getMoneda() + " " + DF.format(fila.getDeudaPorLote()), normal, bg));
 
             alternate = !alternate;
         }
 
-        // Total programa
-        Cell totalCell = new Cell(1, 5)
+        // Total deuda por programa
+        Cell totalDeudaLabel = new Cell(1, 7)
                 .setBorder(new SolidBorder(ColorConstants.BLACK, 0.5f))
                 .setPadding(4)
                 .setTextAlignment(TextAlignment.RIGHT);
-        totalCell.add(new Paragraph("TOTAL PROGRAMA (" + programa.getTotalLotes() + " lotes):").setFont(bold).setFontSize(8));
-        t.addCell(totalCell);
+        totalDeudaLabel.add(new Paragraph("DEUDA PROGRAMA (" + programa.getTotalLotes() + " lotes):").setFont(bold).setFontSize(8));
+        t.addCell(totalDeudaLabel);
 
-        Cell totalVal = new Cell(1, 2)
+        BigDecimal totalDeudaPrograma = programa.getFilas().stream()
+                .map(f -> f.getDeudaPorLote() != null ? f.getDeudaPorLote() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        String moneda = !programa.getFilas().isEmpty() ? programa.getFilas().get(0).getMoneda() : "USD";
+
+        Cell totalDeudaVal = new Cell(1, 1)
                 .setBorder(new SolidBorder(ColorConstants.BLACK, 0.5f))
                 .setPadding(4)
                 .setTextAlignment(TextAlignment.LEFT);
-        String moneda = !programa.getFilas().isEmpty() ? programa.getFilas().get(0).getMoneda() : "USD";
-        totalVal.add(new Paragraph(moneda + " " + DF.format(programa.getTotalPrograma())).setFont(bold).setFontSize(8));
-        t.addCell(totalVal);
+        totalDeudaVal.add(new Paragraph(moneda + " " + DF.format(totalDeudaPrograma)).setFont(bold).setFontSize(8));
+        t.addCell(totalDeudaVal);
 
         return t;
     }

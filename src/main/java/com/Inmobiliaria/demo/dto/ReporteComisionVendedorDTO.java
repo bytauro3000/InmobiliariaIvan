@@ -28,6 +28,7 @@ public class ReporteComisionVendedorDTO {
     private BigDecimal totalComision;      // montoComisionTotal de todas las comisiones
     private BigDecimal aporteComision;     // suma de pagos realizados (adelanto + mensuales)
     private BigDecimal saldoPendiente;     // total - aporte
+    private BigDecimal totalDeuda;         // suma de deudaPorLote de todas las filas
     private String moneda;                 // moneda de las comisiones
 
     // ── Fecha de emisión ────────────────────────────────────────────
@@ -60,6 +61,8 @@ public class ReporteComisionVendedorDTO {
         private BigDecimal montoComision;
         private BigDecimal pagosRealizados;  // adelanto + mensuales de esta comision
         private BigDecimal saldoComision;
+        private BigDecimal comisionMensual;  // 10% del importe de la letra
+        private BigDecimal deudaPorLote;     // registrados × comisionMensual
         private String moneda;
     }
 }
