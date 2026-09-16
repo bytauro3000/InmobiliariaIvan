@@ -206,7 +206,7 @@ public class ReporteComisionPdf {
     private static Table tablaComision(ReporteComisionVendedorDTO.ProgramaComision programa,
                                        PdfFont normal, PdfFont bold) {
         String[] headers = {"MZ", "LT", "MONTO COMISION", "PAGOS REALIZADOS", "SALDO"};
-        Table t = new Table(UnitValue.createPercentArray(new float[]{0.1f, 0.1f, 0.25f, 0.25f, 0.25f}))
+        Table t = new Table(UnitValue.createPercentArray(new float[]{0.12f, 0.15f, 0.24f, 0.24f, 0.25f}))
                 .setWidth(UnitValue.createPercentValue(100))
                 .setMarginBottom(2);
 

@@ -1110,17 +1110,36 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
                 return p;
             });
 
+            // Ordenar lotes por manzana y luego por numeroLote
+            lotes.sort(java.util.Comparator
+                    .comparing(com.Inmobiliaria.demo.entity.Lote::getManzana, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
+                    .thenComparing(com.Inmobiliaria.demo.entity.Lote::getNumeroLote, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())));
+
+            // Agrupar lotes por manzana
+            java.util.LinkedHashMap<String, java.util.List<String>> lotesPorManzana = new java.util.LinkedHashMap<>();
             for (com.Inmobiliaria.demo.entity.Lote lote : lotes) {
-                ReporteComisionVendedorDTO.FilaComision fila = new ReporteComisionVendedorDTO.FilaComision();
-                fila.setManzana(lote.getManzana());
-                fila.setNumeroLote(lote.getNumeroLote());
-                fila.setMontoComision(cv.getMontoComisionTotal());
-                fila.setPagosRealizados(pagosDeEstaComision);
-                fila.setSaldoComision(cv.getSaldoPendiente());
-                fila.setMoneda(cv.getMoneda() != null ? cv.getMoneda().name() : "USD");
-                programa.getFilas().add(fila);
-                programa.setTotalPrograma(programa.getTotalPrograma().add(cv.getMontoComisionTotal() != null ? cv.getMontoComisionTotal() : BigDecimal.ZERO));
+                lotesPorManzana.computeIfAbsent(lote.getManzana(), k -> new ArrayList<>()).add(lote.getNumeroLote());
             }
+
+            // Una sola fila por contrato
+            StringBuilder mzCombined = new StringBuilder();
+            StringBuilder ltCombined = new StringBuilder();
+            for (java.util.Map.Entry<String, java.util.List<String>> entry : lotesPorManzana.entrySet()) {
+                if (mzCombined.length() > 0) mzCombined.append(", ");
+                mzCombined.append(entry.getKey());
+                if (ltCombined.length() > 0) ltCombined.append(", ");
+                ltCombined.append(String.join(", ", entry.getValue()));
+            }
+
+            ReporteComisionVendedorDTO.FilaComision fila = new ReporteComisionVendedorDTO.FilaComision();
+            fila.setManzana(mzCombined.toString());
+            fila.setNumeroLote(ltCombined.toString());
+            fila.setMontoComision(cv.getMontoComisionTotal());
+            fila.setPagosRealizados(pagosDeEstaComision);
+            fila.setSaldoComision(cv.getSaldoPendiente());
+            fila.setMoneda(cv.getMoneda() != null ? cv.getMoneda().name() : "USD");
+            programa.getFilas().add(fila);
+            programa.setTotalPrograma(programa.getTotalPrograma().add(cv.getMontoComisionTotal() != null ? cv.getMontoComisionTotal() : BigDecimal.ZERO));
         }
 
         ReporteComisionVendedorDTO dto = new ReporteComisionVendedorDTO();
