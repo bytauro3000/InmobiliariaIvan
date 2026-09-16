@@ -66,7 +66,10 @@ public class ReporteComisionPdf {
             doc.add(encabezado(dto, courierBold, courier));
 
             // ── TITULO ─────────────────────────────────────────────────
-            doc.add(new Paragraph("HISTORIAL DE COMISIONES")
+            String titulo = dto.isSoloPendientes()
+                    ? "COMISIONES PENDIENTES DE PAGO"
+                    : "HISTORIAL DE COMISIONES";
+            doc.add(new Paragraph(titulo)
                     .setFont(courierBold)
                     .setFontSize(13)
                     .setFontColor(COLOR_AZUL_OSCURO)

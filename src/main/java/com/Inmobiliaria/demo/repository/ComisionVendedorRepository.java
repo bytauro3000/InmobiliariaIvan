@@ -27,4 +27,7 @@ public interface ComisionVendedorRepository extends JpaRepository<ComisionVended
 
     @EntityGraph(attributePaths = {"contrato", "vendedor"})
     List<ComisionVendedor> findByVendedorIdVendedor(Integer idVendedor);
+
+    @EntityGraph(attributePaths = {"contrato", "vendedor"})
+    List<ComisionVendedor> findByVendedorIdVendedorAndSaldoPendienteGreaterThan(Integer idVendedor, java.math.BigDecimal saldo);
 }

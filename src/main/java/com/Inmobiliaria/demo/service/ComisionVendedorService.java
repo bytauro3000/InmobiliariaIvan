@@ -67,4 +67,6 @@ public interface ComisionVendedorService {
 
     /** Genera el reporte de historial de comisiones para un vendedor. */
     ReporteComisionVendedorDTO generarReportePorVendedor(Integer idVendedor);
+
+    ReporteComisionVendedorDTO generarReportePorVendedor(Integer idVendedor, boolean soloPendientes);
 }

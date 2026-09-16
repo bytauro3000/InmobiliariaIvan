@@ -33,6 +33,9 @@ public class ReporteComisionVendedorDTO {
     // ── Fecha de emisión ────────────────────────────────────────────
     private LocalDateTime fechaEmision;
 
+    // ── Filtro ──────────────────────────────────────────────────────
+    private boolean soloPendientes;
+
     // ── Detalle por programa ────────────────────────────────────────
     private List<ProgramaComision> programas;
 

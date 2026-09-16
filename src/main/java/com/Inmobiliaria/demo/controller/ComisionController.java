@@ -142,9 +142,11 @@ public class ComisionController {
     // ─── Reporte de comisiones por vendedor (PDF) ────────────────────────────
 
     @GetMapping("/reporte/{idVendedor}/pdf")
-    public ResponseEntity<byte[]> reporteComisionPdf(@PathVariable Integer idVendedor) {
+    public ResponseEntity<byte[]> reporteComisionPdf(
+            @PathVariable Integer idVendedor,
+            @RequestParam(defaultValue = "false") boolean soloPendientes) {
         try {
-            ReporteComisionVendedorDTO dto = comisionService.generarReportePorVendedor(idVendedor);
+            ReporteComisionVendedorDTO dto = comisionService.generarReportePorVendedor(idVendedor, soloPendientes);
             byte[] pdf = ReporteComisionPdf.generar(dto);
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
