@@ -1074,72 +1074,97 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
 
         List<ComisionVendedor> comisiones = comisionRepository.findByVendedorIdVendedor(idVendedor);
 
-        // Calcular totales
         BigDecimal totalComision = BigDecimal.ZERO;
         BigDecimal aporteComision = BigDecimal.ZERO;
 
-        // Agrupar por programa
-        Map<String, ReporteComisionVendedorDTO.ProgramaComision> mapaProgramas = new LinkedHashMap<>();
+        // ── Fase 1: Recolectar datos de cada comisión ──────────────────────────
+        // Clave: programa -> lista de (comision, lotes, pagos)
+        record DatoComision(ComisionVendedor cv, List<com.Inmobiliaria.demo.entity.Lote> lotes, BigDecimal pagos) {}
+        Map<String, List<DatoComision>> datosPorPrograma = new LinkedHashMap<>();
 
         for (ComisionVendedor cv : comisiones) {
             if (cv.getEstado() == EstadoComision.ANULADA) continue;
 
-            String nombrePrograma;
             List<com.Inmobiliaria.demo.entity.Lote> lotes = contratoLoteRepository.findLotesByContrato(cv.getContrato().getIdContrato());
-            if (!lotes.isEmpty() && lotes.get(0).getPrograma() != null) {
-                nombrePrograma = lotes.get(0).getPrograma().getNombrePrograma();
-            } else {
-                nombrePrograma = "SIN PROGRAMA";
-            }
+            String nombrePrograma = (!lotes.isEmpty() && lotes.get(0).getPrograma() != null)
+                    ? lotes.get(0).getPrograma().getNombrePrograma() : "SIN PROGRAMA";
 
             totalComision = totalComision.add(cv.getMontoComisionTotal() != null ? cv.getMontoComisionTotal() : BigDecimal.ZERO);
 
-            // Obtener pagos de esta comision
             List<PagoComisionVendedor> pagos = pagoComisionRepository.findByComisionIdComisionOrderByIdPagoComisionAsc(cv.getIdComision());
-            BigDecimal pagosDeEstaComision = BigDecimal.ZERO;
-            for (PagoComisionVendedor pago : pagos) {
-                pagosDeEstaComision = pagosDeEstaComision.add(pago.getMonto());
-            }
+            BigDecimal pagosDeEstaComision = pagos.stream()
+                    .map(PagoComisionVendedor::getMonto)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
             aporteComision = aporteComision.add(pagosDeEstaComision);
 
-            ReporteComisionVendedorDTO.ProgramaComision programa = mapaProgramas.computeIfAbsent(nombrePrograma, k -> {
-                ReporteComisionVendedorDTO.ProgramaComision p = new ReporteComisionVendedorDTO.ProgramaComision();
-                p.setNombrePrograma(k);
-                p.setFilas(new ArrayList<>());
-                p.setTotalPrograma(BigDecimal.ZERO);
-                return p;
+            datosPorPrograma.computeIfAbsent(nombrePrograma, k -> new ArrayList<>())
+                    .add(new DatoComision(cv, lotes, pagosDeEstaComision));
+        }
+
+        // ── Fase 2: Ordenar cada programa por MZ y LT, y construir filas ──────
+        Map<String, ReporteComisionVendedorDTO.ProgramaComision> mapaProgramas = new LinkedHashMap<>();
+
+        for (Map.Entry<String, List<DatoComision>> entry : datosPorPrograma.entrySet()) {
+            String nombrePrograma = entry.getKey();
+            List<DatoComision> datos = entry.getValue();
+
+            // Ordenar: MZ primero, luego LT (usando el primer lote de cada contrato)
+            datos.sort((a, b) -> {
+                String mzA = a.lotes().isEmpty() ? "" : a.lotes().get(0).getManzana();
+                String mxB = b.lotes().isEmpty() ? "" : b.lotes().get(0).getManzana();
+                int cmpMz = compareNullsLast(mzA, mxB);
+                if (cmpMz != 0) return cmpMz;
+                String ltA = a.lotes().isEmpty() ? "" : a.lotes().get(0).getNumeroLote();
+                String ltB = b.lotes().isEmpty() ? "" : b.lotes().get(0).getNumeroLote();
+                return compareNullsLast(ltA, ltB);
             });
 
-            // Ordenar lotes por manzana y luego por numeroLote
-            lotes.sort(java.util.Comparator
-                    .comparing(com.Inmobiliaria.demo.entity.Lote::getManzana, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
-                    .thenComparing(com.Inmobiliaria.demo.entity.Lote::getNumeroLote, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())));
+            ReporteComisionVendedorDTO.ProgramaComision programa = new ReporteComisionVendedorDTO.ProgramaComision();
+            programa.setNombrePrograma(nombrePrograma);
+            programa.setFilas(new ArrayList<>());
+            programa.setTotalPrograma(BigDecimal.ZERO);
+            programa.setTotalLotes(0);
 
-            // Agrupar lotes por manzana
-            java.util.LinkedHashMap<String, java.util.List<String>> lotesPorManzana = new java.util.LinkedHashMap<>();
-            for (com.Inmobiliaria.demo.entity.Lote lote : lotes) {
-                lotesPorManzana.computeIfAbsent(lote.getManzana(), k -> new ArrayList<>()).add(lote.getNumeroLote());
+            int numero = 1;
+            for (DatoComision dato : datos) {
+                ComisionVendedor cv = dato.cv();
+                List<com.Inmobiliaria.demo.entity.Lote> lotes = dato.lotes();
+                BigDecimal pagosComision = dato.pagos();
+
+                // Ordenar lotes internamente
+                lotes.sort(java.util.Comparator
+                        .comparing(com.Inmobiliaria.demo.entity.Lote::getManzana, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
+                        .thenComparing(com.Inmobiliaria.demo.entity.Lote::getNumeroLote, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())));
+
+                // Agrupar lotes por manzana
+                java.util.LinkedHashMap<String, java.util.List<String>> lotesPorManzana = new java.util.LinkedHashMap<>();
+                for (com.Inmobiliaria.demo.entity.Lote lote : lotes) {
+                    lotesPorManzana.computeIfAbsent(lote.getManzana(), k -> new ArrayList<>()).add(lote.getNumeroLote());
+                }
+
+                StringBuilder mzCombined = new StringBuilder();
+                StringBuilder ltCombined = new StringBuilder();
+                for (java.util.Map.Entry<String, java.util.List<String>> e : lotesPorManzana.entrySet()) {
+                    if (mzCombined.length() > 0) mzCombined.append(", ");
+                    mzCombined.append(e.getKey());
+                    if (ltCombined.length() > 0) ltCombined.append(", ");
+                    ltCombined.append(String.join(", ", e.getValue()));
+                }
+
+                ReporteComisionVendedorDTO.FilaComision fila = new ReporteComisionVendedorDTO.FilaComision();
+                fila.setNumero(numero++);
+                fila.setManzana(mzCombined.toString());
+                fila.setNumeroLote(ltCombined.toString());
+                fila.setFechaContrato(cv.getContrato().getFechaContrato());
+                fila.setMontoComision(cv.getMontoComisionTotal());
+                fila.setPagosRealizados(pagosComision);
+                fila.setSaldoComision(cv.getSaldoPendiente());
+                fila.setMoneda(cv.getMoneda() != null ? cv.getMoneda().name() : "USD");
+                programa.getFilas().add(fila);
+                programa.setTotalPrograma(programa.getTotalPrograma().add(cv.getMontoComisionTotal() != null ? cv.getMontoComisionTotal() : BigDecimal.ZERO));
+                programa.setTotalLotes(programa.getTotalLotes() + lotes.size());
             }
-
-            // Una sola fila por contrato
-            StringBuilder mzCombined = new StringBuilder();
-            StringBuilder ltCombined = new StringBuilder();
-            for (java.util.Map.Entry<String, java.util.List<String>> entry : lotesPorManzana.entrySet()) {
-                if (mzCombined.length() > 0) mzCombined.append(", ");
-                mzCombined.append(entry.getKey());
-                if (ltCombined.length() > 0) ltCombined.append(", ");
-                ltCombined.append(String.join(", ", entry.getValue()));
-            }
-
-            ReporteComisionVendedorDTO.FilaComision fila = new ReporteComisionVendedorDTO.FilaComision();
-            fila.setManzana(mzCombined.toString());
-            fila.setNumeroLote(ltCombined.toString());
-            fila.setMontoComision(cv.getMontoComisionTotal());
-            fila.setPagosRealizados(pagosDeEstaComision);
-            fila.setSaldoComision(cv.getSaldoPendiente());
-            fila.setMoneda(cv.getMoneda() != null ? cv.getMoneda().name() : "USD");
-            programa.getFilas().add(fila);
-            programa.setTotalPrograma(programa.getTotalPrograma().add(cv.getMontoComisionTotal() != null ? cv.getMontoComisionTotal() : BigDecimal.ZERO));
+            mapaProgramas.put(nombrePrograma, programa);
         }
 
         ReporteComisionVendedorDTO dto = new ReporteComisionVendedorDTO();
@@ -1162,6 +1187,13 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
+
+    private static int compareNullsLast(String a, String b) {
+        if (a == null && b == null) return 0;
+        if (a == null) return 1;
+        if (b == null) return -1;
+        return a.compareToIgnoreCase(b);
+    }
 
     private ComisionVendedor obtenerComision(Integer idComision) {
         return comisionRepository.findById(idComision)

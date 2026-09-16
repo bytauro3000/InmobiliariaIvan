@@ -205,17 +205,17 @@ public class ReporteComisionPdf {
 
     private static Table tablaComision(ReporteComisionVendedorDTO.ProgramaComision programa,
                                        PdfFont normal, PdfFont bold) {
-        String[] headers = {"MZ", "LT", "MONTO COMISION", "PAGOS REALIZADOS", "SALDO"};
-        Table t = new Table(UnitValue.createPercentArray(new float[]{0.12f, 0.15f, 0.24f, 0.24f, 0.25f}))
+        String[] headers = {"N°", "MZ", "LT", "FECHA", "MONTO COMISION", "PAGOS REALIZADOS", "SALDO"};
+        Table t = new Table(UnitValue.createPercentArray(new float[]{0.05f, 0.08f, 0.12f, 0.10f, 0.22f, 0.22f, 0.21f}))
                 .setWidth(UnitValue.createPercentValue(100))
                 .setMarginBottom(2);
 
         // Header
         for (String h : headers) {
             t.addCell(new Cell()
-                    .add(new Paragraph(h).setFont(bold).setFontSize(8).setFontColor(ColorConstants.WHITE))
+                    .add(new Paragraph(h).setFont(bold).setFontSize(7.5f).setFontColor(ColorConstants.WHITE))
                     .setBackgroundColor(COLOR_GRIS_HEADER)
-                    .setPadding(4)
+                    .setPadding(3)
                     .setTextAlignment(TextAlignment.CENTER)
                     .setBorder(new SolidBorder(ColorConstants.BLACK, 0.5f)));
         }
@@ -226,8 +226,13 @@ public class ReporteComisionPdf {
         for (ReporteComisionVendedorDTO.FilaComision fila : programa.getFilas()) {
             DeviceRgb bg = alternate ? colorFila : null;
 
+            t.addCell(celdaFilaCenter(String.valueOf(fila.getNumero()), normal, bg));
             t.addCell(celdaFila(fila.getManzana(), normal, bg));
             t.addCell(celdaFila(fila.getNumeroLote(), normal, bg));
+            t.addCell(celdaFilaCenter(fila.getFechaContrato() != null
+                    ? fila.getFechaContrato().getDayOfMonth() + "/"
+                    + fila.getFechaContrato().getMonthValue() + "/"
+                    + fila.getFechaContrato().getYear() : "—", normal, bg));
             t.addCell(celdaFila(fila.getMoneda() + " " + DF.format(fila.getMontoComision()), normal, bg));
             t.addCell(celdaFila(fila.getMoneda() + " " + DF.format(fila.getPagosRealizados()), normal, bg));
             t.addCell(celdaFila(fila.getMoneda() + " " + DF.format(fila.getSaldoComision()), normal, bg));
@@ -236,11 +241,11 @@ public class ReporteComisionPdf {
         }
 
         // Total programa
-        Cell totalCell = new Cell(1, 3)
+        Cell totalCell = new Cell(1, 5)
                 .setBorder(new SolidBorder(ColorConstants.BLACK, 0.5f))
                 .setPadding(4)
                 .setTextAlignment(TextAlignment.RIGHT);
-        totalCell.add(new Paragraph("TOTAL PROGRAMA:").setFont(bold).setFontSize(8));
+        totalCell.add(new Paragraph("TOTAL PROGRAMA (" + programa.getTotalLotes() + " lotes):").setFont(bold).setFontSize(8));
         t.addCell(totalCell);
 
         Cell totalVal = new Cell(1, 2)
@@ -271,6 +276,16 @@ public class ReporteComisionPdf {
                 .setTextAlignment(TextAlignment.CENTER);
         if (bg != null) c.setBackgroundColor(bg);
         c.add(new Paragraph(texto != null ? texto : "").setFont(normal).setFontSize(8));
+        return c;
+    }
+
+    private static Cell celdaFilaCenter(String texto, PdfFont normal, DeviceRgb bg) {
+        Cell c = new Cell()
+                .setBorder(new SolidBorder(ColorConstants.BLACK, 0.5f))
+                .setPadding(3)
+                .setTextAlignment(TextAlignment.CENTER);
+        if (bg != null) c.setBackgroundColor(bg);
+        c.add(new Paragraph(texto != null ? texto : "").setFont(normal).setFontSize(7.5f));
         return c;
     }
 

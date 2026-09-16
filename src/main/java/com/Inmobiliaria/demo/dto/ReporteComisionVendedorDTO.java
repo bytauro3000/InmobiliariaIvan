@@ -1,6 +1,7 @@
 package com.Inmobiliaria.demo.dto;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -42,14 +43,17 @@ public class ReporteComisionVendedorDTO {
         private String nombrePrograma;
         private List<FilaComision> filas;
         private BigDecimal totalPrograma;
+        private int totalLotes;
     }
 
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
     public static class FilaComision {
+        private int numero;
         private String manzana;
         private String numeroLote;
+        private LocalDate fechaContrato;
         private BigDecimal montoComision;
         private BigDecimal pagosRealizados;  // adelanto + mensuales de esta comision
         private BigDecimal saldoComision;
