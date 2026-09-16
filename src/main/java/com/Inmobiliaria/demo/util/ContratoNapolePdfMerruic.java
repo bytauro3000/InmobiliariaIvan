@@ -174,7 +174,8 @@ public class ContratoNapolePdfMerruic {
 		String verboComunicara = (numClientes > 1) ? "comunicarán" : "comunicará";
 
 		// ── DATOS DEL LOTE ─────────────────────────────────────────────────
-		List<LoteResponseDTO> listaLotes = contrato.getLotes();
+		List<LoteResponseDTO> listaLotes = new ArrayList<>(contrato.getLotes());
+		listaLotes.sort(java.util.Comparator.comparing(LoteResponseDTO::getNumeroLote, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())));
 		LoteResponseDTO lote = listaLotes.get(0);
 
 		// ── ENCABEZADO ─────────────────────────────────────────────────────
