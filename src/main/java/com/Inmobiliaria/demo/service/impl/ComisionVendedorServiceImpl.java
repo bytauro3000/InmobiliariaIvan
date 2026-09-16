@@ -1290,7 +1290,7 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
             aporteComision = aporteComision.add(pagosDeEstaComision);
 
             datosPorPrograma.computeIfAbsent(nombrePrograma, k -> new ArrayList<>())
-                    .add(new DatoComision(cv, lotes, pagosDeEstaComision, pendientes, recalcMensuales(cv, registrados),
+                    .add(new DatoComision(cv, lotes, pagosDeEstaComision, pendientes, habilitables,
                             idContrato != null ? importeLetraPorContrato.getOrDefault(idContrato, BigDecimal.ZERO) : BigDecimal.ZERO));
         }
 
