@@ -174,7 +174,8 @@ public class ContratoNapolePdfMerruic {
 		String verboComunicara = (numClientes > 1) ? "comunicarán" : "comunicará";
 
 		// ── DATOS DEL LOTE ─────────────────────────────────────────────────
-		LoteResponseDTO lote = contrato.getLotes().get(0);
+		List<LoteResponseDTO> listaLotes = contrato.getLotes();
+		LoteResponseDTO lote = listaLotes.get(0);
 
 		// ── ENCABEZADO ─────────────────────────────────────────────────────
 		// Tres líneas centradas, todas subrayadas y con el mismo espaciado
@@ -271,27 +272,72 @@ public class ContratoNapolePdfMerruic {
 		segundaIntro.add(new Text("EL VENDEDOR").setFont(arialNarrowBold));
 		segundaIntro.add(" dan en venta real y enajenación perpetua a favor de ");
 		segundaIntro.add(new Text(etiquetaComprador).setFont(arialNarrowBold));
-		segundaIntro.add(" el lote de terreno rústico ubicado en el PROGRAMA DE VIVIENDA NAPOLE, Manzana ");
-		segundaIntro.add(new Text("\u201c" + lote.getManzana() + "\u201d").setFont(arialNarrowBold));
-		segundaIntro.add(", Lote ");
-		segundaIntro.add(new Text("\u201c" + lote.getNumeroLote() + "\u201d").setFont(arialNarrowBold));
-		segundaIntro.add(", con un área de ");
-		segundaIntro.add(new Text(lote.getArea() + " m2").setFont(arialNarrowBold));
+
+		// ── LÓGICA DINÁMICA PARA LOTES MÚLTIPLES ────────────────────────────
+		BigDecimal areaTotal = BigDecimal.ZERO;
+		for (LoteResponseDTO l : listaLotes) { areaTotal = areaTotal.add(l.getArea()); }
+
+		if (listaLotes.size() == 1) {
+			segundaIntro.add(" el lote de terreno rústico ubicado en el PROGRAMA DE VIVIENDA NAPOLE, Manzana ");
+			segundaIntro.add(new Text("\u201c" + lote.getManzana() + "\u201d").setFont(arialNarrowBold));
+			segundaIntro.add(", Lote ");
+			segundaIntro.add(new Text("\u201c" + lote.getNumeroLote() + "\u201d").setFont(arialNarrowBold));
+			segundaIntro.add(", con un área de ");
+			segundaIntro.add(new Text(areaTotal + " m2").setFont(arialNarrowBold));
+		} else {
+			boolean mismaManzana = listaLotes.stream().map(LoteResponseDTO::getManzana).distinct().count() == 1;
+			if (mismaManzana) {
+				segundaIntro.add(" los lotes de terreno rústico ubicados en el PROGRAMA DE VIVIENDA NAPOLE, Manzana ");
+				segundaIntro.add(new Text("\u201c" + listaLotes.get(0).getManzana() + "\u201d").setFont(arialNarrowBold));
+				segundaIntro.add(", con los lotes Nº ");
+				for (int i = 0; i < listaLotes.size(); i++) {
+					segundaIntro.add(new Text("\u201c" + listaLotes.get(i).getNumeroLote() + "\u201d").setFont(arialNarrowBold));
+					if (i < listaLotes.size() - 1) segundaIntro.add(" y ");
+				}
+				segundaIntro.add(", con un área total de ");
+				segundaIntro.add(new Text(areaTotal + " m2").setFont(arialNarrowBold));
+			} else {
+				segundaIntro.add(" los lotes de terreno rústico ubicados en el PROGRAMA DE VIVIENDA NAPOLE, ");
+				for (int i = 0; i < listaLotes.size(); i++) {
+					segundaIntro.add("Manzana ");
+					segundaIntro.add(new Text("\u201c" + listaLotes.get(i).getManzana() + "\u201d").setFont(arialNarrowBold));
+					segundaIntro.add(", Lote ");
+					segundaIntro.add(new Text("\u201c" + listaLotes.get(i).getNumeroLote() + "\u201d").setFont(arialNarrowBold));
+					if (i < listaLotes.size() - 1) segundaIntro.add(" y ");
+				}
+				segundaIntro.add(", con un área total de ");
+				segundaIntro.add(new Text(areaTotal + " m2").setFont(arialNarrowBold));
+			}
+		}
+
 		segundaIntro.add(", situado en el Distrito de Puente Piedra, Provincia y Departamento de Lima, encerrado dentro de los siguientes linderos y medidas perimétricas:");
 
 		divSegunda.add(segundaIntro);
 
-		Table tablaLinderos = new Table(UnitValue.createPercentArray(new float[]{30f, 45f, 25f}))
-				.useAllAvailableWidth()
-				.setBorder(Border.NO_BORDER)
-				.setMarginLeft(20);
+		// ── LINDEROS POR CADA LOTE ──────────────────────────────────────────
+		for (LoteResponseDTO loteItem : listaLotes) {
 
-		agregarFilaLinderos(tablaLinderos, "Por el frente", lote.getColindanteNorte(), "Con    " + lote.getAncho1() + "  m.l.", arialNarrow);
-		agregarFilaLinderos(tablaLinderos, "Por la derecha", lote.getColindanteEste(), "Con  " + lote.getLargo1() + "  m.l.", arialNarrow);
-		agregarFilaLinderos(tablaLinderos, "Por la Izquierda", lote.getColindanteOeste(), "Con    " + lote.getLargo2() + "  m.l.", arialNarrow);
-		agregarFilaLinderos(tablaLinderos, "Por el fondo", lote.getColindanteSur(), "Con    " + lote.getAncho2() + "  m.l.", arialNarrow);
+			if (listaLotes.size() > 1) {
+				divSegunda.add(new Paragraph()
+						.add(new Text("MZ. " + loteItem.getManzana() + " LT." + loteItem.getNumeroLote() + " ÁREA:" + loteItem.getArea() + "M2")
+								.setFont(arialNarrowBold))
+						.setFontSize(12)
+						.setMarginTop(10)
+						.setMarginBottom(2));
+			}
 
-		divSegunda.add(tablaLinderos);
+			Table tablaLinderos = new Table(UnitValue.createPercentArray(new float[]{30f, 45f, 25f}))
+					.useAllAvailableWidth()
+					.setBorder(Border.NO_BORDER)
+					.setMarginLeft(20);
+
+			agregarFilaLinderos(tablaLinderos, "Por el frente", loteItem.getColindanteNorte(), "Con    " + loteItem.getAncho1() + "  m.l.", arialNarrow);
+			agregarFilaLinderos(tablaLinderos, "Por la derecha", loteItem.getColindanteEste(), "Con  " + loteItem.getLargo1() + "  m.l.", arialNarrow);
+			agregarFilaLinderos(tablaLinderos, "Por la Izquierda", loteItem.getColindanteOeste(), "Con    " + loteItem.getLargo2() + "  m.l.", arialNarrow);
+			agregarFilaLinderos(tablaLinderos, "Por el fondo", loteItem.getColindanteSur(), "Con    " + loteItem.getAncho2() + "  m.l.", arialNarrow);
+
+			divSegunda.add(tablaLinderos);
+		}
 
 		Paragraph segundaFinal = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
