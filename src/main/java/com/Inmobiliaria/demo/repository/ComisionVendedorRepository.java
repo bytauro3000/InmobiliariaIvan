@@ -25,6 +25,6 @@ public interface ComisionVendedorRepository extends JpaRepository<ComisionVended
 
     boolean existsByContratoIdContrato(Integer idContrato);
 
-    @EntityGraph(attributePaths = {"contrato", "contrato.programa", "vendedor"})
+    @EntityGraph(attributePaths = {"contrato", "vendedor"})
     List<ComisionVendedor> findByVendedorIdVendedor(Integer idVendedor);
 }
