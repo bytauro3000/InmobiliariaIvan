@@ -1208,23 +1208,21 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         for (ComisionVendedor cv : comisiones) {
             if (cv.getEstado() == EstadoComision.ANULADA) continue;
 
-            // Obtener pagos de esta comision
-            List<PagoComisionVendedor> pagos = pagoComisionRepository.findByComisionIdComisionOrderByIdPagoComisionAsc(cv.getIdComision());
-            BigDecimal pagosDeEstaComision = pagos.stream()
-                    .map(PagoComisionVendedor::getMonto)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            // FILTRO: Solo incluir comisiones donde el cliente ya pago la letra 8 o mas
-            // (el vendedor debe haber recibido al menos 1 pago mensual, no solo el adelanto)
-            BigDecimal adelanto = cv.getMontoAdelanto() != null ? cv.getMontoAdelanto() : BigDecimal.ZERO;
-            BigDecimal pagosMensuales = pagosDeEstaComision.subtract(adelanto);
-            if (pagosMensuales.compareTo(BigDecimal.ZERO) <= 0) continue;
+            // FILTRO: Solo comisiones EN_PAGO (habilitadas para pago del 10% de la letra)
+            // o PENDIENTE con saldo (el cliente ya avanzo pero aun no se registra el pago)
+            if (cv.getEstado() != EstadoComision.EN_PAGO && cv.getEstado() != EstadoComision.PENDIENTE) continue;
 
             List<com.Inmobiliaria.demo.entity.Lote> lotes = contratoLoteRepository.findLotesByContrato(cv.getContrato().getIdContrato());
             String nombrePrograma = (!lotes.isEmpty() && lotes.get(0).getPrograma() != null)
                     ? lotes.get(0).getPrograma().getNombrePrograma() : "SIN PROGRAMA";
 
             totalComision = totalComision.add(cv.getMontoComisionTotal() != null ? cv.getMontoComisionTotal() : BigDecimal.ZERO);
+
+            // Obtener pagos de esta comision
+            List<PagoComisionVendedor> pagos = pagoComisionRepository.findByComisionIdComisionOrderByIdPagoComisionAsc(cv.getIdComision());
+            BigDecimal pagosDeEstaComision = pagos.stream()
+                    .map(PagoComisionVendedor::getMonto)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
             aporteComision = aporteComision.add(pagosDeEstaComision);
 
             datosPorPrograma.computeIfAbsent(nombrePrograma, k -> new ArrayList<>())
