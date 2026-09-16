@@ -259,7 +259,7 @@ public class ContratoNapolePdfMerruic {
 		// Se agrupa en un Div con keepTogether para que la cláusula completa
 		// (encabezado + texto + linderos) no se parta entre páginas.
 		verificarEspacioYSalto(document, pdf, 0.25f);
-		Div divSegunda = new Div().setKeepTogether(true);
+		Div divSegunda = new Div();
 
 		agregarEncabezadoClausula(document, arialNarrowBold, "OBJETO DEL CONTRATO:");
 
