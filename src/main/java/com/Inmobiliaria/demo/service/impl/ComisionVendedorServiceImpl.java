@@ -1357,7 +1357,9 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
                 fila.setSaldoComision(cv.getSaldoPendiente());
                 fila.setComisionMensual(comisionMensual);
                 fila.setDeudaPorLote(deudaPorLote);
-                fila.setMoneda(cv.getMoneda() != null ? cv.getMoneda().name() : "USD");
+                fila.setMoneda(cv.getMoneda() != null
+                        ? (cv.getMoneda() == com.Inmobiliaria.demo.enums.Moneda.PEN ? "S/." : "$")
+                        : "$");
                 programa.getFilas().add(fila);
                 programa.setTotalPrograma(programa.getTotalPrograma().add(cv.getMontoComisionTotal() != null ? cv.getMontoComisionTotal() : BigDecimal.ZERO));
                 programa.setTotalLotes(programa.getTotalLotes() + lotes.size());
@@ -1377,7 +1379,10 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         dto.setTotalComision(totalComision);
         dto.setAporteComision(aporteComision);
         dto.setSaldoPendiente(totalComision.subtract(aporteComision));
-        dto.setMoneda("PEN");
+        // Moneda dinamica segun la primera comision
+        String monedaReporte = comisiones.isEmpty() ? "USD"
+                : (comisiones.get(0).getMoneda() == com.Inmobiliaria.demo.enums.Moneda.PEN ? "S/." : "$");
+        dto.setMoneda(monedaReporte);
         dto.setFechaEmision(java.time.LocalDateTime.now());
         dto.setProgramas(new ArrayList<>(mapaProgramas.values()));
         dto.setSoloPendientes(true);
