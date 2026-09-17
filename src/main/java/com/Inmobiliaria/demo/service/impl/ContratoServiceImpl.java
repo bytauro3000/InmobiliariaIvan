@@ -1173,4 +1173,128 @@ public class ContratoServiceImpl implements ContratoService {
         }
         return new ArrayList<>(mapa.values());
     }
+
+    // ── Lista de contratos por programa y estado (para reporte) ───────────────
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public List<com.Inmobiliaria.demo.dto.ListaContratoDTO> listarContratosPorProgramaYEstado(
+            Integer idPrograma, List<String> estados) {
+
+        List<Contrato> contratos = contratoRepository.findAllConLotesYClientes();
+
+        // Filtrar por programa si se especifica
+        if (idPrograma != null) {
+            contratos = contratos.stream()
+                    .filter(c -> c.getLotes() != null && c.getLotes().stream()
+                            .anyMatch(cl -> cl.getLote() != null
+                                    && cl.getLote().getPrograma() != null
+                                    && idPrograma.equals(cl.getLote().getPrograma().getIdPrograma())))
+                    .toList();
+        }
+
+        // Filtrar por estados si se especifica
+        if (estados != null && !estados.isEmpty()) {
+            List<com.Inmobiliaria.demo.enums.EstadoContrato> estadosEnum = estados.stream()
+                    .map(e -> {
+                        try {
+                            return com.Inmobiliaria.demo.enums.EstadoContrato.valueOf(e);
+                        } catch (Exception ex) {
+                            return null;
+                        }
+                    })
+                    .filter(Objects::nonNull)
+                    .toList();
+            contratos = contratos.stream()
+                    .filter(c -> c.getEstadoContrato() != null && estadosEnum.contains(c.getEstadoContrato()))
+                    .toList();
+        }
+
+        // Convertir a DTO
+        List<com.Inmobiliaria.demo.dto.ListaContratoDTO> resultado = new ArrayList<>();
+        for (Contrato c : contratos) {
+            com.Inmobiliaria.demo.dto.ListaContratoDTO dto = new com.Inmobiliaria.demo.dto.ListaContratoDTO();
+            dto.setIdContrato(c.getIdContrato());
+            dto.setEstadoContrato(c.getEstadoContrato() != null ? c.getEstadoContrato().name() : "");
+
+            // Clientes (ordenados por orden)
+            java.util.List<com.Inmobiliaria.demo.entity.ContratoCliente> clientes =
+                    c.getClientes() != null ? new java.util.ArrayList<>(c.getClientes()) : java.util.Collections.emptyList();
+            if (clientes != null) {
+                clientes.sort(java.util.Comparator.comparingInt(
+                        cc -> cc.getOrden() != null ? cc.getOrden() : 0));
+                if (clientes.size() > 0 && clientes.get(0).getCliente() != null) {
+                    com.Inmobiliaria.demo.entity.Cliente cl1 = clientes.get(0).getCliente();
+                    dto.setNombreCliente1((cl1.getNombre() + " " + (cl1.getApellidos() != null ? cl1.getApellidos() : "")).trim());
+                    dto.setCelular1(cl1.getCelular());
+                }
+                if (clientes.size() > 1 && clientes.get(1).getCliente() != null) {
+                    com.Inmobiliaria.demo.entity.Cliente cl2 = clientes.get(1).getCliente();
+                    dto.setNombreCliente2((cl2.getNombre() + " " + (cl2.getApellidos() != null ? cl2.getApellidos() : "")).trim());
+                    dto.setCelular2(cl2.getCelular());
+                }
+            }
+
+            // Lotes (ordenados por manzana, luego numero)
+            java.util.List<com.Inmobiliaria.demo.entity.ContratoLote> lotes =
+                    c.getLotes() != null ? new java.util.ArrayList<>(c.getLotes()) : java.util.Collections.emptyList();
+            if (lotes != null && !lotes.isEmpty()) {
+                lotes.sort(java.util.Comparator
+                        .comparing((com.Inmobiliaria.demo.entity.ContratoLote cl) ->
+                                cl.getLote() != null ? cl.getLote().getManzana() : "",
+                                java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
+                        .thenComparing(cl ->
+                                cl.getLote() != null ? cl.getLote().getNumeroLote() : "",
+                                java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())));
+
+                com.Inmobiliaria.demo.entity.ContratoLote primerLote = lotes.get(0);
+                if (primerLote.getLote() != null) {
+                    dto.setManzana(primerLote.getLote().getManzana());
+                    dto.setNumeroLote(primerLote.getLote().getNumeroLote());
+                    dto.setArea(primerLote.getLote().getArea());
+                    if (primerLote.getLote().getPrograma() != null) {
+                        dto.setNombrePrograma(primerLote.getLote().getPrograma().getNombrePrograma());
+                        dto.setIdPrograma(primerLote.getLote().getPrograma().getIdPrograma());
+                    }
+                }
+
+                if (lotes.size() > 1) {
+                    com.Inmobiliaria.demo.entity.ContratoLote segundoLote = lotes.get(1);
+                    if (segundoLote.getLote() != null) {
+                        // Si manzanas diferentes, mostrar ambas
+                        String mz1 = primerLote.getLote() != null ? primerLote.getLote().getManzana() : "";
+                        String mz2 = segundoLote.getLote().getManzana();
+                        if (!mz1.equalsIgnoreCase(mz2)) {
+                            dto.setManzana2(segundoLote.getLote().getManzana());
+                        }
+                        dto.setNumeroLote2(segundoLote.getLote().getNumeroLote());
+                        dto.setArea2(segundoLote.getLote().getArea());
+                    }
+                }
+
+                // Area total
+                java.math.BigDecimal areaTotal = java.math.BigDecimal.ZERO;
+                for (com.Inmobiliaria.demo.entity.ContratoLote cl : lotes) {
+                    if (cl.getLote() != null && cl.getLote().getArea() != null) {
+                        areaTotal = areaTotal.add(cl.getLote().getArea());
+                    }
+                }
+                dto.setAreaTotal(areaTotal);
+            }
+
+            resultado.add(dto);
+        }
+
+        // Ordenar por programa, luego manzana, luego lote
+        resultado.sort(java.util.Comparator
+                .comparing((com.Inmobiliaria.demo.dto.ListaContratoDTO d) ->
+                        d.getNombrePrograma() != null ? d.getNombrePrograma() : "",
+                        java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
+                .thenComparing(d -> d.getManzana() != null ? d.getManzana() : "",
+                        java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
+                .thenComparing(d -> d.getNumeroLote() != null ? d.getNumeroLote() : "",
+                        java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())));
+
+        return resultado;
+    }
 }

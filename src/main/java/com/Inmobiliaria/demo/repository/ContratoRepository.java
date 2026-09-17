@@ -259,6 +259,16 @@ public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
            "  com.Inmobiliaria.demo.enums.EstadoContrato.CANCELADO, " +
            "  com.Inmobiliaria.demo.enums.EstadoContrato.TRANSFERIDO" +
            ") " +
-           "AND (:idVendedor IS NULL OR c.vendedor.idVendedor = :idVendedor)")
+            "AND (:idVendedor IS NULL OR c.vendedor.idVendedor = :idVendedor)")
     List<Contrato> findLotesVendidosConLotes(@Param("idVendedor") Integer idVendedor);
+
+    // ── Lista de contratos por programa y estado (para reporte) ───────────
+    @Query("SELECT DISTINCT c FROM Contrato c " +
+           "LEFT JOIN FETCH c.lotes cl " +
+           "LEFT JOIN FETCH cl.lote l " +
+           "LEFT JOIN FETCH l.programa " +
+           "LEFT JOIN FETCH c.clientes cc " +
+           "LEFT JOIN FETCH cc.cliente " +
+           "ORDER BY c.idContrato DESC")
+    List<Contrato> findAllConLotesYClientes();
 }

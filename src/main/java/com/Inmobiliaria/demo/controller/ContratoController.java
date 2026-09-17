@@ -152,4 +152,71 @@ public class ContratoController {
         contratoEstadoScheduler.ejecutarManualmente();
         return ResponseEntity.ok("Scheduler ejecutado. Revisa los logs de Spring Boot.");
     }
+
+    // ── Lista de contratos por programa y estado ─────────────────────────────
+
+    @GetMapping("/lista-programa")
+    public ResponseEntity<List<com.Inmobiliaria.demo.dto.ListaContratoDTO>> listaContratos(
+            @RequestParam(required = false) Integer idPrograma,
+            @RequestParam(required = false) List<String> estados) {
+        List<com.Inmobiliaria.demo.dto.ListaContratoDTO> lista =
+                contratoService.listarContratosPorProgramaYEstado(idPrograma, estados);
+        return ResponseEntity.ok(lista);
+    }
+
+    @GetMapping("/lista-programa/excel")
+    public ResponseEntity<byte[]> listaContratosExcel(
+            @RequestParam(required = false) Integer idPrograma,
+            @RequestParam(required = false) List<String> estados) {
+        try {
+            List<com.Inmobiliaria.demo.dto.ListaContratoDTO> lista =
+                    contratoService.listarContratosPorProgramaYEstado(idPrograma, estados);
+            byte[] excelBytes = com.Inmobiliaria.demo.util.ListaContratosExcel.generar(lista);
+            return ResponseEntity.ok()
+                    .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=Lista_Contratos.xlsx")
+                    .contentType(org.springframework.http.MediaType.parseMediaType(
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(excelBytes);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/lista-programa/word")
+    public ResponseEntity<byte[]> listaContratosWord(
+            @RequestParam(required = false) Integer idPrograma,
+            @RequestParam(required = false) List<String> estados) {
+        try {
+            List<com.Inmobiliaria.demo.dto.ListaContratoDTO> lista =
+                    contratoService.listarContratosPorProgramaYEstado(idPrograma, estados);
+            byte[] wordBytes = com.Inmobiliaria.demo.util.ListaContratosWord.generar(lista);
+            return ResponseEntity.ok()
+                    .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=Lista_Contratos.docx")
+                    .contentType(org.springframework.http.MediaType.parseMediaType(
+                            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                    .body(wordBytes);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/lista-programa/pdf")
+    public ResponseEntity<byte[]> listaContratosPdf(
+            @RequestParam(required = false) Integer idPrograma,
+            @RequestParam(required = false) List<String> estados) {
+        try {
+            List<com.Inmobiliaria.demo.dto.ListaContratoDTO> lista =
+                    contratoService.listarContratosPorProgramaYEstado(idPrograma, estados);
+            byte[] pdfBytes = com.Inmobiliaria.demo.util.ReporteListaContratosPdf.generar(lista);
+            return ResponseEntity.ok()
+                    .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=Lista_Contratos.pdf")
+                    .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                    .body(pdfBytes);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
 }

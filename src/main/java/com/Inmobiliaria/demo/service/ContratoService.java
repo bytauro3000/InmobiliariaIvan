@@ -48,4 +48,7 @@ public interface ContratoService {
     Map<String, Object> consultarImpactoEdicion(Integer idContrato);
 
     ContratoResponseDTO subirVoucherInicial(Integer idContrato, org.springframework.web.multipart.MultipartFile voucher);
+
+    List<com.Inmobiliaria.demo.dto.ListaContratoDTO> listarContratosPorProgramaYEstado(
+            Integer idPrograma, List<String> estados);
 }
