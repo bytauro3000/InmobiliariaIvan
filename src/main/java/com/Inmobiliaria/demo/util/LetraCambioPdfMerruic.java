@@ -77,7 +77,7 @@ public class LetraCambioPdfMerruic {
                 // DISTRICTO (antes iba Fecha de Giro en Ivan)
                 escribir(canvas, fontBold, FONT_SIZE,
                         reporte.getDistritoNombre(),
-                        101, 16);
+                        101, 18);
 
                 // FECHA DE GIRO (antes iba Distrito en Ivan)
                 escribir(canvas, fontBold, FONT_SIZE,
@@ -110,7 +110,7 @@ public class LetraCambioPdfMerruic {
                             && !reporte.getCliente1Apellidos().isBlank()) {
                         cliente1 += " " + reporte.getCliente1Apellidos();
                     }
-                    escribir(canvas, fontBold, FONT_SIZE, cliente1, 56, 49);
+                    escribir(canvas, fontBold, FONT_SIZE, cliente1, 56, 49.5f);
                 }
 
                 // ── FILA 4 ────────────────────────────────────────────────────
@@ -124,7 +124,7 @@ public class LetraCambioPdfMerruic {
                         cliente2 += " " + reporte.getCliente2Apellidos();
                     }
                     cliente2 += " DNI/RUC:" + reporte.getCliente2NumDocumento();
-                    escribir(canvas, fontBold, FONT_SIZE, cliente2, 46, 53);
+                    escribir(canvas, fontBold, FONT_SIZE, cliente2, 46, 53.5f);
                 }
 
                 // ── FILA 5 ────────────────────────────────────────────────────
@@ -135,7 +135,7 @@ public class LetraCambioPdfMerruic {
                         && !reporte.getCliente1Celular().isBlank()) {
                     dniRucCelular += "   " + reporte.getCliente1Celular();
                 }
-                escribir(canvas, fontBold, FONT_SIZE, dniRucCelular, 52, 62);
+                escribir(canvas, fontBold, FONT_SIZE, dniRucCelular, 54, 63);
 
                 // ── FILA 6 ────────────────────────────────────────────────────
 
@@ -151,10 +151,10 @@ public class LetraCambioPdfMerruic {
                                 ? spaceBefore : (spaceAfter != -1 ? spaceAfter : midpoint);
                         String linea1 = direccion.substring(0, splitPoint).trim();
                         String linea2 = direccion.substring(splitPoint).trim();
-                        escribir(canvas, fontBold, FONT_SIZE, linea1, 52, 68);
-                        escribir(canvas, fontBold, FONT_SIZE, linea2, 52, 74);
+                        escribir(canvas, fontBold, FONT_SIZE, linea1, 54, 68.5f);
+                        escribir(canvas, fontBold, FONT_SIZE, linea2, 54, 74.5f);
                     } else {
-                        escribir(canvas, fontBold, FONT_SIZE, direccion, 52, 68);
+                        escribir(canvas, fontBold, FONT_SIZE, direccion, 54, 68.5f);
                     }
                 }
 
@@ -164,7 +164,7 @@ public class LetraCambioPdfMerruic {
                 if (reporte.getCliente1Distrito() != null) {
                     escribir(canvas, fontBold, FONT_SIZE,
                             reporte.getCliente1Distrito(),
-                            52, 76);
+                            59, 74.5f);
                 }
 
                 canvas.release();
