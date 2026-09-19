@@ -135,7 +135,7 @@ public class LetraCambioPdfMerruic {
                 // Celular Cliente 1
                 if (reporte.getCliente1Celular() != null
                         && !reporte.getCliente1Celular().isBlank()) {
-                    escribir(canvas, fontBold, FONT_SIZE - 0.5f, reporte.getCliente1Celular(), 69, 63);
+                    escribir(canvas, fontBold, FONT_SIZE - 0.5f, reporte.getCliente1Celular(), 89, 63);
                 }
 
                 // ── FILA 6 ────────────────────────────────────────────────────
