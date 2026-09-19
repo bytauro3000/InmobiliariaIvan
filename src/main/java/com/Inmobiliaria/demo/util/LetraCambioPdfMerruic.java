@@ -77,7 +77,7 @@ public class LetraCambioPdfMerruic {
                 // DISTRICTO (antes iba Fecha de Giro en Ivan)
                 escribir(canvas, fontBold, FONT_SIZE,
                         reporte.getDistritoNombre(),
-                        101, 18);
+                        101, 20);
 
                 // FECHA DE GIRO (antes iba Distrito en Ivan)
                 escribir(canvas, fontBold, FONT_SIZE,
@@ -99,7 +99,7 @@ public class LetraCambioPdfMerruic {
                 // Importe en letras
                 escribir(canvas, fontBold, FONT_SIZE,
                         reporte.getImporteLetras(),
-                        45, 38);
+                        45, 39);
 
                 // ── FILA 3 ────────────────────────────────────────────────────
 
@@ -110,7 +110,7 @@ public class LetraCambioPdfMerruic {
                             && !reporte.getCliente1Apellidos().isBlank()) {
                         cliente1 += " " + reporte.getCliente1Apellidos();
                     }
-                    escribir(canvas, fontBold, FONT_SIZE, cliente1, 56, 49.5f);
+                    escribir(canvas, fontBold, FONT_SIZE - 0.5f, cliente1, 57, 49.5f);
                 }
 
                 // ── FILA 4 ────────────────────────────────────────────────────
@@ -124,18 +124,19 @@ public class LetraCambioPdfMerruic {
                         cliente2 += " " + reporte.getCliente2Apellidos();
                     }
                     cliente2 += " DNI/RUC:" + reporte.getCliente2NumDocumento();
-                    escribir(canvas, fontBold, FONT_SIZE, cliente2, 46, 53.5f);
+                    escribir(canvas, fontBold, FONT_SIZE - 0.5f, cliente2, 46, 54.5f);
                 }
 
                 // ── FILA 5 ────────────────────────────────────────────────────
 
-                // DNI/RUC Cliente 1 + Celular (en la misma fila)
-                String dniRucCelular = reporte.getCliente1NumDocumento();
+                // DNI/RUC Cliente 1
+                escribir(canvas, fontBold, FONT_SIZE - 0.5f, reporte.getCliente1NumDocumento(), 58, 63);
+
+                // Celular Cliente 1
                 if (reporte.getCliente1Celular() != null
                         && !reporte.getCliente1Celular().isBlank()) {
-                    dniRucCelular += "   " + reporte.getCliente1Celular();
+                    escribir(canvas, fontBold, FONT_SIZE - 0.5f, reporte.getCliente1Celular(), 69, 63);
                 }
-                escribir(canvas, fontBold, FONT_SIZE, dniRucCelular, 54, 63);
 
                 // ── FILA 6 ────────────────────────────────────────────────────
 
@@ -151,10 +152,10 @@ public class LetraCambioPdfMerruic {
                                 ? spaceBefore : (spaceAfter != -1 ? spaceAfter : midpoint);
                         String linea1 = direccion.substring(0, splitPoint).trim();
                         String linea2 = direccion.substring(splitPoint).trim();
-                        escribir(canvas, fontBold, FONT_SIZE, linea1, 54, 68.5f);
-                        escribir(canvas, fontBold, FONT_SIZE, linea2, 54, 74.5f);
+                        escribir(canvas, fontBold, FONT_SIZE - 0.5f, linea1, 58, 68.5f);
+                        escribir(canvas, fontBold, FONT_SIZE - 0.5f, linea2, 58, 74.5f);
                     } else {
-                        escribir(canvas, fontBold, FONT_SIZE, direccion, 54, 68.5f);
+                        escribir(canvas, fontBold, FONT_SIZE - 0.5f, direccion, 58, 68.5f);
                     }
                 }
 
@@ -162,9 +163,9 @@ public class LetraCambioPdfMerruic {
 
                 // Distrito del cliente
                 if (reporte.getCliente1Distrito() != null) {
-                    escribir(canvas, fontBold, FONT_SIZE,
+                    escribir(canvas, fontBold, FONT_SIZE - 0.5f,
                             reporte.getCliente1Distrito(),
-                            59, 74.5f);
+                            84, 73);
                 }
 
                 canvas.release();
