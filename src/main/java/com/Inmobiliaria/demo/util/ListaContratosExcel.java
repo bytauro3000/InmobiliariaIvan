@@ -38,6 +38,11 @@ public class ListaContratosExcel {
             font.setBold(true);
             headerStyle.setFont(font);
 
+            // Estilo centrado
+            CellStyle centerStyle = workbook.createCellStyle();
+            centerStyle.setAlignment(HorizontalAlignment.CENTER);
+            centerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
             // Estilo empresa (negrita, centrado)
             CellStyle empresaStyle = workbook.createCellStyle();
             Font empresaFont = workbook.createFont();
@@ -109,7 +114,9 @@ public class ListaContratosExcel {
                     if (dto.getManzana2() != null && !dto.getManzana2().isEmpty()) {
                         mz.append("\n").append(dto.getManzana2());
                     }
-                    row.createCell(2).setCellValue(mz.toString());
+                    Cell mzCell = row.createCell(2);
+                    mzCell.setCellValue(mz.toString());
+                    mzCell.setCellStyle(centerStyle);
 
                     // LT
                     StringBuilder lt = new StringBuilder();
@@ -117,14 +124,23 @@ public class ListaContratosExcel {
                     if (dto.getNumeroLote2() != null && !dto.getNumeroLote2().isEmpty()) {
                         lt.append("\n").append(dto.getNumeroLote2());
                     }
-                    row.createCell(3).setCellValue(lt.toString());
+                    Cell ltCell = row.createCell(3);
+                    ltCell.setCellValue(lt.toString());
+                    ltCell.setCellStyle(centerStyle);
 
                     // Area
                     String area = dto.getAreaTotal() != null ? dto.getAreaTotal() + " m2" : "";
-                    row.createCell(4).setCellValue(area);
+                    Cell areaCell = row.createCell(4);
+                    areaCell.setCellValue(area);
+                    areaCell.setCellStyle(centerStyle);
 
-                    row.createCell(5).setCellValue(dto.getCelular1() != null ? dto.getCelular1() : "");
-                    row.createCell(6).setCellValue(dto.getCelular2() != null ? dto.getCelular2() : "");
+                    Cell cel1Cell = row.createCell(5);
+                    cel1Cell.setCellValue(dto.getCelular1() != null ? dto.getCelular1() : "");
+                    cel1Cell.setCellStyle(centerStyle);
+
+                    Cell cel2Cell = row.createCell(6);
+                    cel2Cell.setCellValue(dto.getCelular2() != null ? dto.getCelular2() : "");
+                    cel2Cell.setCellStyle(centerStyle);
                     row.createCell(7).setCellValue(dto.getEstadoContrato() != null ? dto.getEstadoContrato() : "");
                 }
             }

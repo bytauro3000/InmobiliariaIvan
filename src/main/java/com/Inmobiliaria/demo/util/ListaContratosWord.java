@@ -80,6 +80,9 @@ public class ListaContratosWord {
                             : headerRow.addNewTableCell();
                     cell.setText(headers[i]);
                     cell.setColor("3C3C3C");
+                    cell.setVerticalAlignment(org.apache.poi.xwpf.usermodel.XWPFTableCell.XWPFVertAlign.CENTER);
+                    org.apache.poi.xwpf.usermodel.ParagraphAlignment align = (i >= 2) ? org.apache.poi.xwpf.usermodel.ParagraphAlignment.CENTER : org.apache.poi.xwpf.usermodel.ParagraphAlignment.LEFT;
+                    cell.addParagraph().setAlignment(align);
                 }
 
                 for (ListaContratoDTO dto : entry.getValue()) {
@@ -99,6 +102,7 @@ public class ListaContratosWord {
                         mz.append(" / ").append(dto.getManzana2());
                     }
                     row.getCell(2).setText(mz.toString());
+                    row.getCell(2).addParagraph().setAlignment(ParagraphAlignment.CENTER);
 
                     StringBuilder lt = new StringBuilder();
                     if (dto.getNumeroLote() != null) lt.append(dto.getNumeroLote());
@@ -106,12 +110,17 @@ public class ListaContratosWord {
                         lt.append(" / ").append(dto.getNumeroLote2());
                     }
                     row.getCell(3).setText(lt.toString());
+                    row.getCell(3).addParagraph().setAlignment(ParagraphAlignment.CENTER);
 
                     String area = dto.getAreaTotal() != null ? dto.getAreaTotal() + " m2" : "";
                     row.getCell(4).setText(area);
+                    row.getCell(4).addParagraph().setAlignment(ParagraphAlignment.CENTER);
 
                     row.getCell(5).setText(dto.getCelular1() != null ? dto.getCelular1() : "");
+                    row.getCell(5).addParagraph().setAlignment(ParagraphAlignment.CENTER);
+
                     row.getCell(6).setText(dto.getCelular2() != null ? dto.getCelular2() : "");
+                    row.getCell(6).addParagraph().setAlignment(ParagraphAlignment.CENTER);
                 }
 
                 // Espacio despues de cada tabla

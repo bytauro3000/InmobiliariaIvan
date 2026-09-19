@@ -44,7 +44,7 @@ public class ReporteListaContratosPdf {
 
         PdfDocument pdf = new PdfDocument(new PdfWriter(out));
         Document doc = new Document(pdf, PageSize.A4);
-        doc.setMargins(5, 20, 20, 20);
+        doc.setMargins(8, 20, 20, 20);
 
         // Encabezado empresa
         doc.add(encabezado(courierBold, courier));
@@ -79,7 +79,7 @@ public class ReporteListaContratosPdf {
 
             // Tabla
             String[] headers = {"N°", "NOMBRE Y APELLIDOS", "MZ", "LT", "AREA", "CELULAR 1", "CELULAR 2"};
-            Table t = new Table(UnitValue.createPercentArray(new float[]{0.05f, 0.30f, 0.08f, 0.10f, 0.12f, 0.17f, 0.18f}))
+            Table t = new Table(UnitValue.createPercentArray(new float[]{0.05f, 0.35f, 0.08f, 0.08f, 0.10f, 0.14f, 0.15f}))
                     .setWidth(UnitValue.createPercentValue(100))
                     .setMarginBottom(2);
 
@@ -121,11 +121,11 @@ public class ReporteListaContratosPdf {
 
                 t.addCell(celdaFilaCenter(String.valueOf(numero++), courier, bg));
                 t.addCell(celdaFila(nombre, courier, bg));
-                t.addCell(celdaFila(mz.toString(), courier, bg));
-                t.addCell(celdaFila(lt.toString(), courier, bg));
-                t.addCell(celdaFila(area, courier, bg));
-                t.addCell(celdaFila(dto.getCelular1() != null ? dto.getCelular1() : "", courier, bg));
-                t.addCell(celdaFila(dto.getCelular2() != null ? dto.getCelular2() : "", courier, bg));
+                t.addCell(celdaFilaCenter(mz.toString(), courier, bg));
+                t.addCell(celdaFilaCenter(lt.toString(), courier, bg));
+                t.addCell(celdaFilaCenter(area, courier, bg));
+                t.addCell(celdaFilaCenter(dto.getCelular1() != null ? dto.getCelular1() : "", courier, bg));
+                t.addCell(celdaFilaCenter(dto.getCelular2() != null ? dto.getCelular2() : "", courier, bg));
 
                 alternate = !alternate;
             }
