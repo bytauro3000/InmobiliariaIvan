@@ -92,14 +92,14 @@ public class ListaContratosWord {
 
                     String nombre = dto.getNombreCliente1();
                     if (dto.getNombreCliente2() != null && !dto.getNombreCliente2().isEmpty()) {
-                        nombre += " / " + dto.getNombreCliente2();
+                        nombre += "\n" + dto.getNombreCliente2();
                     }
                     row.getCell(1).setText(nombre);
 
                     StringBuilder mz = new StringBuilder();
                     if (dto.getManzana() != null) mz.append(dto.getManzana());
                     if (dto.getManzana2() != null && !dto.getManzana2().isEmpty()) {
-                        mz.append(" / ").append(dto.getManzana2());
+                        mz.append("\n").append(dto.getManzana2());
                     }
                     row.getCell(2).setText(mz.toString());
                     row.getCell(2).addParagraph().setAlignment(ParagraphAlignment.CENTER);
@@ -107,7 +107,7 @@ public class ListaContratosWord {
                     StringBuilder lt = new StringBuilder();
                     if (dto.getNumeroLote() != null) lt.append(dto.getNumeroLote());
                     if (dto.getNumeroLote2() != null && !dto.getNumeroLote2().isEmpty()) {
-                        lt.append(" / ").append(dto.getNumeroLote2());
+                        lt.append("\n").append(dto.getNumeroLote2());
                     }
                     row.getCell(3).setText(lt.toString());
                     row.getCell(3).addParagraph().setAlignment(ParagraphAlignment.CENTER);

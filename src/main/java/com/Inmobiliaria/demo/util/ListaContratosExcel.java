@@ -104,7 +104,7 @@ public class ListaContratosExcel {
 
                     String nombre = dto.getNombreCliente1();
                     if (dto.getNombreCliente2() != null && !dto.getNombreCliente2().isEmpty()) {
-                        nombre += " / " + dto.getNombreCliente2();
+                        nombre += "\n" + dto.getNombreCliente2();
                     }
                     row.createCell(1).setCellValue(nombre);
 
