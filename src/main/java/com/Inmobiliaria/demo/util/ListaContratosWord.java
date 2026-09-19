@@ -12,13 +12,37 @@ import org.apache.poi.xwpf.usermodel.XWPFRun;
 import org.apache.poi.xwpf.usermodel.XWPFTable;
 import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 import org.apache.poi.xwpf.usermodel.XWPFTableCell;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTPageSz;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTSectPr;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.STPageOrientation;
 
+import com.Inmobiliaria.demo.config.EmpresaContext;
 import com.Inmobiliaria.demo.dto.ListaContratoDTO;
 
 public class ListaContratosWord {
 
+    private static String empresa() { return EmpresaContext.empresaService.obtenerActiva().getNombreLegal(); }
+
     public static byte[] generar(List<ListaContratoDTO> lista) throws Exception {
         try (XWPFDocument doc = new XWPFDocument()) {
+            // Orientación vertical explícita
+            CTSectPr sectPr = doc.getDocument().getBody().addNewSectPr();
+            CTPageSz pageSz = sectPr.addNewPgSz();
+            pageSz.setOrient(STPageOrientation.PORTRAIT);
+            pageSz.setW(java.math.BigInteger.valueOf(11906)); // A4 width in twips
+            pageSz.setH(java.math.BigInteger.valueOf(16838)); // A4 height in twips
+
+            // Encabezado empresa
+            XWPFParagraph empresaPara = doc.createParagraph();
+            empresaPara.setAlignment(ParagraphAlignment.LEFT);
+            XWPFRun empresaRun = empresaPara.createRun();
+            empresaRun.setBold(true);
+            empresaRun.setFontSize(10);
+            empresaRun.setText(empresa());
+
+            // Espacio
+            doc.createParagraph();
+
             // Titulo
             XWPFParagraph titulo = doc.createParagraph();
             titulo.setAlignment(ParagraphAlignment.CENTER);

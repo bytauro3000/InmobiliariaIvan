@@ -36,9 +36,6 @@ public class ReporteListaContratosPdf {
     private static final DeviceRgb COLOR_GRIS_HEADER = new DeviceRgb(60, 60, 60);
 
     private static String empresa() { return EmpresaContext.empresaService.obtenerActiva().getNombreLegal(); }
-    private static String ruc() { return "R.U.C.: " + EmpresaContext.empresaService.obtenerActiva().getRuc(); }
-    private static String direccion() { return EmpresaPdfUtil.direccionCompleta(); }
-    private static String telefono() { return "Cel.: " + EmpresaContext.empresaService.obtenerActiva().getCelular(); }
 
     public static byte[] generar(List<ListaContratoDTO> lista) throws Exception {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -46,8 +43,8 @@ public class ReporteListaContratosPdf {
         PdfFont courierBold = cargarFuente("fonts/COURBD.TTF");
 
         PdfDocument pdf = new PdfDocument(new PdfWriter(out));
-        Document doc = new Document(pdf, PageSize.A4.rotate());
-        doc.setMargins(20, 20, 20, 20);
+        Document doc = new Document(pdf, PageSize.A4);
+        doc.setMargins(5, 20, 20, 20);
 
         // Encabezado empresa
         doc.add(encabezado(courierBold, courier));
@@ -57,7 +54,7 @@ public class ReporteListaContratosPdf {
                 .setFont(courierBold).setFontSize(13)
                 .setFontColor(COLOR_AZUL_OSCURO)
                 .setTextAlignment(TextAlignment.CENTER)
-                .setMarginTop(6).setMarginBottom(4));
+                .setMarginTop(4).setMarginBottom(4));
 
         doc.add(new Paragraph("EMISION: " + LocalDateTime.now().format(FMT_FECHA))
                 .setFont(courier).setFontSize(8)
@@ -158,26 +155,33 @@ public class ReporteListaContratosPdf {
     private static Table encabezado(PdfFont bold, PdfFont normal) {
         Table t = new Table(UnitValue.createPercentArray(new float[]{1, 0.3f}))
                 .setWidth(UnitValue.createPercentValue(100))
+                .setMarginTop(0)
                 .setMarginBottom(0);
 
         Cell izq = new Cell()
-                .setBorder(new SolidBorder(ColorConstants.BLACK, 1f))
-                .setPadding(5);
-        izq.add(new Paragraph(empresa()).setFont(bold).setFontSize(9).setFontColor(COLOR_AZUL_OSCURO).setMarginBottom(1));
-        izq.add(new Paragraph(direccion()).setFont(normal).setFontSize(7).setFontColor(ColorConstants.DARK_GRAY).setMarginBottom(1));
-        izq.add(new Paragraph(telefono() + "     " + ruc()).setFont(normal).setFontSize(7).setFontColor(ColorConstants.DARK_GRAY));
+                .setBorder(Border.NO_BORDER)
+                .setVerticalAlignment(com.itextpdf.layout.properties.VerticalAlignment.MIDDLE)
+                .setPaddingTop(0)
+                .setPaddingBottom(0)
+                .setPaddingLeft(5)
+                .setPaddingRight(5);
+        izq.add(new Paragraph(empresa()).setFont(bold).setFontSize(9).setFontColor(COLOR_AZUL_OSCURO));
         t.addCell(izq);
 
         Cell der = new Cell()
-                .setBorder(new SolidBorder(ColorConstants.BLACK, 1f))
-                .setPadding(5)
-                .setTextAlignment(TextAlignment.CENTER);
+                .setBorder(Border.NO_BORDER)
+                .setVerticalAlignment(com.itextpdf.layout.properties.VerticalAlignment.MIDDLE)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setPaddingTop(0)
+                .setPaddingBottom(0)
+                .setPaddingLeft(5)
+                .setPaddingRight(5);
         try {
             String url = EmpresaContext.empresaService.obtenerActiva().getLogoSmallUrl();
             if (url != null && !url.isBlank()) {
                 com.itextpdf.layout.element.Image logo = new com.itextpdf.layout.element.Image(
                         com.itextpdf.io.image.ImageDataFactory.create(url));
-                logo.scaleToFit(50, 50);
+                logo.scaleToFit(60, 60);
                 logo.setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.CENTER);
                 der.add(logo);
             } else {

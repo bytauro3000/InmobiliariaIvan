@@ -1,7 +1,6 @@
 package com.Inmobiliaria.demo.util;
 
 import java.io.ByteArrayOutputStream;
-import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,17 +8,29 @@ import java.util.Map;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.VerticalAlignment;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
+import com.Inmobiliaria.demo.config.EmpresaContext;
 import com.Inmobiliaria.demo.dto.ListaContratoDTO;
 
 public class ListaContratosExcel {
 
+    private static String empresa() { return EmpresaContext.empresaService.obtenerActiva().getNombreLegal(); }
+
     public static byte[] generar(List<ListaContratoDTO> lista) throws Exception {
         try (XSSFWorkbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Lista de Contratos");
+
+            // Configurar página vertical
+            sheet.getPrintSetup().setPaperSize((short) 9); // A4
+            sheet.getPrintSetup().setLandscape(false);
+            sheet.setFitToPage(true);
+            sheet.getPrintSetup().setFitWidth((short) 1);
+            sheet.getPrintSetup().setFitHeight((short) 0);
 
             // Estilo encabezados
             CellStyle headerStyle = workbook.createCellStyle();
@@ -27,8 +38,38 @@ public class ListaContratosExcel {
             font.setBold(true);
             headerStyle.setFont(font);
 
-            // Encabezados
-            Row header = sheet.createRow(0);
+            // Estilo empresa (negrita, centrado)
+            CellStyle empresaStyle = workbook.createCellStyle();
+            Font empresaFont = workbook.createFont();
+            empresaFont.setBold(true);
+            empresaFont.setFontHeightInPoints((short) 10);
+            empresaStyle.setFont(empresaFont);
+            empresaStyle.setAlignment(HorizontalAlignment.LEFT);
+
+            // Fila empresa
+            Row empresaRow = sheet.createRow(0);
+            Cell empresaCell = empresaRow.createCell(0);
+            empresaCell.setCellValue(empresa());
+            empresaCell.setCellStyle(empresaStyle);
+
+            // Fila vacía
+            sheet.createRow(1);
+
+            // Fila título
+            Row tituloRow = sheet.createRow(2);
+            Cell tituloCell = tituloRow.createCell(0);
+            tituloCell.setCellValue("LISTA DE CONTRATOS");
+            CellStyle tituloStyle = workbook.createCellStyle();
+            Font tituloFont = workbook.createFont();
+            tituloFont.setBold(true);
+            tituloFont.setFontHeightInPoints((short) 14);
+            tituloStyle.setFont(tituloFont);
+            tituloStyle.setAlignment(HorizontalAlignment.CENTER);
+            tituloCell.setCellStyle(tituloStyle);
+            sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(2, 2, 0, 7));
+
+            // Encabezados columna
+            Row header = sheet.createRow(4);
             String[] columnas = {"N°", "NOMBRE Y APELLIDOS", "MZ", "LT", "AREA", "CELULAR 1", "CELULAR 2", "ESTADO"};
             for (int i = 0; i < columnas.length; i++) {
                 Cell cell = header.createCell(i);
@@ -43,7 +84,7 @@ public class ListaContratosExcel {
                 porPrograma.computeIfAbsent(prog, k -> new java.util.ArrayList<>()).add(dto);
             }
 
-            int rowIdx = 1;
+            int rowIdx = 5;
             int numero = 1;
             for (Map.Entry<String, List<ListaContratoDTO>> entry : porPrograma.entrySet()) {
                 // Fila de programa
