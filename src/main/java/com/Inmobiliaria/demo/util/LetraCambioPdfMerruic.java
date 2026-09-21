@@ -123,8 +123,13 @@ public class LetraCambioPdfMerruic {
                             && !reporte.getCliente2Apellidos().isBlank()) {
                         cliente2 += " " + reporte.getCliente2Apellidos();
                     }
-                    cliente2 += " DNI/RUC:" + reporte.getCliente2NumDocumento();
                     escribir(canvas, fontBold, FONT_SIZE - 0.5f, cliente2, 46, 54.5f);
+
+                    // DNI/RUC Cliente 2 (separado, entre nombres y fila del cliente 1)
+                    if (reporte.getCliente2NumDocumento() != null
+                            && !reporte.getCliente2NumDocumento().isBlank()) {
+                        escribir(canvas, fontBold, FONT_SIZE - 0.5f, reporte.getCliente2NumDocumento(), 46, 59);
+                    }
                 }
 
                 // ── FILA 5 ────────────────────────────────────────────────────
@@ -135,7 +140,7 @@ public class LetraCambioPdfMerruic {
                 // Celular Cliente 1
                 if (reporte.getCliente1Celular() != null
                         && !reporte.getCliente1Celular().isBlank()) {
-                    escribir(canvas, fontBold, FONT_SIZE - 0.5f, reporte.getCliente1Celular(), 89, 63);
+                    escribir(canvas, fontBold, FONT_SIZE - 2f, reporte.getCliente1Celular(), 93, 63);
                 }
 
                 // ── FILA 6 ────────────────────────────────────────────────────
@@ -152,10 +157,10 @@ public class LetraCambioPdfMerruic {
                                 ? spaceBefore : (spaceAfter != -1 ? spaceAfter : midpoint);
                         String linea1 = direccion.substring(0, splitPoint).trim();
                         String linea2 = direccion.substring(splitPoint).trim();
-                        escribir(canvas, fontBold, FONT_SIZE - 0.5f, linea1, 58, 68.5f);
-                        escribir(canvas, fontBold, FONT_SIZE - 0.5f, linea2, 58, 74.5f);
+                        escribir(canvas, fontBold, FONT_SIZE - 2f, linea1, 58, 68.5f);
+                        escribir(canvas, fontBold, FONT_SIZE - 2f, linea2, 58, 74.5f);
                     } else {
-                        escribir(canvas, fontBold, FONT_SIZE - 0.5f, direccion, 58, 68.5f);
+                        escribir(canvas, fontBold, FONT_SIZE - 2f, direccion, 58, 68.5f);
                     }
                 }
 
