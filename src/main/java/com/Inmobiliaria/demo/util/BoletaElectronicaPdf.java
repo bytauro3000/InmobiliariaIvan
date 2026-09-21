@@ -369,7 +369,7 @@ public class BoletaElectronicaPdf {
             String montoLetras, BigDecimal mtoOperInafectas, String hashCdr) {
         return generarBoletaSimple(serie, correlativo, fechaEmision, tipoMoneda, montoStr,
                 clienteNombre, clienteDoc, direccionCliente, detalleDescripcion,
-                montoLetras, mtoOperInafectas, hashCdr, Collections.emptyList());
+                montoLetras, mtoOperInafectas, hashCdr, Collections.emptyList(), null);
     }
 
     public static byte[] generarBoletaSimple(
@@ -379,6 +379,18 @@ public class BoletaElectronicaPdf {
             String direccionCliente, String detalleDescripcion,
             String montoLetras, BigDecimal mtoOperInafectas, String hashCdr,
             List<Voucher> vouchers) {
+        return generarBoletaSimple(serie, correlativo, fechaEmision, tipoMoneda, montoStr,
+                clienteNombre, clienteDoc, direccionCliente, detalleDescripcion,
+                montoLetras, mtoOperInafectas, hashCdr, vouchers, null);
+    }
+
+    public static byte[] generarBoletaSimple(
+            String serie, String correlativo, String fechaEmision,
+            String tipoMoneda, String montoStr,
+            String clienteNombre, String clienteDoc,
+            String direccionCliente, String detalleDescripcion,
+            String montoLetras, BigDecimal mtoOperInafectas, String hashCdr,
+            List<Voucher> vouchers, String observacion) {
 
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
              PdfDocument pdf = new PdfDocument(new PdfWriter(baos));
@@ -552,6 +564,10 @@ public class BoletaElectronicaPdf {
             if (hashCdr != null && !hashCdr.isBlank()) {
                 celdaSon.add(new Paragraph("RESUMEN: " + hashCdr)
                         .setFont(courier).setFontSize(6f).setFontColor(GRIS_MEDIO));
+            }
+            if (observacion != null && !observacion.isBlank()) {
+                celdaSon.add(new Paragraph("Obs: " + observacion)
+                        .setFont(courier).setFontSize(6.5f).setFontColor(GRIS_MEDIO));
             }
             tablaFooter.addCell(celdaSon);
             tablaFooter.addCell(filaTotalImporte("Importe Total:", monedaSimbolo + " " + montoStr, courierBold));

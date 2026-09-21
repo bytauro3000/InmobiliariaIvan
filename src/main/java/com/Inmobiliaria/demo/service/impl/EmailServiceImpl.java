@@ -38,7 +38,7 @@ public class EmailServiceImpl implements EmailService {
             Comprobante comp = pago.getComprobante();
             if (comp != null && comp.getTipoComprobante() == TipoComprobante.BOLETA
                     && comp.getHashCdr() != null && !comp.getHashCdr().isBlank()) {
-                pdf = generarBoletaPdf(comp, pago.getLetra());
+                pdf = generarBoletaPdf(comp, pago.getLetra(), pago.getNumeroOperacion());
                 nombreArchivo = "boleta-electronica-" + comp.getNumeroCompleto() + ".pdf";
             } else {
                 pdf = ComprobantePagoLetraPdf.generar(pago, "SECRETARIA");
@@ -76,7 +76,7 @@ public class EmailServiceImpl implements EmailService {
             String nombreArchivo;
 
             if (esBoleta) {
-                pdf = generarBoletaPdf(comp, primero.getLetra());
+                pdf = generarBoletaPdf(comp, primero.getLetra(), primero.getNumeroOperacion());
                 nombreArchivo = "boleta-electronica-" + comp.getNumeroCompleto() + ".pdf";
             } else {
                 pdf = pagos.size() == 1
@@ -157,7 +157,7 @@ public class EmailServiceImpl implements EmailService {
             + "</body></html>";
     }
 
-    private byte[] generarBoletaPdf(Comprobante comp, LetraCambio letra) {
+    private byte[] generarBoletaPdf(Comprobante comp, LetraCambio letra, String numeroOperacion) {
         var contrato = letra.getContrato();
 
         String numeroLetra = letra.getNumeroLetra();
@@ -172,9 +172,26 @@ public class EmailServiceImpl implements EmailService {
                 nombrePrograma = lote.getPrograma().getNombrePrograma();
             }
         }
-        String descripcion = "LETRA " + numeroLetra
-            + " POR LA COMPRA DE UN LOTE DE TERRENO RUSTICO PROGRAMA DE VIV. "
-            + (nombrePrograma != null ? nombrePrograma.toUpperCase() : "");
+
+        String descripcion;
+        String observacion = null;
+        boolean esMerruic = "20552273223".equals(empresaService.obtenerActiva().getRuc());
+        if (esMerruic) {
+            String mz = contrato.getLotes() != null && !contrato.getLotes().isEmpty()
+                    ? contrato.getLotes().iterator().next().getLote().getManzana() : "";
+            String lt = contrato.getLotes() != null && !contrato.getLotes().isEmpty()
+                    ? contrato.getLotes().iterator().next().getLote().getNumeroLote() : "";
+            descripcion = "Pago de letra Mz. " + mz + " Lt. " + lt + " del Programa: " + nombrePrograma.toUpperCase();
+            if (numeroOperacion != null && !numeroOperacion.isBlank()) {
+                observacion = "NRO OPERACION: " + numeroOperacion;
+            } else {
+                observacion = "OPERACION INAFECTA - VENTA DE TERRENO";
+            }
+        } else {
+            descripcion = "LETRA " + numeroLetra
+                + " POR LA COMPRA DE UN LOTE DE TERRENO RUSTICO PROGRAMA DE VIV. "
+                + (nombrePrograma != null ? nombrePrograma.toUpperCase() : "");
+        }
 
         String clienteNombre = "";
         String clienteDoc = "";
@@ -201,7 +218,9 @@ public class EmailServiceImpl implements EmailService {
             descripcion,
             NumeroALetras.convertir(comp.getMonto(), contrato.getMoneda()),
             comp.getMonto(),
-            comp.getHashCdr()
+            comp.getHashCdr(),
+            java.util.Collections.emptyList(),
+            observacion
         );
     }
 

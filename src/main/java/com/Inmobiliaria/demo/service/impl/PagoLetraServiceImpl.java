@@ -646,7 +646,16 @@ public class PagoLetraServiceImpl implements PagoLetraService {
                     }
                 }
                 
-                String descripcion = "LETRA " + numeroLetra + " POR LA COMPRA DE UN LOTE DE TERRENO RUSTICO PROGRAMA DE VIV. " + nombrePrograma.toUpperCase();
+                String descripcion;
+                if ("20552273223".equals(empresaService.obtenerActiva().getRuc())) {
+                    String mz = letra.getContrato().getLotes() != null && !letra.getContrato().getLotes().isEmpty()
+                            ? letra.getContrato().getLotes().iterator().next().getLote().getManzana() : "";
+                    String lt = letra.getContrato().getLotes() != null && !letra.getContrato().getLotes().isEmpty()
+                            ? letra.getContrato().getLotes().iterator().next().getLote().getNumeroLote() : "";
+                    descripcion = "Pago de letra Mz. " + mz + " Lt. " + lt + " del Programa: " + nombrePrograma.toUpperCase();
+                } else {
+                    descripcion = "LETRA " + numeroLetra + " POR LA COMPRA DE UN LOTE DE TERRENO RUSTICO PROGRAMA DE VIV. " + nombrePrograma.toUpperCase();
+                }
                 comprobante.setDescripcion(descripcion);
                 sunatRespuesta = sunatEnvioService.enviarBoleta(
                         cliente, letra.getContrato(), comprobante,
@@ -918,7 +927,16 @@ public class PagoLetraServiceImpl implements PagoLetraService {
                     nombrePrograma = primerLote.getLote().getPrograma().getNombrePrograma();
                 }
             }
-            String descripcion = letrasStr + " POR LA COMPRA DE UN LOTE DE TERRENO RUSTICO PROGRAMA DE VIV. " + nombrePrograma.toUpperCase();
+            String descripcion;
+            if ("20552273223".equals(empresaService.obtenerActiva().getRuc())) {
+                String mz = letraEjemplo.getContrato().getLotes() != null && !letraEjemplo.getContrato().getLotes().isEmpty()
+                        ? letraEjemplo.getContrato().getLotes().iterator().next().getLote().getManzana() : "";
+                String lt = letraEjemplo.getContrato().getLotes() != null && !letraEjemplo.getContrato().getLotes().isEmpty()
+                        ? letraEjemplo.getContrato().getLotes().iterator().next().getLote().getNumeroLote() : "";
+                descripcion = "Pago de " + numsLimpios.size() + " letras de la Mz. " + mz + " Lt. " + lt + " del Programa: " + nombrePrograma.toUpperCase();
+            } else {
+                descripcion = letrasStr + " POR LA COMPRA DE UN LOTE DE TERRENO RUSTICO PROGRAMA DE VIV. " + nombrePrograma.toUpperCase();
+            }
             comprobanteCompartido.setDescripcion(descripcion);
 
             sunatRespuestaMulti = sunatEnvioService.enviarBoleta(

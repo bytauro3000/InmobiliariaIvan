@@ -15,6 +15,7 @@ import com.Inmobiliaria.demo.repository.PagoLetraRepository;
 import com.Inmobiliaria.demo.repository.UsuarioRepository;
 import com.Inmobiliaria.demo.repository.VoucherRepository;
 import com.Inmobiliaria.demo.service.ComprobanteService;
+import com.Inmobiliaria.demo.service.EmpresaService;
 import com.Inmobiliaria.demo.service.PagoLetraService;
 import com.Inmobiliaria.demo.repository.ComprobanteRepository;
 import com.Inmobiliaria.demo.util.ComprobantePagoLetraPdf;
@@ -55,6 +56,7 @@ public class PagoLetraController {
     private final VoucherRepository    voucherRepository;
     private final ComprobanteService   comprobanteService;
     private final ComprobanteRepository comprobanteRepository;
+    private final EmpresaService       empresaService;
 
     // ── Lectura básica ────────────────────────────────────────────────────────
 
@@ -156,7 +158,8 @@ public class PagoLetraController {
                 .findByTipoOrigenAndReferenciaId("PAGO_LETRA", idPago);
 
         if (esBoletaElectronica(pago)) {
-            return generarRespuestaBoleta(pago.getComprobante(), pago.getLetra(), vouchers);
+            String obs = construirObservacionPdf(pago.getNumeroOperacion());
+            return generarRespuestaBoleta(pago.getComprobante(), pago.getLetra(), vouchers, obs);
         }
 
         byte[] pdf = ComprobantePagoLetraPdf.generar(pago, rolUsuario, vouchers);
@@ -219,7 +222,8 @@ public class PagoLetraController {
         if (comp != null && comp.getTipoComprobante() == TipoComprobante.BOLETA
                 && comp.getHashCdr() != null && !comp.getHashCdr().isBlank()) {
             String descripcion = construirDescripcionCombinada(pagos);
-            return generarRespuestaBoleta(comp, pagos.get(0).getLetra(), descripcion, vouchers);
+            String obs = construirObservacionPdf(pagos.get(0).getNumeroOperacion());
+            return generarRespuestaBoleta(comp, pagos.get(0).getLetra(), descripcion, vouchers, obs);
         }
 
         byte[] pdf = ComprobantePagoLetraPdf.generarMultiple(pagos, rolUsuario, vouchers);
@@ -267,6 +271,15 @@ public class PagoLetraController {
             }
         }
 
+        if ("20552273223".equals(empresaService.obtenerActiva().getRuc())) {
+            String mz = contrato.getLotes() != null && !contrato.getLotes().isEmpty()
+                    ? contrato.getLotes().iterator().next().getLote().getManzana() : "";
+            String lt = contrato.getLotes() != null && !contrato.getLotes().isEmpty()
+                    ? contrato.getLotes().iterator().next().getLote().getNumeroLote() : "";
+            return "Pago de " + numeros.size() + " letras de la Mz. " + mz + " Lt. " + lt
+                + " del Programa: " + nombrePrograma.toUpperCase();
+        }
+
         return "LETRA " + letrasStr
             + " POR LA COMPRA DE UN LOTE DE TERRENO RUSTICO PROGRAMA DE VIV. "
             + (nombrePrograma != null ? nombrePrograma.toUpperCase() : "");
@@ -279,6 +292,16 @@ public class PagoLetraController {
                 && pago.getComprobante().getTipoComprobante() == TipoComprobante.BOLETA
                 && pago.getComprobante().getHashCdr() != null
                 && !pago.getComprobante().getHashCdr().isBlank();
+    }
+
+    private String construirObservacionPdf(String numeroOperacion) {
+        if ("20552273223".equals(empresaService.obtenerActiva().getRuc())) {
+            if (numeroOperacion != null && !numeroOperacion.isBlank()) {
+                return "NRO OPERACION: " + numeroOperacion;
+            }
+            return "OPERACION INAFECTA - VENTA DE TERRENO";
+        }
+        return null;
     }
 
     private ResponseEntity<byte[]> generarRespuestaBoleta(
@@ -294,6 +317,14 @@ public class PagoLetraController {
         return generarRespuestaBoleta(comp, letra, descripcionParaBoleta(comp, letra), vouchers);
     }
 
+    private ResponseEntity<byte[]> generarRespuestaBoleta(
+            Comprobante comp,
+            LetraCambio letra,
+            List<Voucher> vouchers,
+            String observacion) {
+        return generarRespuestaBoleta(comp, letra, descripcionParaBoleta(comp, letra), vouchers, observacion);
+    }
+
     private String descripcionParaBoleta(Comprobante comp, LetraCambio letra) {
         var contrato = letra.getContrato();
         String numeroLetra = letra.getNumeroLetra();
@@ -306,6 +337,13 @@ public class PagoLetraController {
             if (lote != null && lote.getPrograma() != null) {
                 nombrePrograma = lote.getPrograma().getNombrePrograma();
             }
+        }
+        if ("20552273223".equals(empresaService.obtenerActiva().getRuc())) {
+            String mz = contrato.getLotes() != null && !contrato.getLotes().isEmpty()
+                    ? contrato.getLotes().iterator().next().getLote().getManzana() : "";
+            String lt = contrato.getLotes() != null && !contrato.getLotes().isEmpty()
+                    ? contrato.getLotes().iterator().next().getLote().getNumeroLote() : "";
+            return "Pago de letra Mz. " + mz + " Lt. " + lt + " del Programa: " + nombrePrograma.toUpperCase();
         }
         return "LETRA " + numeroLetra
             + " POR LA COMPRA DE UN LOTE DE TERRENO RUSTICO PROGRAMA DE VIV. "
@@ -324,6 +362,15 @@ public class PagoLetraController {
             LetraCambio letra,
             String descripcion,
             List<Voucher> vouchers) {
+        return generarRespuestaBoleta(comp, letra, descripcion, vouchers, null);
+    }
+
+    private ResponseEntity<byte[]> generarRespuestaBoleta(
+            Comprobante comp,
+            LetraCambio letra,
+            String descripcion,
+            List<Voucher> vouchers,
+            String observacion) {
 
         var contrato = letra.getContrato();
         String clienteNombre = "";
@@ -352,7 +399,8 @@ public class PagoLetraController {
             NumeroALetras.convertir(comp.getMonto(), contrato.getMoneda()),
             comp.getMonto(),
             comp.getHashCdr(),
-            vouchers
+            vouchers,
+            observacion
         );
 
         return ResponseEntity.ok()
