@@ -2,9 +2,9 @@ package com.Inmobiliaria.demo.service.impl;
 
 import com.Inmobiliaria.demo.service.ConfiguracionSistemaService;
 import com.Inmobiliaria.demo.service.TipoCambioService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -31,6 +31,7 @@ public class TipoCambioServiceImpl implements TipoCambioService {
 
     private final ConfiguracionSistemaService configService;
     private final RestTemplate restTemplate = buildRestTemplate();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private BigDecimal tipoCambioCache = null;
 
@@ -76,10 +77,15 @@ public class TipoCambioServiceImpl implements TipoCambioService {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
             String url = String.format(API_URL, inicio.format(formatter), hoy.format(formatter));
 
-            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
-            if (response == null) {
+            // El BCRP devuelve el body en JSON pero con Content-Type: text/html,
+            // por lo que RestTemplate no puede deserializar directo a Map.
+            // Se pide como String y se parsea manualmente con Jackson.
+            String rawJson = restTemplate.getForObject(url, String.class);
+            if (rawJson == null || rawJson.isBlank()) {
                 throw new RuntimeException("Respuesta vacía del BCRP");
             }
+
+            Map<String, Object> response = objectMapper.readValue(rawJson, Map.class);
 
             List<Map<String, Object>> periods = (List<Map<String, Object>>) response.get("periods");
             if (periods == null || periods.isEmpty()) {
