@@ -140,7 +140,7 @@ public class LetraCambioPdfMerruic {
                 // Celular Cliente 1
                 if (reporte.getCliente1Celular() != null
                         && !reporte.getCliente1Celular().isBlank()) {
-                    escribir(canvas, fontBold, FONT_SIZE - 1f, reporte.getCliente1Celular(), 95, 63);
+                    escribir(canvas, fontBold, FONT_SIZE - 1f, reporte.getCliente1Celular(), 99, 63);
                 }
 
                 // ── FILA 6 ────────────────────────────────────────────────────
@@ -166,11 +166,12 @@ public class LetraCambioPdfMerruic {
 
                 // ── FILA 7 ────────────────────────────────────────────────────
 
-                // Distrito del cliente
+                // Distrito del cliente (abreviar si es muy largo)
                 if (reporte.getCliente1Distrito() != null) {
-                    escribir(canvas, fontBold, FONT_SIZE - 1.5f,
-                            reporte.getCliente1Distrito(),
-                            84, 72);
+                    String distrito = abreviarDistrito(reporte.getCliente1Distrito());
+                    escribir(canvas, fontBold, FONT_SIZE - 2f,
+                            distrito,
+                            84, 74);
                 }
 
                 canvas.release();
@@ -215,6 +216,16 @@ public class LetraCambioPdfMerruic {
         DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.US);
         DecimalFormat df = new DecimalFormat("#,##0.00", symbols);
         return df.format(importe);
+    }
+
+    private static String abreviarDistrito(String distrito) {
+        if (distrito == null) return "";
+        String upper = distrito.toUpperCase().trim();
+        if (upper.equals("SAN MARTIN DE PORRES"))   return "SMP";
+        if (upper.equals("SAN JUAN DE LURIGANCHO"))  return "SJL";
+        if (upper.equals("VILLA MARIA DEL TRIUNFO"))  return "VMT";
+        if (upper.equals("SAN JUAN DE MIRAFLORES"))   return "SJM";
+        return distrito;
     }
 
     private static PdfFont cargarFuente(String path) throws IOException {
