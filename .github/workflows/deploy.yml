@@ -40,6 +40,7 @@ jobs:
         with:
           context: .
           push: true
+          no-cache: true
           # ✅ Se usan las variables de tus secretos para formar la ruta completa
           tags: "${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO }}:latest"
 
