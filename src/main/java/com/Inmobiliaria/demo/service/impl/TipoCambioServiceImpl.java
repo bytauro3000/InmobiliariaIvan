@@ -5,12 +5,17 @@ import com.Inmobiliaria.demo.service.TipoCambioService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -18,25 +23,23 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class TipoCambioServiceImpl implements TipoCambioService {
 
-    private static final String API_URL = "https://v6.exchangerate-api.com/v6/%s/latest/USD";
+    private static final String API_URL = "https://estadisticas.bcrp.gob.pe/estadisticas/series/api/PD04639PD-PD04640PD/json/%s/%s";
 
-    // Margen para contratos (se mantiene igual que antes)
     private static final BigDecimal MARGEN_EMPRESA = new BigDecimal("0.02");
-
-    // ✅ NUEVO: márgenes reales de compra y venta
-    // Compra: cliente trae soles y compra dólares → precio sube   (+0.0206)
-    // Venta:  cliente trae dólares y vende        → precio baja   (-0.0054)
     private static final BigDecimal MARGEN_COMPRA = new BigDecimal("0.0206");
     private static final BigDecimal MARGEN_VENTA  = new BigDecimal("0.0054");
 
-    @Value("${exchangerate.api-key}")
-    private String apiKey;
-
     private final ConfiguracionSistemaService configService;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate = buildRestTemplate();
 
-    // Caché en memoria — se actualiza cada hora
     private BigDecimal tipoCambioCache = null;
+
+    private static RestTemplate buildRestTemplate() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(3000);
+        factory.setReadTimeout(3000);
+        return new RestTemplate(factory);
+    }
 
     @Override
     public BigDecimal obtenerTipoCambioOficial() {
@@ -50,7 +53,6 @@ public class TipoCambioServiceImpl implements TipoCambioService {
                 .setScale(3, RoundingMode.HALF_UP);
     }
 
-    //oficial + 0.0206
     @Override
     public BigDecimal obtenerTipoCambioCompra() {
         return obtenerTipoCambioOficial()
@@ -58,7 +60,6 @@ public class TipoCambioServiceImpl implements TipoCambioService {
                 .setScale(3, RoundingMode.HALF_UP);
     }
 
-    //oficial - 0.0054
     @Override
     public BigDecimal obtenerTipoCambioVenta() {
         return obtenerTipoCambioOficial()
@@ -66,28 +67,56 @@ public class TipoCambioServiceImpl implements TipoCambioService {
                 .setScale(3, RoundingMode.HALF_UP);
     }
 
-    // Se ejecuta al arrancar y luego cada hora
     @Scheduled(fixedRate = 3_600_000)
     @SuppressWarnings("unchecked")
     public void actualizarTipoCambio() {
         try {
-            String url   = String.format(API_URL, apiKey);
+            LocalDate hoy = LocalDate.now(ZoneId.of("America/Lima"));
+            LocalDate inicio = hoy.minusDays(7);
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            String url = String.format(API_URL, inicio.format(formatter), hoy.format(formatter));
+
             Map<String, Object> response = restTemplate.getForObject(url, Map.class);
-            if (response != null && "success".equals(response.get("result"))) {
-                Map<String, Object> rates = (Map<String, Object>) response.get("conversion_rates");
-                if (rates != null && rates.containsKey("PEN")) {
-                    double pen = ((Number) rates.get("PEN")).doubleValue();
-                    tipoCambioCache = BigDecimal.valueOf(pen).setScale(3, RoundingMode.HALF_UP);
-                    log.info("Tipo de cambio actualizado desde API: 1 USD = {} PEN (oficial)",  tipoCambioCache);
-                    log.info("  Compra: {}  |  Venta: {}  |  Empresa: {}",
-                            obtenerTipoCambioCompra(),
-                            obtenerTipoCambioVenta(),
-                            obtenerTipoCambioEmpresa());
-                    return;
+            if (response == null) {
+                throw new RuntimeException("Respuesta vacía del BCRP");
+            }
+
+            List<Map<String, Object>> periods = (List<Map<String, Object>>) response.get("periods");
+            if (periods == null || periods.isEmpty()) {
+                throw new RuntimeException("No se encontraron períodos en la respuesta del BCRP");
+            }
+
+            BigDecimal compra = null;
+            BigDecimal venta = null;
+
+            for (int i = periods.size() - 1; i >= 0; i--) {
+                Map<String, Object> period = periods.get(i);
+                List<String> values = (List<String>) period.get("values");
+                if (values != null && values.size() >= 2
+                        && !"n.d.".equals(values.get(0))
+                        && !"n.d.".equals(values.get(1))) {
+                    compra = new BigDecimal(values.get(0));
+                    venta = new BigDecimal(values.get(1));
+                    break;
                 }
             }
+
+            if (compra == null || venta == null) {
+                throw new RuntimeException("No se encontró un período válido con datos en los últimos 7 días");
+            }
+
+            tipoCambioCache = compra.add(venta)
+                    .divide(new BigDecimal("2"), 3, RoundingMode.HALF_UP);
+
+            log.info("Tipo de cambio BCRP actualizado: Compra={} | Venta={} | Oficial={}", compra, venta, tipoCambioCache);
+            log.info("  Empresa={} | Compra client={} | Venta client={}",
+                    obtenerTipoCambioEmpresa(),
+                    obtenerTipoCambioCompra(),
+                    obtenerTipoCambioVenta());
+            return;
+
         } catch (Exception e) {
-            log.warn("API tipo de cambio no disponible, usando valor de respaldo: {}", e.getMessage());
+            log.warn("⚠️ BCRP no disponible - usando fallback DB: {}", e.getMessage());
         }
         tipoCambioCache = configService.getTipoCambioRespaldo();
         log.info("Tipo de cambio de respaldo activo: 1 USD = {} PEN", tipoCambioCache);
