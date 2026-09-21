@@ -72,7 +72,8 @@ public class SunatIntegrationServiceImpl implements SunatIntegrationService {
     @Override
     public Map<String, Object> enviarBoleta(Cliente cliente, Contrato contrato,
                                              Comprobante comprobante, BigDecimal monto,
-                                             String descripcionDetalle) {
+                                             String descripcionDetalle,
+                                             String numeroOperacion) {
         // Solo enviar si es BOLETA
         if (comprobante.getTipoComprobante() != TipoComprobante.BOLETA) {
             Map<String, Object> skip = new HashMap<>();

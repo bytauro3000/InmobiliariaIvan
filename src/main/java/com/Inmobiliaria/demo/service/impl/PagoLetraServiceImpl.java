@@ -12,6 +12,7 @@ import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.repository.ComprobanteRepository;
 import com.Inmobiliaria.demo.repository.*;
 import com.Inmobiliaria.demo.service.ComprobanteService;
+import com.Inmobiliaria.demo.service.EmpresaService;
 import com.Inmobiliaria.demo.service.PagoLetraService;
 import com.Inmobiliaria.demo.service.SunatEnvioService;
 
@@ -58,6 +59,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
     private final ComprobanteService           comprobanteService;
     private final ComprobanteRepository        comprobanteRepository;
     private final SunatEnvioService            sunatEnvioService;
+    private final EmpresaService               empresaService;
     private final NotificacionAdminEmailService notificacionAdminEmailService;
 
     // ─── LETRAS PAGADAS NECESARIAS PARA OBTENER UNA GRATIS ────────────────────
@@ -648,7 +650,8 @@ public class PagoLetraServiceImpl implements PagoLetraService {
                 comprobante.setDescripcion(descripcion);
                 sunatRespuesta = sunatEnvioService.enviarBoleta(
                         cliente, letra.getContrato(), comprobante,
-                        request.getImportePagado(), descripcion);
+                        request.getImportePagado(), descripcion,
+                        request.getNumeroOperacion());
                 
                 // Si SUNAT aceptó, guardar hash y CDR en el comprobante
                 if (sunatRespuesta != null && "ACEPTADA".equals(sunatRespuesta.get("estadoSunat"))) {
@@ -920,7 +923,8 @@ public class PagoLetraServiceImpl implements PagoLetraService {
 
             sunatRespuestaMulti = sunatEnvioService.enviarBoleta(
                     cliente, letraEjemplo.getContrato(),
-                    comprobanteCompartido, montoTotalNeto, descripcion);
+                    comprobanteCompartido, montoTotalNeto, descripcion,
+                    primerPago.getNumeroOperacion());
             if (sunatRespuestaMulti != null && "ACEPTADA".equals(sunatRespuestaMulti.get("estadoSunat"))) {
                 String hash = (String) sunatRespuestaMulti.get("hash");
                 String cdrZip = (String) sunatRespuestaMulti.get("cdrZip");

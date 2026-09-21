@@ -10,7 +10,8 @@ public interface SunatIntegrationService {
 
     Map<String, Object> enviarBoleta(Cliente cliente, Contrato contrato,
                                      Comprobante comprobante, BigDecimal monto,
-                                     String descripcionDetalle);
+                                     String descripcionDetalle,
+                                     String numeroOperacion);
 
     Map<String, Object> enviarNotaCredito(Cliente cliente, Contrato contrato,
                                            Comprobante notaCredito,

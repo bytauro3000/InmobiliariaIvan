@@ -314,7 +314,8 @@ public class MoraServiceImpl implements MoraService {
                 String descripcion = "Pago de mora";
                 comprobante.setDescripcion(descripcion);
                 sunatRespuesta = sunatEnvioService.enviarBoleta(cliente, mora.getLetra().getContrato(),
-                        comprobante, request.getMontoPagado(), descripcion);
+                        comprobante, request.getMontoPagado(), descripcion,
+                        request.getNumeroOperacion());
             }
         }
 

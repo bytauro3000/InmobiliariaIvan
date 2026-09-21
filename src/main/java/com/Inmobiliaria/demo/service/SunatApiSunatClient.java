@@ -6,8 +6,11 @@ import com.Inmobiliaria.demo.dto.apisunat.ApiSunatCreditNoteRequest;
 import com.Inmobiliaria.demo.entity.Cliente;
 import com.Inmobiliaria.demo.entity.Comprobante;
 import com.Inmobiliaria.demo.entity.Contrato;
+import com.Inmobiliaria.demo.entity.ContratoLote;
 import com.Inmobiliaria.demo.enums.TipoCliente;
+import com.Inmobiliaria.demo.service.EmpresaService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,6 +40,7 @@ import java.util.Map;
  * (estado ENVIADO); el CDR/aceptacion se consulta despues en la propia plataforma.
  */
 @Service
+@RequiredArgsConstructor
 public class SunatApiSunatClient {
 
     private static final Logger log = LoggerFactory.getLogger(SunatApiSunatClient.class);
@@ -53,6 +57,8 @@ public class SunatApiSunatClient {
 
     @Value("${apisunat.api-secret:}")
     private String apiSecret;
+
+    private final EmpresaService empresaService;
 
     private static RestTemplate buildRestTemplate() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
@@ -72,8 +78,9 @@ public class SunatApiSunatClient {
      */
     public Map<String, Object> enviarBoleta(Cliente cliente, Contrato contrato,
                                             Comprobante comprobante, BigDecimal monto,
-                                            String descripcionDetalle) {
-        ApiSunatBoletaRequest request = buildRequest(cliente, contrato, comprobante, monto, descripcionDetalle);
+                                            String descripcionDetalle,
+                                            String numeroOperacion) {
+        ApiSunatBoletaRequest request = buildRequest(cliente, contrato, comprobante, monto, descripcionDetalle, numeroOperacion);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -347,7 +354,8 @@ public class SunatApiSunatClient {
 
     private ApiSunatBoletaRequest buildRequest(Cliente cliente, Contrato contrato,
                                                Comprobante comprobante, BigDecimal monto,
-                                               String descripcionDetalle) {
+                                               String descripcionDetalle,
+                                               String numeroOperacion) {
         String moneda = contrato.getMoneda() != null ? contrato.getMoneda().name() : "PEN";
         String fecha = comprobante.getFechaEmision() instanceof LocalDate
                 ? comprobante.getFechaEmision().format(FECHA_FMT)
@@ -378,7 +386,7 @@ public class SunatApiSunatClient {
 
         ApiSunatBoletaRequest.Item item = ApiSunatBoletaRequest.Item.builder()
                 .codigo("SERV001")
-                .descripcion(descripcionDetalle)
+                .descripcion(buildDescripcionDetalle(contrato, descripcionDetalle))
                 .unidad("NIU")
                 .cantidad(BigDecimal.ONE)
                 .precioUnitario(monto)
@@ -392,12 +400,36 @@ public class SunatApiSunatClient {
                 .tipoMoneda(moneda)
                 .formaPago("Contado")
                 .enviarAutomatico(Boolean.TRUE)
-                // Note del XML (cbc:Note), igual que APIPERU. La leyenda del monto
-                // en letras la genera api-sunat por su cuenta para el PDF.
-                .observacion("OPERACION INAFECTA - VENTA DE TERRENO")
+                .observacion(buildObservacion(numeroOperacion))
                 .cliente(clienteApi)
                 .items(Collections.singletonList(item))
                 .build();
+    }
+
+    private boolean esMerruic() {
+        return "20552273223".equals(empresaService.obtenerActiva().getRuc());
+    }
+
+    private String buildObservacion(String numeroOperacion) {
+        if (esMerruic() && numeroOperacion != null && !numeroOperacion.isBlank()) {
+            return "NRO OPERACION: " + numeroOperacion;
+        }
+        return "OPERACION INAFECTA - VENTA DE TERRENO";
+    }
+
+    private String buildDescripcionDetalle(Contrato contrato, String descripcionDetalle) {
+        if (!esMerruic()) {
+            return descripcionDetalle;
+        }
+        if (contrato.getLotes() == null || contrato.getLotes().isEmpty()) {
+            return descripcionDetalle;
+        }
+        ContratoLote primerLote = contrato.getLotes().iterator().next();
+        String mz = primerLote.getLote() != null ? primerLote.getLote().getManzana() : "";
+        String lt = primerLote.getLote() != null ? primerLote.getLote().getNumeroLote() : "";
+        String nombrePrograma = (primerLote.getLote() != null && primerLote.getLote().getPrograma() != null)
+                ? primerLote.getLote().getPrograma().getNombrePrograma() : "";
+        return "Pago de letra Mz. " + mz + " Lt. " + lt + " del Programa: " + nombrePrograma.toUpperCase();
     }
 
     private String mapTipoDocumento(TipoCliente tipoCliente) {

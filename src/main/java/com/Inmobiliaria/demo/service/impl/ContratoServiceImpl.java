@@ -236,7 +236,8 @@ public class ContratoServiceImpl implements ContratoService {
                     compInicial.setDescripcion(descripcion);
                     Map<String, Object> sunatRespuesta = sunatEnvioService.enviarBoleta(
                             cliente, contratoGuardado, compInicial,
-                            pagoGuardado.getImportePagado(), descripcion);
+                            pagoGuardado.getImportePagado(), descripcion,
+                            null);
 
                     // Si SUNAT aceptó, guardar hash y CDR en el comprobante
                     if (sunatRespuesta != null && "ACEPTADA".equals(sunatRespuesta.get("estadoSunat"))) {

@@ -32,17 +32,18 @@ public class SunatEnvioServiceImpl implements SunatEnvioService {
     @Override
     public Map<String, Object> enviarBoleta(Cliente cliente, Contrato contrato,
                                             Comprobante comprobante, BigDecimal monto,
-                                            String descripcionDetalle) {
+                                            String descripcionDetalle,
+                                            String numeroOperacion) {
         log.info("Enviando comprobante {} a SUNAT (proveedor={})...",
                 comprobante.getNumeroCompleto(), sunatProvider);
 
         Map<String, Object> respuesta;
         if ("apisunat".equalsIgnoreCase(sunatProvider)) {
             respuesta = sunatApiSunatClient.enviarBoleta(
-                    cliente, contrato, comprobante, monto, descripcionDetalle);
+                    cliente, contrato, comprobante, monto, descripcionDetalle, numeroOperacion);
         } else {
             respuesta = sunatIntegrationService.enviarBoleta(
-                    cliente, contrato, comprobante, monto, descripcionDetalle);
+                    cliente, contrato, comprobante, monto, descripcionDetalle, numeroOperacion);
         }
 
         String estado = respuesta != null ? (String) respuesta.get("estadoSunat") : "ERROR";
