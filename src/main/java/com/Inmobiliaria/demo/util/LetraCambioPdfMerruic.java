@@ -123,24 +123,24 @@ public class LetraCambioPdfMerruic {
                             && !reporte.getCliente2Apellidos().isBlank()) {
                         cliente2 += " " + reporte.getCliente2Apellidos();
                     }
-                    escribir(canvas, fontBold, FONT_SIZE - 0.5f, cliente2, 46, 54.5f);
+                    escribir(canvas, fontBold, FONT_SIZE - 1f, cliente2, 46, 54.5f);
 
                     // DNI/RUC Cliente 2 (separado, entre nombres y fila del cliente 1)
                     if (reporte.getCliente2NumDocumento() != null
                             && !reporte.getCliente2NumDocumento().isBlank()) {
-                        escribir(canvas, fontBold, FONT_SIZE - 0.5f, reporte.getCliente2NumDocumento(), 46, 59);
+                        escribir(canvas, fontBold, FONT_SIZE - 1f, reporte.getCliente2NumDocumento(), 46, 59);
                     }
                 }
 
                 // ── FILA 5 ────────────────────────────────────────────────────
 
                 // DNI/RUC Cliente 1
-                escribir(canvas, fontBold, FONT_SIZE - 0.5f, reporte.getCliente1NumDocumento(), 58, 63);
+                escribir(canvas, fontBold, FONT_SIZE - 1f, reporte.getCliente1NumDocumento(), 58, 63);
 
                 // Celular Cliente 1
                 if (reporte.getCliente1Celular() != null
                         && !reporte.getCliente1Celular().isBlank()) {
-                    escribir(canvas, fontBold, FONT_SIZE - 2f, reporte.getCliente1Celular(), 93, 63);
+                    escribir(canvas, fontBold, FONT_SIZE - 1f, reporte.getCliente1Celular(), 98, 63);
                 }
 
                 // ── FILA 6 ────────────────────────────────────────────────────
@@ -168,9 +168,9 @@ public class LetraCambioPdfMerruic {
 
                 // Distrito del cliente
                 if (reporte.getCliente1Distrito() != null) {
-                    escribir(canvas, fontBold, FONT_SIZE - 0.5f,
+                    escribir(canvas, fontBold, FONT_SIZE - 1f,
                             reporte.getCliente1Distrito(),
-                            84, 73);
+                            84, 74);
                 }
 
                 canvas.release();
