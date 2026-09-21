@@ -135,12 +135,12 @@ public class LetraCambioPdfMerruic {
                 // ── FILA 5 ────────────────────────────────────────────────────
 
                 // DNI/RUC Cliente 1
-                escribir(canvas, fontBold, FONT_SIZE - 0.5f, reporte.getCliente1NumDocumento(), 58, 63);
+                escribir(canvas, fontBold, FONT_SIZE - 0.5f, reporte.getCliente1NumDocumento(), 58, 64);
 
                 // Celular Cliente 1
                 if (reporte.getCliente1Celular() != null
                         && !reporte.getCliente1Celular().isBlank()) {
-                    escribir(canvas, fontBold, FONT_SIZE - 1f, reporte.getCliente1Celular(), 99, 63);
+                    escribir(canvas, fontBold, FONT_SIZE - 1f, reporte.getCliente1Celular(), 99, 64);
                 }
 
                 // ── FILA 6 ────────────────────────────────────────────────────
@@ -171,7 +171,7 @@ public class LetraCambioPdfMerruic {
                     String distrito = abreviarDistrito(reporte.getCliente1Distrito());
                     escribir(canvas, fontBold, FONT_SIZE - 2f,
                             distrito,
-                            84, 74);
+                            84, 73);
                 }
 
                 canvas.release();
