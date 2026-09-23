@@ -290,6 +290,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             dto.setTipoComprobante(pago.getComprobante().getTipoComprobante());
             dto.setNumeroComprobante(pago.getComprobante().getNumeroCompleto());
             dto.setSunatHash(pago.getComprobante().getHashCdr());
+            dto.setEstadoSunat(pago.getComprobante().getEstadoSunat());
         }
 
         // Vouchers: usa mapa pre-cargado si está disponible (evita N+1 en listarTodos)
@@ -689,8 +690,28 @@ public class PagoLetraServiceImpl implements PagoLetraService {
                         request.getImportePagado(), descripcion,
                         request.getNumeroOperacion());
                 
-                // Si SUNAT aceptó, guardar hash y CDR en el comprobante
-                if (sunatRespuesta != null && "ACEPTADA".equals(sunatRespuesta.get("estadoSunat"))) {
+                // Manejar respuesta de SUNAT
+                String estadoSunat = sunatRespuesta != null
+                        ? (String) sunatRespuesta.get("estadoSunat") : null;
+                String codigoError = sunatRespuesta != null
+                        ? (String) sunatRespuesta.get("codigoError") : null;
+                
+                if ("ERROR".equals(estadoSunat)) {
+                    if ("0111".equals(codigoError)) {
+                        // Error 0111: usuario secundario sin permisos.
+                        // La boleta es válida pero SUNAT no la procesa ahora.
+                        // Se guarda como RECHAZADA (reintentable después).
+                        comprobante.setEstadoSunat("RECHAZADA");
+                        comprobante.setSunatError("0111");
+                        log.warn("Boleta {} enviada como RECHAZADA (0111). Se reintentará automáticamente.",
+                                comprobante.getNumeroCompleto());
+                    } else {
+                        // Otros errores: rollback — el comprobante no es válido
+                        String msg = (String) sunatRespuesta.getOrDefault("mensaje", "Error desconocido");
+                        throw new NegocioException("SUNAT rechazó la boleta: " + msg);
+                    }
+                } else if ("ACEPTADA".equals(estadoSunat)) {
+                    comprobante.setEstadoSunat("ACEPTADA");
                     String hash = (String) sunatRespuesta.get("hash");
                     String cdrZip = (String) sunatRespuesta.get("cdrZip");
                     if (hash != null && !hash.isBlank()) {
@@ -699,8 +720,10 @@ public class PagoLetraServiceImpl implements PagoLetraService {
                     if (cdrZip != null && !cdrZip.isBlank()) {
                         comprobante.setCdrBase64(cdrZip);
                     }
+                } else {
+                    // ENVIADO u otro estado temporal
+                    comprobante.setEstadoSunat("PENDIENTE");
                 }
-                // Si APIPERU rechaza, lanza excepción y @Transactional hace rollback
             }
         }
 
@@ -752,8 +775,16 @@ public class PagoLetraServiceImpl implements PagoLetraService {
 
         PagoLetraResponseDTO dto = mapToDTO(pagoGuardado);
         if (sunatRespuesta != null) {
-            dto.setSunatAceptado(true);
-            dto.setSunatMensaje((String) sunatRespuesta.getOrDefault("mensaje", "ACEPTADA"));
+            String estadoSunat = (String) sunatRespuesta.get("estadoSunat");
+            if ("ACEPTADA".equals(estadoSunat)) {
+                dto.setSunatAceptado(true);
+                dto.setSunatMensaje((String) sunatRespuesta.getOrDefault("mensaje", "ACEPTADA"));
+            } else if ("ERROR".equals(estadoSunat) && "0111".equals(sunatRespuesta.get("codigoError"))) {
+                dto.setSunatAceptado(false);
+                dto.setSunatAdvertencia(
+                    "Pago registrado. La boleta " + comprobante.getNumeroCompleto()
+                    + " está pendiente de aceptación SUNAT (error 0111). Se reintentará automáticamente.");
+            }
         }
         return dto;
     }
@@ -970,11 +1001,31 @@ public class PagoLetraServiceImpl implements PagoLetraService {
                     cliente, letraEjemplo.getContrato(),
                     comprobanteCompartido, montoTotalNeto, descripcion,
                     primerPago.getNumeroOperacion());
-            if (sunatRespuestaMulti != null && "ACEPTADA".equals(sunatRespuestaMulti.get("estadoSunat"))) {
+            
+            // Manejar respuesta de SUNAT (pagos múltiples)
+            String estadoSunatMulti = sunatRespuestaMulti != null
+                    ? (String) sunatRespuestaMulti.get("estadoSunat") : null;
+            String codigoErrorMulti = sunatRespuestaMulti != null
+                    ? (String) sunatRespuestaMulti.get("codigoError") : null;
+            
+            if ("ERROR".equals(estadoSunatMulti)) {
+                if ("0111".equals(codigoErrorMulti)) {
+                    comprobanteCompartido.setEstadoSunat("RECHAZADA");
+                    comprobanteCompartido.setSunatError("0111");
+                    log.warn("Boleta múltiple {} RECHAZADA (0111). Se reintentará.",
+                            comprobanteCompartido.getNumeroCompleto());
+                } else {
+                    String msgMulti = (String) sunatRespuestaMulti.getOrDefault("mensaje", "Error SUNAT");
+                    throw new NegocioException("SUNAT rechazó la boleta: " + msgMulti);
+                }
+            } else if ("ACEPTADA".equals(estadoSunatMulti)) {
+                comprobanteCompartido.setEstadoSunat("ACEPTADA");
                 String hash = (String) sunatRespuestaMulti.get("hash");
                 String cdrZip = (String) sunatRespuestaMulti.get("cdrZip");
                 if (hash != null && !hash.isBlank()) comprobanteCompartido.setHashCdr(hash);
                 if (cdrZip != null && !cdrZip.isBlank()) comprobanteCompartido.setCdrBase64(cdrZip);
+            } else {
+                comprobanteCompartido.setEstadoSunat("PENDIENTE");
             }
         }
 
@@ -991,10 +1042,21 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             .ifPresent(l -> verificarYActualizarEstadoContrato(l.getContrato()));
 
         // Poblar sunatAceptado/sunatMensaje en cada response
-        for (PagoLetraResponseDTO r : responses) {
-            if (sunatRespuestaMulti != null) {
-                r.setSunatAceptado(true);
-                r.setSunatMensaje((String) sunatRespuestaMulti.getOrDefault("mensaje", "ACEPTADA"));
+        String advertenciaMulti = null;
+        if (sunatRespuestaMulti != null) {
+            String estadoMulti = (String) sunatRespuestaMulti.get("estadoSunat");
+            if ("ACEPTADA".equals(estadoMulti)) {
+                for (PagoLetraResponseDTO r : responses) {
+                    r.setSunatAceptado(true);
+                    r.setSunatMensaje((String) sunatRespuestaMulti.getOrDefault("mensaje", "ACEPTADA"));
+                }
+            } else if ("ERROR".equals(estadoMulti) && "0111".equals(sunatRespuestaMulti.get("codigoError"))) {
+                advertenciaMulti = "Pago registrado. La boleta " + comprobanteCompartido.getNumeroCompleto()
+                    + " está pendiente de aceptación SUNAT (error 0111). Se reintentará automáticamente.";
+                for (PagoLetraResponseDTO r : responses) {
+                    r.setSunatAceptado(false);
+                    r.setSunatAdvertencia(advertenciaMulti);
+                }
             }
         }
 

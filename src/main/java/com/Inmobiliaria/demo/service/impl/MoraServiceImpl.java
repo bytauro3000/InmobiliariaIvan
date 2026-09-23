@@ -316,6 +316,32 @@ public class MoraServiceImpl implements MoraService {
                 sunatRespuesta = sunatEnvioService.enviarBoleta(cliente, mora.getLetra().getContrato(),
                         comprobante, request.getMontoPagado(), descripcion,
                         request.getNumeroOperacion());
+                
+                // Manejar respuesta de SUNAT
+                String estadoSunat = sunatRespuesta != null
+                        ? (String) sunatRespuesta.get("estadoSunat") : null;
+                String codigoError = sunatRespuesta != null
+                        ? (String) sunatRespuesta.get("codigoError") : null;
+                
+                if ("ERROR".equals(estadoSunat)) {
+                    if ("0111".equals(codigoError)) {
+                        comprobante.setEstadoSunat("RECHAZADA");
+                        comprobante.setSunatError("0111");
+                        log.warn("Boleta mora {} RECHAZADA (0111). Se reintentará.",
+                                comprobante.getNumeroCompleto());
+                    } else {
+                        String msg = (String) sunatRespuesta.getOrDefault("mensaje", "Error SUNAT");
+                        throw new NegocioException("SUNAT rechazó la boleta: " + msg);
+                    }
+                } else if ("ACEPTADA".equals(estadoSunat)) {
+                    comprobante.setEstadoSunat("ACEPTADA");
+                    String hash = (String) sunatRespuesta.get("hash");
+                    String cdrZip = (String) sunatRespuesta.get("cdrZip");
+                    if (hash != null && !hash.isBlank()) comprobante.setHashCdr(hash);
+                    if (cdrZip != null && !cdrZip.isBlank()) comprobante.setCdrBase64(cdrZip);
+                } else {
+                    comprobante.setEstadoSunat("PENDIENTE");
+                }
             }
         }
 
@@ -358,8 +384,16 @@ public class MoraServiceImpl implements MoraService {
 
         PagoMoraResponseDTO dto = mapPagoToDTO(pagoGuardado);
         if (sunatRespuesta != null) {
-            dto.setSunatAceptado(true);
-            dto.setSunatMensaje((String) sunatRespuesta.getOrDefault("mensaje", "ACEPTADA"));
+            String estadoSunat = (String) sunatRespuesta.get("estadoSunat");
+            if ("ACEPTADA".equals(estadoSunat)) {
+                dto.setSunatAceptado(true);
+                dto.setSunatMensaje((String) sunatRespuesta.getOrDefault("mensaje", "ACEPTADA"));
+            } else if ("ERROR".equals(estadoSunat) && "0111".equals(sunatRespuesta.get("codigoError"))) {
+                dto.setSunatAceptado(false);
+                dto.setSunatAdvertencia(
+                    "Pago registrado. La boleta " + comprobante.getNumeroCompleto()
+                    + " está pendiente de aceptación SUNAT (error 0111). Se reintentará automáticamente.");
+            }
         }
         return dto;
     }
@@ -599,6 +633,7 @@ public class MoraServiceImpl implements MoraService {
             dto.setIdComprobante(pago.getComprobante().getIdComprobante());
             dto.setTipoComprobante(pago.getComprobante().getTipoComprobante());
             dto.setNumeroComprobante(pago.getComprobante().getNumeroCompleto());
+            dto.setEstadoSunat(pago.getComprobante().getEstadoSunat());
         }
 
         if (vouchersPorPago != null) {

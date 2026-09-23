@@ -163,6 +163,7 @@ public class ContratoServiceImpl implements ContratoService {
         contratoGuardado = contratoRepository.save(contrato);
 
         // ── Crear comisión de vendedor (si aplica: financiado + vendedor con %) ──
+        String sunatAdvertencia = null;
         try {
             comisionVendedorService.crearComisionSiAplica(contratoGuardado);
         } catch (Exception e) {
@@ -239,12 +240,32 @@ public class ContratoServiceImpl implements ContratoService {
                             pagoGuardado.getImportePagado(), descripcion,
                             null);
 
-                    // Si SUNAT aceptó, guardar hash y CDR en el comprobante
-                    if (sunatRespuesta != null && "ACEPTADA".equals(sunatRespuesta.get("estadoSunat"))) {
+                    // Manejar respuesta de SUNAT
+                    String estadoSunat = sunatRespuesta != null
+                            ? (String) sunatRespuesta.get("estadoSunat") : null;
+                    String codigoError = sunatRespuesta != null
+                            ? (String) sunatRespuesta.get("codigoError") : null;
+
+                    if ("ERROR".equals(estadoSunat)) {
+                        if ("0111".equals(codigoError)) {
+                            compInicial.setEstadoSunat("RECHAZADA");
+                            compInicial.setSunatError("0111");
+                            sunatAdvertencia = "Pago registrado. La boleta " + compInicial.getNumeroCompleto()
+                                + " está pendiente de aceptación SUNAT (error 0111). Se reintentará automáticamente.";
+                            log.warn("Boleta inicial {} RECHAZADA (0111). Se reintentará.",
+                                    compInicial.getNumeroCompleto());
+                        } else {
+                            String msg = (String) sunatRespuesta.getOrDefault("mensaje", "Error SUNAT");
+                            throw new NegocioException("SUNAT rechazó la boleta: " + msg);
+                        }
+                    } else if ("ACEPTADA".equals(estadoSunat)) {
+                        compInicial.setEstadoSunat("ACEPTADA");
                         String hash = (String) sunatRespuesta.get("hash");
                         String cdrZip = (String) sunatRespuesta.get("cdrZip");
                         if (hash != null && !hash.isBlank()) compInicial.setHashCdr(hash);
                         if (cdrZip != null && !cdrZip.isBlank()) compInicial.setCdrBase64(cdrZip);
+                    } else {
+                        compInicial.setEstadoSunat("PENDIENTE");
                     }
                 }
 
@@ -288,7 +309,11 @@ public class ContratoServiceImpl implements ContratoService {
         }
 
         asociarClientesAlContrato(contratoFinal, clientesConRol);
-        return mapToContratoResponseDTO(contratoFinal);
+        ContratoResponseDTO responseDTO = mapToContratoResponseDTO(contratoFinal);
+        if (sunatAdvertencia != null && responseDTO.getPagoInicial() != null) {
+            responseDTO.getPagoInicial().setSunatAdvertencia(sunatAdvertencia);
+        }
+        return responseDTO;
     }
 
     /**

@@ -27,6 +27,8 @@ public class PagoMoraResponseDTO {
     // ── SUNAT ─────────────────────────────────────────────────────────────────
     private Boolean         sunatAceptado;
     private String          sunatMensaje;
+    private String          sunatAdvertencia;
+    private String          estadoSunat;
 
     // ── Anulación ─────────────────────────────────────────────────────────────
     private Boolean         anulado;

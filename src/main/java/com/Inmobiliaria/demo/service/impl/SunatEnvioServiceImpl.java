@@ -3,7 +3,6 @@ package com.Inmobiliaria.demo.service.impl;
 import com.Inmobiliaria.demo.entity.Cliente;
 import com.Inmobiliaria.demo.entity.Comprobante;
 import com.Inmobiliaria.demo.entity.Contrato;
-import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.service.SunatApiSunatClient;
 import com.Inmobiliaria.demo.service.SunatEnvioService;
 import com.Inmobiliaria.demo.service.SunatIntegrationService;
@@ -51,8 +50,16 @@ public class SunatEnvioServiceImpl implements SunatEnvioService {
             String msg = respuesta != null
                     ? (String) respuesta.getOrDefault("mensaje", "Error desconocido de SUNAT")
                     : "No se obtuvo respuesta del servicio SUNAT";
-            log.error("SUNAT rechazo comprobante {}: {}", comprobante.getNumeroCompleto(), msg);
-            throw new NegocioException("SUNAT rechazó la boleta: " + msg);
+            String codigo = respuesta != null ? (String) respuesta.get("codigoError") : null;
+            log.error("SUNAT rechazo comprobante {} (codigo={}): {}", comprobante.getNumeroCompleto(), codigo, msg);
+            // No lanza excepción: devuelve el mapa con codigoError para que el decida
+            if (respuesta == null) {
+                respuesta = new java.util.HashMap<>();
+                respuesta.put("estadoSunat", "ERROR");
+            }
+            respuesta.put("mensaje", msg);
+            respuesta.put("codigoError", codigo);
+            return respuesta;
         }
 
         log.info("SUNAT acepto comprobante {} correctamente", comprobante.getNumeroCompleto());
@@ -86,8 +93,16 @@ public class SunatEnvioServiceImpl implements SunatEnvioService {
             String msg = respuesta != null
                     ? (String) respuesta.getOrDefault("mensaje", "Error desconocido de SUNAT")
                     : "No se obtuvo respuesta del servicio SUNAT";
-            log.error("SUNAT rechazo nota de credito {}: {}", notaCredito.getNumeroCompleto(), msg);
-            throw new NegocioException("SUNAT rechazó la nota de crédito: " + msg);
+            String codigo = respuesta != null ? (String) respuesta.get("codigoError") : null;
+            log.error("SUNAT rechazo nota de credito {} (codigo={}): {}", notaCredito.getNumeroCompleto(), codigo, msg);
+            // No lanza excepción: devuelve el mapa con codigoError para que el decida
+            if (respuesta == null) {
+                respuesta = new java.util.HashMap<>();
+                respuesta.put("estadoSunat", "ERROR");
+            }
+            respuesta.put("mensaje", msg);
+            respuesta.put("codigoError", codigo);
+            return respuesta;
         }
 
         log.info("SUNAT acepto nota de credito {} correctamente", notaCredito.getNumeroCompleto());

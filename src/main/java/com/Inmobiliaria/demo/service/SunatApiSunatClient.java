@@ -157,10 +157,12 @@ public class SunatApiSunatClient {
 
                 if ("rechazado".equalsIgnoreCase(estado)) {
                     extra.put("estadoSunat", "ERROR");
-                    extra.put("mensaje", sunat.getDescripcion() != null
+                    String msgRechazado = sunat.getDescripcion() != null
                             ? sunat.getDescripcion()
-                            : "Boleta rechazada por SUNAT");
-                    log.warn("API SUNAT boleta {} rechazada: {}", apiSunatId, sunat.getDescripcion());
+                            : "Boleta rechazada por SUNAT";
+                    extra.put("mensaje", msgRechazado);
+                    extra.put("codigoError", extraerCodigoError(msgRechazado));
+                    log.warn("API SUNAT boleta {} rechazada: {}", apiSunatId, msgRechazado);
                     break;
                 }
 
@@ -305,6 +307,7 @@ public class SunatApiSunatClient {
             if (sunat != null && sunat.getDescripcion() != null) {
                 mensaje = sunat.getDescripcion();
             }
+            result.put("codigoError", extraerCodigoError(mensaje));
         } else {
             // "enviado" (o cualquier otro) → la plataforma la manda a SUNAT en segundo plano
             result.put("estadoSunat", "ENVIADO");
@@ -330,8 +333,28 @@ public class SunatApiSunatClient {
     private Map<String, Object> error(String responseBody) {
         Map<String, Object> result = new HashMap<>();
         result.put("estadoSunat", "ERROR");
-        result.put("mensaje", extraerMensajeError(responseBody));
+        String msg = extraerMensajeError(responseBody);
+        result.put("mensaje", msg);
+        result.put("codigoError", extraerCodigoError(msg));
         return result;
+    }
+
+    /**
+     * Extrae el código de error numérico del mensaje de SUNAT.
+     * Formato típico: "3027: Valor no se encuentra..." → "3027"
+     * También soporta: "0111: El usuario..." → "0111"
+     */
+    private String extraerCodigoError(String mensaje) {
+        if (mensaje == null || mensaje.isBlank()) return null;
+        // Buscar patrón "XXXX:" al inicio del mensaje
+        int colonIdx = mensaje.indexOf(':');
+        if (colonIdx >= 4 && colonIdx <= 6) {
+            String codigo = mensaje.substring(0, colonIdx).trim();
+            if (codigo.matches("\\d{4}")) {
+                return codigo;
+            }
+        }
+        return null;
     }
 
     private String extraerMensajeError(String responseBody) {

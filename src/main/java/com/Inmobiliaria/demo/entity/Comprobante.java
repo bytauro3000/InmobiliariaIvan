@@ -81,6 +81,9 @@ public class Comprobante {
     @Column(name = "estado_sunat", length = 15)
     private String estadoSunat;
 
+    @Column(name = "sunat_error", length = 10)
+    private String sunatError;
+
     @Column(name = "id_nota_credito_anulacion")
     private Long idNotaCreditoAnulacion;
 

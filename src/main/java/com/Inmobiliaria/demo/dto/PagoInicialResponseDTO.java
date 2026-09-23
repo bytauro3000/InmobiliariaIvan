@@ -33,6 +33,11 @@ public class PagoInicialResponseDTO {
     private LocalDateTime   fechaAnulacion;
     private String          anuladoPor;
 
+    // ── SUNAT ─────────────────────────────────────────────────────────────────
+    private Boolean         sunatAceptado;
+    private String          sunatAdvertencia;
+    private String          estadoSunat;
+
     // ── Datos extra para listado admin ────────────────────────────────────────
     private Integer         idContrato;
     private String          nombreCliente;
