@@ -39,6 +39,8 @@ public class ReciboEgresoServiceImpl implements ReciboEgresoService {
 
     public static final String SERIE_EGRESO = "EG01";
     public static final String ORIGEN_VOUCHER = "PAGO_COMISION";
+    /** Longitud máxima de la columna recibo_egreso.concepto (VARCHAR 2000). */
+    private static final int MAX_CONCEPTO = 2000;
 
     private final SerieEgresoRepository serieEgresoRepository;
     private final ReciboEgresoRepository reciboEgresoRepository;
@@ -46,6 +48,15 @@ public class ReciboEgresoServiceImpl implements ReciboEgresoService {
     private final PagoComisionVendedorRepository pagoComisionRepository;
     private final VendedorRepository vendedorRepository;
     private final Cloudinary cloudinary;
+
+    /** Trunca el concepto al tamaño de la columna para evitar Data truncation. */
+    private static String truncarConcepto(String concepto) {
+        if (concepto == null) return null;
+        if (concepto.length() <= MAX_CONCEPTO) return concepto;
+        log.warn("concepto del egreso excede {} chars ({}), se trunca",
+                MAX_CONCEPTO, concepto.length());
+        return concepto.substring(0, MAX_CONCEPTO);
+    }
 
     @Override
     @Transactional
@@ -89,7 +100,7 @@ public class ReciboEgresoServiceImpl implements ReciboEgresoService {
         egreso.setNumero(nuevoNumero);
         egreso.setNumeroCompleto(SERIE_EGRESO + "-" + nuevoNumero);
         egreso.setFechaEmision(LocalDate.now());
-        egreso.setConcepto(concepto);
+        egreso.setConcepto(truncarConcepto(concepto));
         egreso.setBeneficiario(beneficiario);
         egreso.setIdContrato(idContrato);
         egreso.setMonto(monto);
