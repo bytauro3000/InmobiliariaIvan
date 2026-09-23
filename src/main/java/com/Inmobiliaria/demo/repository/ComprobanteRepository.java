@@ -87,6 +87,16 @@ public interface ComprobanteRepository extends JpaRepository<Comprobante, Long> 
 
     Page<Comprobante> findByEstadoSunatAndCdrBase64IsNull(String estadoSunat, Pageable pageable);
 
+    // ─── Comprobantes pendientes de sincronización con api-sunat ──────────────
+    // Boletas y NCs con estado PENDIENTE o RECHAZADA que necesitan verificar
+    // su estado real en api-sunat (scheduler CdrPendienteScheduler).
+
+    @Query("SELECT c FROM Comprobante c " +
+           "WHERE c.estadoSunat IN ('PENDIENTE', 'RECHAZADA') " +
+           "AND c.tipoComprobante IN ('BOLETA', 'NOTA_CREDITO') " +
+           "ORDER BY c.idComprobante ASC")
+    Page<Comprobante> findPendientesSincronizacion(Pageable pageable);
+
     // ─── Marcar email enviado sin reescribir toda la entidad ─────────────────
     // Evita el dirty-checking de Hibernate que volvería a escribir fechaEmision
     // con posible offset de timezone si el campo se leyó con desfase UTC→Lima

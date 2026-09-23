@@ -3,11 +3,13 @@ package com.Inmobiliaria.demo.service;
 import com.Inmobiliaria.demo.dto.apisunat.ApiSunatBoletaRequest;
 import com.Inmobiliaria.demo.dto.apisunat.ApiSunatBoletaResponse;
 import com.Inmobiliaria.demo.dto.apisunat.ApiSunatCreditNoteRequest;
+import com.Inmobiliaria.demo.dto.apisunat.ApiSunatListResponse;
 import com.Inmobiliaria.demo.entity.Cliente;
 import com.Inmobiliaria.demo.entity.Comprobante;
 import com.Inmobiliaria.demo.entity.Contrato;
 import com.Inmobiliaria.demo.entity.ContratoLote;
 import com.Inmobiliaria.demo.enums.TipoCliente;
+import com.Inmobiliaria.demo.enums.TipoComprobante;
 import com.Inmobiliaria.demo.service.EmpresaService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -213,6 +216,85 @@ public class SunatApiSunatClient {
         } catch (Exception e) {
             log.error("Error al enviar nota de credito a API SUNAT: {}", e.getMessage(), e);
             Map<String, Object> result = new HashMap<>();
+            result.put("estadoSunat", "ERROR");
+            result.put("mensaje", e.getMessage());
+            return result;
+        }
+    }
+
+    /**
+     * Consulta el estado de un comprobante específico en api-sunat.
+     * Devuelve un Map con:
+     * - estadoSunat: ACEPTADA | RECHAZADA | PENDIENTE | NO_ENCONTRADO | ERROR
+     * - hash: hash del CDR (si está aceptado)
+     * - codigoError: código de rechazo de SUNAT (si está rechazado)
+     */
+    public Map<String, Object> consultarEstadoComprobante(String serie, Integer correlativo, TipoComprobante tipo) {
+        String endpoint = tipo == TipoComprobante.NOTA_CREDITO ? "/notas-credito" : "/boletas";
+        String url = baseUrl + endpoint + "?serie=" + serie + "&correlativo=" + correlativo + "&por_pagina=1";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Api-Key", apiKey);
+        headers.set("X-Api-Secret", apiSecret);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            ResponseEntity<ApiSunatListResponse> response = restTemplate.exchange(
+                    url, HttpMethod.GET, entity, ApiSunatListResponse.class);
+
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                result.put("estadoSunat", "ERROR");
+                result.put("mensaje", "Error HTTP: " + response.getStatusCode());
+                return result;
+            }
+
+            ApiSunatListResponse body = response.getBody();
+            if (body.getDatos() == null || body.getDatos().isEmpty()) {
+                result.put("estadoSunat", "NO_ENCONTRADO");
+                result.put("mensaje", "Comprobante no encontrado en api-sunat");
+                return result;
+            }
+
+            ApiSunatListResponse.Dato dato = body.getDatos().get(0);
+            ApiSunatListResponse.Sunat sunat = dato.getSunat();
+
+            if (sunat == null || sunat.getEstado() == null) {
+                result.put("estadoSunat", "PENDIENTE");
+                return result;
+            }
+
+            String estado = sunat.getEstado().toLowerCase();
+            switch (estado) {
+                case "aceptado":
+                    result.put("estadoSunat", "ACEPTADA");
+                    if (sunat.getHashCpe() != null && !sunat.getHashCpe().isBlank()) {
+                        result.put("hash", sunat.getHashCpe());
+                    }
+                    break;
+                case "rechazado":
+                    result.put("estadoSunat", "RECHAZADA");
+                    if (sunat.getCodigo() != null) {
+                        result.put("codigoError", sunat.getCodigo());
+                    }
+                    if (sunat.getDescripcion() != null) {
+                        result.put("mensaje", sunat.getDescripcion());
+                    }
+                    break;
+                default:
+                    result.put("estadoSunat", "PENDIENTE");
+                    break;
+            }
+
+            return result;
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            log.warn("API SUNAT consulta comprobante {}-{} error: {}", serie, correlativo, e.getResponseBodyAsString());
+            result.put("estadoSunat", "ERROR");
+            result.put("mensaje", e.getResponseBodyAsString());
+            return result;
+        } catch (Exception e) {
+            log.warn("API SUNAT consulta comprobante {}-{} error: {}", serie, correlativo, e.getMessage());
             result.put("estadoSunat", "ERROR");
             result.put("mensaje", e.getMessage());
             return result;
