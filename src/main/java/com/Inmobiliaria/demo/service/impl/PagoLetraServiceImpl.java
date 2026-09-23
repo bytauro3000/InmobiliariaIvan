@@ -455,6 +455,33 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         }
     }
 
+    @Override
+    @Transactional
+    public void procesarAnulacionPendiente(Comprobante notaCredito) {
+        Comprobante original = notaCredito.getComprobanteReferencia();
+        if (original == null) {
+            log.warn("NC {} sin comprobanteReferencia. No se puede anular pago.", notaCredito.getNumeroCompleto());
+            return;
+        }
+
+        if (original.getTipoOrigen() == null || original.getReferenciaId() == null) {
+            log.warn("NC {} → original {} sin tipoOrigen/referenciaId. No se puede anular pago.",
+                    notaCredito.getNumeroCompleto(), original.getNumeroCompleto());
+            return;
+        }
+
+        Integer idPago = original.getReferenciaId();
+        String motivo = "NC " + notaCredito.getNumeroCompleto() + " aceptada por SUNAT (sincronización)";
+
+        try {
+            anularPagoConMoras(idPago, motivo, "SISTEMA-SYNC");
+            log.info("Anulación procesada para NC {} → pago {} anulado.", notaCredito.getNumeroCompleto(), idPago);
+        } catch (Exception e) {
+            log.error("Error al anular pago {} para NC {}: {}", idPago, notaCredito.getNumeroCompleto(), e.getMessage());
+            throw e;
+        }
+    }
+
     // ═══════════════════════════════════════════════════════════════════════════
     // Vouchers
     // ═══════════════════════════════════════════════════════════════════════════

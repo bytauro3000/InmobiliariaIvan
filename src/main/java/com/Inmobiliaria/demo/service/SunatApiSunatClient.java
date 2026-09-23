@@ -267,9 +267,9 @@ public class SunatApiSunatClient {
                 .fechaEmision(fecha)
                 .tipoMoneda(moneda)
                 .enviarAutomatico(Boolean.TRUE)
-                // Note del XML (cbc:Note), igual que APIPERU. La leyenda del monto
-                // en letras la genera api-sunat por su cuenta para el PDF.
-                .observacion("OPERACION INAFECTA - VENTA DE TERRENO")
+                // observacion NO se envía en NCs: Note de Greenter no tiene setObservacion(),
+                // y el catálogo 52 de SUNAT no tiene código para "observación libre".
+                // El motivo ya va en des_motivo.
                 .cliente(clienteApi)
                 .docAfectadoTipo("03") // boleta — las NC de MERRUIC siempre son contra boletas
                 .docAfectadoSerie(comprobanteOriginal.getSerie())

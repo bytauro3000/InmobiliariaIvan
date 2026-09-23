@@ -4,6 +4,7 @@ import com.Inmobiliaria.demo.dto.PagoLetraRequestDTO;
 import com.Inmobiliaria.demo.dto.PagoLetraResponseDTO;
 import com.Inmobiliaria.demo.dto.PagosMultiplesRequestDTO;
 import com.Inmobiliaria.demo.dto.SugerenciaNumeroComprobanteDTO;
+import com.Inmobiliaria.demo.entity.Comprobante;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -49,4 +50,10 @@ public interface PagoLetraService {
     String previewSiguienteNumeroComprobante(TipoComprobante tipoComprobante);
     SugerenciaNumeroComprobanteDTO sugerirNumeroComprobante(TipoComprobante tipoComprobante);
     BigDecimal consultarSaldoPendiente(Integer idLetra);
+
+    /**
+     * Procesa la anulación de pago cuando una NC pasa de PENDIENTE a ACEPTADA.
+     * Busca el pago asociado al comprobante original y ejecuta anularPagoConMoras.
+     */
+    void procesarAnulacionPendiente(Comprobante notaCredito);
 }

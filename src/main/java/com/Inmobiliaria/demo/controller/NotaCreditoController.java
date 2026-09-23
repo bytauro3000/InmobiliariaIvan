@@ -95,45 +95,59 @@ public class NotaCreditoController {
                     cliente, contrato, notaCredito, comprobanteOriginal,
                     comprobanteOriginal.getMonto(), descripcion, codMotivo, desMotivo);
 
-            notaCredito.setEstadoSunat("ACEPTADA");
-            notaCredito.setHashCdr((String) respuesta.get("hash"));
+            String estadoReal = (String) respuesta.getOrDefault("estadoSunat", "ERROR");
+            if ("ACEPTADA".equals(estadoReal)) {
+                notaCredito.setEstadoSunat("ACEPTADA");
+                notaCredito.setHashCdr((String) respuesta.get("hash"));
+            } else {
+                notaCredito.setEstadoSunat("PENDIENTE");
+                log.warn("NC {} devuelta como {} por SUNAT (no ACEPTADA aún). Se guarda como PENDIENTE.",
+                        notaCredito.getNumeroCompleto(), estadoReal);
+            }
             comprobanteRepository.save(notaCredito);
 
-            // Para pago de letra: anula pago + restaura letra + anula moras
-            if (request.getTipoPago().equalsIgnoreCase("LETRA")) {
-                pagoLetraService.anularPagoConMoras(
-                        request.getIdPago(),
-                        "NC " + notaCredito.getNumeroCompleto() + " - " + desMotivo,
-                        anuladoPor);
-            } else {
-                // Otros tipos: anulación simple inline
-                pago.setAnulado(true);
-                pago.setMotivoAnulacion("NC " + notaCredito.getNumeroCompleto() + " - " + desMotivo);
-                pago.setFechaAnulacion(LocalDateTime.now());
-                pago.setAnuladoPor(anuladoPor);
-                savePago(pago);
+            // Solo anular pago si SUNAT aceptó realmente
+            if ("ACEPTADA".equals(estadoReal)) {
+                if (request.getTipoPago().equalsIgnoreCase("LETRA")) {
+                    pagoLetraService.anularPagoConMoras(
+                            request.getIdPago(),
+                            "NC " + notaCredito.getNumeroCompleto() + " - " + desMotivo,
+                            anuladoPor);
+                } else {
+                    pago.setAnulado(true);
+                    pago.setMotivoAnulacion("NC " + notaCredito.getNumeroCompleto() + " - " + desMotivo);
+                    pago.setFechaAnulacion(LocalDateTime.now());
+                    pago.setAnuladoPor(anuladoPor);
+                    savePago(pago);
 
-                // Para pago de inscripción de servicios básicos: anular también el abono
-                // en el microservicio para que recalcule el saldo y, si se anuló todo,
-                // deje el servicio disponible de nuevo.
-                if (pago instanceof PagoInscripcionComprobante pic) {
-                    anularAbonoEnMicroservicio(pic, notaCredito.getNumeroCompleto(), desMotivo, anuladoPor);
+                    if (pago instanceof PagoInscripcionComprobante pic) {
+                        anularAbonoEnMicroservicio(pic, notaCredito.getNumeroCompleto(), desMotivo, anuladoPor);
+                    }
                 }
+
+                comprobanteOriginal.setIdNotaCreditoAnulacion(notaCredito.getIdComprobante());
+                comprobanteOriginal.setFechaAnulacionSunat(LocalDateTime.now());
+                comprobanteRepository.save(comprobanteOriginal);
             }
 
-            comprobanteOriginal.setIdNotaCreditoAnulacion(notaCredito.getIdComprobante());
-            comprobanteOriginal.setFechaAnulacionSunat(LocalDateTime.now());
-            comprobanteRepository.save(comprobanteOriginal);
-
             Map<String, Object> result = new HashMap<>();
-            result.put("success", true);
-            result.put("mensaje", "Nota de crédito " + notaCredito.getNumeroCompleto()
-                    + " emitida y aceptada por SUNAT. Boleta " + comprobanteOriginal.getNumeroCompleto() + " anulada.");
+            if ("ACEPTADA".equals(estadoReal)) {
+                result.put("success", true);
+                result.put("mensaje", "Nota de crédito " + notaCredito.getNumeroCompleto()
+                        + " emitida y aceptada por SUNAT. Boleta " + comprobanteOriginal.getNumeroCompleto() + " anulada.");
+            } else {
+                result.put("success", true);
+                result.put("warning", true);
+                result.put("mensaje", "Nota de crédito " + notaCredito.getNumeroCompleto()
+                        + " enviada a SUNAT pero aún sin respuesta. Se guardó como PENDIENTE. "
+                        + "El pago NO fue anulado aún. Cuando SUNAT acepte, se procesará automáticamente.");
+            }
             result.put("notaCredito", notaCredito.getNumeroCompleto());
             result.put("comprobanteAnulado", comprobanteOriginal.getNumeroCompleto());
             result.put("idNotaCredito", notaCredito.getIdComprobante());
             result.put("tipoComprobanteNC", notaCredito.getTipoComprobante().name());
             result.put("serieNC", notaCredito.getSerie());
+            result.put("estadoSunat", notaCredito.getEstadoSunat());
             return ResponseEntity.ok(result);
 
         } catch (NegocioException e) {
