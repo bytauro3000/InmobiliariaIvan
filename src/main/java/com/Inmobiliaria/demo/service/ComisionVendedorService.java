@@ -58,6 +58,9 @@ public interface ComisionVendedorService {
     /** Marca la comisión como ANULADA cuando el contrato se renuncia/resuelve. */
     void anularComisionSiExiste(Integer idContrato);
 
+    /** Anula manualmente una comisión por su ID (solo si no está COMPLETADA). */
+    ComisionVendedorDTO anularComision(Integer idComision);
+
     /**
      * Sincroniza el vendedor de la comisión al editar el contrato (cambio de vendedor).
      * Recalcula %/montos solo si aún no hay pagos registrados. Si el nuevo vendedor

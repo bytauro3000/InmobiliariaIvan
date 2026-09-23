@@ -72,6 +72,17 @@ public class ComisionController {
         }
     }
 
+    // ─── Anular comisión manualmente ──────────────────────────────────────────
+
+    @PatchMapping("/{idComision}/anular")
+    public ResponseEntity<?> anularComision(@PathVariable Integer idComision) {
+        try {
+            return ResponseEntity.ok(comisionService.anularComision(idComision));
+        } catch (NegocioException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+
     // ─── Registrar adelanto ───────────────────────────────────────────────────
 
     @PostMapping("/adelantos")

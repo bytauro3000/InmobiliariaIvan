@@ -324,7 +324,10 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
 
         // Recalcular estado según la nueva lógica:
         // EN_PAGO = adelanto pagado + 0 cuotas pendientes; PENDIENTE = lo contrario.
-        if (completada) {
+        // ANULADA y COMPLETADA se preservan tal cual están en BD.
+        if (c.getEstado() == EstadoComision.ANULADA) {
+            dto.setEstado(EstadoComision.ANULADA.name());
+        } else if (completada) {
             dto.setEstado(EstadoComision.COMPLETADA.name());
         } else {
             boolean adelantoPagado = c.getMontoAdelanto() != null
@@ -1007,6 +1010,27 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
                 log.info("Comisión {} ANULADA por contrato {}", c.getIdComision(), idContrato);
             }
         });
+    }
+
+    /** Anula manualmente una comisión por su ID (solo si no está COMPLETADA). */
+    @Override
+    @Transactional
+    public ComisionVendedorDTO anularComision(Integer idComision) {
+        ComisionVendedor c = comisionRepository.findById(idComision)
+                .orElseThrow(() -> new NegocioException("Comisión no encontrada: " + idComision));
+        if (c.getEstado() == EstadoComision.COMPLETADA) {
+            throw new NegocioException("No se puede anular una comisión COMPLETADA");
+        }
+        if (c.getEstado() == EstadoComision.ANULADA) {
+            throw new NegocioException("La comisión ya está anulada");
+        }
+        c.setEstado(EstadoComision.ANULADA);
+        comisionRepository.save(c);
+        log.info("Comisión {} ANULADA manualmente", idComision);
+        return listarComisiones().stream()
+                .filter(d -> d.getIdComision().equals(idComision))
+                .findFirst()
+                .orElseThrow(() -> new NegocioException("Error al recargar la comisión anulada"));
     }
 
     // ─── Sincronizar vendedor al editar el contrato ───────────────────────────
