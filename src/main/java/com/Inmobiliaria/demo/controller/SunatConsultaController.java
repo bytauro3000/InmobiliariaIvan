@@ -69,6 +69,16 @@ public class SunatConsultaController {
                 return ResponseEntity.ok(response);
             }
 
+            // Si ya está ACEPTADO, no reenviar a SUNAT (evita error 1033)
+            if ("ACEPTADA".equals(comp.getEstadoSunat())) {
+                response.put("success", true);
+                response.put("idComprobante", comp.getIdComprobante());
+                response.put("numeroCompleto", comp.getNumeroCompleto());
+                response.put("estadoActual", comp.getEstadoSunat());
+                response.put("mensaje", "Comprobante ya está ACEPTADO. No requiere sincronización.");
+                return ResponseEntity.ok(response);
+            }
+
             String estadoAnterior = comp.getEstadoSunat();
 
             // Consultar estado real en SUNAT
