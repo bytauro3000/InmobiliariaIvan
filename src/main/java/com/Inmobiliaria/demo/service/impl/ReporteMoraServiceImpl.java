@@ -308,14 +308,13 @@ public class ReporteMoraServiceImpl implements ReporteMoraService {
 
         List<LetraCambio> letras = contrato.getLetrasCambio();
 
-        // ── Encontrar la primera letra pagada (por número) ──────────────────
-        // Después del primer pago, solo se cuentan letras vencidas desde esa
-        // posición en adelante. Las anteriores son comprobantes físicos no
-        // registrados en el sistema.
-        int numPrimeraPagada = letras.stream()
+        // ── Encontrar la última letra pagada (por número) ──────────────────
+        // Regla de cobranza: solo se cuentan letras posteriores a la última
+        // pagada. Las anteriores se asumen pagadas (físico no registrado).
+        int numUltimaPagada = letras.stream()
                 .filter(l -> l.getEstadoLetra() == EstadoLetra.PAGADO)
                 .mapToInt(l -> extraerNumeroLetra(l.getNumeroLetra()))
-                .min()
+                .max()
                 .orElse(0);
 
         // ── Filtrar letras vencidas (no pagadas, no anuladas, vencidas o hoy) ─
@@ -324,9 +323,8 @@ public class ReporteMoraServiceImpl implements ReporteMoraService {
                         && l.getEstadoLetra() != EstadoLetra.ANULADO)
                 .filter(l -> l.getFechaVencimiento() != null)
                 .filter(l -> !l.getFechaVencimiento().isAfter(hoy))
-                // Si ya hay pago registrado, ignorar letras anteriores a la primera pagada
-                .filter(l -> numPrimeraPagada == 0
-                        || extraerNumeroLetra(l.getNumeroLetra()) >= numPrimeraPagada)
+                // Solo letras posteriores a la última pagada (misma regla que el listado)
+                .filter(l -> extraerNumeroLetra(l.getNumeroLetra()) > numUltimaPagada)
                 .sorted(Comparator.comparingInt(l -> extraerNumeroLetra(l.getNumeroLetra())))
                 .collect(Collectors.toList());
 
