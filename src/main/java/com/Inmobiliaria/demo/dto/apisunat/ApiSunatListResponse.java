@@ -1,5 +1,6 @@
 package com.Inmobiliaria.demo.dto.apisunat;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
@@ -11,6 +12,7 @@ import java.util.List;
  * Formato: { "estado": "exito", "datos": [...], "paginacion": {...} }
  */
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ApiSunatListResponse {
 
     private String estado;
@@ -19,6 +21,7 @@ public class ApiSunatListResponse {
     private Paginacion paginacion;
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Dato {
         private Integer id;
         private String serie;
@@ -31,6 +34,7 @@ public class ApiSunatListResponse {
     }
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Sunat {
         private String estado;
         private String codigo;
@@ -41,6 +45,7 @@ public class ApiSunatListResponse {
     }
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Paginacion {
         @JsonProperty("pagina_actual")
         private Integer paginaActual;

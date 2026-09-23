@@ -88,12 +88,12 @@ public interface ComprobanteRepository extends JpaRepository<Comprobante, Long> 
     Page<Comprobante> findByEstadoSunatAndCdrBase64IsNull(String estadoSunat, Pageable pageable);
 
     // ─── Comprobantes pendientes de sincronización con api-sunat ──────────────
-    // Boletas y NCs con estado PENDIENTE o RECHAZADA que necesitan verificar
-    // su estado real en api-sunat (scheduler CdrPendienteScheduler).
+    // Solo series que van a SUNAT: B001 (boletas) y BB01 (recibo por honorario/NC).
+    // RN01, EB01, NC01 y estadoSunat NULL se omiten (no se envían a SUNAT).
 
     @Query("SELECT c FROM Comprobante c " +
            "WHERE c.estadoSunat IN ('PENDIENTE', 'RECHAZADA') " +
-           "AND c.tipoComprobante IN ('BOLETA', 'NOTA_CREDITO') " +
+           "AND c.serie IN ('B001', 'BB01') " +
            "ORDER BY c.idComprobante ASC")
     Page<Comprobante> findPendientesSincronizacion(Pageable pageable);
 
