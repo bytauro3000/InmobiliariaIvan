@@ -159,9 +159,17 @@ public class ComisionController {
         try {
             ReporteComisionVendedorDTO dto = comisionService.generarReportePorVendedor(idVendedor, soloPendientes);
             byte[] pdf = ReporteComisionPdf.generar(dto);
+            String nombreVendedor = String.join(" ",
+                    dto.getNombreVendedor() != null ? dto.getNombreVendedor() : "",
+                    dto.getApellidosVendedor() != null ? dto.getApellidosVendedor() : ""
+            ).trim();
+            if (nombreVendedor.isEmpty()) {
+                nombreVendedor = "vendedor-" + idVendedor;
+            }
+            String filename = "REPORTE DE COMISIONES (" + nombreVendedor.replaceAll("[\\\\/:*?\"<>|]", "").trim() + ").pdf";
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "inline; filename=\"comisiones-vendedor-" + idVendedor + ".pdf\"")
+                            "attachment; filename=\"" + filename + "\"")
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (NegocioException e) {
