@@ -1101,13 +1101,57 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         BigDecimal totalComision = BigDecimal.ZERO;
         BigDecimal aporteComision = BigDecimal.ZERO;
 
+        // ── Pre-cargar datos en batch (misma logica que listarComisiones) ─────
+        List<Integer> idContratos = comisiones.stream()
+                .map(c -> c.getContrato() != null ? c.getContrato().getIdContrato() : null)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        Map<Integer, Long> maxNumeroPorContrato = new HashMap<>();
+        for (Object[] fila : letraRepository.maxNumeroLetraPagadaPorContratos(idContratos)) {
+            maxNumeroPorContrato.put(((Number) fila[0]).intValue(), ((Number) fila[1]).longValue());
+        }
+
+        List<Integer> idsComisiones = comisiones.stream()
+                .map(ComisionVendedor::getIdComision).collect(Collectors.toList());
+        Map<Integer, Long> mensualesRegistradosPorComision = new HashMap<>();
+        for (Object[] fila : pagoComisionRepository.countByComisionesAndTipo(idsComisiones, "MENSUAL")) {
+            mensualesRegistradosPorComision.put((Integer) fila[0], (Long) fila[1]);
+        }
+
+        // ── Pre-cargar importe de la primera letra habilitada por contrato ───
+        Map<Integer, BigDecimal> importeLetraPorContrato = new HashMap<>();
+        for (Integer idCto : idContratos) {
+            List<LetraCambio> letras = letraRepository
+                    .findByContratoIdContratoAndEstadoLetraOrderByIdLetraAsc(idCto, EstadoLetra.PAGADO);
+            for (LetraCambio letra : letras) {
+                int numero = extraerNumeroLetra(letra.getNumeroLetra());
+                if (numero > LETRAS_PREVIAS) {
+                    importeLetraPorContrato.put(idCto, letra.getImporte());
+                    break;
+                }
+            }
+        }
+
         // ── Fase 1: Recolectar datos de cada comisión ──────────────────────────
-        // Clave: programa -> lista de (comision, lotes, pagos)
-        record DatoComision(ComisionVendedor cv, List<com.Inmobiliaria.demo.entity.Lote> lotes, BigDecimal pagos) {}
+        // Clave: programa -> lista de (comision, lotes, pagos, pendientes, importeLetra)
+        record DatoComision(ComisionVendedor cv, List<com.Inmobiliaria.demo.entity.Lote> lotes, BigDecimal pagos, long pendientes, BigDecimal importeLetra) {}
         Map<String, List<DatoComision>> datosPorPrograma = new LinkedHashMap<>();
 
         for (ComisionVendedor cv : comisiones) {
             if (cv.getEstado() == EstadoComision.ANULADA) continue;
+
+            Integer idContrato = cv.getContrato() != null ? cv.getContrato().getIdContrato() : null;
+
+            boolean completada = cv.getEstado() == EstadoComision.COMPLETADA
+                    || (cv.getSaldoPendiente() != null
+                        && cv.getSaldoPendiente().compareTo(BigDecimal.ZERO) <= 0);
+            long registrados = mensualesRegistradosPorComision.getOrDefault(cv.getIdComision(), 0L);
+            long maxNumero = idContrato != null
+                    ? maxNumeroPorContrato.getOrDefault(idContrato, 0L) : 0L;
+            long habilitables = Math.max(0L, maxNumero - LETRAS_PREVIAS);
+            long pendientes = completada ? 0L : Math.max(0L, habilitables - registrados);
 
             List<com.Inmobiliaria.demo.entity.Lote> lotes = contratoLoteRepository.findLotesByContrato(cv.getContrato().getIdContrato());
             String nombrePrograma = (!lotes.isEmpty() && lotes.get(0).getPrograma() != null)
@@ -1122,7 +1166,8 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
             aporteComision = aporteComision.add(pagosDeEstaComision);
 
             datosPorPrograma.computeIfAbsent(nombrePrograma, k -> new ArrayList<>())
-                    .add(new DatoComision(cv, lotes, pagosDeEstaComision));
+                    .add(new DatoComision(cv, lotes, pagosDeEstaComision, pendientes,
+                            idContrato != null ? importeLetraPorContrato.getOrDefault(idContrato, BigDecimal.ZERO) : BigDecimal.ZERO));
         }
 
         // ── Fase 2: Ordenar cada programa por MZ y LT, y construir filas ──────
@@ -1154,6 +1199,8 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
                 ComisionVendedor cv = dato.cv();
                 List<com.Inmobiliaria.demo.entity.Lote> lotes = dato.lotes();
                 BigDecimal pagosComision = dato.pagos();
+                long pendientes = dato.pendientes();
+                BigDecimal importeLetra = dato.importeLetra();
 
                 // Ordenar lotes internamente
                 lotes.sort(java.util.Comparator
@@ -1175,6 +1222,9 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
                     ltCombined.append(String.join(", ", e.getValue()));
                 }
 
+                BigDecimal comisionMensual = redondear(porcentajeDe(importeLetra, BigDecimal.valueOf(10)));
+                BigDecimal deudaPorLote = comisionMensual.multiply(BigDecimal.valueOf(pendientes));
+
                 ReporteComisionVendedorDTO.FilaComision fila = new ReporteComisionVendedorDTO.FilaComision();
                 fila.setNumero(numero++);
                 fila.setManzana(mzCombined.toString());
@@ -1183,6 +1233,8 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
                 fila.setMontoComision(cv.getMontoComisionTotal());
                 fila.setPagosRealizados(pagosComision);
                 fila.setSaldoComision(cv.getSaldoPendiente());
+                fila.setComisionMensual(comisionMensual);
+                fila.setDeudaPorLote(deudaPorLote);
                 fila.setMoneda(cv.getMoneda() != null ? cv.getMoneda().name() : "USD");
                 programa.getFilas().add(fila);
                 programa.setTotalPrograma(programa.getTotalPrograma().add(cv.getMontoComisionTotal() != null ? cv.getMontoComisionTotal() : BigDecimal.ZERO));
@@ -1203,9 +1255,21 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         dto.setTotalComision(totalComision);
         dto.setAporteComision(aporteComision);
         dto.setSaldoPendiente(totalComision.subtract(aporteComision));
-        dto.setMoneda("PEN");
+        // Moneda dinamica segun la primera comision
+        String monedaReporte = comisiones.isEmpty() ? "USD"
+                : (comisiones.get(0).getMoneda() == com.Inmobiliaria.demo.enums.Moneda.PEN ? "S/." : "$");
+        dto.setMoneda(monedaReporte);
         dto.setFechaEmision(java.time.LocalDateTime.now());
         dto.setProgramas(new ArrayList<>(mapaProgramas.values()));
+
+        // Calcular total deuda sumando deudaPorLote de todas las filas
+        BigDecimal totalDeuda = BigDecimal.ZERO;
+        for (ReporteComisionVendedorDTO.ProgramaComision prog : dto.getProgramas()) {
+            for (ReporteComisionVendedorDTO.FilaComision f : prog.getFilas()) {
+                totalDeuda = totalDeuda.add(f.getDeudaPorLote() != null ? f.getDeudaPorLote() : BigDecimal.ZERO);
+            }
+        }
+        dto.setTotalDeuda(totalDeuda);
 
         return dto;
     }
@@ -1283,7 +1347,7 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
             long maxNumero = idContrato != null
                     ? maxNumeroPorContrato.getOrDefault(idContrato, 0L) : 0L;
             long habilitables = Math.max(0L, maxNumero - LETRAS_PREVIAS);
-            long pendientes = completada ? 0L : Math.max(0L, habilitables - recalcMensuales(cv, registrados));
+            long pendientes = completada ? 0L : Math.max(0L, habilitables - registrados);
 
             // Recalcular estado dinamico (misma logica que toDTO)
             String estadoDinamico;
@@ -1314,7 +1378,7 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
             aporteComision = aporteComision.add(pagosDeEstaComision);
 
             datosPorPrograma.computeIfAbsent(nombrePrograma, k -> new ArrayList<>())
-                    .add(new DatoComision(cv, lotes, pagosDeEstaComision, pendientes, habilitables,
+                    .add(new DatoComision(cv, lotes, pagosDeEstaComision, pendientes, registrados,
                             idContrato != null ? importeLetraPorContrato.getOrDefault(idContrato, BigDecimal.ZERO) : BigDecimal.ZERO));
         }
 
@@ -1345,13 +1409,13 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
                 ComisionVendedor cv = dato.cv();
                 List<com.Inmobiliaria.demo.entity.Lote> lotes = dato.lotes();
                 BigDecimal pagosComision = dato.pagos();
-                long registrados = dato.registrados();
+                long pendientes = dato.pendientes();
                 BigDecimal importeLetra = dato.importeLetra();
 
                 // Calcular comision mensual (10% del importe de la letra)
                 BigDecimal comisionMensual = redondear(porcentajeDe(importeLetra, BigDecimal.valueOf(10)));
-                // Deuda por lote = registrados × comisionMensual
-                BigDecimal deudaPorLote = comisionMensual.multiply(BigDecimal.valueOf(registrados));
+                // Deuda por lote = pendientes × comisionMensual (cuotas aún no pagadas al vendedor)
+                BigDecimal deudaPorLote = comisionMensual.multiply(BigDecimal.valueOf(pendientes));
 
                 lotes.sort(java.util.Comparator
                         .comparing(com.Inmobiliaria.demo.entity.Lote::getManzana, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
@@ -1430,17 +1494,6 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         if (a == null) return 1;
         if (b == null) return -1;
         return a.compareToIgnoreCase(b);
-    }
-
-    /**
-     * Recalcula los pagos mensuales registrados restando el adelanto si existe.
-     * Usado para determinar cuantos pagos mensuales REALES se han hecho.
-     */
-    private long recalcMensuales(ComisionVendedor cv, long registrados) {
-        if (cv.getMontoAdelanto() != null && cv.getMontoAdelanto().compareTo(BigDecimal.ZERO) > 0 && registrados > 0) {
-            return registrados - 1;
-        }
-        return registrados;
     }
 
     private ReporteComisionVendedorDTO construirDtoVacio(Vendedor vendedor) {

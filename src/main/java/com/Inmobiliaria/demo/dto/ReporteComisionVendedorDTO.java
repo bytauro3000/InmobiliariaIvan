@@ -62,7 +62,7 @@ public class ReporteComisionVendedorDTO {
         private BigDecimal pagosRealizados;  // adelanto + mensuales de esta comision
         private BigDecimal saldoComision;
         private BigDecimal comisionMensual;  // 10% del importe de la letra
-        private BigDecimal deudaPorLote;     // registrados × comisionMensual
+        private BigDecimal deudaPorLote;     // pendientes × comisionMensual
         private String moneda;
     }
 }
