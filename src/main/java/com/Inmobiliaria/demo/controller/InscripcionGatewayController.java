@@ -280,6 +280,15 @@ PagoInscripcionComprobante pagoGuardado =
         comprobante.setReferenciaId(pagoGuardado.getIdPagoInscripcionComprobante());
         comprobanteRepository.save(comprobante);
 
+	        // e) Guardar vouchers (opcional) — ANTES de notificar, para que el
+	        //    correo al admin pueda incluir la imagen del voucher.
+	        try {
+	            guardarVouchers(vouchers, pagoGuardado, request.getIdContrato(), idInscripcion);
+	        } catch (Exception e) {
+	            // No interrumpimos el pago si falla la subida del voucher
+	            System.err.println("Error al guardar vouchers del pago de inscripción: " + e.getMessage());
+	        }
+
 	        // ── Notificar al admin solo si el pago es de hoy ───────────────────────
 	        if (fechaPago.equals(LocalDate.now())) {
 	            try {
@@ -292,7 +301,8 @@ PagoInscripcionComprobante pagoGuardado =
 	                String detalle = "Pago de servicio " + request.getTipoServicio().toUpperCase();
 	                String medioPago = request.getMedioPago() != null ? request.getMedioPago().name() : "-";
 	                notificacionAdminEmailService.notificarPagoServicio(
-	                    detalle, clienteNombre, request.getMontoPagado(), moneda, medioPago);
+	                    detalle, clienteNombre, request.getMontoPagado(), moneda, medioPago,
+	                    pagoGuardado.getFechaPago(), pagoGuardado.getIdPagoInscripcionComprobante());
 	            } catch (Exception e) {
 	                log.warn("No se pudo enviar notificacion admin para pago de servicio: {}", e.getMessage());
 	            }
@@ -302,15 +312,7 @@ PagoInscripcionComprobante pagoGuardado =
             Cliente cliente = contrato.getClientes().iterator().next().getCliente();
             String descripcion = "Abono inscripcion servicio de " + request.getTipoServicio().toUpperCase();
             sunatEnvioService.enviarBoleta(cliente, contrato, comprobante,
-                    request.getMontoPagado(), descripcion);*/
-
-	        // e) Guardar vouchers (opcional, en paralelo al resto del flujo)
-	        try {
-	            guardarVouchers(vouchers, pagoGuardado, request.getIdContrato(), idInscripcion);
-	        } catch (Exception e) {
-	            // No interrumpimos el pago si falla la subida del voucher
-	            System.err.println("Error al guardar vouchers del pago de inscripción: " + e.getMessage());
-	        }
+                    request.getMontoPagado(), descripcion)*/
 
 	        InscripcionConPagoResponseDTO response = new InscripcionConPagoResponseDTO(
 	                pagoGuardado.getIdPagoInscripcionComprobante(),

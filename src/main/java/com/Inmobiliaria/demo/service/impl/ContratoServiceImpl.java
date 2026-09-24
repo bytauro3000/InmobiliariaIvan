@@ -1094,7 +1094,8 @@ public class ContratoServiceImpl implements ContratoService {
             detalle += loteInfo;
 
             String medioPago = pago.getMedioPago() != null ? pago.getMedioPago().name() : "-";
-            notificacionAdminEmailService.notificarPagoInicial(detalle, clienteNombre, pago.getImportePagado(), moneda, medioPago);
+            notificacionAdminEmailService.notificarPagoInicial(detalle, clienteNombre, pago.getImportePagado(), moneda, medioPago,
+                    pago.getFechaPago(), pago.getIdPagoInicial());
         } catch (Exception e) {
             log.warn("No se pudo enviar notificacion admin para pago inicial ID {}: {}", pago.getIdPagoInicial(), e.getMessage());
         }

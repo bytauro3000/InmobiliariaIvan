@@ -581,7 +581,8 @@ public class MoraServiceImpl implements MoraService {
             detalle += loteInfo;
 
             String medioPago = pago.getMedioPago() != null ? pago.getMedioPago().name() : "-";
-            notificacionAdminEmailService.notificarPagoMora(detalle, clienteNombre, pago.getImportePagado(), moneda, medioPago);
+            notificacionAdminEmailService.notificarPagoMora(detalle, clienteNombre, pago.getImportePagado(), moneda, medioPago,
+                    pago.getFechaPago(), pago.getIdPagoMora());
         } catch (Exception e) {
             log.warn("No se pudo enviar notificacion admin para pago mora ID {}: {}", pago.getIdPagoMora(), e.getMessage());
         }
