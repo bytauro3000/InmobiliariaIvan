@@ -7,6 +7,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 
 @Data
@@ -22,6 +23,9 @@ public class PagoLetraRequestDTO {
 
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate       fechaOperacion;
+
+    /** Hora exacta del voucher (ISO: HH:mm o HH:mm:ss); si llega, se respeta aunque el día sea otro. */
+    private LocalTime       horaOperacion;
     private TipoComprobante tipoComprobante;
     private String          numeroComprobantePersonalizado;
     private String          observaciones;

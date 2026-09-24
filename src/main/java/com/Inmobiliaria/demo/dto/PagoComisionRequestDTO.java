@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 /**
@@ -36,6 +37,9 @@ public class PagoComisionRequestDTO {
     private String numeroOperacion;
 
     private LocalDate fechaOperacion;
+
+    /** Hora exacta del voucher (ISO: HH:mm o HH:mm:ss); si llega, se respeta aunque el día sea otro. */
+    private LocalTime horaOperacion;
 
     /** Por defecto se usa la fecha actual. */
     private LocalDate fechaPago;

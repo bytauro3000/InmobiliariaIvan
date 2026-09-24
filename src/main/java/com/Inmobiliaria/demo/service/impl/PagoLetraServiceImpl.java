@@ -623,7 +623,8 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         LocalDate fechaPago = request.getFechaPago() != null ? request.getFechaPago() : LocalDate.now();
         LocalDate fechaOperacion = request.getFechaOperacion();
         LocalDateTime fechaPagoHora = FechasUtil.aFechaHora(fechaPago);
-        LocalDateTime fechaOperacionHora = fechaOperacion != null ? FechasUtil.aFechaHora(fechaOperacion) : null;
+        LocalDateTime fechaOperacionHora = fechaOperacion != null
+            ? FechasUtil.aFechaHora(fechaOperacion, request.getHoraOperacion()) : null;
 
         if (esMedioBancario(request.getMedioPago()) && fechaOperacion == null) {
             throw new NegocioException(
@@ -896,7 +897,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             pago.setLetra(letra);
             pago.setFechaPago(FechasUtil.aFechaHora(fechaPago));
             pago.setFechaOperacion(pagoReq.getFechaOperacion() != null
-                ? FechasUtil.aFechaHora(pagoReq.getFechaOperacion()) : null);
+                ? FechasUtil.aFechaHora(pagoReq.getFechaOperacion(), pagoReq.getHoraOperacion()) : null);
             pago.setImportePagado(importeNetoLetra);
             pago.setMedioPago(pagoReq.getMedioPago());
             pago.setNumeroOperacion(pagoReq.getNumeroOperacion());
@@ -1177,7 +1178,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         // día distinto → 00:00:00 (Opción A aprobada).
         pago.setFechaPago(FechasUtil.aFechaHora(request.getFechaPago(), pago.getFechaPago()));
         pago.setFechaOperacion(request.getFechaOperacion() != null
-            ? FechasUtil.aFechaHora(request.getFechaOperacion(), pago.getFechaOperacion()) : null);
+            ? FechasUtil.aFechaHora(request.getFechaOperacion(), request.getHoraOperacion(), pago.getFechaOperacion()) : null);
         pago.setObservaciones(request.getObservaciones());
         if (request.getEsPagoAcuenta() != null) {
             pago.setEsPagoAcuenta(request.getEsPagoAcuenta());

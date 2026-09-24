@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
@@ -93,7 +94,9 @@ public class NotificacionAdminEmailService {
 
         LocalDateTime fechaHora = resolverFechaHora(p.medioPago(), p.fechaPago(), p.fechaOperacion());
         String fechaTxt = fechaHora.format(FMT_FECHA);
-        String horaTxt  = fechaHora.format(FMT_HORA);
+        // Hora desconocida (00:00:00) → se muestra solo la fecha, sin "00:00"
+        String horaTxt = LocalTime.MIDNIGHT.equals(fechaHora.toLocalTime())
+            ? "" : " " + fechaHora.format(FMT_HORA);
 
         String bloqueVoucher = construirBloqueVoucher(p.medioPago(), urlsVoucher);
 
@@ -105,7 +108,7 @@ public class NotificacionAdminEmailService {
                     <img src="%s" alt="Logo" style="max-width: 80px; height: auto;">
                 </div>
                 <div style="text-align: center; margin-bottom: 16px; color: #555; font-size: 13px;">
-                    <span style="font-weight: bold;">%s</span>&nbsp;&nbsp;&nbsp;<span style="font-weight: bold;">%s</span>
+                    <span style="font-weight: bold;">%s%s</span>
                 </div>
                 <table style="width: 100%%; border-collapse: collapse;">
                     <tr><td style="padding: 8px 0; color: #666;">Importe</td><td style="padding: 8px 0; font-weight: bold; color: #2e7d32; font-size: 16px;">%s %s</td></tr>

@@ -698,7 +698,7 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         pago.setMonto(monto);
         pago.setFechaPago(FechasUtil.aFechaHora(fechaPago));
         pago.setFechaOperacion(request.getFechaOperacion() != null
-            ? FechasUtil.aFechaHora(request.getFechaOperacion()) : null);
+            ? FechasUtil.aFechaHora(request.getFechaOperacion(), request.getHoraOperacion()) : null);
         pago.setMedioPago(request.getMedioPago());
         pago.setNumeroOperacion(request.getNumeroOperacion());
         pago.setNumeroEgreso(egreso.getNumeroCompleto());
@@ -787,7 +787,7 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
             pago.setMonto(montoComision);
             pago.setFechaPago(FechasUtil.aFechaHora(fechaPago));
             pago.setFechaOperacion(request.getFechaOperacion() != null
-                ? FechasUtil.aFechaHora(request.getFechaOperacion()) : null);
+                ? FechasUtil.aFechaHora(request.getFechaOperacion(), request.getHoraOperacion()) : null);
             pago.setMedioPago(request.getMedioPago());
             pago.setNumeroOperacion(request.getNumeroOperacion());
             pago.setObservacion(request.getObservacion());

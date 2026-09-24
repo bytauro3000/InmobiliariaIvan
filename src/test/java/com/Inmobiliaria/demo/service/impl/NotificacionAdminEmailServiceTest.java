@@ -99,14 +99,31 @@ class NotificacionAdminEmailServiceTest {
                 "https://res.cloudinary.com/x/logo.png", "INMOBILIARIA CONSTRUCTORA MERRUIC", List.of());
 
         int posLogo   = html.indexOf("logo.png");
-        int posFecha  = html.indexOf(">24/09/2026<");
-        int posHora   = html.indexOf(">15:43<");
+        int posFecha  = html.indexOf(">24/09/2026 15:43<");
         int posTabla  = html.indexOf(">Importe<");
 
         assertTrue(posLogo > 0, "debe tener logo");
-        assertTrue(posFecha > posLogo, "la fecha debe ir debajo del logo");
-        assertTrue(posHora > posFecha, "la hora debe ir al costado de la fecha");
-        assertTrue(posTabla > posHora, "la tabla de datos debe ir después de fecha/hora");
+        assertTrue(posFecha > posLogo, "la fecha con hora debe ir debajo del logo");
+        assertTrue(posTabla > posFecha, "la tabla de datos debe ir después de fecha/hora");
+    }
+
+    @Test
+    void cuerpo_bancario_horaExactaDeAyer() {
+        String html = NotificacionAdminEmailService.construirCuerpo(
+                pago("TRANSFERENCIA", PAGO_HOY, LocalDateTime.of(2026, 9, 23, 14, 35, 22)),
+                "logo.png", "EMPRESA", List.of());
+
+        assertTrue(html.contains(">23/09/2026 14:35<"), "bancario muestra fecha de operación con su hora exacta");
+    }
+
+    @Test
+    void cuerpo_horaDesconocida_muestraSoloFecha_sin0000() {
+        String html = NotificacionAdminEmailService.construirCuerpo(
+                pago("YAPE", PAGO_HOY, LocalDateTime.of(2026, 9, 23, 0, 0, 0)),
+                "logo.png", "EMPRESA", List.of());
+
+        assertTrue(html.contains(">23/09/2026<"), "sin hora se muestra solo la fecha");
+        assertFalse(html.contains("00:00"), "no debe aparecer 00:00 en el mensaje");
     }
 
     @Test
@@ -122,8 +139,8 @@ class NotificacionAdminEmailServiceTest {
 
         assertTrue(posVoucher > posTabla, "el voucher debe ir debajo de la tabla");
         assertTrue(posPie > posVoucher, "el voucher debe ir antes del pie de página");
-        // fecha mostrada = fecha de operación (medio bancario)
-        assertTrue(html.contains(">23/09/2026<"), "bancario muestra fecha de operación");
+        // fecha mostrada = fecha de operación (medio bancario) con su hora
+        assertTrue(html.contains(">23/09/2026 10:05<"), "bancario muestra fecha de operación");
     }
 
     @Test
