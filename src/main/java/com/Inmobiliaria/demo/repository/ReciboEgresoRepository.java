@@ -38,7 +38,7 @@ public interface ReciboEgresoRepository extends JpaRepository<ReciboEgreso, Long
             "r.medio_pago, r.numero_operacion, r.fecha_operacion, r.usuario_registro " +
             "FROM recibo_egreso r " +
             "LEFT JOIN pago_comision_vendedor pcv ON r.numero_completo = pcv.numero_egreso " +
-            "WHERE COALESCE(pcv.fecha_pago, r.fecha_emision) BETWEEN :desde AND :hasta " +
+            "WHERE DATE(COALESCE(pcv.fecha_pago, r.fecha_emision)) BETWEEN :desde AND :hasta " +
             "ORDER BY fecha_doc ASC, r.numero ASC",
             nativeQuery = true)
     List<Object[]> findEgresosPorFechaPagoOrEmision(

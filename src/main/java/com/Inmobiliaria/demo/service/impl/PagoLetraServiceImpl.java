@@ -15,6 +15,7 @@ import com.Inmobiliaria.demo.service.ComprobanteService;
 import com.Inmobiliaria.demo.service.EmpresaService;
 import com.Inmobiliaria.demo.service.PagoLetraService;
 import com.Inmobiliaria.demo.service.SunatEnvioService;
+import com.Inmobiliaria.demo.util.FechasUtil;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
@@ -273,8 +274,8 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         dto.setIdPago(pago.getIdPago());
         dto.setIdLetra(pago.getLetra().getIdLetra());
         dto.setNumeroLetra(pago.getLetra().getNumeroLetra());
-        dto.setFechaPago(pago.getFechaPago());
-        dto.setFechaOperacion(pago.getFechaOperacion());
+        dto.setFechaPago(pago.getFechaPago() != null ? pago.getFechaPago().toLocalDate() : null);
+        dto.setFechaOperacion(pago.getFechaOperacion() != null ? pago.getFechaOperacion().toLocalDate() : null);
         dto.setImportePagado(pago.getImportePagado());
         dto.setMedioPago(pago.getMedioPago());
         dto.setNumeroOperacion(pago.getNumeroOperacion());
@@ -488,7 +489,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
     // ═══════════════════════════════════════════════════════════════════════════
 
     private void notificarAdminPagoLetra(PagoLetras pago) {
-        if (!pago.getFechaPago().equals(LocalDate.now())) return;
+        if (pago.getFechaPago() == null || !pago.getFechaPago().toLocalDate().equals(LocalDate.now())) return;
         try {
             var letra = pago.getLetra();
             var contrato = letra.getContrato();
@@ -620,6 +621,8 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         // fechaOperacion = fecha del voucher (solo referencial, nullable)
         LocalDate fechaPago = request.getFechaPago() != null ? request.getFechaPago() : LocalDate.now();
         LocalDate fechaOperacion = request.getFechaOperacion();
+        LocalDateTime fechaPagoHora = FechasUtil.aFechaHora(fechaPago);
+        LocalDateTime fechaOperacionHora = fechaOperacion != null ? FechasUtil.aFechaHora(fechaOperacion) : null;
 
         if (esMedioBancario(request.getMedioPago()) && fechaOperacion == null) {
             throw new NegocioException(
@@ -629,8 +632,8 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         // ── Construir el pago ────────────────────────────────────────────────
         PagoLetras pago = new PagoLetras();
         pago.setLetra(letra);
-        pago.setFechaPago(fechaPago);
-        pago.setFechaOperacion(fechaOperacion);
+        pago.setFechaPago(fechaPagoHora);
+        pago.setFechaOperacion(fechaOperacionHora);
         pago.setImportePagado(request.getImportePagado());
         pago.setMedioPago(request.getMedioPago());
         pago.setNumeroOperacion(request.getNumeroOperacion());
@@ -890,8 +893,9 @@ public class PagoLetraServiceImpl implements PagoLetraService {
 
             PagoLetras pago = new PagoLetras();
             pago.setLetra(letra);
-            pago.setFechaPago(fechaPago);
-            pago.setFechaOperacion(pagoReq.getFechaOperacion());
+            pago.setFechaPago(FechasUtil.aFechaHora(fechaPago));
+            pago.setFechaOperacion(pagoReq.getFechaOperacion() != null
+                ? FechasUtil.aFechaHora(pagoReq.getFechaOperacion()) : null);
             pago.setImportePagado(importeNetoLetra);
             pago.setMedioPago(pagoReq.getMedioPago());
             pago.setNumeroOperacion(pagoReq.getNumeroOperacion());
@@ -1124,7 +1128,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
 
         PagoLetras pago = new PagoLetras();
         pago.setLetra(letra);
-        pago.setFechaPago(fechaPago);
+        pago.setFechaPago(FechasUtil.aFechaHora(fechaPago));
         pago.setImportePagado(BigDecimal.ZERO);
         pago.setMedioPago(medioPago);
         pago.setNumeroOperacion(null);
@@ -1162,14 +1166,17 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         PagoLetras pago = pagoLetraRepository.findById(idPago)
             .orElseThrow(() -> new NegocioException("Pago no encontrado con id: " + idPago));
 
-        LocalDate fechaPagoAnterior   = pago.getFechaPago();
-        LocalDate fechaOperacionAnterior = pago.getFechaOperacion();
+        LocalDateTime fechaPagoAnterior   = pago.getFechaPago();
+        LocalDateTime fechaOperacionAnterior = pago.getFechaOperacion();
 
         pago.setImportePagado(request.getImportePagado());
         pago.setMedioPago(request.getMedioPago());
         pago.setNumeroOperacion(request.getNumeroOperacion());
-        pago.setFechaPago(request.getFechaPago() != null ? request.getFechaPago() : LocalDate.now());
-        pago.setFechaOperacion(request.getFechaOperacion());
+        // Fecha elegida por soporte: mismo día → conserva la hora original;
+        // día distinto → 00:00:00 (Opción A aprobada).
+        pago.setFechaPago(FechasUtil.aFechaHora(request.getFechaPago(), pago.getFechaPago()));
+        pago.setFechaOperacion(request.getFechaOperacion() != null
+            ? FechasUtil.aFechaHora(request.getFechaOperacion(), pago.getFechaOperacion()) : null);
         pago.setObservaciones(request.getObservaciones());
         if (request.getEsPagoAcuenta() != null) {
             pago.setEsPagoAcuenta(request.getEsPagoAcuenta());
@@ -1219,7 +1226,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
         if (letra == null) return;
 
         LocalDate fechaVenc = letra.getFechaVencimiento();
-        LocalDate fechaPago = pago.getFechaPago();
+        LocalDate fechaPago = pago.getFechaPago() != null ? pago.getFechaPago().toLocalDate() : null;
 
         // Solo aplica si el pago completó la letra y esta estaba vencida (o quedó vencida).
         boolean letraCompleta = letra.getSaldoPendiente() != null
@@ -1232,7 +1239,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
             Integer idContrato = pago.getLetra().getContrato() != null
                     ? pago.getLetra().getContrato().getIdContrato() : null;
             LocalDate fechaRef = esMedioBancario(pago.getMedioPago())
-                    ? (pago.getFechaOperacion() != null ? pago.getFechaOperacion() : fechaPago)
+                    ? (pago.getFechaOperacion() != null ? pago.getFechaOperacion().toLocalDate() : fechaPago)
                     : resolverFechaReferenciaMora(numLetra, idContrato, fechaPago);
             moraService.generarMoraParaPago(letra, pago, fechaRef);
         } else {

@@ -10,6 +10,8 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.security.Principal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import com.Inmobiliaria.demo.util.FechasUtil;
 import java.time.format.DateTimeFormatter;
 
 import org.modelmapper.ModelMapper;
@@ -189,7 +191,7 @@ public class ContratoServiceImpl implements ContratoService {
         	PagoInicial pago = new PagoInicial();
         	pago.setContrato(contratoGuardado);
         	pago.setImportePagado(piReq.getImportePagado());
-        	pago.setFechaPago(fechaPagoInicial);
+        	pago.setFechaPago(FechasUtil.aFechaHora(fechaPagoInicial));
         	pago.setMedioPago(piReq.getMedioPago());
         	pago.setNumeroOperacion(piReq.getNumeroOperacion());
         	pago.setObservaciones(piReq.getObservaciones());
@@ -807,7 +809,8 @@ public class ContratoServiceImpl implements ContratoService {
                 .flatMap(l -> l.getPagos() != null ? l.getPagos().stream()
                         .filter(p -> p.getFechaPago() != null)
                         .map(com.Inmobiliaria.demo.entity.PagoLetras::getFechaPago)
-                        .max(Comparator.naturalOrder()) : java.util.Optional.empty())
+                        .max(Comparator.naturalOrder())
+                        .map(LocalDateTime::toLocalDate) : java.util.Optional.empty())
                 .orElse(null);
     }
 
@@ -1040,7 +1043,7 @@ public class ContratoServiceImpl implements ContratoService {
             PagoInicialResponseDTO piDto = new PagoInicialResponseDTO();
             piDto.setIdPagoInicial(pi.getIdPagoInicial());
             piDto.setImportePagado(pi.getImportePagado());
-            piDto.setFechaPago(pi.getFechaPago());
+            piDto.setFechaPago(pi.getFechaPago() != null ? pi.getFechaPago().toLocalDate() : null);
             piDto.setMedioPago(pi.getMedioPago());
             piDto.setNumeroOperacion(pi.getNumeroOperacion());
             piDto.setObservaciones(pi.getObservaciones());
@@ -1059,7 +1062,7 @@ public class ContratoServiceImpl implements ContratoService {
     }
 
     private void notificarAdminPagoInicial(PagoInicial pago) {
-        if (!pago.getFechaPago().equals(LocalDate.now())) return;
+        if (pago.getFechaPago() == null || !pago.getFechaPago().toLocalDate().equals(LocalDate.now())) return;
         try {
             var contrato = pago.getContrato();
             Moneda moneda = contrato.getMoneda() != null ? contrato.getMoneda() : Moneda.USD;

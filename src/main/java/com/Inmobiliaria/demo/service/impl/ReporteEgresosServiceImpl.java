@@ -58,7 +58,11 @@ public class ReporteEgresosServiceImpl implements ReporteEgresosService {
                     .moneda((String) f[8])
                     .medioPago((String) f[9])
                     .numeroOperacion((String) f[10])
-                    .fechaOperacion(f[11] != null ? ((java.sql.Date) f[11]).toLocalDate() : null)
+                    .fechaOperacion(f[11] instanceof java.sql.Timestamp ts
+                            ? ts.toLocalDateTime().toLocalDate()
+                            : f[11] instanceof java.sql.Date d
+                                    ? d.toLocalDate()
+                                    : f[11] instanceof LocalDate ld ? ld : null)
                     .usuarioRegistro((String) f[12])
                     .build());
         }

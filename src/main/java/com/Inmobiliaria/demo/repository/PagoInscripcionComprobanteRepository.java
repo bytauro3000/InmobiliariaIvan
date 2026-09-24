@@ -40,16 +40,20 @@ public interface PagoInscripcionComprobanteRepository
            "WHERE p.idPagoInscripcionComprobante = :id")
     Optional<PagoInscripcionComprobante> findByIdConLotes(Integer id);
 
+    default List<PagoInscripcionComprobante> findByFechaPagoBetween(LocalDate desde, LocalDate hasta) {
+        return buscarEntreRango(desde.atStartOfDay(), hasta.plusDays(1).atStartOfDay());
+    }
+
     @Query("SELECT p FROM PagoInscripcionComprobante p " +
            "JOIN FETCH p.comprobante c " +
            "JOIN FETCH p.contrato co " +
            "LEFT JOIN FETCH co.clientes cc " +
            "LEFT JOIN FETCH cc.cliente cli " +
-           "WHERE p.fechaPago >= :desde AND p.fechaPago <= :hasta " +
+           "WHERE p.fechaPago >= :desde AND p.fechaPago < :hasta " +
            "ORDER BY p.fechaPago ASC")
-    List<PagoInscripcionComprobante> findByFechaPagoBetween(
-            @Param("desde") LocalDate desde,
-            @Param("hasta") LocalDate hasta);
+    List<PagoInscripcionComprobante> buscarEntreRango(
+            @Param("desde") java.time.LocalDateTime desde,
+            @Param("hasta") java.time.LocalDateTime hasta);
 
     // ── ADMIN: Listado general con filtros opcionales ─────────────────────────
 
@@ -72,16 +76,25 @@ public interface PagoInscripcionComprobanteRepository
            "       (lot IS NOT NULL AND LOWER(lot.numeroLote) = LOWER(:numeroLote))) " +
            "AND   (:idPrograma IS NULL OR " +
            "       (prog IS NOT NULL AND prog.idPrograma = :idPrograma)) " +
-           "AND   (:desde IS NULL OR p.fechaPago >= :desde) " +
-           "AND   (:hasta IS NULL OR p.fechaPago <= :hasta) " +
-            "ORDER BY p.fechaPago DESC, c.tipoComprobante, c.numeroCompleto")
-    List<PagoInscripcionComprobante> findTodos(
+            "AND   (:desde IS NULL OR p.fechaPago >= :desde) " +
+            "AND   (:hasta IS NULL OR p.fechaPago < :hasta) " +
+             "ORDER BY p.fechaPago DESC, c.tipoComprobante, c.numeroCompleto")
+    List<PagoInscripcionComprobante> buscarTodos(
             @Param("numeroComprobante") String numeroComprobante,
             @Param("manzana")          String manzana,
             @Param("numeroLote")       String numeroLote,
             @Param("idPrograma")       Integer idPrograma,
-            @Param("desde")            LocalDate desde,
-            @Param("hasta")            LocalDate hasta);
+            @Param("desde")            java.time.LocalDateTime desde,
+            @Param("hasta")            java.time.LocalDateTime hasta);
+
+    /** Wrapper: desde/hasta en LocalDate (inclusive) → rango DATETIME. */
+    default List<PagoInscripcionComprobante> findTodos(
+            String numeroComprobante, String manzana, String numeroLote, Integer idPrograma,
+            LocalDate desde, LocalDate hasta) {
+        return buscarTodos(numeroComprobante, manzana, numeroLote, idPrograma,
+                desde != null ? desde.atStartOfDay() : null,
+                hasta != null ? hasta.plusDays(1).atStartOfDay() : null);
+    }
 
     @Query("SELECT p FROM PagoInscripcionComprobante p WHERE p.contrato.idContrato = :idContrato")
     List<PagoInscripcionComprobante> findByContratoId(@Param("idContrato") Integer idContrato);

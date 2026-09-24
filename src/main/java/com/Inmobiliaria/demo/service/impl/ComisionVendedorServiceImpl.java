@@ -23,6 +23,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import com.Inmobiliaria.demo.util.FechasUtil;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -541,7 +543,7 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         pago.setComision(comision);
         pago.setTipo("ADELANTO");
         pago.setMonto(monto);
-        pago.setFechaPago(LocalDate.now());
+        pago.setFechaPago(LocalDateTime.now());
         pago.setNumeroEgreso(egreso.getNumeroCompleto());
         pago.setObservacion(request.getObservacion());
         pagoComisionRepository.save(pago);
@@ -694,8 +696,9 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         pago.setComision(comision);
         pago.setTipo("ADELANTO");
         pago.setMonto(monto);
-        pago.setFechaPago(fechaPago);
-        pago.setFechaOperacion(request.getFechaOperacion());
+        pago.setFechaPago(FechasUtil.aFechaHora(fechaPago));
+        pago.setFechaOperacion(request.getFechaOperacion() != null
+            ? FechasUtil.aFechaHora(request.getFechaOperacion()) : null);
         pago.setMedioPago(request.getMedioPago());
         pago.setNumeroOperacion(request.getNumeroOperacion());
         pago.setNumeroEgreso(egreso.getNumeroCompleto());
@@ -782,8 +785,9 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
             pago.setLetra(letra);
             pago.setTipo("MENSUAL");
             pago.setMonto(montoComision);
-            pago.setFechaPago(fechaPago);
-            pago.setFechaOperacion(request.getFechaOperacion());
+            pago.setFechaPago(FechasUtil.aFechaHora(fechaPago));
+            pago.setFechaOperacion(request.getFechaOperacion() != null
+                ? FechasUtil.aFechaHora(request.getFechaOperacion()) : null);
             pago.setMedioPago(request.getMedioPago());
             pago.setNumeroOperacion(request.getNumeroOperacion());
             pago.setObservacion(request.getObservacion());
@@ -998,7 +1002,7 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
             pago.setLetra(letra);
             pago.setTipo("MENSUAL");
             pago.setMonto(monto);
-            pago.setFechaPago(LocalDate.now());
+            pago.setFechaPago(LocalDateTime.now());
             pago.setObservacion(request.getObservacion());
             pagos.add(pago);
 

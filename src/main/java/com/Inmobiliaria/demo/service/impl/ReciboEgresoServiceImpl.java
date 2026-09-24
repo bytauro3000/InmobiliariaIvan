@@ -25,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import com.Inmobiliaria.demo.util.FechasUtil;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -107,7 +108,7 @@ public class ReciboEgresoServiceImpl implements ReciboEgresoService {
         egreso.setMoneda(moneda);
         egreso.setMedioPago(medioPago != null ? medioPago.name() : null);
         egreso.setNumeroOperacion(numeroOperacion);
-        egreso.setFechaOperacion(fechaOperacion);
+        egreso.setFechaOperacion(fechaOperacion != null ? FechasUtil.aFechaHora(fechaOperacion) : null);
 
         return reciboEgresoRepository.save(egreso);
     }

@@ -59,7 +59,7 @@ public interface PagoInicialRepository extends JpaRepository<PagoInicial, Intege
     @Query(value =
         "SELECT COALESCE(SUM(importe_pagado), 0) " +
         "FROM pago_inicial " +
-        "WHERE fecha_pago = :fecha " +
+        "WHERE DATE(fecha_pago) = :fecha " +
         "AND (anulado = false OR anulado IS NULL)",
         nativeQuery = true)
     BigDecimal sumImportePagadoByFecha(@Param("fecha") LocalDate fecha);
@@ -67,29 +67,32 @@ public interface PagoInicialRepository extends JpaRepository<PagoInicial, Intege
     @Query(value =
         "SELECT COUNT(*) " +
         "FROM pago_inicial " +
-        "WHERE fecha_pago = :fecha " +
+        "WHERE DATE(fecha_pago) = :fecha " +
         "AND (anulado = false OR anulado IS NULL)",
         nativeQuery = true)
     long countByFechaPago(@Param("fecha") LocalDate fecha);
 
     // ── Reporte ingresos ──────────────────────────────────────────────────────
 
+    default List<PagoInicial> findByFechaPagoBetween(LocalDate desde, LocalDate hasta) {
+        return buscarEntreRango(desde.atStartOfDay(), hasta.plusDays(1).atStartOfDay());
+    }
+
     @Query("SELECT DISTINCT p FROM PagoInicial p " +
            "JOIN FETCH p.contrato co " +
            "LEFT JOIN FETCH co.clientes cc " +
            "LEFT JOIN FETCH cc.cliente cli " +
            "LEFT JOIN FETCH p.comprobante c " +
-           "WHERE p.fechaPago BETWEEN :desde AND :hasta " +
+           "WHERE p.fechaPago >= :desde AND p.fechaPago < :hasta " +
            "ORDER BY p.fechaPago ASC")
-    List<PagoInicial> findByFechaPagoBetween(
-            @Param("desde") LocalDate desde,
-            @Param("hasta") LocalDate hasta);
+    List<PagoInicial> buscarEntreRango(@Param("desde") java.time.LocalDateTime desde,
+                                       @Param("hasta") java.time.LocalDateTime hasta);
 
     @Query(value =
         "SELECT MONTH(fecha_pago) AS mes, YEAR(fecha_pago) AS anio, " +
         "COALESCE(SUM(importe_pagado), 0) AS total " +
         "FROM pago_inicial " +
-        "WHERE fecha_pago BETWEEN :desde AND :hasta " +
+        "WHERE DATE(fecha_pago) BETWEEN :desde AND :hasta " +
         "AND (anulado = false OR anulado IS NULL) " +
         "GROUP BY YEAR(fecha_pago), MONTH(fecha_pago) " +
         "ORDER BY anio, mes",
@@ -104,7 +107,7 @@ public interface PagoInicialRepository extends JpaRepository<PagoInicial, Intege
         "COALESCE(SUM(p.importe_pagado), 0) AS total " +
         "FROM pago_inicial p " +
         "LEFT JOIN comprobante c ON p.id_comprobante = c.id_comprobante " +
-        "WHERE p.fecha_pago BETWEEN :desde AND :hasta " +
+        "WHERE DATE(p.fecha_pago) BETWEEN :desde AND :hasta " +
         "AND (p.anulado = false OR p.anulado IS NULL) " +
         "GROUP BY YEAR(p.fecha_pago), MONTH(p.fecha_pago), " +
         "CASE WHEN c.tipo_comprobante = 'BOLETA' THEN 'BOLETA' ELSE 'RECIBO' END " +
@@ -119,7 +122,7 @@ public interface PagoInicialRepository extends JpaRepository<PagoInicial, Intege
         "CASE WHEN medio_pago = 'EFECTIVO' THEN 'EFECTIVO' ELSE 'BANCARIO' END AS tipo, " +
         "COALESCE(SUM(importe_pagado), 0) AS total " +
         "FROM pago_inicial " +
-        "WHERE fecha_pago BETWEEN :desde AND :hasta " +
+        "WHERE DATE(fecha_pago) BETWEEN :desde AND :hasta " +
         "AND (anulado = false OR anulado IS NULL) " +
         "GROUP BY YEAR(fecha_pago), MONTH(fecha_pago), " +
         "CASE WHEN medio_pago = 'EFECTIVO' THEN 'EFECTIVO' ELSE 'BANCARIO' END " +
@@ -132,7 +135,7 @@ public interface PagoInicialRepository extends JpaRepository<PagoInicial, Intege
     @Query(value =
         "SELECT COALESCE(SUM(importe_pagado), 0) " +
         "FROM pago_inicial " +
-        "WHERE fecha_pago BETWEEN :desde AND :hasta " +
+        "WHERE DATE(fecha_pago) BETWEEN :desde AND :hasta " +
         "AND (anulado = false OR anulado IS NULL)",
         nativeQuery = true)
     BigDecimal sumImportePagadoByRango(
@@ -142,7 +145,7 @@ public interface PagoInicialRepository extends JpaRepository<PagoInicial, Intege
     @Query(value =
         "SELECT COUNT(*) " +
         "FROM pago_inicial " +
-        "WHERE fecha_pago BETWEEN :desde AND :hasta " +
+        "WHERE DATE(fecha_pago) BETWEEN :desde AND :hasta " +
         "AND (anulado = false OR anulado IS NULL)",
         nativeQuery = true)
     long countByFechaPagoBetween(
@@ -170,14 +173,23 @@ public interface PagoInicialRepository extends JpaRepository<PagoInicial, Intege
            "       (lot IS NOT NULL AND LOWER(lot.numeroLote) = LOWER(:numeroLote))) " +
            "AND   (:idPrograma IS NULL OR " +
            "       (prog IS NOT NULL AND prog.idPrograma = :idPrograma)) " +
-           "AND   (:desde IS NULL OR p.fechaPago >= :desde) " +
-            "AND   (:hasta IS NULL OR p.fechaPago <= :hasta) " +
-            "ORDER BY p.fechaPago DESC, c.tipoComprobante, c.numeroCompleto")
-    List<PagoInicial> findTodos(
+            "AND   (:desde IS NULL OR p.fechaPago >= :desde) " +
+             "AND   (:hasta IS NULL OR p.fechaPago < :hasta) " +
+             "ORDER BY p.fechaPago DESC, c.tipoComprobante, c.numeroCompleto")
+    List<PagoInicial> buscarTodos(
             @Param("numeroComprobante") String numeroComprobante,
             @Param("manzana")          String manzana,
             @Param("numeroLote")       String numeroLote,
             @Param("idPrograma")       Integer idPrograma,
-            @Param("desde")            LocalDate desde,
-            @Param("hasta")            LocalDate hasta);
+            @Param("desde")            java.time.LocalDateTime desde,
+            @Param("hasta")            java.time.LocalDateTime hasta);
+
+    /** Wrapper: desde/hasta en LocalDate (inclusive) → rango DATETIME. */
+    default List<PagoInicial> findTodos(
+            String numeroComprobante, String manzana, String numeroLote, Integer idPrograma,
+            LocalDate desde, LocalDate hasta) {
+        return buscarTodos(numeroComprobante, manzana, numeroLote, idPrograma,
+                desde != null ? desde.atStartOfDay() : null,
+                hasta != null ? hasta.plusDays(1).atStartOfDay() : null);
+    }
 }

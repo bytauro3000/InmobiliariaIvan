@@ -5,6 +5,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * Recibo de egresos (salida de dinero, ej. pago de comisión a vendedor).
@@ -72,5 +73,5 @@ public class ReciboEgreso {
 
     /** Fecha de la operación (del voucher). */
     @Column(name = "fecha_operacion")
-    private LocalDate fechaOperacion;
+    private LocalDateTime fechaOperacion;
 }

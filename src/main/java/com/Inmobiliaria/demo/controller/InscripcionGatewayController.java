@@ -18,6 +18,7 @@ import com.Inmobiliaria.demo.repository.VoucherRepository;
 import com.Inmobiliaria.demo.service.ComprobanteService;
 import com.Inmobiliaria.demo.service.impl.InscripcionComprobanteServiceImpl;
 import com.Inmobiliaria.demo.util.ComprobanteInscripcionPdf;
+import com.Inmobiliaria.demo.util.FechasUtil;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import feign.FeignException;
@@ -253,7 +254,7 @@ import java.util.stream.Collectors;
 	        PagoInscripcionComprobante pago = new PagoInscripcionComprobante();
 	        pago.setContrato(contrato);
 	        pago.setImportePagado(request.getMontoPagado());
-	        pago.setFechaPago(fechaPago);
+	        pago.setFechaPago(FechasUtil.aFechaHora(fechaPago));
 	        pago.setMedioPago(request.getMedioPago());
 	        pago.setNumeroOperacion(request.getNumeroOperacion());
 	        pago.setObservaciones(request.getObservaciones() != null
@@ -542,7 +543,7 @@ PagoInscripcionComprobante pagoGuardado =
 	        dto.setIdPagoInscripcionComprobante(p.getIdPagoInscripcionComprobante());
 	        dto.setIdContrato(p.getContrato().getIdContrato());
 	        dto.setImportePagado(p.getImportePagado());
-	        dto.setFechaPago(p.getFechaPago());
+	        dto.setFechaPago(p.getFechaPago() != null ? p.getFechaPago().toLocalDate() : null);
 	        dto.setMedioPago(p.getMedioPago());
 	        dto.setNumeroOperacion(p.getNumeroOperacion());
 	        dto.setObservaciones(p.getObservaciones());

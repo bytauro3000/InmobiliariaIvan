@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @MappedSuperclass
@@ -15,7 +14,7 @@ import java.time.LocalDateTime;
 public abstract class PagoBase {
 
     @Column(name = "fecha_pago", nullable = false)
-    private LocalDate fechaPago;
+    private LocalDateTime fechaPago;
 
     @Column(name = "importe_pagado", nullable = false, precision = 12, scale = 2)
     private BigDecimal importePagado;

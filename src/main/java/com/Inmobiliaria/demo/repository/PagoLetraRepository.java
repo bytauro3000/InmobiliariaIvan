@@ -42,20 +42,34 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
 
     // ── Consultas para scheduler y email ──────────────────────────────────────
 
+    /**
+     * Busca los pagos de un día (fecha de negocio LocalDate). La columna es
+     * DATETIME: se convierte a rango [00:00, 00:00 del día siguiente).
+     */
+    default List<PagoLetras> findByFechaPago(LocalDate fecha) {
+        return buscarEntreFechasPago(fecha.atStartOfDay(), fecha.plusDays(1).atStartOfDay());
+    }
+
     @Query("SELECT DISTINCT p FROM PagoLetras p " +
            "JOIN FETCH p.letra l " +
            "JOIN FETCH l.contrato c " +
-           "WHERE p.fechaPago = :fecha")
-    List<PagoLetras> findByFechaPago(@Param("fecha") LocalDate fecha);
+           "WHERE p.fechaPago >= :desde AND p.fechaPago < :hasta")
+    List<PagoLetras> buscarEntreFechasPago(@Param("desde") java.time.LocalDateTime desde,
+                                           @Param("hasta") java.time.LocalDateTime hasta);
+
+    default List<PagoLetras> findByFechaPagoAndEmailEnviadoFalse(LocalDate fecha) {
+        return buscarPorFechaYPendienteEmail(fecha.atStartOfDay(), fecha.plusDays(1).atStartOfDay());
+    }
 
     @Query("SELECT DISTINCT p FROM PagoLetras p " +
            "JOIN FETCH p.letra l " +
            "JOIN FETCH l.contrato c " +
            "LEFT JOIN FETCH c.clientes cc " +
            "LEFT JOIN FETCH cc.cliente " +
-           "WHERE p.fechaPago = :fecha " +
+           "WHERE p.fechaPago >= :desde AND p.fechaPago < :hasta " +
            "AND (p.comprobante IS NULL OR p.comprobante.emailEnviado = false)")
-    List<PagoLetras> findByFechaPagoAndEmailEnviadoFalse(@Param("fecha") LocalDate fecha);
+    List<PagoLetras> buscarPorFechaYPendienteEmail(@Param("desde") java.time.LocalDateTime desde,
+                                                   @Param("hasta") java.time.LocalDateTime hasta);
 
     // ── Consultas para lógica de negocio ──────────────────────────────────────
 
@@ -80,7 +94,7 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
     @Query(value =
         "SELECT COALESCE(SUM(importe_pagado), 0) " +
         "FROM pago_letra " +
-        "WHERE fecha_pago = :fecha " +
+        "WHERE DATE(fecha_pago) = :fecha " +
         "AND (anulado = false OR anulado IS NULL)",
         nativeQuery = true)
     BigDecimal sumImportePagadoByFecha(@Param("fecha") LocalDate fecha);
@@ -88,12 +102,16 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
     @Query(value =
         "SELECT COUNT(*) " +
         "FROM pago_letra " +
-        "WHERE fecha_pago = :fecha " +
+        "WHERE DATE(fecha_pago) = :fecha " +
         "AND (anulado = false OR anulado IS NULL)",
         nativeQuery = true)
     long countByFechaPago(@Param("fecha") LocalDate fecha);
 
     // ── Reporte ingresos ──────────────────────────────────────────────────────
+
+    default List<PagoLetras> findByFechaPagoBetween(LocalDate desde, LocalDate hasta) {
+        return buscarEntreRango(desde.atStartOfDay(), hasta.plusDays(1).atStartOfDay());
+    }
 
     @Query("SELECT DISTINCT p FROM PagoLetras p " +
            "JOIN FETCH p.letra l " +
@@ -101,17 +119,16 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
            "LEFT JOIN FETCH co.clientes cc " +
            "LEFT JOIN FETCH cc.cliente cli " +
            "LEFT JOIN FETCH p.comprobante c " +
-           "WHERE p.fechaPago BETWEEN :desde AND :hasta " +
+           "WHERE p.fechaPago >= :desde AND p.fechaPago < :hasta " +
            "ORDER BY p.fechaPago ASC")
-    List<PagoLetras> findByFechaPagoBetween(
-            @Param("desde") LocalDate desde,
-            @Param("hasta") LocalDate hasta);
+    List<PagoLetras> buscarEntreRango(@Param("desde") java.time.LocalDateTime desde,
+                                      @Param("hasta") java.time.LocalDateTime hasta);
 
     @Query(value =
         "SELECT MONTH(fecha_pago) AS mes, YEAR(fecha_pago) AS anio, " +
         "COALESCE(SUM(importe_pagado), 0) AS total " +
         "FROM pago_letra " +
-        "WHERE fecha_pago BETWEEN :desde AND :hasta " +
+        "WHERE DATE(fecha_pago) BETWEEN :desde AND :hasta " +
         "AND (anulado = false OR anulado IS NULL) " +
         "GROUP BY YEAR(fecha_pago), MONTH(fecha_pago) " +
         "ORDER BY anio, mes",
@@ -126,7 +143,7 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
         "COALESCE(SUM(p.importe_pagado), 0) AS total " +
         "FROM pago_letra p " +
         "LEFT JOIN comprobante c ON p.id_comprobante = c.id_comprobante " +
-        "WHERE p.fecha_pago BETWEEN :desde AND :hasta " +
+        "WHERE DATE(p.fecha_pago) BETWEEN :desde AND :hasta " +
         "AND (p.anulado = false OR p.anulado IS NULL) " +
         "GROUP BY YEAR(p.fecha_pago), MONTH(p.fecha_pago), " +
         "CASE WHEN c.tipo_comprobante = 'BOLETA' THEN 'BOLETA' ELSE 'RECIBO' END " +
@@ -141,7 +158,7 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
         "CASE WHEN medio_pago = 'EFECTIVO' THEN 'EFECTIVO' ELSE 'BANCARIO' END AS tipo, " +
         "COALESCE(SUM(importe_pagado), 0) AS total " +
         "FROM pago_letra " +
-        "WHERE fecha_pago BETWEEN :desde AND :hasta " +
+        "WHERE DATE(fecha_pago) BETWEEN :desde AND :hasta " +
         "AND (anulado = false OR anulado IS NULL) " +
         "GROUP BY YEAR(fecha_pago), MONTH(fecha_pago), " +
         "CASE WHEN medio_pago = 'EFECTIVO' THEN 'EFECTIVO' ELSE 'BANCARIO' END " +
@@ -154,7 +171,7 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
     @Query(value =
         "SELECT COALESCE(SUM(importe_pagado), 0) " +
         "FROM pago_letra " +
-        "WHERE fecha_pago BETWEEN :desde AND :hasta " +
+        "WHERE DATE(fecha_pago) BETWEEN :desde AND :hasta " +
         "AND (anulado = false OR anulado IS NULL)",
         nativeQuery = true)
     BigDecimal sumImportePagadoByRango(
@@ -164,7 +181,7 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
     @Query(value =
         "SELECT COUNT(*) " +
         "FROM pago_letra " +
-        "WHERE fecha_pago BETWEEN :desde AND :hasta " +
+        "WHERE DATE(fecha_pago) BETWEEN :desde AND :hasta " +
         "AND (anulado = false OR anulado IS NULL)",
         nativeQuery = true)
     long countByFechaPagoBetween(
@@ -204,14 +221,23 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
            "       (lot IS NOT NULL AND LOWER(lot.numeroLote) = LOWER(:numeroLote))) " +
            "AND   (:idPrograma IS NULL OR " +
            "       (prog IS NOT NULL AND prog.idPrograma = :idPrograma)) " +
-           "AND   (:desde IS NULL OR p.fechaPago >= :desde) " +
-           "AND   (:hasta IS NULL OR p.fechaPago <= :hasta) " +
-            "ORDER BY p.fechaPago DESC, c.tipoComprobante, c.numeroCompleto")
-    List<PagoLetras> findTodosConLotes(
+            "AND   (:desde IS NULL OR p.fechaPago >= :desde) " +
+            "AND   (:hasta IS NULL OR p.fechaPago < :hasta) " +
+             "ORDER BY p.fechaPago DESC, c.tipoComprobante, c.numeroCompleto")
+    List<PagoLetras> buscarTodosConLotes(
             @Param("numeroComprobante") String numeroComprobante,
             @Param("manzana")          String manzana,
             @Param("numeroLote")       String numeroLote,
             @Param("idPrograma")       Integer idPrograma,
-            @Param("desde")            LocalDate desde,
-            @Param("hasta")            LocalDate hasta);
+            @Param("desde")            java.time.LocalDateTime desde,
+            @Param("hasta")            java.time.LocalDateTime hasta);
+
+    /** Wrapper: desde/hasta en LocalDate (inclusive) → rango DATETIME. */
+    default List<PagoLetras> findTodosConLotes(
+            String numeroComprobante, String manzana, String numeroLote, Integer idPrograma,
+            LocalDate desde, LocalDate hasta) {
+        return buscarTodosConLotes(numeroComprobante, manzana, numeroLote, idPrograma,
+                desde != null ? desde.atStartOfDay() : null,
+                hasta != null ? hasta.plusDays(1).atStartOfDay() : null);
+    }
 }

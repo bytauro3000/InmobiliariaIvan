@@ -57,7 +57,7 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
                     .idPago(p.getIdPago())
                     .numeroComprobante(p.getComprobante() != null
                             ? p.getComprobante().getNumeroCompleto() : null)
-                    .fechaPago(p.getFechaPago())
+                    .fechaPago(p.getFechaPago() != null ? p.getFechaPago().toLocalDate() : null)
                     .importePagado(p.getImportePagado())
                     .medioPago(p.getMedioPago())
                     .numeroOperacion(p.getNumeroOperacion())
@@ -70,7 +70,7 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
                                     ? p.getLetra().getContrato().getClientes() : null))
                     .observaciones(p.getObservaciones())
                     .anulado(Boolean.TRUE.equals(p.getAnulado()))
-                    .fechaOperacion(p.getFechaOperacion())
+                    .fechaOperacion(p.getFechaOperacion() != null ? p.getFechaOperacion().toLocalDate() : null)
                     .build());
         }
 
@@ -93,7 +93,7 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
                     .idPago(p.getIdPagoMora())
                     .numeroComprobante(p.getComprobante() != null
                             ? p.getComprobante().getNumeroCompleto() : null)
-                    .fechaPago(p.getFechaPago())
+                    .fechaPago(p.getFechaPago() != null ? p.getFechaPago().toLocalDate() : null)
                     .importePagado(p.getImportePagado())
                     .medioPago(p.getMedioPago())
                     .numeroOperacion(p.getNumeroOperacion())
@@ -119,7 +119,7 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
                     .idPago(p.getIdPagoInicial())
                     .numeroComprobante(p.getComprobante() != null
                             ? p.getComprobante().getNumeroCompleto() : null)
-                    .fechaPago(p.getFechaPago())
+                    .fechaPago(p.getFechaPago() != null ? p.getFechaPago().toLocalDate() : null)
                     .importePagado(p.getImportePagado())
                     .medioPago(p.getMedioPago())
                     .numeroOperacion(p.getNumeroOperacion())
@@ -212,7 +212,7 @@ public class ReporteIngresosServiceImpl implements ReporteIngresosService {
                     .tipoComprobante(comp != null ? comp.getTipoComprobante().name() : null)
                     .idPago(p.getIdPagoInscripcionComprobante())
                     .numeroComprobante(comp != null ? comp.getNumeroCompleto() : null)
-                    .fechaPago(p.getFechaPago())
+                    .fechaPago(p.getFechaPago() != null ? p.getFechaPago().toLocalDate() : null)
                     .importePagado(p.getImportePagado())
                     .medioPago(p.getMedioPago())
                     .numeroOperacion(p.getNumeroOperacion())

@@ -28,6 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import com.Inmobiliaria.demo.util.FechasUtil;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -289,7 +290,7 @@ public class MoraServiceImpl implements MoraService {
         pago.setMora(mora);
         pago.setImportePagado(request.getMontoPagado());
         LocalDate fechaPagoMora = request.getFechaPago() != null ? request.getFechaPago() : LocalDate.now();
-        pago.setFechaPago(fechaPagoMora);
+        pago.setFechaPago(FechasUtil.aFechaHora(fechaPagoMora));
         pago.setMedioPago(request.getMedioPago());
         pago.setNumeroOperacion(request.getNumeroOperacion());
         pago.setObservaciones(request.getObservaciones());
@@ -547,7 +548,7 @@ public class MoraServiceImpl implements MoraService {
     // ─── Notificación al admin ─────────────────────────────────────────────────
 
     private void notificarAdminPagoMora(PagoMora pago) {
-        if (!pago.getFechaPago().equals(LocalDate.now())) return;
+        if (pago.getFechaPago() == null || !pago.getFechaPago().toLocalDate().equals(LocalDate.now())) return;
         try {
             var mora = pago.getMora();
             var letra = mora.getLetra();
@@ -624,7 +625,7 @@ public class MoraServiceImpl implements MoraService {
         dto.setIdPagoMora(pago.getIdPagoMora());
         dto.setIdMora(pago.getMora().getIdMora());
         dto.setMontoPagado(pago.getImportePagado());
-        dto.setFechaPago(pago.getFechaPago());
+        dto.setFechaPago(pago.getFechaPago() != null ? pago.getFechaPago().toLocalDate() : null);
         dto.setMedioPago(pago.getMedioPago());
         dto.setNumeroOperacion(pago.getNumeroOperacion());
         dto.setObservaciones(pago.getObservaciones());

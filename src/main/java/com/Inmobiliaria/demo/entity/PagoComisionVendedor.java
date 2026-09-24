@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * Pago de comisión a un vendedor: adelanto (al firmar contrato) o cuota mensual
@@ -41,11 +41,11 @@ public class PagoComisionVendedor {
     private BigDecimal monto;
 
     @Column(name = "fecha_pago", nullable = false)
-    private LocalDate fechaPago;
+    private LocalDateTime fechaPago;
 
     /** Fecha de la operación (del voucher) para medios bancarios. */
     @Column(name = "fecha_operacion")
-    private LocalDate fechaOperacion;
+    private LocalDateTime fechaOperacion;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "medio_pago", length = 20)

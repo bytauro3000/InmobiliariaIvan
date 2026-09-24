@@ -30,16 +30,22 @@ public interface PagoMoraRepository extends JpaRepository<PagoMora, Integer> {
            "WHERE pm.comprobante.numeroCompleto = :numeroCompleto")
     List<PagoMora> findByComprobanteNumeroCompleto(@Param("numeroCompleto") String numeroCompleto);
 
+    /** Fecha de negocio (LocalDate) → rango DATETIME [00:00, día siguiente). */
+    default List<PagoMora> findByFechaPago(LocalDate fecha) {
+        return buscarEntreFechasPago(fecha.atStartOfDay(), fecha.plusDays(1).atStartOfDay());
+    }
+
     @Query("SELECT pm FROM PagoMora pm " +
-           "WHERE pm.fechaPago = :fecha")
-    List<PagoMora> findByFechaPago(@Param("fecha") LocalDate fecha);
+           "WHERE pm.fechaPago >= :desde AND pm.fechaPago < :hasta")
+    List<PagoMora> buscarEntreFechasPago(@Param("desde") java.time.LocalDateTime desde,
+                                         @Param("hasta") java.time.LocalDateTime hasta);
 
     // ── Dashboard ─────────────────────────────────────────────────────────────
 
     @Query(value =
         "SELECT COALESCE(SUM(importe_pagado), 0) " +
         "FROM pago_mora " +
-        "WHERE fecha_pago = :fecha " +
+        "WHERE DATE(fecha_pago) = :fecha " +
         "AND (anulado = false OR anulado IS NULL)",
         nativeQuery = true)
     BigDecimal sumImportePagadoByFecha(@Param("fecha") LocalDate fecha);
@@ -47,12 +53,16 @@ public interface PagoMoraRepository extends JpaRepository<PagoMora, Integer> {
     @Query(value =
         "SELECT COUNT(*) " +
         "FROM pago_mora " +
-        "WHERE fecha_pago = :fecha " +
+        "WHERE DATE(fecha_pago) = :fecha " +
         "AND (anulado = false OR anulado IS NULL)",
         nativeQuery = true)
     long countByFechaPago(@Param("fecha") LocalDate fecha);
 
     // ── Reporte ingresos ──────────────────────────────────────────────────────
+
+    default List<PagoMora> findByFechaPagoBetween(LocalDate desde, LocalDate hasta) {
+        return buscarEntreRango(desde.atStartOfDay(), hasta.plusDays(1).atStartOfDay());
+    }
 
     @Query("SELECT pm FROM PagoMora pm " +
            "JOIN FETCH pm.mora m " +
@@ -61,17 +71,16 @@ public interface PagoMoraRepository extends JpaRepository<PagoMora, Integer> {
            "LEFT JOIN FETCH co.clientes cc " +
            "LEFT JOIN FETCH cc.cliente cli " +
            "LEFT JOIN FETCH pm.comprobante c " +
-           "WHERE pm.fechaPago BETWEEN :desde AND :hasta " +
+           "WHERE pm.fechaPago >= :desde AND pm.fechaPago < :hasta " +
            "ORDER BY pm.fechaPago ASC")
-    List<PagoMora> findByFechaPagoBetween(
-            @Param("desde") LocalDate desde,
-            @Param("hasta") LocalDate hasta);
+    List<PagoMora> buscarEntreRango(@Param("desde") java.time.LocalDateTime desde,
+                                    @Param("hasta") java.time.LocalDateTime hasta);
 
     @Query(value =
         "SELECT MONTH(fecha_pago) AS mes, YEAR(fecha_pago) AS anio, " +
         "COALESCE(SUM(importe_pagado), 0) AS total " +
         "FROM pago_mora " +
-        "WHERE fecha_pago BETWEEN :desde AND :hasta " +
+        "WHERE DATE(fecha_pago) BETWEEN :desde AND :hasta " +
         "AND (anulado = false OR anulado IS NULL) " +
         "GROUP BY YEAR(fecha_pago), MONTH(fecha_pago) " +
         "ORDER BY anio, mes",
@@ -86,7 +95,7 @@ public interface PagoMoraRepository extends JpaRepository<PagoMora, Integer> {
         "COALESCE(SUM(p.importe_pagado), 0) AS total " +
         "FROM pago_mora p " +
         "LEFT JOIN comprobante c ON p.id_comprobante = c.id_comprobante " +
-        "WHERE p.fecha_pago BETWEEN :desde AND :hasta " +
+        "WHERE DATE(p.fecha_pago) BETWEEN :desde AND :hasta " +
         "AND (p.anulado = false OR p.anulado IS NULL) " +
         "GROUP BY YEAR(p.fecha_pago), MONTH(p.fecha_pago), " +
         "CASE WHEN c.tipo_comprobante = 'BOLETA' THEN 'BOLETA' ELSE 'RECIBO' END " +
@@ -101,7 +110,7 @@ public interface PagoMoraRepository extends JpaRepository<PagoMora, Integer> {
         "CASE WHEN medio_pago = 'EFECTIVO' THEN 'EFECTIVO' ELSE 'BANCARIO' END AS tipo, " +
         "COALESCE(SUM(importe_pagado), 0) AS total " +
         "FROM pago_mora " +
-        "WHERE fecha_pago BETWEEN :desde AND :hasta " +
+        "WHERE DATE(fecha_pago) BETWEEN :desde AND :hasta " +
         "AND (anulado = false OR anulado IS NULL) " +
         "GROUP BY YEAR(fecha_pago), MONTH(fecha_pago), " +
         "CASE WHEN medio_pago = 'EFECTIVO' THEN 'EFECTIVO' ELSE 'BANCARIO' END " +
@@ -114,7 +123,7 @@ public interface PagoMoraRepository extends JpaRepository<PagoMora, Integer> {
     @Query(value =
         "SELECT COALESCE(SUM(importe_pagado), 0) " +
         "FROM pago_mora " +
-        "WHERE fecha_pago BETWEEN :desde AND :hasta " +
+        "WHERE DATE(fecha_pago) BETWEEN :desde AND :hasta " +
         "AND (anulado = false OR anulado IS NULL)",
         nativeQuery = true)
     BigDecimal sumImportePagadoByRango(
@@ -124,7 +133,7 @@ public interface PagoMoraRepository extends JpaRepository<PagoMora, Integer> {
     @Query(value =
         "SELECT COUNT(*) " +
         "FROM pago_mora " +
-        "WHERE fecha_pago BETWEEN :desde AND :hasta " +
+        "WHERE DATE(fecha_pago) BETWEEN :desde AND :hasta " +
         "AND (anulado = false OR anulado IS NULL)",
         nativeQuery = true)
     long countByFechaPagoBetween(
@@ -155,14 +164,23 @@ public interface PagoMoraRepository extends JpaRepository<PagoMora, Integer> {
            "       (lot IS NOT NULL AND LOWER(lot.numeroLote) = LOWER(:numeroLote))) " +
            "AND   (:idPrograma IS NULL OR " +
            "       (prog IS NOT NULL AND prog.idPrograma = :idPrograma)) " +
-           "AND   (:desde IS NULL OR pm.fechaPago >= :desde) " +
-            "AND   (:hasta IS NULL OR pm.fechaPago <= :hasta) " +
-            "ORDER BY pm.fechaPago DESC, c.tipoComprobante, c.numeroCompleto")
-    List<PagoMora> findTodos(
+            "AND   (:desde IS NULL OR pm.fechaPago >= :desde) " +
+             "AND   (:hasta IS NULL OR pm.fechaPago < :hasta) " +
+             "ORDER BY pm.fechaPago DESC, c.tipoComprobante, c.numeroCompleto")
+    List<PagoMora> buscarTodos(
             @Param("numeroComprobante") String numeroComprobante,
             @Param("manzana")          String manzana,
             @Param("numeroLote")       String numeroLote,
             @Param("idPrograma")       Integer idPrograma,
-            @Param("desde")            LocalDate desde,
-            @Param("hasta")            LocalDate hasta);
+            @Param("desde")            java.time.LocalDateTime desde,
+            @Param("hasta")            java.time.LocalDateTime hasta);
+
+    /** Wrapper: desde/hasta en LocalDate (inclusive) → rango DATETIME. */
+    default List<PagoMora> findTodos(
+            String numeroComprobante, String manzana, String numeroLote, Integer idPrograma,
+            LocalDate desde, LocalDate hasta) {
+        return buscarTodos(numeroComprobante, manzana, numeroLote, idPrograma,
+                desde != null ? desde.atStartOfDay() : null,
+                hasta != null ? hasta.plusDays(1).atStartOfDay() : null);
+    }
 }

@@ -150,7 +150,7 @@ public class PagoInicialServiceImpl implements PagoInicialService {
         PagoInicialResponseDTO dto = new PagoInicialResponseDTO();
         dto.setIdPagoInicial(pago.getIdPagoInicial());
         dto.setImportePagado(pago.getImportePagado());
-        dto.setFechaPago(pago.getFechaPago());
+        dto.setFechaPago(pago.getFechaPago() != null ? pago.getFechaPago().toLocalDate() : null);
         dto.setMedioPago(pago.getMedioPago());
         dto.setNumeroOperacion(pago.getNumeroOperacion());
         dto.setObservaciones(pago.getObservaciones());
