@@ -41,21 +41,21 @@ public class NotificacionAdminEmailService {
     }
 
     public void notificarPagoMora(String detalleMora, String clienteNombre, BigDecimal importe, Moneda moneda, String medioPago,
-                                  LocalDateTime fechaPago, Integer idPagoMora) {
+                                  LocalDateTime fechaPago, LocalDateTime fechaOperacion, Integer idPagoMora) {
         enviar(new NotificacionPago("PAGO DE MORA", "PAGO_MORA", idPagoMora,
-                detalleMora, clienteNombre, importe, moneda, medioPago, fechaPago, null));
+                detalleMora, clienteNombre, importe, moneda, medioPago, fechaPago, fechaOperacion));
     }
 
     public void notificarPagoInicial(String detalle, String clienteNombre, BigDecimal importe, Moneda moneda, String medioPago,
-                                     LocalDateTime fechaPago, Integer idPagoInicial) {
+                                     LocalDateTime fechaPago, LocalDateTime fechaOperacion, Integer idPagoInicial) {
         enviar(new NotificacionPago("PAGO INICIAL / CUOTA", "PAGO_INICIAL", idPagoInicial,
-                detalle, clienteNombre, importe, moneda, medioPago, fechaPago, null));
+                detalle, clienteNombre, importe, moneda, medioPago, fechaPago, fechaOperacion));
     }
 
     public void notificarPagoServicio(String detalle, String clienteNombre, BigDecimal importe, Moneda moneda, String medioPago,
-                                      LocalDateTime fechaPago, Integer idPagoInscripcion) {
+                                      LocalDateTime fechaPago, LocalDateTime fechaOperacion, Integer idPagoInscripcion) {
         enviar(new NotificacionPago("PAGO DE SERVICIO", "PAGO_INSCRIPCION", idPagoInscripcion,
-                detalle, clienteNombre, importe, moneda, medioPago, fechaPago, null));
+                detalle, clienteNombre, importe, moneda, medioPago, fechaPago, fechaOperacion));
     }
 
     private void enviar(NotificacionPago p) {

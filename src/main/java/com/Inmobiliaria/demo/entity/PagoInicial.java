@@ -3,6 +3,8 @@ package com.Inmobiliaria.demo.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "pago_inicial")
 @Getter
@@ -19,4 +21,7 @@ public class PagoInicial extends PagoBase {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_contrato", nullable = false)
     private Contrato contrato;
+
+    @Column(name = "fecha_operacion")
+    private LocalDateTime fechaOperacion;
 }

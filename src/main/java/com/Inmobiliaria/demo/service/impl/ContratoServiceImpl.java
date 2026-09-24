@@ -12,6 +12,7 @@ import java.security.Principal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import com.Inmobiliaria.demo.util.FechasUtil;
+import com.Inmobiliaria.demo.util.MedioPagoUtil;
 import java.time.format.DateTimeFormatter;
 
 import org.modelmapper.ModelMapper;
@@ -188,10 +189,17 @@ public class ContratoServiceImpl implements ContratoService {
         	PagoInicialRequestDTO piReq = requestDTO.getPagoInicial();
             LocalDate fechaPagoInicial = piReq.getFechaPago() != null ? piReq.getFechaPago() : LocalDate.now();
 
+            if (MedioPagoUtil.esBancario(piReq.getMedioPago()) && piReq.getFechaOperacion() == null) {
+                throw new NegocioException(
+                    "Para pagos con " + piReq.getMedioPago() + " la fecha de operación es obligatoria.");
+            }
+
         	PagoInicial pago = new PagoInicial();
         	pago.setContrato(contratoGuardado);
         	pago.setImportePagado(piReq.getImportePagado());
         	pago.setFechaPago(FechasUtil.aFechaHora(fechaPagoInicial));
+        	pago.setFechaOperacion(piReq.getFechaOperacion() != null
+                ? FechasUtil.aFechaHora(piReq.getFechaOperacion(), piReq.getHoraOperacion()) : null);
         	pago.setMedioPago(piReq.getMedioPago());
         	pago.setNumeroOperacion(piReq.getNumeroOperacion());
         	pago.setObservaciones(piReq.getObservaciones());
@@ -1095,7 +1103,7 @@ public class ContratoServiceImpl implements ContratoService {
 
             String medioPago = pago.getMedioPago() != null ? pago.getMedioPago().name() : "-";
             notificacionAdminEmailService.notificarPagoInicial(detalle, clienteNombre, pago.getImportePagado(), moneda, medioPago,
-                    pago.getFechaPago(), pago.getIdPagoInicial());
+                    pago.getFechaPago(), pago.getFechaOperacion(), pago.getIdPagoInicial());
         } catch (Exception e) {
             log.warn("No se pudo enviar notificacion admin para pago inicial ID {}: {}", pago.getIdPagoInicial(), e.getMessage());
         }

@@ -19,6 +19,7 @@ import com.Inmobiliaria.demo.service.ComprobanteService;
 import com.Inmobiliaria.demo.service.impl.InscripcionComprobanteServiceImpl;
 import com.Inmobiliaria.demo.util.ComprobanteInscripcionPdf;
 import com.Inmobiliaria.demo.util.FechasUtil;
+import com.Inmobiliaria.demo.util.MedioPagoUtil;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import feign.FeignException;
@@ -206,6 +207,9 @@ import java.util.stream.Collectors;
 	            return ResponseEntity.badRequest().body("El medio de pago es obligatorio.");
 	        if (request.getTipoComprobante() == null)
 	            return ResponseEntity.badRequest().body("El tipo de comprobante es obligatorio.");
+	        if (MedioPagoUtil.esBancario(request.getMedioPago()) && request.getFechaOperacion() == null)
+	            return ResponseEntity.badRequest().body(
+	                    "Para pagos con " + request.getMedioPago() + " la fecha de operación es obligatoria.");
 	
 	        // a) Enviar abono al microservicio
 	        Map<String, Object> abonoRespuestaMs = null;
@@ -229,7 +233,7 @@ import java.util.stream.Collectors;
 	                        "Contrato no encontrado con ID: " + request.getIdContrato()));
 	
 	        // c) Generar comprobante en el monolito
-	        LocalDate fechaPago = LocalDate.now();
+	        LocalDate fechaPago = request.getFechaPago() != null ? request.getFechaPago() : LocalDate.now();
 	
 	        Comprobante comprobante;
 	        if (request.getNumeroComprobantePersonalizado() != null
@@ -255,6 +259,8 @@ import java.util.stream.Collectors;
 	        pago.setContrato(contrato);
 	        pago.setImportePagado(request.getMontoPagado());
 	        pago.setFechaPago(FechasUtil.aFechaHora(fechaPago));
+	        pago.setFechaOperacion(request.getFechaOperacion() != null
+	                ? FechasUtil.aFechaHora(request.getFechaOperacion(), request.getHoraOperacion()) : null);
 	        pago.setMedioPago(request.getMedioPago());
 	        pago.setNumeroOperacion(request.getNumeroOperacion());
 	        pago.setObservaciones(request.getObservaciones() != null
@@ -302,7 +308,8 @@ PagoInscripcionComprobante pagoGuardado =
 	                String medioPago = request.getMedioPago() != null ? request.getMedioPago().name() : "-";
 	                notificacionAdminEmailService.notificarPagoServicio(
 	                    detalle, clienteNombre, request.getMontoPagado(), moneda, medioPago,
-	                    pagoGuardado.getFechaPago(), pagoGuardado.getIdPagoInscripcionComprobante());
+	                    pagoGuardado.getFechaPago(), pagoGuardado.getFechaOperacion(),
+	                    pagoGuardado.getIdPagoInscripcionComprobante());
 	            } catch (Exception e) {
 	                log.warn("No se pudo enviar notificacion admin para pago de servicio: {}", e.getMessage());
 	            }

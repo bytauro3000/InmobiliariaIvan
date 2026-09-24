@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import com.Inmobiliaria.demo.util.FechasUtil;
+import com.Inmobiliaria.demo.util.MedioPagoUtil;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -286,11 +287,18 @@ public class MoraServiceImpl implements MoraService {
             );
         }
 
+        if (MedioPagoUtil.esBancario(request.getMedioPago()) && request.getFechaOperacion() == null) {
+            throw new NegocioException(
+                "Para pagos con " + request.getMedioPago() + " la fecha de operación es obligatoria.");
+        }
+
         PagoMora pago = new PagoMora();
         pago.setMora(mora);
         pago.setImportePagado(request.getMontoPagado());
         LocalDate fechaPagoMora = request.getFechaPago() != null ? request.getFechaPago() : LocalDate.now();
         pago.setFechaPago(FechasUtil.aFechaHora(fechaPagoMora));
+        pago.setFechaOperacion(request.getFechaOperacion() != null
+            ? FechasUtil.aFechaHora(request.getFechaOperacion(), request.getHoraOperacion()) : null);
         pago.setMedioPago(request.getMedioPago());
         pago.setNumeroOperacion(request.getNumeroOperacion());
         pago.setObservaciones(request.getObservaciones());
@@ -582,7 +590,7 @@ public class MoraServiceImpl implements MoraService {
 
             String medioPago = pago.getMedioPago() != null ? pago.getMedioPago().name() : "-";
             notificacionAdminEmailService.notificarPagoMora(detalle, clienteNombre, pago.getImportePagado(), moneda, medioPago,
-                    pago.getFechaPago(), pago.getIdPagoMora());
+                    pago.getFechaPago(), pago.getFechaOperacion(), pago.getIdPagoMora());
         } catch (Exception e) {
             log.warn("No se pudo enviar notificacion admin para pago mora ID {}: {}", pago.getIdPagoMora(), e.getMessage());
         }

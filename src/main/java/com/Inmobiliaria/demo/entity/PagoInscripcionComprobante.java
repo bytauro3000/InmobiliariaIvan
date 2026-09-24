@@ -3,6 +3,8 @@ package com.Inmobiliaria.demo.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "pago_inscripcion_comprobante")
 @Getter
@@ -30,4 +32,7 @@ public class PagoInscripcionComprobante extends PagoBase {
     // Se guarda al registrar el abono para poder anularlo ahí cuando se emite una NC.
     @Column(name = "id_pago_inscripcion_ms")
     private Long idPagoInscripcionMs;
+
+    @Column(name = "fecha_operacion")
+    private LocalDateTime fechaOperacion;
 }

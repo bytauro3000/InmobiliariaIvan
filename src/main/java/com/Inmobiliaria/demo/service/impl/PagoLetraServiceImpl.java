@@ -16,6 +16,7 @@ import com.Inmobiliaria.demo.service.EmpresaService;
 import com.Inmobiliaria.demo.service.PagoLetraService;
 import com.Inmobiliaria.demo.service.SunatEnvioService;
 import com.Inmobiliaria.demo.util.FechasUtil;
+import com.Inmobiliaria.demo.util.MedioPagoUtil;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
@@ -132,11 +133,7 @@ public class PagoLetraServiceImpl implements PagoLetraService {
     }
 
     private static boolean esMedioBancario(MedioPago medio) {
-        return medio == MedioPago.DEPOSITO
-            || medio == MedioPago.TRANSFERENCIA
-            || medio == MedioPago.YAPE
-            || medio == MedioPago.PLIN
-            || medio == MedioPago.OTROS;
+        return MedioPagoUtil.esBancario(medio);
     }
 
     /**
