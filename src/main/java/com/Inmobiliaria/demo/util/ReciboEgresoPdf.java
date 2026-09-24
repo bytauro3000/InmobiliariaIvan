@@ -90,8 +90,12 @@ public class ReciboEgresoPdf {
     public static byte[] generar(ReciboEgreso egreso, List<Voucher> vouchers) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
+        // Concepto agrupado por contrato ([C|...]) → tabla A4 anidada; si no, layout clásico A5.
+        List<GrupoConcepto> grupos = parsearGrupos(egreso.getConcepto());
+        PageSize tamanho = grupos.isEmpty() ? PageSize.A5.rotate() : PageSize.A4;
+
         try (PdfDocument pdf = new PdfDocument(new PdfWriter(out));
-             Document doc = new Document(pdf, PageSize.A5.rotate())) {
+             Document doc = new Document(pdf, tamanho)) {
 
             float marg1 = 20f;
             doc.setMargins(marg1, 18, marg1, 52);
@@ -210,41 +214,45 @@ public class ReciboEgresoPdf {
                     .setBorderBottom(new SolidBorder(GRIS_MEDIO, 0.5f))
                     .setMarginTop(4).setMarginBottom(4));
 
-            // ── TABLA DE ITEMS (detalle por lote) ──
-            List<String[]> items = parsearItems(egreso.getConcepto(), monedaSimbolo);
-
-            Table tablaItems = new Table(UnitValue.createPercentArray(new float[]{1, 0.24f}))
-                    .setWidth(UnitValue.createPercentValue(100));
-
-            // Encabezado con azul marino y letras blancas (como boletas)
-            tablaItems.addHeaderCell(new Cell()
-                    .setBackgroundColor(AZUL_MARINO)
-                    .setPadding(3)
-                    .add(new Paragraph("DETALLE").setFont(courierBold).setFontSize(8f)
-                            .setFontColor(ColorConstants.WHITE).setTextAlignment(TextAlignment.LEFT)));
-            tablaItems.addHeaderCell(new Cell()
-                    .setBackgroundColor(AZUL_MARINO)
-                    .setPadding(3)
-                    .add(new Paragraph("IMPORTE").setFont(courierBold).setFontSize(8f)
-                            .setFontColor(ColorConstants.WHITE).setTextAlignment(TextAlignment.RIGHT)));
-
-            boolean esMultiItem = items.size() > 1;
-            if (items.isEmpty()) {
-                tablaItems.addCell(cellDetalle(egreso.getConcepto(), courier));
-                tablaItems.addCell(cellDetalle(monedaSimbolo + " " + montoStr, courier, TextAlignment.RIGHT));
+            // ── TABLA DE ITEMS (detalle por lote o agrupada por contrato) ──
+            if (!grupos.isEmpty()) {
+                doc.add(tablaAgrupadaPorContrato(grupos, monedaSimbolo, egreso.getMonto()));
             } else {
-                for (String[] item : items) {
-                    tablaItems.addCell(cellDetalle(item[0], courier));
-                    String importe = item[1];
-                    if (!esMultiItem) {
-                        // Un solo item: el importe es el monto total del egreso
-                        importe = monedaSimbolo + " " + montoStr;
-                    }
-                    tablaItems.addCell(cellDetalle(importe, courier, TextAlignment.RIGHT));
-                }
-            }
+                List<String[]> items = parsearItems(egreso.getConcepto(), monedaSimbolo);
 
-            doc.add(tablaItems);
+                Table tablaItems = new Table(UnitValue.createPercentArray(new float[]{1, 0.24f}))
+                        .setWidth(UnitValue.createPercentValue(100));
+
+                // Encabezado con azul marino y letras blancas (como boletas)
+                tablaItems.addHeaderCell(new Cell()
+                        .setBackgroundColor(AZUL_MARINO)
+                        .setPadding(3)
+                        .add(new Paragraph("DETALLE").setFont(courierBold).setFontSize(8f)
+                                .setFontColor(ColorConstants.WHITE).setTextAlignment(TextAlignment.LEFT)));
+                tablaItems.addHeaderCell(new Cell()
+                        .setBackgroundColor(AZUL_MARINO)
+                        .setPadding(3)
+                        .add(new Paragraph("IMPORTE").setFont(courierBold).setFontSize(8f)
+                                .setFontColor(ColorConstants.WHITE).setTextAlignment(TextAlignment.RIGHT)));
+
+                boolean esMultiItem = items.size() > 1;
+                if (items.isEmpty()) {
+                    tablaItems.addCell(cellDetalle(egreso.getConcepto(), courier));
+                    tablaItems.addCell(cellDetalle(monedaSimbolo + " " + montoStr, courier, TextAlignment.RIGHT));
+                } else {
+                    for (String[] item : items) {
+                        tablaItems.addCell(cellDetalle(item[0], courier));
+                        String importe = item[1];
+                        if (!esMultiItem) {
+                            // Un solo item: el importe es el monto total del egreso
+                            importe = monedaSimbolo + " " + montoStr;
+                        }
+                        tablaItems.addCell(cellDetalle(importe, courier, TextAlignment.RIGHT));
+                    }
+                }
+
+                doc.add(tablaItems);
+            }
 
             // ── TOTAL ──
             Table tablaTotal = new Table(UnitValue.createPercentArray(new float[]{1, 0.24f}))
@@ -339,10 +347,11 @@ public class ReciboEgresoPdf {
             // ── LÍNEA GRIS IZQUIERDA ──
             PdfPage page = pdf.getFirstPage();
             PdfCanvas canvas = new PdfCanvas(page);
+            float alto = page.getPageSize().getHeight();
             canvas.setStrokeColor(new DeviceGray(0.55f))
                   .setLineWidth(1.2f)
-                  .moveTo(0, 210f)
-                  .lineTo(28, 210f)
+                  .moveTo(0, alto - 40f)
+                  .lineTo(28, alto - 40f)
                   .stroke();
             canvas.release();
 
@@ -353,6 +362,141 @@ public class ReciboEgresoPdf {
             throw new RuntimeException("Error al generar recibo de egreso PDF: " + e.getMessage(), e);
         }
         return out.toByteArray();
+    }
+
+    /** Grupo de pagos de un contrato: descripción + filas letra/monto + subtotal. */
+    private static class GrupoConcepto {
+        final String descripcion;
+        final List<String[]> filas = new ArrayList<>(); // [letra, monto]
+        String subtotal;
+
+        GrupoConcepto(String descripcion) {
+            this.descripcion = descripcion;
+        }
+    }
+
+    /**
+     * Parsea el concepto con marcas [C|id|desc] / L|letra|monto / S|sub / T|total
+     * que genera ComisionVendedorServiceImpl.construirConceptoAgrupado.
+     * Devuelve lista vacía si el concepto no está en ese formato (layout clásico).
+     */
+    private static List<GrupoConcepto> parsearGrupos(String concepto) {
+        List<GrupoConcepto> grupos = new ArrayList<>();
+        if (concepto == null || concepto.isBlank()) return grupos;
+        if (!concepto.contains("[C|")) return grupos;
+        for (String linea : concepto.split("\\r?\\n")) {
+            String t = linea.trim();
+            if (t.isEmpty()) continue;
+            if (t.startsWith("[C|")) {
+                // [C|id|descripcion]
+                int segundo = t.indexOf('|', 3);
+                String desc = segundo > 0 && t.endsWith("]")
+                        ? t.substring(segundo + 1, t.length() - 1)
+                        : t;
+                grupos.add(new GrupoConcepto(desc));
+            } else if (t.startsWith("L|") && !grupos.isEmpty()) {
+                String[] p = t.split("\\|", -1);
+                String letra = p.length > 1 ? p[1] : "";
+                String monto = p.length > 2 ? p[2] : "0.00";
+                grupos.get(grupos.size() - 1).filas.add(new String[]{letra, monto});
+            } else if (t.startsWith("S|") && !grupos.isEmpty()) {
+                grupos.get(grupos.size() - 1).subtotal = t.substring(2);
+            }
+            // T|total se ignora: el total es egreso.getMonto()
+        }
+        return grupos;
+    }
+
+    /**
+     * Tabla A4 agrupada por contrato:
+     * DESCRIPCION | LETRA | MONTO | SUBTOTAL
+     * con una fila final TOTAL general. DESCRIPCION y SUBTOTAL usan rowspan
+     * para cubrir todas las letras de cada contrato.
+     */
+    private static Table tablaAgrupadaPorContrato(List<GrupoConcepto> grupos, String monedaSimbolo,
+                                                  BigDecimal totalEgreso) throws Exception {
+        PdfFont courier = cargarFuente("fonts/COUR.TTF");
+        PdfFont courierBold = cargarFuente("fonts/COURBD.TTF");
+
+        Table tabla = new Table(UnitValue.createPercentArray(new float[]{0.38f, 0.17f, 0.20f, 0.25f}))
+                .setWidth(UnitValue.createPercentValue(100));
+
+        String[] headers = {"DESCRIPCION", "LETRA", "MONTO", "SUBTOTAL"};
+        for (String h : headers) {
+            tabla.addHeaderCell(new Cell()
+                    .setBackgroundColor(AZUL_MARINO)
+                    .setPadding(4)
+                    .add(new Paragraph(h).setFont(courierBold).setFontSize(8f)
+                            .setFontColor(ColorConstants.WHITE)
+                            .setTextAlignment("LETRA".equals(h) || "MONTO".equals(h)
+                                    ? TextAlignment.CENTER : TextAlignment.LEFT)));
+        }
+
+        for (GrupoConcepto g : grupos) {
+            int n = Math.max(g.filas.size(), 1);
+
+            Cell celdaDesc = new Cell(n, 1)
+                    .setBorder(new SolidBorder(GRIS_MEDIO, 0.4f))
+                    .setPadding(4)
+                    .setVerticalAlignment(VerticalAlignment.TOP)
+                    .add(new Paragraph(g.descripcion).setFont(courier).setFontSize(8f));
+
+            Cell celdaSub = new Cell(n, 1)
+                    .setBorder(new SolidBorder(GRIS_MEDIO, 0.4f))
+                    .setPadding(4)
+                    .setTextAlignment(TextAlignment.RIGHT)
+                    .setVerticalAlignment(VerticalAlignment.MIDDLE)
+                    .add(new Paragraph(monedaSimbolo + " "
+                            + DF.format(new BigDecimal(g.subtotal != null ? g.subtotal : "0")))
+                            .setFont(courierBold).setFontSize(8f));
+
+            tabla.addCell(celdaDesc);
+
+            if (g.filas.isEmpty()) {
+                tabla.addCell(cellDetalle("—", courier, TextAlignment.CENTER));
+                tabla.addCell(cellDetalle("—", courier, TextAlignment.RIGHT));
+                tabla.addCell(celdaSub);
+            } else {
+                for (int i = 0; i < g.filas.size(); i++) {
+                    tabla.addCell(cellDetalle(g.filas.get(i)[0], courier, TextAlignment.CENTER));
+                    tabla.addCell(cellDetalle(monedaSimbolo + " " + montoNum(g.filas.get(i)[1]),
+                            courier, TextAlignment.RIGHT));
+                    if (i == 0) {
+                        tabla.addCell(celdaSub); // rowSpan=n en la primera fila del grupo
+                    }
+                }
+            }
+        }
+
+        // Fila TOTAL general
+        Cell celdaTotalLabel = new Cell(1, 3)
+                .setBorderTop(new SolidBorder(ColorConstants.BLACK, 1f))
+                .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 2f))
+                .setBorderLeft(Border.NO_BORDER).setBorderRight(Border.NO_BORDER)
+                .setPadding(4)
+                .setTextAlignment(TextAlignment.RIGHT)
+                .add(new Paragraph("TOTAL").setFont(courierBold).setFontSize(9f));
+        tabla.addCell(celdaTotalLabel);
+        Cell celdaTotalValor = new Cell()
+                .setBorderTop(new SolidBorder(ColorConstants.BLACK, 1f))
+                .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 2f))
+                .setBorderLeft(Border.NO_BORDER).setBorderRight(Border.NO_BORDER)
+                .setPadding(4)
+                .setTextAlignment(TextAlignment.RIGHT)
+                .add(new Paragraph(monedaSimbolo + " "
+                        + DF.format(totalEgreso != null ? totalEgreso : BigDecimal.ZERO))
+                        .setFont(courierBold).setFontSize(9f));
+        tabla.addCell(celdaTotalValor);
+
+        return tabla;
+    }
+
+    private static String montoNum(String raw) {
+        try {
+            return DF.format(new BigDecimal(raw.trim()));
+        } catch (Exception e) {
+            return raw;
+        }
     }
 
     /**

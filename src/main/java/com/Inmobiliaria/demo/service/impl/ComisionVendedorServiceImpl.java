@@ -741,7 +741,6 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         // Validar cada letra y agrupar los pagos por comisión (contrato).
         List<PagoComisionVendedor> pagos = new ArrayList<>();
         Map<Integer, ComisionVendedor> comisionesAfectadas = new HashMap<>();
-        List<String> lineasDetalle = new ArrayList<>();
         BigDecimal totalPagado = BigDecimal.ZERO;
 
         for (LetraCambio letra : letrasSeleccionadas) {
@@ -792,7 +791,6 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
 
             comisionesAfectadas.put(comision.getIdComision(), comision);
             totalPagado = totalPagado.add(montoComision);
-            lineasDetalle.add(detalleLote(contrato, letra) + "  " + montoComision.toPlainString());
         }
 
         if (pagos.isEmpty()) {
@@ -809,8 +807,8 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
             beneficiario = "VENDEDORES (comisiones)";
         }
 
-        lineasDetalle.add("TOTAL: " + totalPagado.toPlainString());
-        String concepto = String.join("\n", lineasDetalle);
+        // Concepto estructurado por contrato (lo parsea ReciboEgresoPdf para la tabla A4).
+        String concepto = construirConceptoAgrupado(pagos, totalPagado);
 
         // Un solo egreso EG01 para todo el lote seleccionado.
         String dniVendedor = (comisList.size() == 1 && comisList.get(0).getVendedor() != null)
@@ -848,20 +846,59 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         return resp;
     }
 
-    /** Línea de detalle del lote para el concepto del egreso. */
-    private String detalleLote(Contrato contrato, LetraCambio letra) {
-        List<Programa> programas = contratoLoteRepository.findProgramasByContrato(contrato.getIdContrato());
+    /**
+     * Concepto del egreso agrupado por contrato, con marcas que parsea
+     * {@code ReciboEgresoPdf} para armar la tabla A4 (descripción | detalle | subtotal).
+     * Formato:
+     * <pre>
+     * [C|id|descripcionMZ-LT-Programa]
+     * L|Letra 8/150|24.00
+     * L|Letra 9/150|24.00
+     * S|48.00
+     * [C|id|...]
+     * ...
+     * T|total
+     * </pre>
+     */
+    private String construirConceptoAgrupado(List<PagoComisionVendedor> pagos, BigDecimal total) {
+        Map<Integer, List<PagoComisionVendedor>> porContrato = new LinkedHashMap<>();
+        for (PagoComisionVendedor p : pagos) {
+            Integer id = p.getComision().getContrato() != null
+                    ? p.getComision().getContrato().getIdContrato()
+                    : p.getComision().getIdComision();
+            porContrato.computeIfAbsent(id, k -> new ArrayList<>()).add(p);
+        }
+        List<String> lineas = new ArrayList<>();
+        for (Map.Entry<Integer, List<PagoComisionVendedor>> e : porContrato.entrySet()) {
+            ComisionVendedor c = e.getValue().get(0).getComision();
+            Contrato contrato = c.getContrato();
+            String desc = descripcionContrato(contrato != null ? contrato.getIdContrato() : e.getKey());
+            lineas.add("[C|" + e.getKey() + "|" + desc + "]");
+            BigDecimal sub = BigDecimal.ZERO;
+            for (PagoComisionVendedor p : e.getValue()) {
+                String letra = p.getLetra() != null ? p.getLetra().getNumeroLetra() : "-";
+                lineas.add("L|" + letra + "|" + p.getMonto().toPlainString());
+                sub = sub.add(p.getMonto());
+            }
+            lineas.add("S|" + sub.toPlainString());
+        }
+        lineas.add("T|" + total.toPlainString());
+        return String.join("\n", lineas);
+    }
+
+    /** Descripción del lote para el concepto (MZ · LT · programa), sin letra. */
+    private String descripcionContrato(Integer idContrato) {
+        List<Programa> programas = contratoLoteRepository.findProgramasByContrato(idContrato);
         String programa = nombrePrograma(programas);
         List<String> mz = new ArrayList<>();
         List<String> lotes = new ArrayList<>();
-        List<Lote> lotesContrato = contratoLoteRepository.findLotesByContrato(contrato.getIdContrato());
-        for (Lote l : lotesContrato) {
+        for (Lote l : contratoLoteRepository.findLotesByContrato(idContrato)) {
             if (l.getManzana() != null && !l.getManzana().isBlank()) mz.add(l.getManzana());
             if (l.getNumeroLote() != null && !l.getNumeroLote().isBlank()) lotes.add(l.getNumeroLote());
         }
         return "Pago de comisión MZ " + String.join(",", mz)
                 + " · LT " + String.join(",", lotes)
-                + " · " + programa + " · Letra " + letra.getNumeroLetra();
+                + " · " + programa;
     }
 
     private List<String> manzanasPorContratoLocal(ComisionVendedor c) {
