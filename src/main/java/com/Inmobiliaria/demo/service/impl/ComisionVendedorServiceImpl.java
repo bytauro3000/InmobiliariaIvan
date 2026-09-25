@@ -55,6 +55,11 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         }
     }
 
+    /** Nombre completo del vendedor para el beneficiario del comprobante. */
+    private static String nombreVendedor(Vendedor v) {
+        return v == null ? "-" : (v.getNombre() + " " + v.getApellidos()).trim();
+    }
+
     private final ComisionVendedorRepository comisionRepository;
     private final PagoComisionVendedorRepository pagoComisionRepository;
     private final LetraCambioRepository letraRepository;
@@ -801,22 +806,28 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
             throw new NegocioException("No hay montos que registrar (saldo pendiente en 0).");
         }
 
-        // Beneficiario: si hay un solo vendedor se usa su nombre; si son varios, se indica "Vendedores".
-        String beneficiario;
+        // Un solo vendedor por comprobante: si las comisiones seleccionadas
+        // pertenecen a vendedores distintos se rechaza el pago (nunca se mezclan).
         List<ComisionVendedor> comisList = new ArrayList<>(comisionesAfectadas.values());
-        if (comisList.size() == 1 && comisList.get(0).getVendedor() != null) {
-            Vendedor v = comisList.get(0).getVendedor();
-            beneficiario = (v.getNombre() + " " + v.getApellidos()).trim();
-        } else {
-            beneficiario = "VENDEDORES (comisiones)";
+        Vendedor vendedor = null;
+        for (ComisionVendedor c : comisList) {
+            Vendedor v = c.getVendedor();
+            if (v == null) continue;
+            if (vendedor == null) {
+                vendedor = v;
+            } else if (!Objects.equals(vendedor.getIdVendedor(), v.getIdVendedor())) {
+                throw new NegocioException("Las comisiones seleccionadas pertenecen a vendedores distintos ("
+                        + nombreVendedor(vendedor) + " y " + nombreVendedor(v)
+                        + "). Registre un pago por cada vendedor.");
+            }
         }
+        String beneficiario = vendedor != null ? nombreVendedor(vendedor) : "VENDEDORES (comisiones)";
 
         // Concepto estructurado por contrato (lo parsea ReciboEgresoPdf para la tabla A4).
         String concepto = construirConceptoAgrupado(pagos, totalPagado);
 
         // Un solo egreso EG01 para todo el lote seleccionado.
-        String dniVendedor = (comisList.size() == 1 && comisList.get(0).getVendedor() != null)
-                ? comisList.get(0).getVendedor().getDni() : null;
+        String dniVendedor = vendedor != null ? vendedor.getDni() : null;
         ReciboEgreso egreso = reciboEgresoService.generarEgresoConVouchers(
                 concepto, beneficiario, dniVendedor, obtenerUsuarioRegistro(),
                 null, totalPagado,

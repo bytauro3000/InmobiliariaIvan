@@ -52,9 +52,8 @@ import java.util.regex.Pattern;
 
 /**
  * Plantilla del RECIBO DE EGRESOS (serie EG01). Estructura tipo FACTURA con
- * items de detalle (cada lote en una fila con su importe) y total. Pie con 3
- * cuadros: vendedor + DNI + firma | fecha de pago | usuario que realizó el pago
- * + firma. Reverso con vouchers adjuntos (3 por página).
+ * items de detalle (cada lote en una fila con su importe) y total. Reverso con
+ * vouchers adjuntos (3 por página).
  */
 public class ReciboEgresoPdf {
 
@@ -122,9 +121,6 @@ public class ReciboEgresoPdf {
             String numOp = (egreso.getNumeroOperacion() != null && !egreso.getNumeroOperacion().isBlank())
                     ? "   N\u00b0 Op: " + egreso.getNumeroOperacion() : "";
             String fechaOp = (fechaOperacionStr != null) ? "   Fecha Op: " + fechaOperacionStr : "";
-
-            String usuarioRegistro = egreso.getUsuarioRegistro() != null
-                    ? egreso.getUsuarioRegistro() : "SECRETARIA";
 
             // ── ENCABEZADO ──
             ImageData logoData = LogoCacheService.logoImageData();
@@ -276,73 +272,6 @@ public class ReciboEgresoPdf {
             doc.add(new Paragraph()
                     .setBorderBottom(new SolidBorder(GRIS_MEDIO, 0.5f))
                     .setMarginTop(5).setMarginBottom(4));
-
-            // ── PIE (3 cuadros) ──
-            Table pie = new Table(UnitValue.createPercentArray(new float[]{1f, 0.8f, 1f}))
-                    .setWidth(UnitValue.createPercentValue(100));
-
-            Cell celdaVendedor = new Cell()
-                    .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f)).setPadding(8)
-                    .setVerticalAlignment(VerticalAlignment.BOTTOM);
-            celdaVendedor.add(new Paragraph(beneficiario)
-                    .setFont(courierBold).setFontSize(9f)
-                    .setTextAlignment(TextAlignment.CENTER).setMarginTop(4).setMarginBottom(1));
-            celdaVendedor.add(new Paragraph("DNI: " + dni)
-                    .setFont(courier).setFontSize(9f)
-                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(1));
-            celdaVendedor.add(lineaFirma());
-            celdaVendedor.add(new Paragraph("VENDEDOR / FIRMA")
-                    .setFont(courierBold).setFontSize(8f)
-                    .setTextAlignment(TextAlignment.CENTER));
-            pie.addCell(celdaVendedor);
-
-            String[] pf = fechaEmisionStr.split("/");
-            String dia = pf.length > 0 ? pf[0] : "--";
-            String mes = pf.length > 1 ? pf[1] : "--";
-            String anio = pf.length > 2 ? pf[2] : "----";
-
-            Cell celdaFecha = new Cell()
-                    .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f))
-                    .setPaddingTop(8).setPaddingBottom(8).setPaddingLeft(8).setPaddingRight(8)
-                    .setTextAlignment(TextAlignment.CENTER)
-                    .setVerticalAlignment(VerticalAlignment.MIDDLE);
-            celdaFecha.add(new Paragraph("Fecha de Pago")
-                    .setFont(courierBold).setFontSize(10f)
-                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(3));
-            Table lineaSep = new Table(UnitValue.createPercentArray(new float[]{1}))
-                    .setWidth(UnitValue.createPercentValue(100))
-                    .setMarginLeft(-8).setMarginRight(-8).setMarginBottom(4);
-            lineaSep.addCell(new Cell()
-                    .setBorder(Border.NO_BORDER)
-                    .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.8f))
-                    .setPadding(0).setHeight(1));
-            celdaFecha.add(lineaSep);
-            celdaFecha.add(new Paragraph("DIA    MES    A\u00d1O")
-                    .setFont(courierBold).setFontSize(9f)
-                    .setTextAlignment(TextAlignment.CENTER).setMarginBottom(3));
-            Table tablaFecha = new Table(UnitValue.createPercentArray(new float[]{1, 1, 1}))
-                    .setWidth(UnitValue.createPercentValue(100));
-            tablaFecha.addCell(celdaFechaBox(dia, courierBold));
-            tablaFecha.addCell(celdaFechaBox(mes, courierBold));
-            tablaFecha.addCell(celdaFechaBox(anio, courierBold));
-            celdaFecha.add(tablaFecha);
-            pie.addCell(celdaFecha);
-
-            Cell celdaUsuario = new Cell()
-                    .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f)).setPadding(5)
-                    .setTextAlignment(TextAlignment.CENTER)
-                    .setVerticalAlignment(VerticalAlignment.BOTTOM);
-            celdaUsuario.add(new Paragraph(" ").setFont(courier).setFontSize(10).setMarginBottom(2));
-            celdaUsuario.add(lineaFirma());
-            celdaUsuario.add(new Paragraph(usuarioRegistro)
-                    .setFont(courierBold).setFontSize(9f)
-                    .setTextAlignment(TextAlignment.CENTER).setMarginTop(4).setMarginBottom(1));
-            celdaUsuario.add(new Paragraph("REALIZÓ EL PAGO")
-                    .setFont(courier).setFontSize(8f)
-                    .setTextAlignment(TextAlignment.CENTER));
-            pie.addCell(celdaUsuario);
-
-            doc.add(pie);
 
             // ── LÍNEA GRIS IZQUIERDA ──
             PdfPage page = pdf.getFirstPage();
@@ -643,24 +572,6 @@ public class ReciboEgresoPdf {
                 .setBorder(Border.NO_BORDER)
                 .setPadding(1.5f)
                 .add(new Paragraph(": " + (texto != null ? texto : "-")).setFont(normal).setFontSize(8f));
-    }
-
-    private static Table lineaFirma() {
-        Table linea = new Table(UnitValue.createPercentArray(new float[]{1}))
-                .setWidth(UnitValue.createPercentValue(85))
-                .setHorizontalAlignment(HorizontalAlignment.CENTER).setMarginBottom(3);
-        linea.addCell(new Cell()
-                .setBorder(Border.NO_BORDER)
-                .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.8f))
-                .setPadding(0).setHeight(1));
-        return linea;
-    }
-
-    private static Cell celdaFechaBox(String valor, PdfFont bold) {
-        return new Cell()
-                .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f))
-                .setPadding(3).setTextAlignment(TextAlignment.CENTER)
-                .add(new Paragraph(valor).setFont(bold).setFontSize(9f));
     }
 
     private static PdfFont cargarFuente(String path) throws Exception {
