@@ -19,6 +19,9 @@ public interface PagoComisionVendedorRepository extends JpaRepository<PagoComisi
 
     List<PagoComisionVendedor> findByNumeroEgreso(String numeroEgreso);
 
+    /** Pagos de las comisiones dadas (para eliminarlos con el contrato). */
+    List<PagoComisionVendedor> findByComisionIdComisionIn(java.util.Collection<Integer> idsComision);
+
     /** Conteo de pagos de tipo dado por comisión (para el listado batch). */
     @Query("SELECT p.comision.idComision, COUNT(p) FROM PagoComisionVendedor p " +
            "WHERE p.comision.idComision IN :ids AND p.tipo = :tipo GROUP BY p.comision.idComision")

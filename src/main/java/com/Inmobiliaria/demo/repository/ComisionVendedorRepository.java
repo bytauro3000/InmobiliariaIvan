@@ -13,6 +13,9 @@ public interface ComisionVendedorRepository extends JpaRepository<ComisionVended
 
     Optional<ComisionVendedor> findByContratoIdContrato(Integer idContrato);
 
+    /** Todas las comisiones de un contrato (para eliminarlas al borrar el contrato). */
+    List<ComisionVendedor> findAllByContratoIdContrato(Integer idContrato);
+
     @EntityGraph(attributePaths = {"contrato", "vendedor"})
     List<ComisionVendedor> findAllByOrderByIdComisionDesc();
 

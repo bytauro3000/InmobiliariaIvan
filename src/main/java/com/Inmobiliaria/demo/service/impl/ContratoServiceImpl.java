@@ -46,6 +46,8 @@ import com.Inmobiliaria.demo.repository.PagoInicialRepository;
 import com.Inmobiliaria.demo.repository.PagoInscripcionComprobanteRepository;
 import com.Inmobiliaria.demo.repository.PagoLetraRepository;
 import com.Inmobiliaria.demo.repository.MoraRepository;
+import com.Inmobiliaria.demo.repository.ComisionVendedorRepository;
+import com.Inmobiliaria.demo.repository.PagoComisionVendedorRepository;
 import com.Inmobiliaria.demo.entity.Voucher;
 import com.Inmobiliaria.demo.service.*;
 import com.Inmobiliaria.demo.exception.NegocioException;
@@ -89,6 +91,8 @@ public class ContratoServiceImpl implements ContratoService {
     private final com.Inmobiliaria.demo.repository.VoucherRepository voucherRepository;
     private final NotificacionAdminEmailService notificacionAdminEmailService;
     private final MoraRepository                 moraRepository;
+    private final ComisionVendedorRepository     comisionRepository;
+    private final PagoComisionVendedorRepository pagoComisionRepository;
     private final EmpresaService                 empresaService;
 
     private void setearValoresPorDefecto(Contrato contrato) {
@@ -706,6 +710,22 @@ public class ContratoServiceImpl implements ContratoService {
 
         if (!inscripciones.isEmpty()) {
             pagoInscripcionComprobanteRepository.deleteAll(inscripciones);
+        }
+
+        // ── 5b. Eliminar pagos y comisiones de vendedor (FK → contrato) ─────────
+        List<ComisionVendedor> comisiones = comisionRepository.findAllByContratoIdContrato(idContrato);
+        if (!comisiones.isEmpty()) {
+            List<Integer> idsComisiones = comisiones.stream()
+                    .map(ComisionVendedor::getIdComision)
+                    .toList();
+            List<PagoComisionVendedor> pagosComision =
+                    pagoComisionRepository.findByComisionIdComisionIn(idsComisiones);
+            if (!pagosComision.isEmpty()) {
+                pagoComisionRepository.deleteAll(pagosComision);
+            }
+            comisionRepository.deleteAll(comisiones);
+            log.info("Comisiones de vendedor eliminadas con el contrato {}: {} comisión(es), {} pago(s)",
+                    idContrato, comisiones.size(), pagosComision.size());
         }
 
         // ── 6. Eliminar el contrato (cascada: letras → pagos) ───────────────────
