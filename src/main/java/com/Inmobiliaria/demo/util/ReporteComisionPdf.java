@@ -87,6 +87,8 @@ public class ReporteComisionPdf {
                     doc.add(encabezadoPrograma(programa.getNombrePrograma(), courierBold));
                     doc.add(tablaComision(programa, courier, courierBold));
                 }
+                // ── TOTAL GENERAL: suma de los totales de TODOS los programas ──
+                doc.add(totalGeneral(dto, courierBold));
             } else {
                 doc.add(new Paragraph("El vendedor no tiene comisiones registradas.")
                         .setFont(courier).setFontSize(11)
@@ -264,6 +266,57 @@ public class ReporteComisionPdf {
                 .setTextAlignment(TextAlignment.LEFT);
         totalDeudaVal.add(new Paragraph(moneda + " " + DF.format(totalDeudaPrograma)).setFont(bold).setFontSize(8));
         t.addCell(totalDeudaVal);
+
+        return t;
+    }
+
+    // ── TOTAL GENERAL (suma de todos los programas) ─────────────────
+
+    /**
+     * Fila final con la suma de los totales de DEUDA de todos los programas
+     * del reporte (ej: Florida 100 + Claveles 900 = TOTAL GENERAL 1,000).
+     */
+    private static Table totalGeneral(ReporteComisionVendedorDTO dto, PdfFont bold) {
+        List<ReporteComisionVendedorDTO.ProgramaComision> programas = dto.getProgramas();
+
+        BigDecimal total = BigDecimal.ZERO;
+        int totalLotes = 0;
+        String moneda = null;
+        for (ReporteComisionVendedorDTO.ProgramaComision programa : programas) {
+            totalLotes += programa.getTotalLotes();
+            for (ReporteComisionVendedorDTO.FilaComision fila : programa.getFilas()) {
+                total = total.add(fila.getDeudaPorLote() != null ? fila.getDeudaPorLote() : BigDecimal.ZERO);
+                if (moneda == null && fila.getMoneda() != null && !fila.getMoneda().isBlank()) {
+                    moneda = fila.getMoneda();
+                }
+            }
+        }
+        if (moneda == null) moneda = dto.getMoneda() != null ? dto.getMoneda() : "$";
+        if ("PEN".equals(moneda)) moneda = "S/.";
+        else if ("USD".equals(moneda)) moneda = "$";
+
+        Table t = new Table(UnitValue.createPercentArray(new float[]{1, 0.25f}))
+                .setWidth(UnitValue.createPercentValue(100))
+                .setMarginTop(6);
+
+        Cell label = new Cell()
+                .setBackgroundColor(COLOR_AZUL_OSCURO)
+                .setBorder(new SolidBorder(ColorConstants.BLACK, 0.5f))
+                .setPadding(5)
+                .setTextAlignment(TextAlignment.RIGHT);
+        label.add(new Paragraph("TOTAL GENERAL (" + programas.size() + " programas · "
+                + totalLotes + " lotes):").setFont(bold).setFontSize(9)
+                .setFontColor(ColorConstants.WHITE));
+        t.addCell(label);
+
+        Cell valor = new Cell()
+                .setBackgroundColor(COLOR_AZUL_OSCURO)
+                .setBorder(new SolidBorder(ColorConstants.BLACK, 0.5f))
+                .setPadding(5)
+                .setTextAlignment(TextAlignment.CENTER);
+        valor.add(new Paragraph(moneda + " " + DF.format(total)).setFont(bold).setFontSize(9)
+                .setFontColor(ColorConstants.WHITE));
+        t.addCell(valor);
 
         return t;
     }
