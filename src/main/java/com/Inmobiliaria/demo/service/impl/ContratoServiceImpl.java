@@ -713,6 +713,9 @@ public class ContratoServiceImpl implements ContratoService {
         }
 
         // ── 5b. Eliminar pagos y comisiones de vendedor (FK → contrato) ─────────
+        // Contrato.comisiones y ComisionVendedor.pagos también tienen cascade = ALL,
+        // pero aquí se borran de forma explícita para garantizar el ORDEN: los pagos
+        // de comisión referencian letras (id_letra) que recién se eliminan en el paso 6.
         List<ComisionVendedor> comisiones = comisionRepository.findAllByContratoIdContrato(idContrato);
         if (!comisiones.isEmpty()) {
             List<Integer> idsComisiones = comisiones.stream()

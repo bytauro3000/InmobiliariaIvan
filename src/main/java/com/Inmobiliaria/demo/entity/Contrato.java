@@ -2,6 +2,7 @@ package com.Inmobiliaria.demo.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -74,6 +75,15 @@ public class Contrato {
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_pago_inicial")
     private PagoInicial pagoInicial;
+
+    /**
+     * Comisiones de vendedor del contrato: se eliminan en cascada al borrar el contrato.
+     * Va ANTES que las letras porque los pagos de comisión referencian letras
+     * (pago_comision_vendedor.id_letra) y deben borrarse antes que éstas.
+     */
+    @OneToMany(mappedBy = "contrato", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 50)
+    private List<ComisionVendedor> comisiones = new ArrayList<>();
 
     @OneToMany(mappedBy = "contrato", cascade = CascadeType.ALL, orphanRemoval = true)
     @BatchSize(size = 50)

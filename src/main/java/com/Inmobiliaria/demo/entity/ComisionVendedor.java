@@ -7,6 +7,8 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Comisión que gana un vendedor por un contrato (lote vendido).
@@ -60,6 +62,10 @@ public class ComisionVendedor {
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", length = 20, nullable = false)
     private EstadoComision estado = EstadoComision.PENDIENTE;
+
+    /** Pagos de esta comisión (adelanto y mensuales): se eliminan en cascada con la comisión. */
+    @OneToMany(mappedBy = "comision", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PagoComisionVendedor> pagos = new ArrayList<>();
 
     @Column(name = "fecha_creacion", nullable = false)
     private LocalDateTime fechaCreacion = LocalDateTime.now();
