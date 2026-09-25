@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,16 +42,11 @@ public class ReporteEgresosServiceImpl implements ReporteEgresosService {
                 totalUsd = totalUsd.add(monto);
             }
 
-            LocalDate fechaDoc = f[3] != null ? ((java.sql.Date) f[3]).toLocalDate() : null;
-            if (fechaDoc == null && f[3] instanceof LocalDate ld) {
-                fechaDoc = ld;
-            }
-
             detalle.add(ResumenEgresoItemDTO.builder()
                     .numeroEgreso((String) f[0])
                     .serie((String) f[1])
                     .numero(f[2] != null ? ((Number) f[2]).intValue() : null)
-                    .fechaEmision(fechaDoc)
+                    .fechaEmision(aFecha(f[3]))
                     .concepto((String) f[4])
                     .beneficiario((String) f[5])
                     .idContrato(f[6] != null ? ((Number) f[6]).intValue() : null)
@@ -58,11 +54,7 @@ public class ReporteEgresosServiceImpl implements ReporteEgresosService {
                     .moneda((String) f[8])
                     .medioPago((String) f[9])
                     .numeroOperacion((String) f[10])
-                    .fechaOperacion(f[11] instanceof java.sql.Timestamp ts
-                            ? ts.toLocalDateTime().toLocalDate()
-                            : f[11] instanceof java.sql.Date d
-                                    ? d.toLocalDate()
-                                    : f[11] instanceof LocalDate ld ? ld : null)
+                    .fechaOperacion(aFecha(f[11]))
                     .usuarioRegistro((String) f[12])
                     .build());
         }
@@ -76,5 +68,20 @@ public class ReporteEgresosServiceImpl implements ReporteEgresosService {
                 .cantidadTotal(detalle.size())
                 .detalle(detalle)
                 .build();
+    }
+
+    /**
+     * Convierte el valor devuelto por la query nativa a LocalDate sin casts forzados.
+     * La columna fecha_doc mezcla COALESCE(pcv.fecha_pago DATETIME, r.fecha_emision DATE),
+     * así que JDBC puede devolver Timestamp, Date, LocalDate o LocalDateTime.
+     */
+    private static LocalDate aFecha(Object valor) {
+        if (valor == null) return null;
+        if (valor instanceof LocalDate ld) return ld;
+        if (valor instanceof java.sql.Timestamp ts) return ts.toLocalDateTime().toLocalDate();
+        if (valor instanceof java.sql.Date d) return d.toLocalDate();
+        if (valor instanceof LocalDateTime ldt) return ldt.toLocalDate();
+        if (valor instanceof java.util.Date d) return new java.sql.Date(d.getTime()).toLocalDate();
+        return null;
     }
 }
