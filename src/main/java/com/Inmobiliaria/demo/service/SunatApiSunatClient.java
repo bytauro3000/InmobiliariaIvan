@@ -91,15 +91,16 @@ public class SunatApiSunatClient {
         headers.set("X-Api-Secret", apiSecret);
         HttpEntity<ApiSunatBoletaRequest> entity = new HttpEntity<>(request, headers);
 
-        // ── IDEMPOTENCIA: si la boleta (serie+correlativo) ya existe y SUNAT la
-        //    aceptó, se REUTILIZA en vez de volver a crearla. Evita el error
-        //    "correlativo ya existe" tras un reintento donde el envío anterior a
-        //    SUNAT sí se completó pero el monolito cortó por timeout y dio rollback.
+        // ── IDEMPOTENCIA: si la boleta (serie+correlativo) ya existe en api-sunat,
+        //    se REUTILIZA en vez de volver a crearla (evita "correlativo ya existe"
+        //    tras un reintento donde el envío anterior a SUNAT sí se completó pero
+        //    el monolito cortó por timeout y dio rollback).
         Map<String, Object> previa = consultarEstadoComprobante(
                 comprobante.getSerie(), comprobante.getNumero(), TipoComprobante.BOLETA);
         String estadoPrevia = (String) previa.get("estadoSunat");
+
         if ("ACEPTADA".equals(estadoPrevia)) {
-            log.info("Boleta {} ya existe y fue ACEPTADA por SUNAT; se reutiliza (hash={}).",
+            log.info("Boleta {} ya ACEPTADA por SUNAT; se reutiliza (hash={}).",
                     comprobante.getNumeroCompleto(), previa.get("hash"));
             Map<String, Object> result = new HashMap<>();
             result.put("estadoSunat", "ACEPTADA");
@@ -111,15 +112,32 @@ public class SunatApiSunatClient {
             return result;
         }
         if ("RECHAZADA".equals(estadoPrevia)) {
-            log.warn("Boleta {} ya existe RECHAZADA en API SUNAT ({}); no se reenvía automáticamente.",
+            log.warn("Boleta {} ya RECHAZADA en API SUNAT ({}); no se reenvía automáticamente.",
                     comprobante.getNumeroCompleto(), previa.get("mensaje"));
             Map<String, Object> result = new HashMap<>();
             result.put("estadoSunat", "ERROR");
+            result.put("numeroCompleto", comprobante.getNumeroCompleto());
             result.put("mensaje", previa.getOrDefault("mensaje", "Boleta rechazada previamente por SUNAT."));
             result.put("codigoError", previa.get("codigoError"));
             return result;
         }
-        // NO_ENCONTRADO / PENDIENTE / ERROR (de red): se continúa con la creación normal.
+        if ("PENDIENTE".equals(estadoPrevia)) {
+            // Existe pero SUNAT aún no resuelve (enviado/pendiente tras timeout previo).
+            // NO se re-POSTea (sería duplicado); se espera/resuelve y se reutiliza.
+            Integer apiId = (Integer) previa.get("apiSunatId");
+            Map<String, Object> result = new HashMap<>();
+            result.put("numeroCompleto", comprobante.getNumeroCompleto());
+            if (apiId != null) {
+                result.put("apiSunatId", apiId);
+                result.putAll(esperarAceptacionYSacarHash(apiId));
+            }
+            result.putIfAbsent("estadoSunat", "ENVIADO");
+            result.put("mensaje", "Boleta ya existe en API SUNAT; se reutiliza sin reenviar.");
+            log.info("Boleta {} existe en API SUNAT (estado previo PENDIENTE); se reutiliza sin reenviar.",
+                    comprobante.getNumeroCompleto());
+            return result;
+        }
+        // NO_ENCONTRADO o ERROR (de red en la consulta): se continúa con la creación normal.
 
         String url = baseUrl + "/boletas";
         log.info("Enviando boleta {} a API SUNAT: {}", comprobante.getNumeroCompleto(), url);
@@ -134,7 +152,18 @@ public class SunatApiSunatClient {
                 result.putAll(esperarAceptacionYSacarHash(apiSunatId));
             }
             return result;
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
+        } catch (HttpClientErrorException e) {
+            String body = e.getResponseBodyAsString();
+            // Defensa: si el correlativo ya existe (carrera entre el pre-check y el
+            // POST), reutilizar la boleta existente en vez de fallar.
+            if (e.getStatusCode().value() == 422 && body != null && body.contains("ya existe")) {
+                log.warn("Boleta {} duplicada en API SUNAT durante el POST; se reutiliza la existente.",
+                        comprobante.getNumeroCompleto());
+                return reutilizarTrasDuplicado(comprobante);
+            }
+            log.error("API SUNAT respondio error: status={}, body={}", e.getStatusCode().value(), body);
+            return error(body);
+        } catch (HttpServerErrorException e) {
             log.error("API SUNAT respondio error: status={}, body={}",
                     e.getStatusCode().value(), e.getResponseBodyAsString());
             return error(e.getResponseBodyAsString());
@@ -145,6 +174,44 @@ public class SunatApiSunatClient {
             result.put("mensaje", e.getMessage());
             return result;
         }
+    }
+
+    /**
+     * Reutiliza una boleta que api-sunat reporta como ya existente (duplicado
+     * detectado en el POST). Consulta su estado y devuelve el resultado
+     * apropiado (ACEPTADA con hash / ENVIADO / ERROR si rechazada).
+     */
+    private Map<String, Object> reutilizarTrasDuplicado(Comprobante comprobante) {
+        Map<String, Object> previa = consultarEstadoComprobante(
+                comprobante.getSerie(), comprobante.getNumero(), TipoComprobante.BOLETA);
+        String estado = (String) previa.get("estadoSunat");
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("numeroCompleto", comprobante.getNumeroCompleto());
+
+        if ("ACEPTADA".equals(estado)) {
+            result.put("estadoSunat", "ACEPTADA");
+            if (previa.get("hash") != null) {
+                result.put("hash", previa.get("hash"));
+            }
+            result.put("mensaje", "Boleta ya aceptada por SUNAT; se reutiliza.");
+            return result;
+        }
+        if ("RECHAZADA".equals(estado)) {
+            result.put("estadoSunat", "ERROR");
+            result.put("mensaje", previa.getOrDefault("mensaje", "Boleta rechazada por SUNAT."));
+            result.put("codigoError", previa.get("codigoError"));
+            return result;
+        }
+
+        Integer apiId = (Integer) previa.get("apiSunatId");
+        if (apiId != null) {
+            result.put("apiSunatId", apiId);
+            result.putAll(esperarAceptacionYSacarHash(apiId));
+        }
+        result.putIfAbsent("estadoSunat", "ENVIADO");
+        result.put("mensaje", "Boleta ya existe en API SUNAT; se reutiliza.");
+        return result;
     }
 
     /**
@@ -281,13 +348,15 @@ public class SunatApiSunatClient {
             }
 
             ApiSunatListResponse body = response.getBody();
-            if (body.getDatos() == null || body.getDatos().isEmpty()) {
+            ApiSunatListResponse.Contenedor cont = body != null ? body.getDatos() : null;
+            if (cont == null || cont.getDatos() == null || cont.getDatos().isEmpty()) {
                 result.put("estadoSunat", "NO_ENCONTRADO");
                 result.put("mensaje", "Comprobante no encontrado en api-sunat");
                 return result;
             }
 
-            ApiSunatListResponse.Dato dato = body.getDatos().get(0);
+            ApiSunatListResponse.Dato dato = cont.getDatos().get(0);
+            result.put("apiSunatId", dato.getId());
             ApiSunatListResponse.Sunat sunat = dato.getSunat();
 
             if (sunat == null || sunat.getEstado() == null) {

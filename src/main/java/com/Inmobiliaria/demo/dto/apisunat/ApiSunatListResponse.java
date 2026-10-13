@@ -9,7 +9,11 @@ import java.util.List;
 /**
  * Respuesta de la API SUNAT propia al listar comprobantes
  * (GET /api/v1/boletas, GET /api/v1/notas-credito).
- * Formato: { "estado": "exito", "datos": [...], "paginacion": {...} }
+ *
+ * Formato real (el listado va DENTRO de un objeto `datos`):
+ *   { "estado": "exito",
+ *     "mensaje": "OK",
+ *     "datos": { "datos": [ ... ], "paginacion": { ... } } }
  */
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -17,8 +21,17 @@ public class ApiSunatListResponse {
 
     private String estado;
     private String mensaje;
-    private List<Dato> datos;
-    private Paginacion paginacion;
+    private Contenedor datos;
+
+    /**
+     * Envoltorio interno: el listado real y la paginación están dentro de `datos`.
+     */
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Contenedor {
+        private List<Dato> datos;
+        private Paginacion paginacion;
+    }
 
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)
