@@ -8,9 +8,11 @@ import com.Inmobiliaria.demo.enums.EstadoCivil;
 import com.Inmobiliaria.demo.enums.EstadoCliente;
 import com.Inmobiliaria.demo.enums.Genero;
 import com.Inmobiliaria.demo.enums.TipoCliente;
+import com.Inmobiliaria.demo.security.crypto.AesGcmConverter;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -53,13 +55,16 @@ public class Cliente {
     @Column(name = "tipoCliente", nullable = false)
     private TipoCliente tipoCliente;
 
-    @Column(name = "numDocumento", unique = true)
+    @Convert(converter = AesGcmConverter.class)
+    @Column(name = "numDocumento", unique = true, length = 128)
     private String numDoc;
 
-    @Column(name = "celular", nullable = false, length = 20)
+    @Convert(converter = AesGcmConverter.class)
+    @Column(name = "celular", nullable = false, length = 128)
     private String celular;
 
-    @Column(name = "telefono", length = 20)
+    @Convert(converter = AesGcmConverter.class)
+    @Column(name = "telefono", length = 128)
     private String telefono;
 
     @Column(name = "direccion", nullable = false, length = 150)
