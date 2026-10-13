@@ -1,11 +1,13 @@
 package com.Inmobiliaria.demo.controller;
 
+import com.Inmobiliaria.demo.annotation.Auditable;
 import com.Inmobiliaria.demo.dto.ClienteRequestDTO;
 import com.Inmobiliaria.demo.dto.ClienteResponseDTO;
 import com.Inmobiliaria.demo.dto.ConsultaDniDTO;
 import com.Inmobiliaria.demo.dto.DistritoDTO;
 import com.Inmobiliaria.demo.entity.Cliente;
 import com.Inmobiliaria.demo.entity.Distrito;
+import com.Inmobiliaria.demo.enums.AccionAuditoria;
 import com.Inmobiliaria.demo.service.ClienteService;
 import com.Inmobiliaria.demo.service.ConsultaDniService;
 import com.Inmobiliaria.demo.repository.DistritoRepository;
@@ -84,6 +86,7 @@ public class ClienteController {
         return clientes.stream().map(this::toResponseDTO).collect(Collectors.toList());
     }
 
+    @Auditable(accion = AccionAuditoria.CREAR, entidad = "Cliente")
     @PostMapping("/agregar")
     public ResponseEntity<ClienteResponseDTO> agregarCliente(@Valid @RequestBody ClienteRequestDTO dto) {
         Cliente cliente = toEntity(dto);
@@ -91,6 +94,7 @@ public class ClienteController {
         return new ResponseEntity<>(toResponseDTO(nuevoCliente), HttpStatus.CREATED);
     }
 
+    @Auditable(accion = AccionAuditoria.ACTUALIZAR, entidad = "Cliente", indiceArgId = 0)
     @PutMapping("/actualizar/{id}")
     public ResponseEntity<ClienteResponseDTO> actualizarCliente(@PathVariable Integer id, @Valid @RequestBody ClienteRequestDTO dto) {
         Cliente existente = clienteService.buscarClientePorId(id);
@@ -103,6 +107,7 @@ public class ClienteController {
         return ResponseEntity.ok(toResponseDTO(actualizado));
     }
 
+    @Auditable(accion = AccionAuditoria.ACTUALIZAR, entidad = "Cliente", indiceArgId = 0)
     @PatchMapping("/actualizar-celular/{id}")
     public ResponseEntity<ClienteResponseDTO> actualizarCelular(@PathVariable Integer id, @RequestBody java.util.Map<String, String> body) {
         String nuevoCelular = body.get("celular");
@@ -118,6 +123,7 @@ public class ClienteController {
         return ResponseEntity.ok(toResponseDTO(actualizado));
     }
 
+    @Auditable(accion = AccionAuditoria.ELIMINAR, entidad = "Cliente", indiceArgId = 0)
     @DeleteMapping("/eliminar/{id}")
     public void eliminarCliente(@PathVariable Integer id) {
         clienteService.eliminarClienteById(id);

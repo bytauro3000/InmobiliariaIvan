@@ -9,10 +9,12 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.Inmobiliaria.demo.annotation.Auditable;
 import com.Inmobiliaria.demo.dto.GenerarLetrasRequest;
 import com.Inmobiliaria.demo.dto.LetraCambioDTO;
 import com.Inmobiliaria.demo.dto.ReporteCronogramaPagosClientesDTO;
 import com.Inmobiliaria.demo.dto.ReporteLetraCambioDTO;
+import com.Inmobiliaria.demo.enums.AccionAuditoria;
 import com.Inmobiliaria.demo.service.LetraCambioService;
 
 import lombok.RequiredArgsConstructor;
@@ -33,6 +35,7 @@ public class LetrasCambioController {
     }
 
     // ── Generar letras para un contrato dado ──────────────────────────────────
+    @Auditable(accion = AccionAuditoria.CREAR, entidad = "LetraCambio", indiceArgId = 0)
     @PostMapping("/contrato/{idContrato}")
     public ResponseEntity<Void> generarLetras(
             @PathVariable Integer idContrato,
@@ -42,6 +45,7 @@ public class LetrasCambioController {
     }
 
     // ── Actualizar una letra de cambio por su ID ──────────────────────────────
+    @Auditable(accion = AccionAuditoria.ACTUALIZAR, entidad = "LetraCambio", indiceArgId = 0)
     @PutMapping("/actualizar/{idLetra}")
     public ResponseEntity<LetraCambioDTO> actualizarLetra(
             @PathVariable Integer idLetra,
@@ -51,6 +55,7 @@ public class LetrasCambioController {
     }
 
     // ── Eliminar todas las letras de un contrato ──────────────────────────────
+    @Auditable(accion = AccionAuditoria.ELIMINAR, entidad = "LetraCambio", indiceArgId = 0)
     @DeleteMapping("/eliminar/{idContrato}")
     public ResponseEntity<Void> eliminarPorContrato(@PathVariable Integer idContrato) {
         letraCambioService.eliminarPorContrato(idContrato);

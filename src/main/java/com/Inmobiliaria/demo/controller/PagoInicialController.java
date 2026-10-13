@@ -1,10 +1,12 @@
 package com.Inmobiliaria.demo.controller;
 
+import com.Inmobiliaria.demo.annotation.Auditable;
 import com.Inmobiliaria.demo.dto.AnulacionRequestDTO;
 import com.Inmobiliaria.demo.dto.PagoInicialResponseDTO;
 import com.Inmobiliaria.demo.entity.Comprobante;
 import com.Inmobiliaria.demo.entity.PagoInicial;
 import com.Inmobiliaria.demo.entity.Voucher;
+import com.Inmobiliaria.demo.enums.AccionAuditoria;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
 import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.repository.VoucherRepository;
@@ -146,6 +148,7 @@ public class PagoInicialController {
 
     // ── ADMIN: Anular pago inicial ────────────────────────────────────────────
 
+    @Auditable(accion = AccionAuditoria.ANULAR, entidad = "PagoInicial", indiceArgId = 0)
     @PatchMapping("/{idContrato}/pago-inicial/anular")
     @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
     public ResponseEntity<PagoInicialResponseDTO> anularPagoInicial(
@@ -159,6 +162,7 @@ public class PagoInicialController {
 
     // ── ADMIN: Eliminar físicamente ───────────────────────────────────────────
 
+    @Auditable(accion = AccionAuditoria.ELIMINAR, entidad = "PagoInicial", indiceArgId = 0)
     @DeleteMapping("/{idContrato}/pago-inicial")
     @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
     public ResponseEntity<Void> eliminarPagoInicial(

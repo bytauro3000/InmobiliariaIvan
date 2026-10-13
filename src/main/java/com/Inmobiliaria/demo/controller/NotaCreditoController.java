@@ -1,8 +1,10 @@
 package com.Inmobiliaria.demo.controller;
 
+import com.Inmobiliaria.demo.annotation.Auditable;
 import com.Inmobiliaria.demo.client.InscripcionClient;
 import com.Inmobiliaria.demo.dto.NotaCreditoRequestDTO;
 import com.Inmobiliaria.demo.entity.*;
+import com.Inmobiliaria.demo.enums.AccionAuditoria;
 import com.Inmobiliaria.demo.enums.Moneda;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
 import com.Inmobiliaria.demo.enums.TipoOrigenComprobante;
@@ -48,6 +50,7 @@ public class NotaCreditoController {
     private final SunatEnvioService sunatEnvioService;
     private final InscripcionClient inscripcionClient;
 
+    @Auditable(accion = AccionAuditoria.ENVIAR_SUNAT, entidad = "NotaCredito")
     @PostMapping("/enviar")
     @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
     @Transactional

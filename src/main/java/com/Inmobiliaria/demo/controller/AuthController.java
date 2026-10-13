@@ -4,7 +4,9 @@ import com.Inmobiliaria.demo.dto.LoginRequest;
 import com.Inmobiliaria.demo.dto.LoginResponse;
 import com.Inmobiliaria.demo.entity.RefreshToken;
 import com.Inmobiliaria.demo.entity.Usuario;
+import com.Inmobiliaria.demo.enums.AccionAuditoria;
 import com.Inmobiliaria.demo.security.JwtUtil;
+import com.Inmobiliaria.demo.service.AuditoriaService;
 import com.Inmobiliaria.demo.service.RefreshTokenService;
 import com.Inmobiliaria.demo.service.SesionActivaService;
 import com.Inmobiliaria.demo.service.UsuarioService;
@@ -29,6 +31,7 @@ public class AuthController {
     private final UsuarioService usuarioService;
     private final RefreshTokenService refreshTokenService;
     private final SesionActivaService sesionActivaService;
+    private final AuditoriaService auditoriaService;
 
     @Value("${jwt.cookie-secure:true}")
     private boolean cookieSecure;
@@ -55,6 +58,9 @@ public class AuthController {
         String ip = obtenerIpCliente(request);
         String userAgent = request.getHeader("User-Agent");
         sesionActivaService.registrarLogin(usuario, ip, userAgent);
+
+        auditoriaService.registrar(AccionAuditoria.LOGIN, "Usuario", usuario.getId(),
+                "LOGIN exitoso: " + usuario.getCorreo() + " | IP: " + ip);
 
         // El refresh token NO se devuelve en el body, solo en la cookie HttpOnly
         return ResponseEntity.ok(new LoginResponse(token));
@@ -89,6 +95,7 @@ public class AuthController {
                 sesionActivaService.desactivarSesion(usuarioId);
             }
             refreshTokenService.revokeRefreshToken(refreshToken);
+            auditoriaService.registrar(AccionAuditoria.LOGOUT, "Usuario", usuarioId, "LOGOUT");
         }
         eliminarCookieRefreshToken(response);
         return ResponseEntity.ok().build();

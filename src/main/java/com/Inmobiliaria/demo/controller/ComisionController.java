@@ -1,5 +1,6 @@
 package com.Inmobiliaria.demo.controller;
 
+import com.Inmobiliaria.demo.annotation.Auditable;
 import com.Inmobiliaria.demo.dto.ComisionVendedorDTO;
 import com.Inmobiliaria.demo.dto.PagoComisionMensualDTO;
 import com.Inmobiliaria.demo.dto.PagoComisionRequestDTO;
@@ -9,6 +10,7 @@ import com.Inmobiliaria.demo.dto.RegistrarAdelantoRequest;
 import com.Inmobiliaria.demo.dto.RegistrarPagosMensualesRequest;
 import com.Inmobiliaria.demo.dto.ActualizarMontoComisionRequest;
 import com.Inmobiliaria.demo.dto.ReporteComisionVendedorDTO;
+import com.Inmobiliaria.demo.enums.AccionAuditoria;
 import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.service.ComisionVendedorService;
 import com.Inmobiliaria.demo.service.ReciboEgresoService;
@@ -42,6 +44,7 @@ public class ComisionController {
 
     // ─── Migración (backfill) de contratos existentes ─────────────────────────
 
+    @Auditable(accion = AccionAuditoria.MIGRAR, entidad = "Comision")
     @PostMapping("/migrar")
     public ResponseEntity<?> migrarComisiones() {
         try {
@@ -63,6 +66,7 @@ public class ComisionController {
 
     // ─── Actualizar monto de comisión acordado (negociación) ─────────────────
 
+    @Auditable(accion = AccionAuditoria.ACTUALIZAR, entidad = "Comision")
     @PutMapping("/monto")
     public ResponseEntity<?> actualizarMontoComision(@RequestBody ActualizarMontoComisionRequest request) {
         try {
@@ -74,6 +78,7 @@ public class ComisionController {
 
     // ─── Anular comisión manualmente ──────────────────────────────────────────
 
+    @Auditable(accion = AccionAuditoria.ANULAR, entidad = "Comision", indiceArgId = 0)
     @PatchMapping("/{idComision}/anular")
     public ResponseEntity<?> anularComision(@PathVariable Integer idComision) {
         try {
@@ -85,6 +90,7 @@ public class ComisionController {
 
     // ─── Registrar adelanto ───────────────────────────────────────────────────
 
+    @Auditable(accion = AccionAuditoria.PAGAR, entidad = "Comision")
     @PostMapping("/adelantos")
     public ResponseEntity<?> registrarAdelanto(@RequestBody RegistrarAdelantoRequest request) {
         try {
@@ -96,6 +102,7 @@ public class ComisionController {
 
     // ─── Registrar pago de comisión (adelanto o mensual multi-lote) con vouchers ─
 
+    @Auditable(accion = AccionAuditoria.PAGAR, entidad = "Comision")
     @PostMapping(value = "/pagos/registrar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> registrarPagoComision(
             @RequestPart("pago") PagoComisionRequestDTO request,
@@ -114,6 +121,7 @@ public class ComisionController {
 
     // ─── Registrar pagos mensuales (multiselección) ───────────────────────────
 
+    @Auditable(accion = AccionAuditoria.PAGAR, entidad = "Comision")
     @PostMapping("/pagos")
     public ResponseEntity<?> registrarPagosMensuales(@RequestBody RegistrarPagosMensualesRequest request) {
         try {

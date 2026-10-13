@@ -20,12 +20,14 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Map;
 
+import com.Inmobiliaria.demo.annotation.Auditable;
 import com.Inmobiliaria.demo.dto.ConsultaDniDTO;
 import com.Inmobiliaria.demo.dto.UsuarioListadoDTO;
 import com.Inmobiliaria.demo.dto.UsuarioRegistroDTO;
 import com.Inmobiliaria.demo.entity.Distrito;
 import com.Inmobiliaria.demo.entity.RolUsuario;
 import com.Inmobiliaria.demo.entity.Usuario;
+import com.Inmobiliaria.demo.enums.AccionAuditoria;
 import com.Inmobiliaria.demo.repository.DistritoRepository;
 import com.Inmobiliaria.demo.service.ConsultaDniService;
 import com.Inmobiliaria.demo.service.EmailVerificationService;
@@ -45,6 +47,7 @@ public class UsuarioController {
     private final DistritoRepository distritoRepository;
 
     // Endpoint para crear el usuario
+    @Auditable(accion = AccionAuditoria.CREAR, entidad = "Usuario")
     @PostMapping("/registrar")
     public ResponseEntity<?> registrarUsuario(@Valid @RequestBody UsuarioRegistroDTO dto) {
         try {
@@ -100,6 +103,7 @@ public class UsuarioController {
         }
     }
     
+    @Auditable(accion = AccionAuditoria.ACTUALIZAR, entidad = "Usuario", indiceArgId = 0)
     @PutMapping("/editar/{id}")
     public ResponseEntity<?> editarUsuario(@PathVariable Integer id, @Valid @RequestBody UsuarioRegistroDTO dto) {
         try {
@@ -110,6 +114,7 @@ public class UsuarioController {
         }
     }
 
+    @Auditable(accion = AccionAuditoria.ACTUALIZAR, entidad = "Usuario", indiceArgId = 0)
     @PatchMapping("/cambiar-estado/{id}")
     public ResponseEntity<?> cambiarEstado(@PathVariable Integer id) {
         try {

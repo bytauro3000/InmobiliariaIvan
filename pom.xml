@@ -84,6 +84,12 @@
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
 
+		<!-- AOP (auditoría vía aspectos) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-aop</artifactId>
+		</dependency>
+
 		<!-- Model Mapper -->
 		<dependency>
 			<groupId>org.modelmapper</groupId>

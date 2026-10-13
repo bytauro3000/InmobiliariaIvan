@@ -9,11 +9,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
+import com.Inmobiliaria.demo.annotation.Auditable;
 import com.Inmobiliaria.demo.dto.ContratoRequestDTO;
 import com.Inmobiliaria.demo.dto.ContratoResponseDTO;
 import com.Inmobiliaria.demo.dto.ContratoListItemDTO;
 import com.Inmobiliaria.demo.dto.LotesVendidosResponseDTO;
 import com.Inmobiliaria.demo.dto.TransferenciaResponseDTO;
+import com.Inmobiliaria.demo.enums.AccionAuditoria;
 import com.Inmobiliaria.demo.service.ContratoService;
 
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,7 @@ public class ContratoController {
     private final ContratoService contratoService;
     private final ContratoEstadoScheduler contratoEstadoScheduler;
 
+    @Auditable(accion = AccionAuditoria.CREAR, entidad = "Contrato")
     @PostMapping("/agregar")
     public ResponseEntity<ContratoResponseDTO> guardarContrato(
         @Valid @RequestBody ContratoRequestDTO requestDTO,
@@ -37,6 +40,7 @@ public class ContratoController {
         return new ResponseEntity<>(contratoGuardado, HttpStatus.CREATED);
     }
 
+    @Auditable(accion = AccionAuditoria.ACTUALIZAR, entidad = "Contrato", indiceArgId = 0)
     @PutMapping("/actualizar/{id}")
     public ResponseEntity<ContratoResponseDTO> actualizarContrato(
         @PathVariable Integer id,
@@ -99,6 +103,7 @@ public class ContratoController {
         return contratoService.listarLotesVendidos(idVendedor);
     }
 
+    @Auditable(accion = AccionAuditoria.ELIMINAR, entidad = "Contrato", indiceArgId = 0)
     @DeleteMapping("/eliminar/{id}")
     @PreAuthorize("hasAuthority('ROLE_SOPORTE')")
     public void eliminarContrato(@PathVariable Integer id) {
@@ -111,6 +116,7 @@ public class ContratoController {
         return ResponseEntity.ok(contratoService.consultarImpactoEdicion(id));
     }
 
+    @Auditable(accion = AccionAuditoria.ACTUALIZAR, entidad = "Contrato", indiceArgId = 0)
     @PatchMapping("/{id}/estado")
     public ResponseEntity<ContratoResponseDTO> cambiarEstado(
             @PathVariable Integer id,
@@ -119,12 +125,14 @@ public class ContratoController {
         return ResponseEntity.ok(actualizado);
     }
 
+    @Auditable(accion = AccionAuditoria.ACTUALIZAR, entidad = "Contrato", indiceArgId = 0)
     @PatchMapping("/{id}/renuncia")
     public ResponseEntity<ContratoResponseDTO> registrarRenuncia(@PathVariable Integer id) {
         ContratoResponseDTO resultado = contratoService.registrarRenuncia(id);
         return ResponseEntity.ok(resultado);
     }
 
+    @Auditable(accion = AccionAuditoria.ACTUALIZAR, entidad = "Contrato", indiceArgId = 0)
     @PatchMapping("/{id}/transferencia")
     public ResponseEntity<TransferenciaResponseDTO> registrarTransferencia(@PathVariable Integer id) {
         TransferenciaResponseDTO datos = contratoService.registrarTransferencia(id);
@@ -141,6 +149,7 @@ public class ContratoController {
                 .body(pdfBytes);
     }
 
+    @Auditable(accion = AccionAuditoria.ACTUALIZAR, entidad = "Contrato", indiceArgId = 0)
     @PostMapping(value = "/{id}/voucher-inicial", consumes = "multipart/form-data")
     public ResponseEntity<ContratoResponseDTO> subirVoucherInicial(
             @PathVariable Integer id,

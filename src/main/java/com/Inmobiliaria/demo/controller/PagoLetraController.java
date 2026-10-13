@@ -1,5 +1,6 @@
 package com.Inmobiliaria.demo.controller;
 
+import com.Inmobiliaria.demo.annotation.Auditable;
 import com.Inmobiliaria.demo.dto.AnulacionRequestDTO;
 import com.Inmobiliaria.demo.dto.PagoLetraRequestDTO;
 import com.Inmobiliaria.demo.dto.PagoLetraResponseDTO;
@@ -9,6 +10,7 @@ import com.Inmobiliaria.demo.entity.Comprobante;
 import com.Inmobiliaria.demo.entity.LetraCambio;
 import com.Inmobiliaria.demo.entity.PagoLetras;
 import com.Inmobiliaria.demo.entity.Voucher;
+import com.Inmobiliaria.demo.enums.AccionAuditoria;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
 import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.repository.PagoLetraRepository;
@@ -80,6 +82,7 @@ public class PagoLetraController {
 
     // ── Registro ──────────────────────────────────────────────────────────────
 
+    @Auditable(accion = AccionAuditoria.PAGAR, entidad = "PagoLetra")
     @PostMapping(value = "/registrar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PagoLetraResponseDTO> registrarPago(
             @RequestPart("pago") PagoLetraRequestDTO request,
@@ -89,6 +92,7 @@ public class PagoLetraController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+    @Auditable(accion = AccionAuditoria.PAGAR, entidad = "PagoLetra")
     @PostMapping(value = "/registrar-multiple", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> registrarPagosMultiples(
             @RequestPart("pagos") PagosMultiplesRequestDTO request,
@@ -98,6 +102,7 @@ public class PagoLetraController {
         return new ResponseEntity<>(resultado, HttpStatus.CREATED);
     }
 
+    @Auditable(accion = AccionAuditoria.ACTUALIZAR, entidad = "PagoLetra", indiceArgId = 0)
     @PutMapping(value = "/actualizar/{idPago}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PagoLetraResponseDTO> actualizarPago(
             @PathVariable Integer idPago,
@@ -425,6 +430,7 @@ public class PagoLetraController {
 
     // ── ADMIN: Anular ─────────────────────────────────────────────────────────
 
+    @Auditable(accion = AccionAuditoria.ANULAR, entidad = "PagoLetra", indiceArgId = 0)
     @PatchMapping("/{idPago}/anular")
     @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
     @Transactional
@@ -454,6 +460,7 @@ public class PagoLetraController {
 
     // ── ADMIN: Eliminar físicamente ───────────────────────────────────────────
 
+    @Auditable(accion = AccionAuditoria.ELIMINAR, entidad = "PagoLetra", indiceArgId = 0)
     @DeleteMapping("/{idPago}")
     @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
     public ResponseEntity<Void> eliminarPago(

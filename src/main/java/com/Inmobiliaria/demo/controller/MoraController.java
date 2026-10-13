@@ -1,7 +1,9 @@
 package com.Inmobiliaria.demo.controller;
 
+import com.Inmobiliaria.demo.annotation.Auditable;
 import com.Inmobiliaria.demo.dto.*;
 import com.Inmobiliaria.demo.entity.PagoMora;
+import com.Inmobiliaria.demo.enums.AccionAuditoria;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
 import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.repository.PagoMoraRepository;
@@ -76,6 +78,7 @@ public class MoraController {
         return ResponseEntity.ok(pagoLetraService.sugerirNumeroComprobante(tipoComprobante));
     }
 
+    @Auditable(accion = AccionAuditoria.CREAR, entidad = "Mora", indiceArgId = 0)
     @PostMapping("/crear-pendiente/{idLetra}")
     public ResponseEntity<MoraResponseDTO> crearMoraPendiente(
             @PathVariable Integer idLetra) {
@@ -90,6 +93,7 @@ public class MoraController {
 
     // ── Acciones ──────────────────────────────────────────────────────────────
 
+    @Auditable(accion = AccionAuditoria.PAGAR, entidad = "PagoMora")
     @PostMapping(value = "/pagar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PagoMoraResponseDTO> pagarMora(
             @RequestPart("pago") PagoMoraRequestDTO request,
@@ -133,6 +137,7 @@ public class MoraController {
 
     // ── ADMIN: Anular mora ────────────────────────────────────────────────────
 
+    @Auditable(accion = AccionAuditoria.ANULAR, entidad = "Mora", indiceArgId = 0)
     @PatchMapping("/{idMora}/anular")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMINISTRADOR', 'ROLE_SOPORTE')")
     public ResponseEntity<MoraResponseDTO> anularMora(
@@ -145,6 +150,7 @@ public class MoraController {
 
     // ── ADMIN: Anular pago de mora ────────────────────────────────────────────
 
+    @Auditable(accion = AccionAuditoria.ANULAR, entidad = "PagoMora", indiceArgId = 0)
     @PatchMapping("/pago/{idPagoMora}/anular")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMINISTRADOR', 'ROLE_SOPORTE')")
     public ResponseEntity<PagoMoraResponseDTO> anularPagoMora(
@@ -157,6 +163,7 @@ public class MoraController {
 
     // ── ADMIN: Eliminar pago de mora físicamente ──────────────────────────────
 
+    @Auditable(accion = AccionAuditoria.ELIMINAR, entidad = "PagoMora", indiceArgId = 0)
     @DeleteMapping("/pago/{idPagoMora}")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMINISTRADOR', 'ROLE_SOPORTE')")
     public ResponseEntity<Void> eliminarPagoMora(@PathVariable Integer idPagoMora) {

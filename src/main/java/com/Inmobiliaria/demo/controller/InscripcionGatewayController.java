@@ -1,5 +1,6 @@
 package com.Inmobiliaria.demo.controller;
 	
+import com.Inmobiliaria.demo.annotation.Auditable;
 import com.Inmobiliaria.demo.client.InscripcionClient;
 import com.Inmobiliaria.demo.dto.*;
 import com.Inmobiliaria.demo.entity.Comprobante;
@@ -7,6 +8,7 @@ import com.Inmobiliaria.demo.entity.Contrato;
 import com.Inmobiliaria.demo.entity.Lote;
 import com.Inmobiliaria.demo.entity.PagoInscripcionComprobante;
 import com.Inmobiliaria.demo.entity.Voucher;
+import com.Inmobiliaria.demo.enums.AccionAuditoria;
 import com.Inmobiliaria.demo.enums.Moneda;
 import com.Inmobiliaria.demo.enums.TipoOrigenComprobante;
 import com.Inmobiliaria.demo.exception.NegocioException;
@@ -166,6 +168,7 @@ import java.util.stream.Collectors;
 	
 	    // ── 2. Registrar nueva inscripción ───────────────────────────────────────
 	
+	    @Auditable(accion = AccionAuditoria.CREAR, entidad = "Inscripcion")
 	    @PostMapping("/registrar")
 	    @PreAuthorize("hasAuthority('ROLE_SECRETARIA')")
 	    public ResponseEntity<?> registrarInscripcion(@RequestBody InscripcionServicioDTO dto) {
@@ -188,6 +191,7 @@ import java.util.stream.Collectors;
 	
 	    // ── 3. Registrar abono a una inscripción existente ───────────────────────
 
+	    @Auditable(accion = AccionAuditoria.PAGAR, entidad = "Inscripcion", indiceArgId = 0)
 	    @PostMapping(value = "/{idInscripcion}/abonar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	    @PreAuthorize("hasAuthority('ROLE_SECRETARIA')")
 	    @Transactional
@@ -436,6 +440,7 @@ PagoInscripcionComprobante pagoGuardado =
 	
 	    // ── 9. Eliminar inscripción ───────────────────────────────────────────────
 	
+	    @Auditable(accion = AccionAuditoria.ELIMINAR, entidad = "Inscripcion", indiceArgId = 0)
 	    @DeleteMapping("/{idInscripcion}")
 	    @PreAuthorize("hasAuthority('ROLE_SECRETARIA')")
 	    public ResponseEntity<?> eliminarInscripcion(@PathVariable Integer idInscripcion) {
@@ -496,6 +501,7 @@ PagoInscripcionComprobante pagoGuardado =
 	
 	    // ── 12. Admin: Anular pago de inscripción ────────────────────────────────
 	
+	    @Auditable(accion = AccionAuditoria.ANULAR, entidad = "PagoInscripcion", indiceArgId = 0)
 	    @PatchMapping("/pago/{idPago}/anular")
 	    @PreAuthorize("hasAuthority('ROLE_ADMINISTRADOR')")
 	    @Transactional
