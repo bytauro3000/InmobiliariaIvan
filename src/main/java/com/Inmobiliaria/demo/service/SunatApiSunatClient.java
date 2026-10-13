@@ -91,6 +91,36 @@ public class SunatApiSunatClient {
         headers.set("X-Api-Secret", apiSecret);
         HttpEntity<ApiSunatBoletaRequest> entity = new HttpEntity<>(request, headers);
 
+        // ── IDEMPOTENCIA: si la boleta (serie+correlativo) ya existe y SUNAT la
+        //    aceptó, se REUTILIZA en vez de volver a crearla. Evita el error
+        //    "correlativo ya existe" tras un reintento donde el envío anterior a
+        //    SUNAT sí se completó pero el monolito cortó por timeout y dio rollback.
+        Map<String, Object> previa = consultarEstadoComprobante(
+                comprobante.getSerie(), comprobante.getNumero(), TipoComprobante.BOLETA);
+        String estadoPrevia = (String) previa.get("estadoSunat");
+        if ("ACEPTADA".equals(estadoPrevia)) {
+            log.info("Boleta {} ya existe y fue ACEPTADA por SUNAT; se reutiliza (hash={}).",
+                    comprobante.getNumeroCompleto(), previa.get("hash"));
+            Map<String, Object> result = new HashMap<>();
+            result.put("estadoSunat", "ACEPTADA");
+            result.put("numeroCompleto", comprobante.getNumeroCompleto());
+            if (previa.get("hash") != null) {
+                result.put("hash", previa.get("hash"));
+            }
+            result.put("mensaje", "Boleta ya aceptada previamente por SUNAT; se reutiliza.");
+            return result;
+        }
+        if ("RECHAZADA".equals(estadoPrevia)) {
+            log.warn("Boleta {} ya existe RECHAZADA en API SUNAT ({}); no se reenvía automáticamente.",
+                    comprobante.getNumeroCompleto(), previa.get("mensaje"));
+            Map<String, Object> result = new HashMap<>();
+            result.put("estadoSunat", "ERROR");
+            result.put("mensaje", previa.getOrDefault("mensaje", "Boleta rechazada previamente por SUNAT."));
+            result.put("codigoError", previa.get("codigoError"));
+            return result;
+        }
+        // NO_ENCONTRADO / PENDIENTE / ERROR (de red): se continúa con la creación normal.
+
         String url = baseUrl + "/boletas";
         log.info("Enviando boleta {} a API SUNAT: {}", comprobante.getNumeroCompleto(), url);
 
