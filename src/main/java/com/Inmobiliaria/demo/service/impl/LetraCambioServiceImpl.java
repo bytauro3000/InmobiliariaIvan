@@ -434,6 +434,8 @@ public class LetraCambioServiceImpl implements LetraCambioService {
         LetraCambio letraExistente = letraCambioRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Letra de cambio no encontrada con el ID: " + id));
 
+        LocalDate fechaVencimientoAnterior = letraExistente.getFechaVencimiento();
+
         letraExistente.setFechaGiro(letraCambioDTO.getFechaGiro());
         letraExistente.setFechaVencimiento(letraCambioDTO.getFechaVencimiento());
         letraExistente.setImporte(letraCambioDTO.getImporte());
@@ -441,8 +443,66 @@ public class LetraCambioServiceImpl implements LetraCambioService {
         letraExistente.setEstadoLetra(EstadoLetra.valueOf(letraCambioDTO.getEstadoLetra()));
 
         LetraCambio letraActualizada = letraCambioRepository.save(letraExistente);
+
+        // Recalcular cronograma: si cambió la fecha de vencimiento, las letras
+        // siguientes se reordenan mes a mes desde la nueva fecha (igual que al generarlas).
+        if (letraCambioDTO.getFechaVencimiento() != null
+                && !letraCambioDTO.getFechaVencimiento().equals(fechaVencimientoAnterior)) {
+            recalcularCronogramaPosterior(letraActualizada);
+        }
+
         recalcularEstadoContrato(letraActualizada.getContrato());
         return modelMapper.map(letraActualizada, LetraCambioDTO.class);
+    }
+
+    /**
+     * Recalcula la fecha de vencimiento de las letras posteriores a la dada,
+     * sumando de mes a mes desde su nueva fecha (misma lógica que al generarlas:
+     * conserva el día original, sin pasarse del último día del mes).
+     */
+    private void recalcularCronogramaPosterior(LetraCambio letraBase) {
+        LocalDate base = letraBase.getFechaVencimiento();
+        if (base == null) return;
+
+        int diaOriginal = base.getDayOfMonth();
+        int numBase = extraerNumeroLetra(letraBase.getNumeroLetra());
+
+        List<LetraCambio> letras = letraCambioRepository
+                .findByContratoIdContrato(letraBase.getContrato().getIdContrato());
+        List<LetraCambio> aGuardar = new ArrayList<>();
+
+        for (LetraCambio l : letras) {
+            if (l.getIdLetra().equals(letraBase.getIdLetra())) continue;
+            int num = extraerNumeroLetra(l.getNumeroLetra());
+            if (num <= numBase) continue;
+
+            LocalDate fechaCalculada = base.plusMonths(num - numBase);
+            LocalDate fechaFinal = fechaCalculada.withDayOfMonth(
+                    Math.min(diaOriginal, fechaCalculada.lengthOfMonth()));
+            if (!fechaFinal.equals(l.getFechaVencimiento())) {
+                l.setFechaVencimiento(fechaFinal);
+                // Recalcular estado según la nueva fecha (solo PENDIENTE/VENCIDO;
+                // no toca PAGADO/PARCIAL/ANULADO).
+                if (l.getEstadoLetra() == EstadoLetra.PENDIENTE || l.getEstadoLetra() == EstadoLetra.VENCIDO) {
+                    l.setEstadoLetra(fechaFinal.isBefore(LocalDate.now())
+                            ? EstadoLetra.VENCIDO
+                            : EstadoLetra.PENDIENTE);
+                }
+                aGuardar.add(l);
+            }
+        }
+        if (!aGuardar.isEmpty()) {
+            letraCambioRepository.saveAll(aGuardar);
+        }
+    }
+
+    private int extraerNumeroLetra(String numeroLetra) {
+        if (numeroLetra == null || numeroLetra.isBlank()) return 0;
+        String parte = numeroLetra.contains("/")
+                ? numeroLetra.split("/")[0].trim()
+                : numeroLetra.trim();
+        try { return Integer.parseInt(parte); }
+        catch (NumberFormatException e) { return 0; }
     }
 
     @Override
