@@ -239,12 +239,28 @@ public class ContratoVillaRealIIMerruic {
 				.setTextAlignment(TextAlignment.JUSTIFIED)
 				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
 
-		primeraCuerpo.add(new Text("PRIMERO: ").setFont(arialNarrowBold));
+		primeraCuerpo.add(new Text("PRIMERO: ").setFont(arialNarrowBold).setUnderline());
 		primeraCuerpo.add(new Text("EL VENDEDOR").setFont(arialNarrowBold));
-		primeraCuerpo.add(" es copropietario del 80.12% de acciones y derechos del inmueble denominado PARCELA 5-B DE LA ZONA A DEL FUNDO SANTA INÉS, EX ESTABLO MARANGA, U.C. N° 02974 (PARTE) equivalente a un área física de 5,164.00m2 con código de certificado literal Partida N°07074270, situado a la altura del kilómetro 3 de la Av. José Saco Rojas, Distrito de Carabayllo, Provincia y Departamento de Lima. Cuyo predio fue adquirido mediante contrato privado de compraventa de terreno rustico de fecha 19/11/2019 celebrada con sus anteriores propietarios OLGA CONSUELO VIVAS MENENDEZ, identificada con DNI N° 06926190 y LUÍS EMILIO VIVAS MENENDEZ, identificado con DNI N° 41633683 (sucesión intestada de quienes en vida fueron EMILIO VIVAS REYNOSO y DOLORES LEONISA MENENDEZ LOPEZ VIUDA DE VIVAS), OSCAR GERARDO WILLIAMS MENENDEZ, identificado con DNI N° 09671279, ANA MARIA WILLIAMS MENENDEZ DE VILLAJUAN, identificada con DNI N° 07993343, (sucesión intestada de quien en vida fue DOLORES LEONISA MENENDEZ LOPEZ VIUDA DE VIVAS). ");
+		primeraCuerpo.add(" es copropietario del 80.12% de acciones y derechos del inmueble denominado PARCELA 5-B DE LA ZONA A DEL FUNDO SANTA INÉS, EX ESTABLO MARANGA, U.C. N° 02974 (PARTE) equivalente a un área física de 5,164.00m², con código de certificado literal ");
+		primeraCuerpo.add(new Text("Partida N°07074270").setFont(arialNarrowBold));
+		primeraCuerpo.add(", situado a la altura del kilómetro 3 de la Av. José Saco Rojas, Distrito de Carabayllo, Provincia y Departamento de Lima. Cuyo predio fue adquirido mediante contrato privado de compraventa de terreno rustico de fecha 19/11/2019 celebrada con sus anteriores propietarios ");
+		primeraCuerpo.add(new Text("OLGA CONSUELO VIVAS MENENDEZ").setFont(arialNarrowBold));
+		primeraCuerpo.add(", identificada con DNI N° 06926190 y ");
+		primeraCuerpo.add(new Text("LUÍS EMILIO VIVAS MENENDEZ").setFont(arialNarrowBold));
+		primeraCuerpo.add(", identificado con DNI N° 41633683 (sucesión intestada de quienes en vida fueron ");
+		primeraCuerpo.add(new Text("EMILIO VIVAS REYNOSO").setFont(arialNarrowBold));
+		primeraCuerpo.add(" y ");
+		primeraCuerpo.add(new Text("DOLORES LEONISA MENENDEZ LOPEZ VIUDA DE VIVAS").setFont(arialNarrowBold));
+		primeraCuerpo.add("), ");
+		primeraCuerpo.add(new Text("OSCAR GERARDO WILLIAMS MENENDEZ").setFont(arialNarrowBold));
+		primeraCuerpo.add(", identificado con DNI N° 09671279, ");
+		primeraCuerpo.add(new Text("ANA MARIA WILLIAMS MENENDEZ DE VILLAJUAN").setFont(arialNarrowBold));
+		primeraCuerpo.add(", identificada con DNI N° 07993343, (sucesión intestada de quien en vida fue ");
+		primeraCuerpo.add(new Text("DOLORES LEONISA MENENDEZ LOPEZ VIUDA DE VIVAS").setFont(arialNarrowBold));
+		primeraCuerpo.add("). Sobre el referido terreno ");
 		primeraCuerpo.add(new Text("EL VENDEDOR").setFont(arialNarrowBold));
-		primeraCuerpo.add(" con fecha 19/11/2019 celebró el CONTRATO PRIVADO DE COMPRAVENTA DE TERRENO RÚSTICO a fin que la empresa en mención realice la lotización del 80.12% de acciones y derechos que equivale a un área de 5,164.00m2 de terreno, la misma que encuentra dentro del área de mayor extensión a que hace referencia esta cláusula, en ese sentido, la empresa, sobre el referido terreno viene desarrollando el PROGRAMA DE VIVIENDA ");
-		primeraCuerpo.add(new Text("“VILLA REAL II”").setFont(arialNarrowBold));
+		primeraCuerpo.add(" viene desarrollando el ");
+		primeraCuerpo.add(new Text("PROGRAMA DE VIVIENDA VILLA REAL II").setFont(arialNarrowBold));
 		primeraCuerpo.add(" la misma que se distribuye en lotes y manzanas con sus respectivas áreas conforme al plano de lotización.");
 
 		document.add(primeraCuerpo);
