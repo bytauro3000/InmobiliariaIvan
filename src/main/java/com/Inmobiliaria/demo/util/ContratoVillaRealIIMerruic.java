@@ -257,13 +257,19 @@ public class ContratoVillaRealIIMerruic {
 		primeraCuerpo.add(new Text("ANA MARIA WILLIAMS MENENDEZ DE VILLAJUAN").setFont(arialNarrowBold));
 		primeraCuerpo.add(", identificada con DNI N° 07993343, (sucesión intestada de quien en vida fue ");
 		primeraCuerpo.add(new Text("DOLORES LEONISA MENENDEZ LOPEZ VIUDA DE VIVAS").setFont(arialNarrowBold));
-		primeraCuerpo.add("). Sobre el referido terreno ");
-		primeraCuerpo.add(new Text("EL VENDEDOR").setFont(arialNarrowBold));
-		primeraCuerpo.add(" viene desarrollando el ");
-		primeraCuerpo.add(new Text("PROGRAMA DE VIVIENDA VILLA REAL II").setFont(arialNarrowBold));
-		primeraCuerpo.add(" la misma que se distribuye en lotes y manzanas con sus respectivas áreas conforme al plano de lotización.");
+		primeraCuerpo.add(").");
 
 		document.add(primeraCuerpo);
+
+		Paragraph segundaParteCuerpo = new Paragraph()
+				.setTextAlignment(TextAlignment.JUSTIFIED)
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
+		segundaParteCuerpo.add("Sobre el referido terreno ");
+		segundaParteCuerpo.add(new Text("EL VENDEDOR").setFont(arialNarrowBold));
+		segundaParteCuerpo.add(" viene desarrollando el ");
+		segundaParteCuerpo.add(new Text("PROGRAMA DE VIVIENDA VILLA REAL II").setFont(arialNarrowBold));
+		segundaParteCuerpo.add(" la misma que se distribuye en lotes y manzanas con sus respectivas áreas conforme al plano de lotización.");
+		document.add(segundaParteCuerpo);
 
 		// ── SEGUNDA: OBJETO DEL CONTRATO ───────────────────────────────────
 		// Se agrupa en un Div con keepTogether para que la cláusula completa
