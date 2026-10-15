@@ -245,12 +245,14 @@ public class ContratoVillaRealIIContadoMerruic {
 		primeraCuerpo.add(", identificada con DNI N° 07993343, (sucesión intestada de quien en vida fue ");
 		primeraCuerpo.add(new Text("DOLORES LEONISA MENENDEZ LOPEZ VIUDA DE VIVAS").setFont(arialNarrowBold));
 		primeraCuerpo.add(").");
+		primeraCuerpo.setMarginBottom(0);
 
 		document.add(primeraCuerpo);
 
 		Paragraph segundaParteCuerpo = new Paragraph()
 				.setTextAlignment(TextAlignment.JUSTIFIED)
-				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f);
+				.setFont(arialNarrow).setFontSize(12).setMultipliedLeading(1.0f)
+				.setMarginTop(0);
 		segundaParteCuerpo.add("Sobre el referido terreno ");
 		segundaParteCuerpo.add(new Text("EL VENDEDOR").setFont(arialNarrowBold));
 		segundaParteCuerpo.add(" viene desarrollando el ");
@@ -259,7 +261,7 @@ public class ContratoVillaRealIIContadoMerruic {
 		document.add(segundaParteCuerpo);
 
 		// ── SEGUNDA: OBJETO DEL CONTRATO ───────────────────────────────────
-		verificarEspacioYSalto(document, pdf, 0.25f);
+		verificarEspacioYSalto(document, pdf, 0.15f);
 		Div divSegunda = new Div().setKeepTogether(true);
 
 		agregarEncabezadoClausula(document, arialNarrowBold, "OBJETO DEL CONTRATO:");
