@@ -228,7 +228,9 @@ public class ContratoVillaRealIIContadoMerruic {
 
 		primeraCuerpo.add(new Text("PRIMERO: ").setFont(arialNarrowBold).setUnderline());
 		primeraCuerpo.add(new Text("EL VENDEDOR").setFont(arialNarrowBold));
-		primeraCuerpo.add(" es copropietario del 80.12% de acciones y derechos del inmueble denominado PARCELA 5-B DE LA ZONA A DEL FUNDO SANTA INÉS, EX ESTABLO MARANGA, U.C. N° 02974 (PARTE) equivalente a un área física de 5,164.00m², situado a la altura del kilómetro 3 de la Av. José Saco Rojas, Distrito de Carabayllo, Provincia y Departamento de Lima. Cuyo predio fue adquirido mediante contrato privado de compraventa de terreno rustico de fecha 19/11/2019 celebrada con sus anteriores propietarios ");
+		primeraCuerpo.add(" es copropietario del 80.12% de acciones y derechos del inmueble denominado PARCELA 5-B DE LA ZONA A DEL FUNDO SANTA INÉS, EX ESTABLO MARANGA, U.C. N° 02974 (PARTE) equivalente a un área física de 5,164.00m², con código de certificado literal ");
+		primeraCuerpo.add(new Text("Partida N°07074270").setFont(arialNarrowBold));
+		primeraCuerpo.add(", situado a la altura del kilómetro 3 de la Av. José Saco Rojas, Distrito de Carabayllo, Provincia y Departamento de Lima. Cuyo predio fue adquirido mediante contrato privado de compraventa de terreno rustico de fecha 19/11/2019 celebrada con sus anteriores propietarios ");
 		primeraCuerpo.add(new Text("OLGA CONSUELO VIVAS MENENDEZ").setFont(arialNarrowBold));
 		primeraCuerpo.add(", identificada con DNI N° 06926190 y ");
 		primeraCuerpo.add(new Text("LUÍS EMILIO VIVAS MENENDEZ").setFont(arialNarrowBold));
