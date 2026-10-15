@@ -54,6 +54,7 @@ import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.util.ContratoFloridaPdf;
 import com.Inmobiliaria.demo.util.ContratoContadoFloridaPdf;
 import com.Inmobiliaria.demo.util.ContratoNapolePdfMerruic;
+import com.Inmobiliaria.demo.util.ContratoVillaRealIIContadoMerruic;
 import com.Inmobiliaria.demo.util.ContratoVillaRealIIMerruic;
 import com.Inmobiliaria.demo.util.ContratoPalmasDeMallorcaPdfMerruic;
 import com.cloudinary.Cloudinary;
@@ -800,9 +801,13 @@ public class ContratoServiceImpl implements ContratoService {
         if (esMerruic && esFinanciado && nombreProgUp.contains("NAPOLE")) {
             return ContratoNapolePdfMerruic.generarContratoNapole(dto, primeraLetra);
         }
-        // Plantilla VILLA REAL II (MERRUIC): solo FINANCIADO + programa VILLA REAL II
+        // Plantilla VILLA REAL II (MERRUIC): FINANCIADO + programa VILLA REAL II
         if (esMerruic && esFinanciado && nombreProgUp.contains("VILLA REAL II")) {
             return ContratoVillaRealIIMerruic.generarContratoVillaRealII(dto, primeraLetra);
+        }
+        // Plantilla VILLA REAL II CONTADO (MERRUIC): CONTADO + programa VILLA REAL II
+        if (esMerruic && !esFinanciado && nombreProgUp.contains("VILLA REAL II")) {
+            return ContratoVillaRealIIContadoMerruic.generarContratoVillaRealIIContado(dto);
         }
         // Plantilla PALMAS DE MALLORCA (MERRUIC): solo FINANCIADO + programa PALMAS DE MALLORCA
         if (esMerruic && esFinanciado && nombreProgUp.contains("PALMAS DE MALLORCA")) {
