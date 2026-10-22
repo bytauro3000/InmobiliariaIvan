@@ -1,5 +1,6 @@
 package com.Inmobiliaria.demo.security;
 
+import com.Inmobiliaria.demo.entity.Cliente;
 import com.Inmobiliaria.demo.entity.Usuario;
 import com.Inmobiliaria.demo.entity.Vendedor;
 import com.Inmobiliaria.demo.repository.VendedorRepository;
@@ -31,6 +32,9 @@ public class JwtUtil {
     }
 
     private static final long ACCESS_TOKEN_EXPIRATION_MS = 1000 * 60 * 30; // 30 minutos
+
+    /** Portal del cliente: sesión de 12 h (sin refresh; al expirar se re-login con Google). */
+    private static final long PORTAL_TOKEN_EXPIRATION_MS = 1000L * 60 * 60 * 12;
 
     // Único responsable de crear el token en el Login
     public String generateToken(Authentication authentication, Usuario usuario) {
@@ -66,6 +70,28 @@ public class JwtUtil {
                 .setSubject(usuario.getCorreo())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRATION_MS))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    /**
+     * Token del PORTAL DEL CLIENTE (login con Google). Expira en 12 h: no hay
+     * refresh token para clientes (el refresh actual depende de la tabla usuario);
+     * al expirar, el portal vuelve a pedir login con Google (un clic).
+     */
+    public String generateTokenCliente(Cliente cliente, String email) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("rol", "ROLE_CLIENTE");
+        claims.put("tipo", "CLIENTE");
+        claims.put("id", cliente.getIdCliente());
+        claims.put("nombre", cliente.getNombre());
+        claims.put("apellidos", cliente.getApellidos());
+
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject(email)
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + PORTAL_TOKEN_EXPIRATION_MS))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }

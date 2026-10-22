@@ -90,6 +90,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return path.contains("/api/auth/login")
                 || path.contains("/api/auth/refresh")
                 || path.contains("/api/auth/logout")
+                || path.contains("/api/auth/google")      // portal del cliente (Google)
                 || path.contains("/api/public/")
                 || path.contains("/chat-ws")
                 || path.equals("/favicon.ico")

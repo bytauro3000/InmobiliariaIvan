@@ -204,6 +204,18 @@ public interface ContratoRepository extends JpaRepository<Contrato, Integer> {
     @Query("SELECT c FROM Contrato c ORDER BY c.idContrato DESC")
     Page<Contrato> findAllResumenPaginado(Pageable pageable);
 
+    /**
+     * Portal del cliente: contratos de uno o varios clientes (puede haber
+     * registros duplicados de cliente con el mismo email). Dos queries separadas
+     * en el service para lotes/letras, siguiendo el patrón del código (evita
+     * MultipleBagFetchException al hacer JOIN FETCH de varias colecciones).
+     */
+    @Query("SELECT DISTINCT c FROM Contrato c " +
+           "LEFT JOIN FETCH c.clientes cc " +
+           "LEFT JOIN FETCH cc.cliente " +
+           "WHERE cc.cliente.idCliente IN :ids")
+    List<Contrato> findByClientesIdClienteIn(@Param("ids") Collection<Integer> ids);
+
     @Query("SELECT cl.contrato.montoTotal FROM ContratoLote cl " +
            "WHERE cl.lote.idLote = :idLote " +
             "AND cl.contrato.estadoContrato NOT IN (" +

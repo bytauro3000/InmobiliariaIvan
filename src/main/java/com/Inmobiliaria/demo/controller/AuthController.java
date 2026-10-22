@@ -1,5 +1,6 @@
 package com.Inmobiliaria.demo.controller;
 
+import com.Inmobiliaria.demo.dto.GoogleAuthRequest;
 import com.Inmobiliaria.demo.dto.LoginRequest;
 import com.Inmobiliaria.demo.dto.LoginResponse;
 import com.Inmobiliaria.demo.entity.RefreshToken;
@@ -7,6 +8,7 @@ import com.Inmobiliaria.demo.entity.Usuario;
 import com.Inmobiliaria.demo.enums.AccionAuditoria;
 import com.Inmobiliaria.demo.security.JwtUtil;
 import com.Inmobiliaria.demo.service.AuditoriaService;
+import com.Inmobiliaria.demo.service.PortalAuthService;
 import com.Inmobiliaria.demo.service.RefreshTokenService;
 import com.Inmobiliaria.demo.service.SesionActivaService;
 import com.Inmobiliaria.demo.service.UsuarioService;
@@ -32,6 +34,7 @@ public class AuthController {
     private final RefreshTokenService refreshTokenService;
     private final SesionActivaService sesionActivaService;
     private final AuditoriaService auditoriaService;
+    private final PortalAuthService portalAuthService;
 
     @Value("${jwt.cookie-secure:true}")
     private boolean cookieSecure;
@@ -107,6 +110,16 @@ public class AuthController {
             return ResponseEntity.ok(false);
         }
         return ResponseEntity.ok(true);
+    }
+
+    /**
+     * Login del PORTAL DEL CLIENTE con Google Identity Services.
+     * Ruta pública (whitelist en el filtro + gateway). No emite refresh token:
+     * el JWT del portal dura 12 h y al expirar se vuelve a entrar con Google.
+     */
+    @PostMapping("/google")
+    public ResponseEntity<LoginResponse> loginPortalGoogle(@RequestBody GoogleAuthRequest request) {
+        return ResponseEntity.ok(portalAuthService.autenticarConGoogle(request.getCredential()));
     }
 
     private void agregarCookieRefreshToken(HttpServletResponse response, String refreshToken) {

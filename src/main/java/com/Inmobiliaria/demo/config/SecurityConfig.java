@@ -78,6 +78,9 @@ public class SecurityConfig {
                     "/api/agendas/**",
                     "/api/empresa/**"
                 ).hasAnyAuthority("ROLE_SECRETARIA", "ROLE_ADMINISTRADOR", "ROLE_SOPORTE", "ROLE_VENDEDOR")
+                // ── Portal del cliente: SOLO ROLE_CLIENTE (lectura) ────────────────────
+                .requestMatchers("/api/portal/**")
+                .hasAuthority("ROLE_CLIENTE")
                 // ── Auditoría: solo ADMINISTRADOR ────────────────────────────────────
                 .requestMatchers("/api/auditoria/**")
                 .hasAuthority("ROLE_ADMINISTRADOR")

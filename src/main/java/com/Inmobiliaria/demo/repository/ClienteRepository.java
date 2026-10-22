@@ -29,6 +29,16 @@ public interface ClienteRepository extends JpaRepository<Cliente, Integer> {
 
     @Query("SELECT c FROM Cliente c LEFT JOIN FETCH c.distrito WHERE c.idCliente = :id")
     Cliente findByIdWithDistrito(@Param("id") Integer id);
+
+    /**
+     * Portal del cliente: lookup por email (login con Google). El email NO es
+     * único en la BD, por lo que devuelve lista (puede haber duplicados); TRIM
+     * + LOWER cubren variaciones de mayúsculas/espacios del registro manual.
+     */
+    @Query("SELECT c FROM Cliente c LEFT JOIN FETCH c.distrito "
+         + "WHERE LOWER(TRIM(c.email)) = LOWER(TRIM(:email)) "
+         + "ORDER BY c.idCliente ASC")
+    List<Cliente> findByEmailIgnoreCase(@Param("email") String email);
     
     @Query("SELECT c FROM Cliente c LEFT JOIN FETCH c.distrito ORDER BY c.idCliente DESC")
     List<Cliente> findAllByOrderByIdClienteDesc();
