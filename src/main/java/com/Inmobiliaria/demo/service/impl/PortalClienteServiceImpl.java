@@ -29,6 +29,7 @@ import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Implementación del portal del cliente (solo lectura).
@@ -154,7 +155,42 @@ public class PortalClienteServiceImpl implements PortalClienteService {
         BigDecimal moraInmediata = BigDecimal.ZERO;
         int pagadas = 0, vencidas = 0, proximas = 0;
 
-        for (LetraCambio letra : letraCambioRepository.findByContratoIdContrato(contrato.getIdContrato())) {
+        List<LetraCambio> letras = letraCambioRepository.findByContratoIdContrato(contrato.getIdContrato());
+
+        // Migración: si la secretaria empezó a registrar desde una letra alta (ej. 40),
+        // las anteriores (1..39) ya se pagaron en el talonario físico aunque no tengan
+        // comprobante en el sistema → el CLIENTE las ve como Pagadas. La vista del
+        // staff no usa este servicio, por lo que no cambia.
+        Integer primeraRegistrada = letras.stream()
+                .filter(l -> l.getEstadoLetra() == EstadoLetra.PAGADO)
+                .map(l -> aEntero(l.getNumeroLetra()))
+                .filter(Objects::nonNull)
+                .min(Integer::compareTo)
+                .orElse(null);
+
+        for (LetraCambio letra : letras) {
+            Integer numero = aEntero(letra.getNumeroLetra());
+            boolean pagadaEnTalonario = primeraRegistrada != null
+                    && numero != null
+                    && numero < primeraRegistrada
+                    && letra.getEstadoLetra() != EstadoLetra.PAGADO
+                    && letra.getEstadoLetra() != EstadoLetra.ANULADO;
+
+            if (pagadaEnTalonario) {
+                dto.getLetras().add(new PortalLetraDTO(
+                        letra.getIdLetra(),
+                        contrato.getIdContrato(),
+                        letra.getNumeroLetra(),
+                        letra.getFechaVencimiento(),
+                        letra.getImporte(),
+                        null,
+                        "PAGADA",
+                        0,
+                        BigDecimal.ZERO));
+                pagadas++;
+                continue;
+            }
+
             String estado = estadoEfectivo(letra, hoy);
             boolean estaVencida = "VENCIDA".equals(estado);
             int diasVencida = estaVencida
@@ -237,6 +273,15 @@ public class PortalClienteServiceImpl implements PortalClienteService {
             return letra.getSaldoPendiente();
         }
         return letra.getImporte() != null ? letra.getImporte() : BigDecimal.ZERO;
+    }
+
+    /** Convierte el número de letra (String) a entero; null si no es numérico. */
+    private static Integer aEntero(String numero) {
+        try {
+            return Integer.valueOf(numero.trim());
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     /** "Mz 3 - Lt 12 (Villa Real II)" si el contrato tiene lote; si no, null. */
