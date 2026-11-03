@@ -1539,6 +1539,131 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         return dto;
     }
 
+    // ─── Reporte de pagos a vendedores ───────────────────────────────────────
+
+    @Override
+    @Transactional(readOnly = true)
+    public ReportePagosVendedorDTO listarPagosVendedor(Integer idVendedor, String tipo) {
+        String tipoFiltro = normalizarTipoPagos(tipo);
+        int idFiltro = idVendedor != null ? idVendedor : 0;
+
+        List<PagoComisionVendedor> pagos = pagoComisionRepository.buscarParaReportePagos(idFiltro, tipoFiltro);
+
+        // ── Batch: lotes (MZ/LT) y programa por contrato ─────────────────────
+        List<Integer> idContratos = pagos.stream()
+                .map(p -> p.getComision().getContrato() != null
+                        ? p.getComision().getContrato().getIdContrato() : null)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        Map<Integer, String> manzanasPorContrato = new HashMap<>();
+        Map<Integer, String> lotesPorContrato = new HashMap<>();
+        Map<Integer, String> programaPorContrato = new HashMap<>();
+
+        if (!idContratos.isEmpty()) {
+            Map<Integer, LinkedHashMap<String, List<String>>> agrupados = new HashMap<>();
+            for (Object[] fila : contratoLoteRepository.findLotesByContratos(idContratos)) {
+                Integer idCto = (Integer) fila[0];
+                String manzana = fila[1] != null ? fila[1].toString() : "";
+                String lote = fila[2] != null ? fila[2].toString() : "";
+                agrupados.computeIfAbsent(idCto, k -> new LinkedHashMap<>())
+                        .computeIfAbsent(manzana, k -> new ArrayList<>()).add(lote);
+            }
+            for (Map.Entry<Integer, LinkedHashMap<String, List<String>>> e : agrupados.entrySet()) {
+                StringBuilder mz = new StringBuilder();
+                StringBuilder lt = new StringBuilder();
+                for (Map.Entry<String, List<String>> g : e.getValue().entrySet()) {
+                    if (mz.length() > 0) { mz.append(", "); lt.append(", "); }
+                    mz.append(g.getKey());
+                    lt.append(String.join(", ", g.getValue()));
+                }
+                manzanasPorContrato.put(e.getKey(), mz.toString());
+                lotesPorContrato.put(e.getKey(), lt.toString());
+            }
+            for (Object[] fila : contratoLoteRepository.findProgramasByContratos(idContratos)) {
+                Integer idCto = (Integer) fila[0];
+                Programa programa = (Programa) fila[1];
+                programaPorContrato.put(idCto, programa != null && programa.getNombrePrograma() != null
+                        ? programa.getNombrePrograma() : "SIN PROGRAMA");
+            }
+        }
+
+        // ── Filas y totales ──────────────────────────────────────────────────
+        List<ReportePagosVendedorDTO.FilaPago> filas = new ArrayList<>();
+        BigDecimal totalAdelantos = BigDecimal.ZERO;
+        BigDecimal totalMensuales = BigDecimal.ZERO;
+        String moneda = null;
+        int numero = 1;
+
+        for (PagoComisionVendedor pago : pagos) {
+            ComisionVendedor cv = pago.getComision();
+            Integer idCto = cv.getContrato() != null ? cv.getContrato().getIdContrato() : null;
+
+            ReportePagosVendedorDTO.FilaPago fila = new ReportePagosVendedorDTO.FilaPago();
+            fila.setNumero(numero++);
+            fila.setIdVendedor(cv.getVendedor() != null ? cv.getVendedor().getIdVendedor() : null);
+            fila.setNombreVendedor(nombreVendedor(cv.getVendedor()));
+            fila.setTipo(pago.getTipo());
+            fila.setFechaPago(pago.getFechaPago());
+            fila.setNumeroLetra(pago.getLetra() != null ? pago.getLetra().getNumeroLetra() : null);
+            fila.setIdContrato(idCto);
+            fila.setManzana(manzanasPorContrato.getOrDefault(idCto, ""));
+            fila.setNumeroLote(lotesPorContrato.getOrDefault(idCto, ""));
+            fila.setPrograma(programaPorContrato.getOrDefault(idCto, "SIN PROGRAMA"));
+            fila.setMonto(pago.getMonto() != null ? pago.getMonto() : BigDecimal.ZERO);
+            fila.setMedioPago(pago.getMedioPago() != null ? pago.getMedioPago().name() : null);
+            fila.setNumeroOperacion(pago.getNumeroOperacion());
+            fila.setNumeroEgreso(pago.getNumeroEgreso());
+            String monedaFila = cv.getMoneda() != null ? cv.getMoneda().name() : "USD";
+            fila.setMoneda(monedaFila);
+            filas.add(fila);
+
+            if (moneda == null) moneda = monedaFila;
+            if ("ADELANTO".equals(pago.getTipo())) {
+                totalAdelantos = totalAdelantos.add(fila.getMonto());
+            } else {
+                totalMensuales = totalMensuales.add(fila.getMonto());
+            }
+        }
+
+        // ── Cabecera ─────────────────────────────────────────────────────────
+        ReportePagosVendedorDTO dto = new ReportePagosVendedorDTO();
+        dto.setIdVendedor(idVendedor);
+        dto.setTodosVendedores(idVendedor == null);
+        dto.setFiltroTipo(tipoFiltro.isEmpty() ? "TODOS" : tipoFiltro);
+
+        if (idVendedor != null) {
+            Vendedor vendedor = vendedorRepository.findById(idVendedor)
+                    .orElseThrow(() -> new NegocioException("Vendedor no encontrado: " + idVendedor));
+            dto.setNombreVendedor(vendedor.getNombre());
+            dto.setApellidosVendedor(vendedor.getApellidos());
+            dto.setDniVendedor(vendedor.getDni());
+        } else {
+            dto.setNombreVendedor("TODOS");
+            dto.setApellidosVendedor("LOS VENDEDORES");
+            dto.setDniVendedor(null);
+        }
+
+        dto.setTotalPagos(filas.size());
+        dto.setTotalAdelantos(totalAdelantos);
+        dto.setTotalMensuales(totalMensuales);
+        dto.setTotalGeneral(totalAdelantos.add(totalMensuales));
+        dto.setMoneda(moneda != null ? moneda : "USD");
+        dto.setFechaEmision(LocalDateTime.now());
+        dto.setPagos(filas);
+
+        return dto;
+    }
+
+    /** Normaliza el filtro de tipo del reporte de pagos: "" (todos), "ADELANTO" o "MENSUAL". */
+    private static String normalizarTipoPagos(String tipo) {
+        if (tipo == null || tipo.isBlank()) return "";
+        String t = tipo.trim().toUpperCase();
+        if (t.equals("ADELANTO") || t.equals("MENSUAL")) return t;
+        return "";
+    }
+
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
     private static int compareNullsLast(String a, String b) {

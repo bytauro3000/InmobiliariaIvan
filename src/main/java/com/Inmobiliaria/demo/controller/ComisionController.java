@@ -10,11 +10,13 @@ import com.Inmobiliaria.demo.dto.RegistrarAdelantoRequest;
 import com.Inmobiliaria.demo.dto.RegistrarPagosMensualesRequest;
 import com.Inmobiliaria.demo.dto.ActualizarMontoComisionRequest;
 import com.Inmobiliaria.demo.dto.ReporteComisionVendedorDTO;
+import com.Inmobiliaria.demo.dto.ReportePagosVendedorDTO;
 import com.Inmobiliaria.demo.enums.AccionAuditoria;
 import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.service.ComisionVendedorService;
 import com.Inmobiliaria.demo.service.ReciboEgresoService;
 import com.Inmobiliaria.demo.util.ReporteComisionPdf;
+import com.Inmobiliaria.demo.util.ReportePagosVendedorPdf;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -184,6 +186,56 @@ public class ComisionController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         } catch (Exception e) {
             log.error("Error generando reporte de comisiones para vendedor {}: ", idVendedor, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(("Error generando PDF: " + e.getMessage()).getBytes());
+        }
+    }
+
+    // ─── Reporte de pagos a vendedores (tabla + PDF) ─────────────────────────
+
+    /** Pagos ya efectuados al vendedor. Filtros: idVendedor (opcional) y tipo (ADELANTO|MENSUAL|TODOS). */
+    @GetMapping("/pagos-reporte")
+    public ResponseEntity<ReportePagosVendedorDTO> reportePagos(
+            @RequestParam(required = false) Integer idVendedor,
+            @RequestParam(defaultValue = "TODOS") String tipo) {
+        try {
+            return ResponseEntity.ok(comisionService.listarPagosVendedor(idVendedor, tipo));
+        } catch (NegocioException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
+    /** PDF del reporte de pagos a vendedores con los mismos filtros. */
+    @GetMapping("/pagos-reporte/pdf")
+    public ResponseEntity<byte[]> reportePagosPdf(
+            @RequestParam(required = false) Integer idVendedor,
+            @RequestParam(defaultValue = "TODOS") String tipo) {
+        try {
+            ReportePagosVendedorDTO dto = comisionService.listarPagosVendedor(idVendedor, tipo);
+            byte[] pdf = ReportePagosVendedorPdf.generar(dto);
+
+            String nombreVendedor = dto.isTodosVendedores()
+                    ? "TODOS"
+                    : String.join(" ",
+                            dto.getNombreVendedor() != null ? dto.getNombreVendedor() : "",
+                            dto.getApellidosVendedor() != null ? dto.getApellidosVendedor() : ""
+                    ).trim();
+            String tipoNombre = switch (tipo == null ? "TODOS" : tipo.toUpperCase()) {
+                case "ADELANTO" -> "ADELANTOS";
+                case "MENSUAL" -> "CUOTAS";
+                default -> "TODOS";
+            };
+            String filename = "REPORTE DE PAGOS (" + nombreVendedor.replaceAll("[\\\\/:*?\"<>|]", "").trim()
+                    + " - " + tipoNombre + ").pdf";
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (NegocioException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (Exception e) {
+            log.error("Error generando reporte de pagos a vendedores (vendedor={}, tipo={}): ", idVendedor, tipo, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(("Error generando PDF: " + e.getMessage()).getBytes());
         }

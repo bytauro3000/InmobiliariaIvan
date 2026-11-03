@@ -9,6 +9,7 @@ import com.Inmobiliaria.demo.dto.RegistrarAdelantoRequest;
 import com.Inmobiliaria.demo.dto.RegistrarPagosMensualesRequest;
 import com.Inmobiliaria.demo.dto.ActualizarMontoComisionRequest;
 import com.Inmobiliaria.demo.dto.ReporteComisionVendedorDTO;
+import com.Inmobiliaria.demo.dto.ReportePagosVendedorDTO;
 import com.Inmobiliaria.demo.entity.ComisionVendedor;
 import com.Inmobiliaria.demo.entity.Contrato;
 import org.springframework.web.multipart.MultipartFile;
@@ -72,4 +73,11 @@ public interface ComisionVendedorService {
     ReporteComisionVendedorDTO generarReportePorVendedor(Integer idVendedor);
 
     ReporteComisionVendedorDTO generarReportePorVendedor(Integer idVendedor, boolean soloPendientes);
+
+    /**
+     * Reporte de pagos ya efectuados al vendedor (adelantos y cuotas mensuales).
+     * @param idVendedor null → todos los vendedores
+     * @param tipo "ADELANTO", "MENSUAL" o "TODOS"
+     */
+    ReportePagosVendedorDTO listarPagosVendedor(Integer idVendedor, String tipo);
 }

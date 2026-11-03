@@ -27,4 +27,19 @@ public interface PagoComisionVendedorRepository extends JpaRepository<PagoComisi
            "WHERE p.comision.idComision IN :ids AND p.tipo = :tipo GROUP BY p.comision.idComision")
     List<Object[]> countByComisionesAndTipo(
             @Param("ids") List<Integer> ids, @Param("tipo") String tipo);
+
+    /**
+     * Pagos para el reporte de pagos a vendedores, ordenados del más reciente
+     * al más antiguo. Filtros: idVendedor = 0 → todos; tipo = "" → todos.
+     */
+    @Query("SELECT p FROM PagoComisionVendedor p " +
+           "JOIN FETCH p.comision c " +
+           "JOIN FETCH c.vendedor v " +
+           "LEFT JOIN FETCH p.letra " +
+           "WHERE (:idVendedor = 0 OR v.idVendedor = :idVendedor) " +
+           "AND (:tipo = '' OR p.tipo = :tipo) " +
+           "ORDER BY p.fechaPago DESC, p.idPagoComision DESC")
+    List<PagoComisionVendedor> buscarParaReportePagos(
+            @Param("idVendedor") Integer idVendedor,
+            @Param("tipo") String tipo);
 }
