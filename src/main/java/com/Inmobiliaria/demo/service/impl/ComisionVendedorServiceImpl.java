@@ -41,6 +41,18 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
     /** Cantidad de letras previas que NO generan comisión mensual (la letra 8 es la primera). */
     private static final int LETRAS_PREVIAS = 7;
 
+    /** Longitud máxima de la columna pago_comision_vendedor.observacion (VARCHAR 2000). */
+    private static final int MAX_OBSERVACION = 2000;
+
+    /** Trunca la observación al tamaño de la columna para evitar Data truncation. */
+    private static String truncarObservacion(String observacion) {
+        if (observacion == null) return null;
+        if (observacion.length() <= MAX_OBSERVACION) return observacion;
+        log.warn("observacion del pago de comisión excede {} chars ({}), se trunca",
+                MAX_OBSERVACION, observacion.length());
+        return observacion.substring(0, MAX_OBSERVACION);
+    }
+
     /**
      * Extrae el número de una letra del formato "N/120" (o "8").
      * Ej: "8/120" → 8. Si no es numérico, devuelve 0.
@@ -550,7 +562,7 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         pago.setMonto(monto);
         pago.setFechaPago(LocalDateTime.now());
         pago.setNumeroEgreso(egreso.getNumeroCompleto());
-        pago.setObservacion(request.getObservacion());
+        pago.setObservacion(truncarObservacion(request.getObservacion()));
         pagoComisionRepository.save(pago);
 
         comision.setMontoAdelanto(monto);
@@ -707,7 +719,7 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
         pago.setMedioPago(request.getMedioPago());
         pago.setNumeroOperacion(request.getNumeroOperacion());
         pago.setNumeroEgreso(egreso.getNumeroCompleto());
-        pago.setObservacion(request.getObservacion());
+        pago.setObservacion(truncarObservacion(request.getObservacion()));
         pagoComisionRepository.save(pago);
 
         comision.setMontoAdelanto(monto);
@@ -795,7 +807,7 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
                 ? FechasUtil.aFechaHora(request.getFechaOperacion(), request.getHoraOperacion()) : null);
             pago.setMedioPago(request.getMedioPago());
             pago.setNumeroOperacion(request.getNumeroOperacion());
-            pago.setObservacion(request.getObservacion());
+            pago.setObservacion(truncarObservacion(request.getObservacion()));
             pagos.add(pago);
 
             comisionesAfectadas.put(comision.getIdComision(), comision);
@@ -1014,7 +1026,7 @@ public class ComisionVendedorServiceImpl implements ComisionVendedorService {
             pago.setTipo("MENSUAL");
             pago.setMonto(monto);
             pago.setFechaPago(LocalDateTime.now());
-            pago.setObservacion(request.getObservacion());
+            pago.setObservacion(truncarObservacion(request.getObservacion()));
             pagos.add(pago);
 
             totalPagado = totalPagado.add(monto);

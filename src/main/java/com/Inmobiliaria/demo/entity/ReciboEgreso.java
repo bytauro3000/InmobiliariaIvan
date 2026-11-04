@@ -38,7 +38,7 @@ public class ReciboEgreso {
     private LocalDate fechaEmision;
 
     /** Concepto del egreso (ej: "Comisión vendedor - Adelanto", "Comisión - letra N"). */
-    @Column(name = "concepto", nullable = false, length = 2000)
+    @Column(name = "concepto", nullable = false, length = 8000)
     private String concepto;
 
     /** Beneficiario (nombre del vendedor). */

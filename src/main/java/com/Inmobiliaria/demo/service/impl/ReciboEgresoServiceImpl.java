@@ -40,8 +40,8 @@ public class ReciboEgresoServiceImpl implements ReciboEgresoService {
 
     public static final String SERIE_EGRESO = "EG01";
     public static final String ORIGEN_VOUCHER = "PAGO_COMISION";
-    /** Longitud máxima de la columna recibo_egreso.concepto (VARCHAR 2000). */
-    private static final int MAX_CONCEPTO = 2000;
+    /** Longitud máxima de la columna recibo_egreso.concepto (VARCHAR 8000). */
+    private static final int MAX_CONCEPTO = 8000;
 
     private final SerieEgresoRepository serieEgresoRepository;
     private final ReciboEgresoRepository reciboEgresoRepository;

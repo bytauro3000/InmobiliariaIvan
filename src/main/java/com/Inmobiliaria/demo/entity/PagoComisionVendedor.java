@@ -58,6 +58,6 @@ public class PagoComisionVendedor {
     @Column(name = "numero_egreso", length = 30)
     private String numeroEgreso;
 
-    @Column(name = "observacion", length = 255)
+    @Column(name = "observacion", length = 2000)
     private String observacion;
 }
