@@ -193,6 +193,21 @@ public class ReciboEgresoPdf {
 
             doc.add(encabezado);
 
+            // ── LÍNEA GRIS IZQUIERDA ──
+            // Dibujada ya con la página 1 creada pero ANTES de que el contenido
+            // multi-página la libere (immediateFlush), lo que rompía getFirstPage().
+            PdfPage page = pdf.getFirstPage();
+            PdfCanvas canvas = new PdfCanvas(page);
+            float alto = page.getPageSize().getHeight();
+            canvas.saveState();
+            canvas.setStrokeColor(new DeviceGray(0.55f))
+                  .setLineWidth(1.2f)
+                  .moveTo(0, alto - 40f)
+                  .lineTo(28, alto - 40f)
+                  .stroke();
+            canvas.restoreState();
+            canvas.release();
+
             // ── DATOS DEL RECIBO (como factura) ──
             Table datos = new Table(UnitValue.createPercentArray(new float[]{0.22f, 1}))
                     .setWidth(UnitValue.createPercentValue(100)).setMarginTop(6);
@@ -272,17 +287,6 @@ public class ReciboEgresoPdf {
             doc.add(new Paragraph()
                     .setBorderBottom(new SolidBorder(GRIS_MEDIO, 0.5f))
                     .setMarginTop(5).setMarginBottom(4));
-
-            // ── LÍNEA GRIS IZQUIERDA ──
-            PdfPage page = pdf.getFirstPage();
-            PdfCanvas canvas = new PdfCanvas(page);
-            float alto = page.getPageSize().getHeight();
-            canvas.setStrokeColor(new DeviceGray(0.55f))
-                  .setLineWidth(1.2f)
-                  .moveTo(0, alto - 40f)
-                  .lineTo(28, alto - 40f)
-                  .stroke();
-            canvas.release();
 
             // ── REVERSO: vouchers adjuntos ──
             agregarPaginaReverso(doc, pdf, vouchers, courierBold);
