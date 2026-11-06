@@ -240,4 +240,15 @@ public interface PagoLetraRepository extends JpaRepository<PagoLetras, Integer> 
                 desde != null ? desde.atStartOfDay() : null,
                 hasta != null ? hasta.plusDays(1).atStartOfDay() : null);
     }
+
+    // ── Reporte ingreso detallado ─────────────────────────────────────────────
+
+    /** Batch: contrato + titular + cliente por ids de pago (evita N+1). */
+    @Query("SELECT DISTINCT p FROM PagoLetras p " +
+           "JOIN FETCH p.letra l " +
+           "JOIN FETCH l.contrato co " +
+           "LEFT JOIN FETCH co.clientes cc " +
+           "LEFT JOIN FETCH cc.cliente cli " +
+           "WHERE p.idPago IN :ids")
+    List<PagoLetras> buscarPorIdsConClientes(@Param("ids") List<Integer> ids);
 }

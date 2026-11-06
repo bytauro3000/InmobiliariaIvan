@@ -192,4 +192,14 @@ public interface PagoInicialRepository extends JpaRepository<PagoInicial, Intege
                 desde != null ? desde.atStartOfDay() : null,
                 hasta != null ? hasta.plusDays(1).atStartOfDay() : null);
     }
+
+    // ── Reporte ingreso detallado ─────────────────────────────────────────────
+
+    /** Batch: contrato + titular + cliente por ids de pago (evita N+1). */
+    @Query("SELECT DISTINCT p FROM PagoInicial p " +
+           "JOIN FETCH p.contrato co " +
+           "LEFT JOIN FETCH co.clientes cc " +
+           "LEFT JOIN FETCH cc.cliente cli " +
+           "WHERE p.idPagoInicial IN :ids")
+    List<PagoInicial> buscarPorIdsConClientes(@Param("ids") List<Integer> ids);
 }

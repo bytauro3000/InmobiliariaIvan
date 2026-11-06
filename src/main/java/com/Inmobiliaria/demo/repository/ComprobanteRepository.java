@@ -103,4 +103,18 @@ public interface ComprobanteRepository extends JpaRepository<Comprobante, Long> 
     @Modifying
     @Query("UPDATE Comprobante c SET c.emailEnviado = true WHERE c.idComprobante = :id")
     void marcarEmailEnviado(@Param("id") Long id);
+
+    // ─── Reporte ingreso detallado ────────────────────────────────────────────
+
+    @Query("SELECT c FROM Comprobante c " +
+           "WHERE c.fechaEmision BETWEEN :desde AND :hasta " +
+           "AND c.tipoComprobante IN :tipos " +
+           "ORDER BY c.fechaEmision ASC, c.serie ASC, c.numero ASC")
+    List<Comprobante> buscarDetallado(
+            @Param("desde") LocalDate desde,
+            @Param("hasta") LocalDate hasta,
+            @Param("tipos") List<TipoComprobante> tipos);
+
+    /** Notas de crédito que afectan a los comprobantes dados (consulta por lote). */
+    List<Comprobante> findByComprobanteReferenciaIdComprobanteIn(java.util.Collection<Long> ids);
 }

@@ -98,4 +98,14 @@ public interface PagoInscripcionComprobanteRepository
 
     @Query("SELECT p FROM PagoInscripcionComprobante p WHERE p.contrato.idContrato = :idContrato")
     List<PagoInscripcionComprobante> findByContratoId(@Param("idContrato") Integer idContrato);
+
+    // ── Reporte ingreso detallado ─────────────────────────────────────────────
+
+    /** Batch: contrato + titular + cliente por ids de pago (evita N+1). */
+    @Query("SELECT DISTINCT p FROM PagoInscripcionComprobante p " +
+           "JOIN FETCH p.contrato co " +
+           "LEFT JOIN FETCH co.clientes cc " +
+           "LEFT JOIN FETCH cc.cliente cli " +
+           "WHERE p.idPagoInscripcionComprobante IN :ids")
+    List<PagoInscripcionComprobante> buscarPorIdsConClientes(@Param("ids") List<Integer> ids);
 }

@@ -183,4 +183,16 @@ public interface PagoMoraRepository extends JpaRepository<PagoMora, Integer> {
                 desde != null ? desde.atStartOfDay() : null,
                 hasta != null ? hasta.plusDays(1).atStartOfDay() : null);
     }
+
+    // ── Reporte ingreso detallado ─────────────────────────────────────────────
+
+    /** Batch: mora → letra → contrato + titular + cliente por ids de pago. */
+    @Query("SELECT DISTINCT pm FROM PagoMora pm " +
+           "JOIN FETCH pm.mora m " +
+           "JOIN FETCH m.letra l " +
+           "JOIN FETCH l.contrato co " +
+           "LEFT JOIN FETCH co.clientes cc " +
+           "LEFT JOIN FETCH cc.cliente cli " +
+           "WHERE pm.idPagoMora IN :ids")
+    List<PagoMora> buscarPorIdsConClientes(@Param("ids") List<Integer> ids);
 }
