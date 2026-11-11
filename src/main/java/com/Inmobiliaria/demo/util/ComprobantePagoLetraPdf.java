@@ -135,8 +135,9 @@ public class ComprobantePagoLetraPdf {
     // Siempre 3 por página en fila, mismo tamaño fijo.
     // Si hay menos de 3 en la última página, se centran con celdas vacías.
     // ─────────────────────────────────────────────────────────────────────────
-    private static void agregarPaginaReverso(Document doc, PdfDocument pdf,
-                                              List<Voucher> vouchers, PdfFont courierBold) {
+    // Package-private: reutilizado por ComprobanteMoraPdf (mismo paquete).
+    static void agregarPaginaReverso(Document doc, PdfDocument pdf,
+                                      List<Voucher> vouchers, PdfFont courierBold) {
         if (vouchers == null || vouchers.isEmpty()) return;
 
         pdf.getCatalog().setViewerPreferences(
@@ -227,7 +228,8 @@ public class ComprobantePagoLetraPdf {
     // ─────────────────────────────────────────────────────────────────────────
     // Elimina páginas en blanco al final del PDF (iText a veces genera una extra)
     // ─────────────────────────────────────────────────────────────────────────
-    private static byte[] eliminarPaginasEnBlanco(byte[] pdfBytes) {
+    // Package-private: reutilizado por ComprobanteMoraPdf (mismo paquete).
+    static byte[] eliminarPaginasEnBlanco(byte[] pdfBytes) {
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             PdfDocument pdfDoc = new PdfDocument(
@@ -260,7 +262,8 @@ public class ComprobantePagoLetraPdf {
     // ─────────────────────────────────────────────────────────────────────────
     // Cuenta las páginas de un PDF en memoria (para el ajuste dinámico del múltiple)
     // ─────────────────────────────────────────────────────────────────────────
-    private static int contarPaginas(byte[] pdfBytes) {
+    // Package-private: reutilizado por ComprobanteMoraPdf (mismo paquete).
+    static int contarPaginas(byte[] pdfBytes) {
         try {
             PdfDocument pdf = new PdfDocument(new PdfReader(new ByteArrayInputStream(pdfBytes)));
             int n = pdf.getNumberOfPages();

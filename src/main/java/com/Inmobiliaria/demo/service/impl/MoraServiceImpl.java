@@ -35,9 +35,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.Inmobiliaria.demo.entity.Empresa;
@@ -262,8 +266,9 @@ public class MoraServiceImpl implements MoraService {
     public MoraResumenContratoDTO obtenerResumenPorContrato(Integer idContrato) {
         List<MoraLetra> pendientes = moraRepository
             .findByContratoIdContratoAndEstado(idContrato, EstadoMora.PENDIENTE);
+        // Suma de saldos (no de totales): respeta pagos parciales y descuentos
         BigDecimal total = pendientes.stream()
-            .map(MoraLetra::getMontoMoraTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
+            .map(this::saldoMora).reduce(BigDecimal.ZERO, BigDecimal::add);
         return new MoraResumenContratoDTO(idContrato, pendientes.size(), total);
     }
 
@@ -280,10 +285,16 @@ public class MoraServiceImpl implements MoraService {
         if (mora.getEstadoMora() == EstadoMora.ANULADO)
             throw new NegocioException("Esta mora está anulada y no puede pagarse.");
 
-        if (request.getMontoPagado().compareTo(mora.getMontoMoraTotal()) != 0) {
+        // Pago parcial permitido: cualquier monto entre 0 (exclusivo) y el saldo.
+        BigDecimal saldo = saldoMora(mora);
+        if (saldo.signum() <= 0)
+            throw new NegocioException("Esta mora ya fue pagada.");
+        if (request.getMontoPagado() == null || request.getMontoPagado().signum() <= 0)
+            throw new NegocioException("El monto pagado debe ser mayor a cero.");
+        if (request.getMontoPagado().compareTo(saldo) > 0) {
             throw new NegocioException(
-                "El monto pagado (" + request.getMontoPagado() + ") no coincide con " +
-                "el total de la mora (" + mora.getMontoMoraTotal() + ")."
+                "El monto pagado (" + request.getMontoPagado() + ") no puede superar " +
+                "el saldo pendiente de la mora (" + saldo + ")."
             );
         }
 
@@ -380,7 +391,9 @@ public class MoraServiceImpl implements MoraService {
             }
         }
 
-        mora.setEstadoMora(EstadoMora.PAGADO);
+        // Estado según saldo restante (permite pago parcial: queda PENDIENTE)
+        BigDecimal nuevoSaldo = saldo.subtract(request.getMontoPagado());
+        mora.setEstadoMora(nuevoSaldo.signum() <= 0 ? EstadoMora.PAGADO : EstadoMora.PENDIENTE);
         moraRepository.save(mora);
 
         PagoMora finalPago = pagoGuardado;
@@ -392,6 +405,7 @@ public class MoraServiceImpl implements MoraService {
         });
 
         PagoMoraResponseDTO dto = mapPagoToDTO(pagoGuardado);
+        dto.setSaldoRestante(nuevoSaldo.signum() < 0 ? BigDecimal.ZERO : nuevoSaldo);
         if (sunatRespuesta != null) {
             String estadoSunat = (String) sunatRespuesta.get("estadoSunat");
             if ("ACEPTADA".equals(estadoSunat)) {
@@ -407,6 +421,250 @@ public class MoraServiceImpl implements MoraService {
         return dto;
     }
 
+    // ─── Pago múltiple de moras (un comprobante compartido) ──────────────────
+
+    @Override
+    @Transactional
+    public Map<String, Object> pagarMorasMultiples(MoraPagosMultiplesRequestDTO request,
+                                                   List<MultipartFile> vouchers) throws IOException {
+        if (request.getPagos() == null || request.getPagos().isEmpty())
+            throw new NegocioException("La lista de moras no puede estar vacía.");
+        if (request.getMedioPago() == null)
+            throw new NegocioException("Debe indicar el medio de pago.");
+
+        // ── Cargar y validar cada mora (lock pesimista, sin duplicados) ──────
+        List<MoraLetra> moras = new ArrayList<>();
+        Set<Integer> idsVistos = new HashSet<>();
+        Integer idContrato = null;
+
+        for (MoraPagosMultiplesRequestDTO.Item item : request.getPagos()) {
+            if (item.getIdMora() == null)
+                throw new NegocioException("Cada mora seleccionada debe tener un idMora.");
+            if (!idsVistos.add(item.getIdMora()))
+                throw new NegocioException("La mora con id " + item.getIdMora() +
+                        " está repetida en la selección.");
+
+            MoraLetra mora = moraRepository.findByIdWithLock(item.getIdMora())
+                .orElseThrow(() -> new NegocioException("Mora no encontrada con id: " + item.getIdMora()));
+
+            String refLetra = mora.getLetra() != null ? mora.getLetra().getNumeroLetra()
+                    : String.valueOf(item.getIdMora());
+            if (mora.getEstadoMora() == EstadoMora.PAGADO)
+                throw new NegocioException("La mora de la letra N° " + refLetra + " ya fue pagada.");
+            if (mora.getEstadoMora() == EstadoMora.ANULADO)
+                throw new NegocioException("La mora de la letra N° " + refLetra + " está anulada.");
+
+            BigDecimal saldo = saldoMora(mora);
+            if (saldo.signum() <= 0)
+                throw new NegocioException("La mora de la letra N° " + refLetra + " ya fue pagada.");
+            if (item.getImportePagado() == null || item.getImportePagado().signum() <= 0)
+                throw new NegocioException("El monto para la letra N° " + refLetra +
+                        " debe ser mayor a cero.");
+            if (item.getImportePagado().compareTo(saldo) > 0)
+                throw new NegocioException("El monto para la letra N° " + refLetra + " (" +
+                        item.getImportePagado() + ") no puede superar el saldo pendiente (" +
+                        saldo + ").");
+
+            Integer idC = mora.getLetra().getContrato().getIdContrato();
+            if (idContrato == null) idContrato = idC;
+            else if (!idContrato.equals(idC))
+                throw new NegocioException("Todas las moras seleccionadas deben pertenecer al mismo contrato.");
+
+            moras.add(mora);
+        }
+
+        // ── Descuento negociado (solo en pago múltiple, proporcional) ─────────
+        BigDecimal descuentoTotal = request.getDescuentoNegociado() != null
+                ? request.getDescuentoNegociado() : BigDecimal.ZERO;
+        if (descuentoTotal.signum() < 0)
+            throw new NegocioException("El descuento no puede ser negativo.");
+
+        BigDecimal totalBruto = request.getPagos().stream()
+                .map(MoraPagosMultiplesRequestDTO.Item::getImportePagado)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (descuentoTotal.compareTo(totalBruto) > 0)
+            throw new NegocioException("El descuento (" + descuentoTotal +
+                    ") no puede superar el monto total del lote (" + totalBruto + ").");
+        if (descuentoTotal.signum() > 0
+                && (request.getMotivoDescuento() == null || request.getMotivoDescuento().isBlank()))
+            throw new NegocioException("Debe indicar el motivo del descuento.");
+
+        BigDecimal totalNeto = totalBruto.subtract(descuentoTotal);
+
+        if (MedioPagoUtil.esBancario(request.getMedioPago()) && request.getFechaOperacion() == null)
+            throw new NegocioException(
+                "Para pagos con " + request.getMedioPago() + " la fecha de operación es obligatoria.");
+
+        LocalDate fechaPago = request.getFechaPago() != null ? request.getFechaPago() : LocalDate.now();
+
+        // ── Vouchers → Cloudinary (una vez; se replica por cada pago) ─────────
+        List<String> urlsVoucher = new ArrayList<>();
+        if (vouchers != null && !vouchers.isEmpty()) {
+            String timestamp = LocalDateTime.now()
+                    .format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
+            int idx = 0;
+            for (MultipartFile archivo : vouchers) {
+                String publicId = "mora-multiple-" + timestamp + "-" + (idx++);
+                Map<?, ?> result = cloudinary.uploader().upload(archivo.getBytes(),
+                    ObjectUtils.asMap(
+                        "folder", "vouchers/mora-multiple",
+                        "public_id", publicId
+                    ));
+                urlsVoucher.add(result.get("secure_url").toString());
+            }
+        }
+
+        // ── Comprobante compartido (igual que pagos múltiples de letras) ──────
+        Comprobante comprobanteCompartido = null;
+        if (request.getTipoComprobante() != null) {
+            comprobanteCompartido = comprobanteService.generarComprobanteConNumeroY(
+                request.getTipoComprobante(),
+                TipoOrigenComprobante.PAGO_MORA,
+                null,
+                totalNeto,
+                fechaPago,
+                request.getNumeroComprobantePersonalizado(),
+                null
+            );
+        }
+
+        List<PagoMoraResponseDTO> responses = new ArrayList<>();
+
+        for (int i = 0; i < request.getPagos().size(); i++) {
+            MoraPagosMultiplesRequestDTO.Item item = request.getPagos().get(i);
+            MoraLetra mora = moras.get(i);
+            BigDecimal bruto = item.getImportePagado();
+
+            // Descuento proporcional a lo bruto de cada mora (HALF_UP, centavos)
+            BigDecimal descProporcionada = BigDecimal.ZERO;
+            if (descuentoTotal.signum() > 0 && totalBruto.signum() > 0) {
+                descProporcionada = descuentoTotal
+                    .multiply(bruto)
+                    .divide(totalBruto, 2, RoundingMode.HALF_UP);
+            }
+            BigDecimal neto = bruto.subtract(descProporcionada);
+            BigDecimal saldoPrevio = saldoMora(mora);
+
+            PagoMora pago = new PagoMora();
+            pago.setMora(mora);
+            pago.setImportePagado(neto);
+            pago.setDescuentoAplicado(descProporcionada);
+            pago.setFechaPago(FechasUtil.aFechaHora(fechaPago));
+            pago.setFechaOperacion(request.getFechaOperacion() != null
+                ? FechasUtil.aFechaHora(request.getFechaOperacion(), request.getHoraOperacion()) : null);
+            pago.setMedioPago(request.getMedioPago());
+            pago.setNumeroOperacion(request.getNumeroOperacion());
+            pago.setObservaciones(construirObservacionesMora(
+                request.getObservaciones(), descProporcionada, request.getMotivoDescuento()));
+            pago.setComprobante(comprobanteCompartido);
+
+            PagoMora guardado = pagoMoraRepository.save(pago);
+
+            for (String url : urlsVoucher) {
+                Voucher v = new Voucher();
+                v.setTipoOrigen("PAGO_MORA");
+                v.setReferenciaId(guardado.getIdPagoMora());
+                v.setUrl(url);
+                voucherRepository.save(v);
+            }
+
+            // Saldo por mora: bruto (neto + descuento) descuenta del saldo previo
+            BigDecimal nuevoSaldo = saldoPrevio.subtract(bruto);
+            if (nuevoSaldo.signum() < 0) nuevoSaldo = BigDecimal.ZERO;
+            mora.setEstadoMora(nuevoSaldo.signum() <= 0 ? EstadoMora.PAGADO : EstadoMora.PENDIENTE);
+            moraRepository.save(mora);
+
+            PagoMora finalGuardado = guardado;
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    notificarAdminPagoMora(finalGuardado);
+                }
+            });
+
+            PagoMoraResponseDTO resp = mapPagoToDTO(guardado);
+            resp.setSaldoRestante(nuevoSaldo);
+            responses.add(resp);
+        }
+
+        // ── Asignar referenciaId al comprobante compartido ────────────────────
+        if (comprobanteCompartido != null && comprobanteCompartido.getReferenciaId() == null
+                && !responses.isEmpty()) {
+            comprobanteCompartido.setReferenciaId(responses.get(0).getIdPagoMora());
+            comprobanteRepository.save(comprobanteCompartido);
+        }
+
+        // ── SUNAT: boleta electrónica (serie B) con descripción combinada ─────
+        Map<String, Object> sunatRespuestaMulti = null;
+        if (comprobanteCompartido != null
+                && comprobanteCompartido.getTipoComprobante() == TipoComprobante.BOLETA
+                && comprobanteCompartido.getSerie() != null
+                && comprobanteCompartido.getSerie().startsWith("B")) {
+
+            Contrato contrato = moras.get(0).getLetra().getContrato();
+            Cliente cliente = contrato.getClientes().iterator().next().getCliente();
+            String descripcion = construirDescripcionMoraMulti(moras);
+            comprobanteCompartido.setDescripcion(descripcion);
+
+            sunatRespuestaMulti = sunatEnvioService.enviarBoleta(
+                    cliente, contrato,
+                    comprobanteCompartido, totalNeto, descripcion,
+                    request.getNumeroOperacion());
+
+            String estadoSunatMulti = sunatRespuestaMulti != null
+                    ? (String) sunatRespuestaMulti.get("estadoSunat") : null;
+            String codigoErrorMulti = sunatRespuestaMulti != null
+                    ? (String) sunatRespuestaMulti.get("codigoError") : null;
+
+            if ("ERROR".equals(estadoSunatMulti)) {
+                if ("0111".equals(codigoErrorMulti)) {
+                    comprobanteCompartido.setEstadoSunat("RECHAZADA");
+                    comprobanteCompartido.setSunatError("0111");
+                    log.warn("Boleta mora múltiple {} RECHAZADA (0111). Se reintentará.",
+                            comprobanteCompartido.getNumeroCompleto());
+                } else {
+                    String msgMulti = (String) sunatRespuestaMulti.getOrDefault("mensaje", "Error SUNAT");
+                    throw new NegocioException("SUNAT rechazó la boleta: " + msgMulti);
+                }
+            } else if ("ACEPTADA".equals(estadoSunatMulti)) {
+                comprobanteCompartido.setEstadoSunat("ACEPTADA");
+                String hash = (String) sunatRespuestaMulti.get("hash");
+                String cdrZip = (String) sunatRespuestaMulti.get("cdrZip");
+                if (hash != null && !hash.isBlank()) comprobanteCompartido.setHashCdr(hash);
+                if (cdrZip != null && !cdrZip.isBlank()) comprobanteCompartido.setCdrBase64(cdrZip);
+            } else {
+                comprobanteCompartido.setEstadoSunat("PENDIENTE");
+            }
+        }
+
+        // ── Poblar sunatAceptado/sunatAdvertencia en cada response ────────────
+        if (sunatRespuestaMulti != null) {
+            String estadoMulti = (String) sunatRespuestaMulti.get("estadoSunat");
+            if ("ACEPTADA".equals(estadoMulti)) {
+                for (PagoMoraResponseDTO r : responses) {
+                    r.setSunatAceptado(true);
+                    r.setSunatMensaje((String) sunatRespuestaMulti.getOrDefault("mensaje", "ACEPTADA"));
+                }
+            } else if ("ERROR".equals(estadoMulti) && "0111".equals(sunatRespuestaMulti.get("codigoError"))) {
+                String advertencia = "Pago registrado. La boleta " + comprobanteCompartido.getNumeroCompleto()
+                        + " está pendiente de aceptación SUNAT (error 0111). Se reintentará automáticamente.";
+                for (PagoMoraResponseDTO r : responses) {
+                    r.setSunatAceptado(false);
+                    r.setSunatAdvertencia(advertencia);
+                }
+            }
+        }
+
+        Map<String, Object> resultado = new LinkedHashMap<>();
+        resultado.put("pagos", responses);
+        resultado.put("numeroComprobanteGenerado",
+            comprobanteCompartido != null ? comprobanteCompartido.getNumeroCompleto() : null);
+        resultado.put("descuentoAplicado", descuentoTotal);
+        resultado.put("montoTotalNeto", totalNeto);
+        return resultado;
+    }
+
     // ─── Anular mora (MoraLetra) ───────────────────────────────────────────────
 
     @Override
@@ -419,6 +677,9 @@ public class MoraServiceImpl implements MoraService {
             throw new NegocioException("No se puede anular una mora que ya fue pagada.");
         if (mora.getEstadoMora() == EstadoMora.ANULADO)
             throw new NegocioException("Esta mora ya está anulada.");
+        if (saldoMora(mora).compareTo(montoTotalSeguro(mora)) < 0)
+            throw new NegocioException(
+                "No se puede anular una mora con pagos registrados. Anule primero los pagos.");
 
         mora.setEstadoMora(EstadoMora.ANULADO);
         mora.setMotivoAnulacion(motivo);
@@ -440,17 +701,17 @@ public class MoraServiceImpl implements MoraService {
             .findByTipoOrigenAndReferenciaId("PAGO_MORA", pago.getIdPagoMora())
             .forEach(voucherRepository::delete);
  
-        // Si la mora queda sin pagos activos → vuelve a PENDIENTE
+        // Recalcular estado de la mora sin el pago eliminado (cubre pagos parciales)
         MoraLetra mora = pago.getMora();
         pagoMoraRepository.delete(pago);
- 
-        boolean tienePagosActivos = mora.getPagos().stream()
-            .filter(p -> !p.getIdPagoMora().equals(idPagoMora))
-            .anyMatch(p -> !Boolean.TRUE.equals(p.getAnulado()));
- 
-        if (!tienePagosActivos && mora.getEstadoMora() == EstadoMora.PAGADO) {
-            mora.setEstadoMora(EstadoMora.PENDIENTE);
-            moraRepository.save(mora);
+
+        if (mora.getEstadoMora() != EstadoMora.ANULADO) {
+            BigDecimal saldo = saldoDe(mora, mora.getPagos(), idPagoMora);
+            EstadoMora nuevo = saldo.signum() <= 0 ? EstadoMora.PAGADO : EstadoMora.PENDIENTE;
+            if (mora.getEstadoMora() != nuevo) {
+                mora.setEstadoMora(nuevo);
+                moraRepository.save(mora);
+            }
         }
     }
 
@@ -480,15 +741,8 @@ public class MoraServiceImpl implements MoraService {
             comprobanteRepository.save(orig);
         }
 
-        // Si todos los pagos de la mora están anulados → mora vuelve a PENDIENTE
-        MoraLetra mora = pago.getMora();
-        boolean todosAnulados = mora.getPagos().stream()
-            .allMatch(p -> Boolean.TRUE.equals(p.getAnulado()));
-
-        if (todosAnulados && mora.getEstadoMora() == EstadoMora.PAGADO) {
-            mora.setEstadoMora(EstadoMora.PENDIENTE);
-            moraRepository.save(mora);
-        }
+        // Recalcular estado de la mora a partir del saldo (cubre pagos parciales)
+        actualizarEstadoMora(pago.getMora());
 
         return mapPagoToDTO(pago);
     }
@@ -544,6 +798,103 @@ public class MoraServiceImpl implements MoraService {
     }
 
     // ─── Helpers privados ──────────────────────────────────────────────────────
+
+    /**
+     * Saldo pendiente de una mora: montoMoraTotal − pagos activos
+     * (importePagado neto + descuentoAplicado), mínimo 0.
+     */
+    private BigDecimal saldoMora(MoraLetra mora) {
+        return saldoDe(mora, mora.getPagos(), null);
+    }
+
+    /** Igual que saldoMora pero excluyendo un pago (p. ej. el que se elimina). */
+    private BigDecimal saldoDe(MoraLetra mora, java.util.Collection<PagoMora> pagos, Integer idExcluido) {
+        BigDecimal total = montoTotalSeguro(mora);
+        if (pagos == null || pagos.isEmpty()) return total;
+        BigDecimal pagado = pagos.stream()
+            .filter(p -> idExcluido == null || !idExcluido.equals(p.getIdPagoMora()))
+            .filter(p -> !Boolean.TRUE.equals(p.getAnulado()))
+            .map(p -> p.getImportePagado().add(
+                    p.getDescuentoAplicado() != null ? p.getDescuentoAplicado() : BigDecimal.ZERO))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal saldo = total.subtract(pagado);
+        return saldo.signum() < 0 ? BigDecimal.ZERO : saldo;
+    }
+
+    private BigDecimal montoTotalSeguro(MoraLetra mora) {
+        return mora.getMontoMoraTotal() != null ? mora.getMontoMoraTotal() : BigDecimal.ZERO;
+    }
+
+    /** Recalcula el estado de la mora a partir de su saldo (PAGADO si saldo == 0). */
+    private void actualizarEstadoMora(MoraLetra mora) {
+        if (mora.getEstadoMora() == EstadoMora.ANULADO) return;
+        EstadoMora nuevo = saldoMora(mora).signum() <= 0 ? EstadoMora.PAGADO : EstadoMora.PENDIENTE;
+        if (mora.getEstadoMora() != nuevo) {
+            mora.setEstadoMora(nuevo);
+            moraRepository.save(mora);
+        }
+    }
+
+    private String construirObservacionesMora(String obsBase, BigDecimal descuento, String motivoDescuento) {
+        StringBuilder sb = new StringBuilder();
+        if (obsBase != null && !obsBase.isBlank()) sb.append(obsBase);
+        if (descuento != null && descuento.compareTo(BigDecimal.ZERO) > 0) {
+            if (sb.length() > 0) sb.append(" | ");
+            sb.append("Descuento aplicado: $").append(descuento.setScale(2, RoundingMode.HALF_UP));
+            if (motivoDescuento != null && !motivoDescuento.isBlank())
+                sb.append(" (").append(motivoDescuento).append(")");
+        }
+        return sb.length() > 0 ? sb.toString() : null;
+    }
+
+    /**
+     * Descripción SUNAT para boleta de mora múltiple:
+     * "MORA DE LAS LETRAS 75, 76 Y 77 POR LA COMPRA DE ..." (misma ramificación
+     * de marca que los pagos múltiples de letras).
+     */
+    private String construirDescripcionMoraMulti(List<MoraLetra> moras) {
+        List<String> numsLimpios = new ArrayList<>();
+        for (MoraLetra m : moras) {
+            String n = m.getLetra().getNumeroLetra();
+            if (n != null && n.contains("/")) n = n.substring(0, n.indexOf('/'));
+            if (n != null && !n.isBlank()) numsLimpios.add(n);
+        }
+        String letrasStr;
+        if (numsLimpios.size() <= 1) {
+            letrasStr = "MORA LETRA " + (numsLimpios.isEmpty() ? "-" : numsLimpios.get(0));
+        } else if (numsLimpios.size() == 2) {
+            letrasStr = "MORA LETRAS " + numsLimpios.get(0) + " Y " + numsLimpios.get(1);
+        } else {
+            StringBuilder sb = new StringBuilder("MORA DE LAS LETRAS ");
+            for (int i = 0; i < numsLimpios.size() - 1; i++) {
+                sb.append(numsLimpios.get(i));
+                if (i < numsLimpios.size() - 2) sb.append(", ");
+            }
+            sb.append(" Y ").append(numsLimpios.get(numsLimpios.size() - 1));
+            letrasStr = sb.toString();
+        }
+
+        Contrato contrato = moras.get(0).getLetra().getContrato();
+        String nombrePrograma = "";
+        String mz = "";
+        String lt = "";
+        if (contrato.getLotes() != null && !contrato.getLotes().isEmpty()) {
+            ContratoLote cl = contrato.getLotes().iterator().next();
+            if (cl.getLote() != null) {
+                mz = cl.getLote().getManzana();
+                lt = cl.getLote().getNumeroLote();
+                if (cl.getLote().getPrograma() != null)
+                    nombrePrograma = cl.getLote().getPrograma().getNombrePrograma();
+            }
+        }
+
+        if ("20552273223".equals(empresaService.obtenerActiva().getRuc())) {
+            return "Pago de mora de " + numsLimpios.size() + " letras de la Mz. " + mz
+                    + " Lt. " + lt + " del Programa: " + nombrePrograma.toUpperCase();
+        }
+        return letrasStr + " POR LA COMPRA DE UN LOTE DE TERRENO RUSTICO PROGRAMA DE VIV. "
+                + nombrePrograma.toUpperCase();
+    }
 
     private void cancelarMoraExistenteSiHay(Integer idLetra) {
         moraRepository.findByLetraIdLetraAndEstadoMora(idLetra, EstadoMora.PENDIENTE)
@@ -613,6 +964,7 @@ public class MoraServiceImpl implements MoraService {
         dto.setMontoMoraTotal(mora.getMontoMoraTotal());
         dto.setFechaGeneracion(mora.getFechaGeneracion());
         dto.setEstadoMora(mora.getEstadoMora());
+        dto.setSaldoPendiente(saldoMora(mora));
         // ── Anulación ─────────────────────────────────────────────────────────
         dto.setMotivoAnulacion(mora.getMotivoAnulacion());
         dto.setFechaAnulacion(mora.getFechaAnulacion());
@@ -634,6 +986,7 @@ public class MoraServiceImpl implements MoraService {
         dto.setIdPagoMora(pago.getIdPagoMora());
         dto.setIdMora(pago.getMora().getIdMora());
         dto.setMontoPagado(pago.getImportePagado());
+        dto.setDescuentoAplicado(pago.getDescuentoAplicado());
         dto.setFechaPago(pago.getFechaPago() != null ? pago.getFechaPago().toLocalDate() : null);
         dto.setMedioPago(pago.getMedioPago());
         dto.setNumeroOperacion(pago.getNumeroOperacion());

@@ -33,6 +33,9 @@ public class MoraResponseDTO {
     private LocalDate  fechaGeneracion;
     private EstadoMora estadoMora;
 
+    /** Saldo aún pendiente de pago (= montoMoraTotal - pagos activos, mínimo 0). */
+    private BigDecimal saldoPendiente;
+
     // ── Anulación ─────────────────────────────────────────────────────────────
     private String        motivoAnulacion;
     private LocalDateTime fechaAnulacion;

@@ -6,6 +6,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 public interface MoraService {
 
@@ -19,6 +20,14 @@ public interface MoraService {
     MoraResumenContratoDTO obtenerResumenPorContrato(Integer idContrato);
 
     PagoMoraResponseDTO pagarMora(PagoMoraRequestDTO request, List<MultipartFile> vouchers) throws IOException;
+
+    /**
+     * Pago múltiple de moras: N moras del mismo contrato en una sola operación
+     * con comprobante y vouchers compartidos. Devuelve un mapa con:
+     * pagos, numeroComprobanteGenerado, descuentoAplicado, montoTotalNeto.
+     */
+    Map<String, Object> pagarMorasMultiples(MoraPagosMultiplesRequestDTO request,
+                                            List<MultipartFile> vouchers) throws IOException;
 
     /** Anula la entidad MoraLetra (estado → ANULADO). */
     MoraResponseDTO anularMora(Integer idMora, String motivo, String anuladoPor);

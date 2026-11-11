@@ -3,6 +3,7 @@ package com.Inmobiliaria.demo.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -24,4 +25,8 @@ public class PagoMora extends PagoBase {
 
     @Column(name = "fecha_operacion")
     private LocalDateTime fechaOperacion;
+
+    /** Descuento negociado proporcional aplicado a este pago (pago múltiple de mora). */
+    @Column(name = "descuento_aplicado", precision = 12, scale = 2)
+    private BigDecimal descuentoAplicado;
 }

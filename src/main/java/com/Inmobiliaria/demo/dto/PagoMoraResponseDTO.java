@@ -24,6 +24,11 @@ public class PagoMoraResponseDTO {
     private String          observaciones;
     private List<String>    urlsVoucher;
 
+    /** Descuento negociado proporcional aplicado a este pago (si lo hubo). */
+    private BigDecimal      descuentoAplicado;
+    /** Saldo restante de la mora después de este pago (solo en respuestas de pago). */
+    private BigDecimal      saldoRestante;
+
     // ── SUNAT ─────────────────────────────────────────────────────────────────
     private Boolean         sunatAceptado;
     private String          sunatMensaje;

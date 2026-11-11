@@ -2,11 +2,14 @@ package com.Inmobiliaria.demo.controller;
 
 import com.Inmobiliaria.demo.annotation.Auditable;
 import com.Inmobiliaria.demo.dto.*;
+import com.Inmobiliaria.demo.entity.Comprobante;
 import com.Inmobiliaria.demo.entity.PagoMora;
+import com.Inmobiliaria.demo.entity.Voucher;
 import com.Inmobiliaria.demo.enums.AccionAuditoria;
 import com.Inmobiliaria.demo.enums.TipoComprobante;
 import com.Inmobiliaria.demo.exception.NegocioException;
 import com.Inmobiliaria.demo.repository.PagoMoraRepository;
+import com.Inmobiliaria.demo.repository.VoucherRepository;
 import com.Inmobiliaria.demo.service.MoraService;
 import com.Inmobiliaria.demo.service.PagoLetraService;
 import com.Inmobiliaria.demo.util.ComprobanteMoraPdf;
@@ -26,7 +29,11 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/moras")
@@ -36,6 +43,7 @@ public class MoraController {
     private final MoraService          moraService;
     private final PagoMoraRepository   pagoMoraRepository;
     private final PagoLetraService     pagoLetraService;
+    private final VoucherRepository    voucherRepository;
 
     // ── Consultas ─────────────────────────────────────────────────────────────
 
@@ -102,6 +110,16 @@ public class MoraController {
         return new ResponseEntity<>(moraService.pagarMora(request, vouchers), HttpStatus.CREATED);
     }
 
+    @Auditable(accion = AccionAuditoria.PAGAR, entidad = "PagoMora")
+    @PostMapping(value = "/pagar-multiple", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, Object>> pagarMorasMultiples(
+            @RequestPart("pago") MoraPagosMultiplesRequestDTO request,
+            @RequestPart(value = "vouchers", required = false) List<MultipartFile> vouchers)
+            throws java.io.IOException {
+        return new ResponseEntity<>(
+                moraService.pagarMorasMultiples(request, vouchers), HttpStatus.CREATED);
+    }
+
     @GetMapping("/pago/{idPagoMora}/comprobante-pdf")
     @Transactional(readOnly = true)
     public ResponseEntity<byte[]> descargarComprobanteMora(
@@ -121,7 +139,23 @@ public class MoraController {
                         .orElse("SECRETARIA");
             }
 
-            byte[] pdf = ComprobanteMoraPdf.generar(pagoMora, rolUsuario);
+            // Si el comprobante está compartido por varios pagos (pago múltiple),
+            // usar el generador combinado para mostrar el detalle de las moras
+            if (pagoMora.getComprobante() != null) {
+                List<PagoMora> todosPagos = pagoMoraRepository
+                        .findByComprobanteNumeroCompleto(
+                                pagoMora.getComprobante().getNumeroCompleto());
+                if (todosPagos.size() > 1) {
+                    return generarPdfMultipleMora(todosPagos, rolUsuario, idPagoMora);
+                }
+            }
+
+            // Pago individual (único con ese comprobante o sin comprobante):
+            // incluye el reverso con los vouchers adjuntos
+            List<Voucher> vouchers = voucherRepository
+                    .findByTipoOrigenAndReferenciaId("PAGO_MORA", idPagoMora);
+
+            byte[] pdf = ComprobanteMoraPdf.generar(pagoMora, rolUsuario, vouchers);
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
                             "inline; filename=\"comprobante-mora-" + idPagoMora + ".pdf\"")
@@ -133,6 +167,61 @@ public class MoraController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    @GetMapping("/comprobante-multiple/{numeroComprobante}")
+    @Transactional(readOnly = true)
+    public ResponseEntity<byte[]> descargarComprobanteMultiple(
+            @PathVariable String numeroComprobante,
+            Authentication authentication) {
+        List<PagoMora> pagos =
+                pagoMoraRepository.findByComprobanteNumeroCompleto(numeroComprobante);
+
+        if (pagos == null || pagos.isEmpty()) {
+            throw new NegocioException(
+                    "No se encontraron pagos de mora con el comprobante: " + numeroComprobante);
+        }
+
+        String rolUsuario = "SECRETARIA";
+        if (authentication != null && authentication.getAuthorities() != null) {
+            rolUsuario = authentication.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .map(r -> r.replace("ROLE_", ""))
+                    .findFirst()
+                    .orElse("SECRETARIA");
+        }
+
+        return generarPdfMultipleMora(pagos, rolUsuario, null);
+    }
+
+    /**
+     * PDF combinado para moras que comparten un mismo comprobante:
+     * vouchers deduplicados por URL + generador múltiple.
+     */
+    private ResponseEntity<byte[]> generarPdfMultipleMora(
+            List<PagoMora> pagos, String rolUsuario, Integer idPagoSugerido) {
+
+        List<Voucher> vouchers = new ArrayList<>();
+        Set<String> urlsVistas = new HashSet<>();
+        for (PagoMora p : pagos) {
+            for (Voucher v : voucherRepository
+                    .findByTipoOrigenAndReferenciaId("PAGO_MORA", p.getIdPagoMora())) {
+                if (urlsVistas.add(v.getUrl())) {
+                    vouchers.add(v);
+                }
+            }
+        }
+
+        byte[] pdf = ComprobanteMoraPdf.generarMultiple(pagos, rolUsuario, vouchers);
+        Comprobante comp = pagos.get(0).getComprobante();
+        String filename = comp != null && comp.getNumeroCompleto() != null
+                ? comp.getNumeroCompleto()
+                : (idPagoSugerido != null ? "comprobante-mora-" + idPagoSugerido : "comprobante-mora");
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "inline; filename=\"comprobante-" + filename + ".pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 
     // ── ADMIN: Anular mora ────────────────────────────────────────────────────
