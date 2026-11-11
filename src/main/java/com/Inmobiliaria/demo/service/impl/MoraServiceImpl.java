@@ -393,8 +393,13 @@ public class MoraServiceImpl implements MoraService {
 
         // Estado según saldo restante (permite pago parcial: queda PENDIENTE)
         BigDecimal nuevoSaldo = saldo.subtract(request.getMontoPagado());
+        if (nuevoSaldo.signum() < 0) nuevoSaldo = BigDecimal.ZERO;
         mora.setEstadoMora(nuevoSaldo.signum() <= 0 ? EstadoMora.PAGADO : EstadoMora.PENDIENTE);
         moraRepository.save(mora);
+
+        // Saldo posterior a este pago (persistido para el comprobante PDF)
+        pagoGuardado.setSaldoRestante(nuevoSaldo);
+        pagoGuardado = pagoMoraRepository.save(pagoGuardado);
 
         PagoMora finalPago = pagoGuardado;
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -405,7 +410,7 @@ public class MoraServiceImpl implements MoraService {
         });
 
         PagoMoraResponseDTO dto = mapPagoToDTO(pagoGuardado);
-        dto.setSaldoRestante(nuevoSaldo.signum() < 0 ? BigDecimal.ZERO : nuevoSaldo);
+        dto.setSaldoRestante(nuevoSaldo);
         if (sunatRespuesta != null) {
             String estadoSunat = (String) sunatRespuesta.get("estadoSunat");
             if ("ACEPTADA".equals(estadoSunat)) {
@@ -546,10 +551,15 @@ public class MoraServiceImpl implements MoraService {
             BigDecimal neto = bruto.subtract(descProporcionada);
             BigDecimal saldoPrevio = saldoMora(mora);
 
+            // Saldo por mora: bruto (neto + descuento) descuenta del saldo previo
+            BigDecimal nuevoSaldo = saldoPrevio.subtract(bruto);
+            if (nuevoSaldo.signum() < 0) nuevoSaldo = BigDecimal.ZERO;
+
             PagoMora pago = new PagoMora();
             pago.setMora(mora);
             pago.setImportePagado(neto);
             pago.setDescuentoAplicado(descProporcionada);
+            pago.setSaldoRestante(nuevoSaldo);
             pago.setFechaPago(FechasUtil.aFechaHora(fechaPago));
             pago.setFechaOperacion(request.getFechaOperacion() != null
                 ? FechasUtil.aFechaHora(request.getFechaOperacion(), request.getHoraOperacion()) : null);
@@ -569,9 +579,7 @@ public class MoraServiceImpl implements MoraService {
                 voucherRepository.save(v);
             }
 
-            // Saldo por mora: bruto (neto + descuento) descuenta del saldo previo
-            BigDecimal nuevoSaldo = saldoPrevio.subtract(bruto);
-            if (nuevoSaldo.signum() < 0) nuevoSaldo = BigDecimal.ZERO;
+            // Estado según el saldo ya calculado (permite pago parcial: queda PENDIENTE)
             mora.setEstadoMora(nuevoSaldo.signum() <= 0 ? EstadoMora.PAGADO : EstadoMora.PENDIENTE);
             moraRepository.save(mora);
 

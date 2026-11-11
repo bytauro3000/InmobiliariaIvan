@@ -29,4 +29,11 @@ public class PagoMora extends PagoBase {
     /** Descuento negociado proporcional aplicado a este pago (pago múltiple de mora). */
     @Column(name = "descuento_aplicado", precision = 12, scale = 2)
     private BigDecimal descuentoAplicado;
+
+    /**
+     * Saldo de la mora después de este pago (0 = cancelación total).
+     * Null en pagos antiguos (antes del pago parcial): se asume cancelación total.
+     */
+    @Column(name = "saldo_restante", precision = 12, scale = 2)
+    private BigDecimal saldoRestante;
 }

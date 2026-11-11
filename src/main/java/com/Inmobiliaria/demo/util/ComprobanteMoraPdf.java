@@ -42,6 +42,7 @@ import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -83,9 +84,12 @@ public class ComprobanteMoraPdf {
         // Calculo dinamico de margenes - A5 landscape 595x420 pts
         // "Por concepto de" puede wrappear a 2 lineas → contamos 6 lineas renderizadas
         // encabezado=118, marginTop=3, filaRecibo=33, cuerpo(6lin), pie=78
+        // Pago parcial: concepto y detalle envuelven a 2 lineas → 7 lineas.
+        BigDecimal saldoPendiente = saldoDePago(pagoMora);
+        boolean esParcial = saldoPendiente.signum() > 0;
         float fsMora  = 9.5f;
         float lineHM  = fsMora * 1.55f;           // ~14.7 pts/linea
-        float cHMora  = (6f * lineHM) + (3f * 2f) + (4f * 3f); // 6lineas+pad3+4seps
+        float cHMora  = ((esParcial ? 7f : 6f) * lineHM) + (3f * 2f) + (4f * 3f); // lineas+pad3+4seps
         float totMora = 118f + 3f + 33f + cHMora + 78f;
         float mMora   = Math.min(25f, Math.max(8f, (420f - totMora) / 2f));
 
@@ -139,13 +143,22 @@ public class ComprobanteMoraPdf {
             String numLetraFmt = letra.getNumeroLetra() != null
                     ? letra.getNumeroLetra().replace("/", " de ") : "-";
 
-            String concepto = "Pago de mora - Letra N\u00b0 " + numLetraFmt
-                    + "  -  Contrato N\u00b0 " + contrato.getIdContrato()
-                    + "  -  " + loteInfo;
+            String concepto = esParcial
+                    ? "Pago de mora - Letra a cuenta de N\u00b0 " + numLetraFmt
+                            + " (saldo " + simbolo + " " + DF.format(saldoPendiente) + ")"
+                            + "  -  Contrato N\u00b0 " + contrato.getIdContrato()
+                            + "  -  " + loteInfo
+                    : "Pago de mora - Letra N\u00b0 " + numLetraFmt
+                            + "  -  Contrato N\u00b0 " + contrato.getIdContrato()
+                            + "  -  " + loteInfo;
 
             String detalleMora = mora.getDiasMora() + " dias de atraso"
                     + "  |  Interes: " + simbolo + " " + DF.format(mora.getMontoPorcentaje())
-                    + "  |  Recargo diario: " + simbolo + " " + DF.format(mora.getMontoDiario());
+                    + "  |  Recargo diario: " + simbolo + " " + DF.format(mora.getMontoDiario())
+                    + (esParcial
+                            ? "  |  Pagado: " + simbolo + " " + DF.format(pagadoDePago(pagoMora))
+                              + "  |  Saldo: " + simbolo + " " + DF.format(saldoPendiente)
+                            : "");
 
             String fechaPagoStr = pagoMora.getFechaPago() != null
                     ? pagoMora.getFechaPago().format(FMT) : "-";
@@ -157,7 +170,9 @@ public class ComprobanteMoraPdf {
             String fechaVencStr = mora.getFechaVencimientoLetra() != null
                     ? mora.getFechaVencimientoLetra().format(FMT) : "-";
 
-            String moraEnLetras = NumeroALetras.convertir(mora.getMontoMoraTotal(), monedaContrato);
+            // En letra: el monto realmente pagado (coincide con la caja; en pago
+            // completo era igual al total de la mora)
+            String moraEnLetras = NumeroALetras.convertir(pagoMora.getImportePagado(), monedaContrato);
 
             // ── QR ───────────────────────────────────────────────────────────
             String urlQr = BASE_URL + "/pago/" + pagoMora.getIdPagoMora() + "/comprobante-pdf";
@@ -404,17 +419,40 @@ public class ComprobanteMoraPdf {
                 })
                 .collect(Collectors.toList());
 
-        String letrasStr;
-        if (numerosLetra.size() == 1) {
-            letrasStr = "N\u00b0 " + numerosLetra.get(0);
-        } else {
-            String ultimas    = numerosLetra.get(numerosLetra.size() - 1);
-            String anteriores = String.join(", ", numerosLetra.subList(0, numerosLetra.size() - 1));
-            letrasStr = "N\u00b0 " + anteriores + " y " + ultimas;
-        }
-
         Moneda monedaContrato = contrato.getMoneda() != null ? contrato.getMoneda() : Moneda.USD;
         String simbolo      = (monedaContrato == Moneda.PEN) ? "S/" : "$";
+
+        // Letras: "N° X" si se canceló completo; "a cuenta de N° X (saldo $Y)" si
+        // este comprobante dejó saldo pendiente en esa mora (pago parcial).
+        List<String> piezasLetra = new ArrayList<>();
+        boolean anteriorParcial = false;
+        for (String num : numerosLetra) {
+            PagoMora pagoLetra = pagos.stream()
+                    .filter(x -> x.getMora().getLetra() != null
+                            && x.getMora().getLetra().getNumeroLetra() != null
+                            && x.getMora().getLetra().getNumeroLetra().split("/")[0].trim().equals(num))
+                    .findFirst().orElse(null);
+            BigDecimal saldoLetra = pagoLetra != null ? saldoDePago(pagoLetra) : BigDecimal.ZERO;
+            if (saldoLetra.signum() > 0) {
+                piezasLetra.add("a cuenta de N\u00b0 " + num
+                        + " (saldo " + simbolo + " " + DF.format(saldoLetra) + ")");
+                anteriorParcial = true;
+            } else {
+                piezasLetra.add(piezasLetra.isEmpty() || anteriorParcial ? "N\u00b0 " + num : num);
+                anteriorParcial = false;
+            }
+        }
+        String letrasStr;
+        if (piezasLetra.isEmpty()) {
+            letrasStr = "-";
+        } else if (piezasLetra.size() == 1) {
+            letrasStr = piezasLetra.get(0);
+        } else {
+            String ultima      = piezasLetra.get(piezasLetra.size() - 1);
+            String anteriores  = String.join(", ", piezasLetra.subList(0, piezasLetra.size() - 1));
+            letrasStr = anteriores + " y " + ultima;
+        }
+
         String netoEnLetras = NumeroALetras.convertir(totalNeto, monedaContrato);
 
         String loteInfo = "-";
@@ -641,12 +679,13 @@ public class ComprobanteMoraPdf {
                 cuerpo.addCell(celdaCuerpo);
                 doc.add(cuerpo);
 
-                // ── TABLA DETALLE: Letra | F.Venc | Días | Interés | Recargo | Total ──
+                // ── TABLA DETALLE: Letra | F.Venc | Días | Interés | Recargo | Total | Pagado | Saldo ──
                 Table tabla = new Table(UnitValue.createPercentArray(
-                        new float[]{0.14f, 0.16f, 0.09f, 0.20f, 0.21f, 0.20f}))
+                        new float[]{0.12f, 0.13f, 0.07f, 0.16f, 0.17f, 0.15f, 0.10f, 0.10f}))
                         .setWidth(UnitValue.createPercentValue(100))
                         .setMarginTop(3);
-                String[] headers = {"Letra", "F. Venc", "D\u00edas", "Inter\u00e9s", "Recargo diario", "Total"};
+                String[] headers = {"Letra", "F. Venc", "D\u00edas", "Inter\u00e9s", "Recargo diario",
+                        "Total", "Pagado", "Saldo"};
                 for (String h : headers) {
                     tabla.addCell(new Cell()
                             .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f))
@@ -658,10 +697,16 @@ public class ComprobanteMoraPdf {
                 }
 
                 BigDecimal sumaTotales = BigDecimal.ZERO;
+                BigDecimal sumaPagados = BigDecimal.ZERO;
+                BigDecimal sumaSaldos  = BigDecimal.ZERO;
                 for (PagoMora p : pagosOrdenados) {
                     MoraLetra m = p.getMora();
+                    BigDecimal pagadoFila = pagadoDePago(p);
+                    BigDecimal saldoFila  = saldoDePago(p);
                     sumaTotales = sumaTotales.add(
                             m.getMontoMoraTotal() != null ? m.getMontoMoraTotal() : BigDecimal.ZERO);
+                    sumaPagados = sumaPagados.add(pagadoFila);
+                    sumaSaldos  = sumaSaldos.add(saldoFila);
                     String numL = m.getLetra().getNumeroLetra() != null
                             ? m.getLetra().getNumeroLetra() : "-";
                     String fVenc = m.getFechaVencimientoLetra() != null
@@ -673,9 +718,11 @@ public class ComprobanteMoraPdf {
                     tabla.addCell(celdaDetalle(DF.format(zeroIfNull(m.getMontoPorcentaje())), courier, fsTabla, TextAlignment.RIGHT));
                     tabla.addCell(celdaDetalle(DF.format(zeroIfNull(m.getMontoDiario())),     courier, fsTabla, TextAlignment.RIGHT));
                     tabla.addCell(celdaDetalle(DF.format(zeroIfNull(m.getMontoMoraTotal())),  courier, fsTabla, TextAlignment.RIGHT));
+                    tabla.addCell(celdaDetalle(DF.format(pagadoFila), courier, fsTabla, TextAlignment.RIGHT));
+                    tabla.addCell(celdaDetalle(DF.format(saldoFila),  courier, fsTabla, TextAlignment.RIGHT));
                 }
 
-                // Fila TOTAL
+                // Fila TOTAL (TOTAL MORAS abarca las 5 primeras columnas + Total, Pagado, Saldo)
                 tabla.addCell(new Cell(1, 5)
                         .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f))
                         .setPadding(2)
@@ -689,6 +736,20 @@ public class ComprobanteMoraPdf {
                         .setBackgroundColor(new DeviceGray(0.85f))
                         .setTextAlignment(TextAlignment.RIGHT)
                         .add(new Paragraph(DF.format(sumaTotales)).setFont(courierBold).setFontSize(fsTabla)
+                                .setTextAlignment(TextAlignment.RIGHT)));
+                tabla.addCell(new Cell()
+                        .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                        .setPadding(2)
+                        .setBackgroundColor(new DeviceGray(0.85f))
+                        .setTextAlignment(TextAlignment.RIGHT)
+                        .add(new Paragraph(DF.format(sumaPagados)).setFont(courierBold).setFontSize(fsTabla)
+                                .setTextAlignment(TextAlignment.RIGHT)));
+                tabla.addCell(new Cell()
+                        .setBorder(new SolidBorder(ColorConstants.BLACK, 0.8f))
+                        .setPadding(2)
+                        .setBackgroundColor(new DeviceGray(0.85f))
+                        .setTextAlignment(TextAlignment.RIGHT)
+                        .add(new Paragraph(DF.format(sumaSaldos)).setFont(courierBold).setFontSize(fsTabla)
                                 .setTextAlignment(TextAlignment.RIGHT)));
                 doc.add(tabla);
 
@@ -796,6 +857,23 @@ public class ComprobanteMoraPdf {
 
     private static BigDecimal zeroIfNull(BigDecimal valor) {
         return valor != null ? valor : BigDecimal.ZERO;
+    }
+
+    /** Monto que este comprobante aplicó a la mora (neto + descuento). */
+    private static BigDecimal pagadoDePago(PagoMora p) {
+        return zeroIfNull(p.getImportePagado()).add(zeroIfNull(p.getDescuentoAplicado()));
+    }
+
+    /**
+     * Saldo de la mora después de este pago. Usa la columna persistida
+     * (saldo_restante); en pagos antiguos sin ella se estima desde el total
+     * de la mora (asume que es el único pago: correcto para pagos completos
+     * y para el primer pago parcial).
+     */
+    private static BigDecimal saldoDePago(PagoMora p) {
+        if (p.getSaldoRestante() != null) return p.getSaldoRestante();
+        BigDecimal saldo = zeroIfNull(p.getMora().getMontoMoraTotal()).subtract(pagadoDePago(p));
+        return saldo.signum() < 0 ? BigDecimal.ZERO : saldo;
     }
 
     // ── Helpers (idénticos a ComprobantePagoLetraPdf) ─────────────────────────
