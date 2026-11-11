@@ -19,6 +19,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.cache.annotation.CacheConfig;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -107,7 +108,9 @@ public class ContratoServiceImpl implements ContratoService {
 
     @Override
     @Transactional
-    @CacheEvict(allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "contratos", allEntries = true),
+            @CacheEvict(value = "lotes", allEntries = true) })
     public ContratoResponseDTO guardarContrato(ContratoRequestDTO requestDTO, Principal principal) {
         List<Integer> idsLotesAValidar;
         if (requestDTO.getIdSeparacion() != null) {
@@ -375,7 +378,9 @@ public class ContratoServiceImpl implements ContratoService {
 
     @Override
     @Transactional
-    @CacheEvict(allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "contratos", allEntries = true),
+            @CacheEvict(value = "lotes", allEntries = true) })
     public ContratoResponseDTO actualizarContrato(Integer id, ContratoRequestDTO requestDTO) {
         Contrato contrato = contratoRepository.findById(id)
                 .orElseThrow(() -> new NegocioException("Contrato no encontrado con ID: " + id));
@@ -636,7 +641,9 @@ public class ContratoServiceImpl implements ContratoService {
 
     @Override
     @Transactional
-    @CacheEvict(allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "contratos", allEntries = true),
+            @CacheEvict(value = "lotes", allEntries = true) })
     public void eliminarContrato(Integer idContrato) {
         Contrato contrato = contratoRepository.findByIdConTodo(idContrato);
         if (contrato == null) throw new NegocioException("No se encontro el contrato con ID: " + idContrato);
@@ -862,7 +869,9 @@ public class ContratoServiceImpl implements ContratoService {
 
     @Override
     @Transactional
-    @CacheEvict(allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "contratos", allEntries = true),
+            @CacheEvict(value = "lotes", allEntries = true) })
     public ContratoResponseDTO cambiarEstado(Integer idContrato, String nuevoEstadoStr) {
         Contrato contrato = contratoRepository.findById(idContrato)
             .orElseThrow(() -> new NegocioException("Contrato no encontrado con ID: " + idContrato));
@@ -900,7 +909,9 @@ public class ContratoServiceImpl implements ContratoService {
 
     @Override
     @Transactional
-    @CacheEvict(allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "contratos", allEntries = true),
+            @CacheEvict(value = "lotes", allEntries = true) })
     public ContratoResponseDTO registrarRenuncia(Integer idContrato) {
         Contrato contrato = contratoRepository.findById(idContrato)
             .orElseThrow(() -> new NegocioException("Contrato no encontrado: " + idContrato));
